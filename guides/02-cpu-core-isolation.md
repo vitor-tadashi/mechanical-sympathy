@@ -9,6 +9,24 @@
 | **Applies to** | Bare metal only. VMs: application-side pinning (§6) is still useful, but OS-side isolation is skipped. |
 | **Depends on** | [Guide 01](01-grub-bootloader-tuning.md) (`isolcpus`, `nohz_full`, `rcu_nocbs`) |
 
+## At a glance
+
+- **What:** move the operating system, kernel workqueues and interrupts off the isolated CPUs, then put exactly one critical application thread on each one.
+- **Why:** every task, tick, `kworker` or interrupt that borrows the CPU delays a spinning thread by microseconds to milliseconds. RT throttling alone costs **50 ms every second**.
+- **Cost:** fewer CPUs for everything else, and CPUs that sit idle unless a pinned thread uses them.
+
+**Time:** ~1 h including the layout design + 1 reboot (shared with Guide 01) · **Do this if:** bare metal, one critical application, a handful of threads you can pin · **Skip if:** thread-per-request servers or large dynamic pools, or a VM (only §6 applies).
+
+```mermaid
+flowchart LR
+  g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
+  class g02 focus
+  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+```
+
+*Guide 02 builds on the boot arguments from Guide 01 and comes before huge pages.*
+
 ---
 
 ## 1. The problem: everything else that wants your CPU
@@ -59,7 +77,38 @@ cat /sys/class/net/<nic>/device/numa_node
 
 **Reference layout** (2 × 16 cores, HT off, even CPUs = node 0, odd = node 1, critical NICs on node 1):
 
+```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
+flowchart TD
+  subgraph n1["NUMA node 1 (odd CPUs): critical NICs and threads"]
+    direction LR
+    c1["CPU 1 · housekeeping: critical NIC IRQs"]
+    c3["CPU 3 · ISOLATED · net.rx loop"]
+    c5["CPU 5 · ISOLATED · net.tx loop"]
+    c7["CPU 7 · ISOLATED · event.loop"]
+    c9["CPU 9, 11 · ISOLATED · worker.0, worker.1"]
+    c13["CPU 13 to 31 · ISOLATED · timer, spares"]
+  end
+  subgraph n0["NUMA node 0 (even CPUs): operating system"]
+    direction LR
+    c0["CPU 0 · workqueues, mgmt and timing NIC IRQs"]
+    c2["CPU 2 · workqueues"]
+    c4["CPU 4, 6 · agents slice (EDR, monitoring)"]
+    c8["CPU 8 to 28 · OS and non-critical app threads"]
+    c30["CPU 30 · bulk NIC IRQs"]
+  end
+  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
+  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
+  class c0,c2,c4,c8,c30,c1 hk
+  class c3,c5,c7,c9,c13 iso
 ```
+
+*Node 0 runs the operating system, agents and non-critical interrupts. Node 1 keeps one housekeeping CPU for the critical NIC's interrupts, and every other CPU there is isolated and runs exactly one pinned thread role.*
+
+<details>
+<summary><b>The same layout as text</b> (for copying into a runbook)</summary>
+
+```text
             node 0 (even)                          node 1 (odd)
   ┌─────────────────────────────────┐   ┌──────────────────────────────────────┐
   │ 0  workqueues, mgmt/timing IRQs │   │ 1  housekeeping: critical NIC IRQs   │
@@ -72,6 +121,8 @@ cat /sys/class/net/<nic>/device/numa_node
   └─────────────────────────────────┘   └──────────────────────────────────────┘
   OS_CPUS = 0 1 2 4 6 ... 30            ISOLATED_CPUS = 3 5 7 ... 31
 ```
+
+</details>
 
 `OS_CPUS` must be the exact complement of `ISOLATED_CPUS`. The verify step checks this.
 
@@ -129,7 +180,8 @@ sysctl -w kernel.sched_rt_runtime_us=-1       # persisted in /etc/sysctl.d/91-lo
 
 By default, `SCHED_FIFO`/`SCHED_RR` tasks may consume at most 950 ms of every 1 s (`sched_rt_runtime_us=950000` out of `sched_rt_period_us=1000000`). Then the kernel **forcibly deschedules them for 50 ms** so that normal tasks get a turn. A busy-spinning FIFO thread therefore stalls for 50 ms once per second, which can easily be the biggest outlier in your histogram.
 
-`-1` removes the cap. **Risk:** a runaway FIFO thread on a *housekeeping* CPU now starves everything on it, kernel threads included, and the host may appear hung. Only run FIFO spinners on isolated CPUs.
+> [!WARNING]
+> `-1` removes the cap. **Risk:** a runaway FIFO thread on a *housekeeping* CPU now starves everything on it, kernel threads included, and the host may appear hung. Only run FIFO spinners on isolated CPUs.
 
 ## 5. Kernel threads that stay on isolated CPUs
 
@@ -149,6 +201,7 @@ What matters is not that they exist, but that they **stay asleep**. Measure it w
 
 Isolated CPUs have **no load balancing**. A thread whose affinity mask spans several isolated CPUs is put on the first one and never moved. So the rule is:
 
+> [!IMPORTANT]
 > **One critical thread → one isolated CPU. Every other thread → the OS CPUs.**
 
 ### 6.1 Describe the mapping in configuration, not in code
@@ -173,7 +226,10 @@ Keep a feature switch (`affinity.enable` above). The same build then runs pinned
 
 The thread pins **itself** as the first thing in its `run()` method, before it touches its working set. That way its first-touch memory is also allocated on the right NUMA node.
 
-**Java** (JDK 22+, Foreign Function & Memory API, no library):
+**Java** (JDK 22+, Foreign Function & Memory API, no library). The thread builds a one-bit CPU mask and calls `sched_setaffinity(0, …)` on itself before running its loop:
+
+<details>
+<summary><b>Full class: <code>PinnedRunnable</code></b> (about 30 lines)</summary>
 
 ```java
 import java.lang.foreign.*;
@@ -208,6 +264,8 @@ public final class PinnedRunnable implements Runnable {
     }
 }
 ```
+
+</details>
 
 Start the JVM with `--enable-native-access=ALL-UNNAMED` (or the module name), otherwise the JDK warns about the restricted call, and future releases deny it. The example's [`ThreadAffinity`](../examples/java-latency-probe/src/main/java/com/example/lowlat/ThreadAffinity.java) adds `errno` capture, `sched_getcpu()`, and reading the mask back for the start-up log.
 
@@ -255,6 +313,18 @@ Thread names matter here. Name your threads (`Thread.setName`, `pthread_setname_
 ### 6.4 Busy-spin vs back-off
 
 A pinned critical thread normally **busy-spins**: it polls its queue or socket in a tight loop and never blocks. Blocking means a futex sleep followed by a wake-up, and the wake-up costs 5–50 µs through the scheduler.
+
+```mermaid
+flowchart LR
+  q{"Does this thread own<br/>a physical CPU?"} -- "yes: isolated CPU<br/>on bare metal" --> spin["busy-spin<br/>(Thread.onSpinWait)"]
+  q -- "no: VM or<br/>shared CPU" --> back["backoff<br/>spin, then yield, then park"]
+  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
+  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
+  class spin iso
+  class back hk
+```
+
+*Spin only when the CPU belongs to the thread. On a shared or virtual CPU, spinning steals time from other work and raises steal time, so back off.*
 
 | Environment | Idle strategy | Why |
 |---|---|---|
@@ -321,6 +391,21 @@ How to read `/proc/interrupts` on isolated CPUs:
 
 ## 9. Troubleshooting
 
+When an isolated CPU is noisy, the row of `/proc/interrupts` that keeps increasing tells you who is interrupting it:
+
+```mermaid
+flowchart TD
+  s(["Isolated CPU is noisy"]) --> r{"Which row<br/>increases?"}
+  r -- "LOC at HZ" --> f1["More than one runnable task, or nohz_full<br/>not active: check ps -eLo psr and Guide 01 §7"]
+  r -- "RES" --> f2["Another task keeps waking there:<br/>find it with ps -eLo psr,comm"]
+  r -- "CAL or TLB" --> f3["munmap or mprotect in the process:<br/>fewer mapping changes, huge pages (Guide 03)"]
+  r -- "a NIC row" --> f4["IRQ affinity or irqbalance:<br/>§4.3 and Guide 04 §6"]
+  r -- "none, still slow" --> f5["Kernel thread or RT throttling:<br/>rtla osnoise top, §4.4, §5"]
+```
+
+*Match the increasing interrupt row to its cause: tick, rescheduling IPI, TLB shootdown, device interrupt, or, when none increases, a kernel thread or RT throttling.*
+
+
 | Symptom | Cause | Fix |
 |---|---|---|
 | All critical threads on the first isolated CPU | Pinned to a *range* of isolated CPUs | One CPU per thread |
@@ -333,12 +418,11 @@ How to read `/proc/interrupts` on isolated CPUs:
 
 ## 10. Rollback
 
-```bash
-sudo sed -i '/^CPUAffinity=/d;/^DefaultLimitRTPRIO=/d;/^DefaultLimitNICE=/d' /etc/systemd/system.conf
-sudo rm -f /etc/sysctl.d/91-lowlat-rt.conf && sudo sysctl -w kernel.sched_rt_runtime_us=950000
-sudo systemctl enable --now irqbalance
-sudo systemctl reboot        # also restores the default workqueue cpumask (all CPUs)
-```
+- [ ] Remove the systemd defaults: `sudo sed -i '/^CPUAffinity=/d;/^DefaultLimitRTPRIO=/d;/^DefaultLimitNICE=/d' /etc/systemd/system.conf`
+- [ ] Restore RT throttling: `sudo rm -f /etc/sysctl.d/91-lowlat-rt.conf && sudo sysctl -w kernel.sched_rt_runtime_us=950000`
+- [ ] Re-enable irqbalance: `sudo systemctl enable --now irqbalance`
+- [ ] Reboot: `sudo systemctl reboot`. This also restores the default workqueue cpumask (all CPUs).
+- [ ] Confirm: `grep Cpus_allowed_list /proc/1/status` lists every CPU
 
 Every file the script touched is also saved under `/var/lib/lowlat/factory-settings/` (first-ever copy) and `/var/lib/lowlat/backup/<timestamp>/`.
 
@@ -350,7 +434,15 @@ Every file the script touched is also saved under `/var/lib/lowlat/factory-setti
 | Application pins one thread per vCPU | ✅ | ⚠️ Only if the hypervisor pins vCPUs to dedicated pCPUs. Otherwise pinning inside the guest does not help. |
 | Busy-spin idle strategy | ✅ | ❌ Use back-off |
 
-## 12. References
+## 12. Key takeaways
+
+- One critical thread per isolated CPU. Everything else, including JVM service threads, stays on the OS CPUs.
+- Isolated CPUs have no load balancing. A mask that spans several of them stacks threads on the first one.
+- systemd `CPUAffinity` is inherited affinity, not a cpuset, so the application can still pin onto isolated CPUs.
+- Turn RT throttling off only for FIFO spinners on isolated CPUs, or you risk a 50 ms stall every second.
+- Verify with `/proc/interrupts` and `rtla osnoise`: kernel threads may exist on an isolated CPU, but they must stay asleep.
+
+## 13. References
 
 - `man 7 sched`, `man 1 taskset`, `man 8 numactl`, `man 5 systemd-system.conf`
 - Workqueues: <https://docs.kernel.org/core-api/workqueue.html>

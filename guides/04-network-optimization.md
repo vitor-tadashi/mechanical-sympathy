@@ -9,20 +9,41 @@
 | **Applies to** | Bare metal: everything. VMs: coalescing/offloads where the virtual NIC supports them, and IRQ affinity for virtio/SR-IOV queues. |
 | **Depends on** | [Guide 02](02-cpu-core-isolation.md) (CPU layout, irqbalance disabled) |
 
+## At a glance
+
+- **What:** give each traffic class its own NIC, then set every critical NIC so that a packet never waits (coalescing 0, no PAUSE, no batching offloads), is never dropped (large rings), and is handled on a known housekeeping CPU near the card.
+- **Why:** adaptive coalescing alone adds 30–50 µs to the first packet of a burst, PAUSE frames stall a port for milliseconds, and one dropped TCP segment costs a 200 ms retransmit.
+- **Cost:** one interrupt per packet on the IRQ CPU, lower bulk throughput unless you use the bulk profile, and a short link reset when queues or rings change.
+
+**Time:** ~1 h (mostly discovery and the role map), no reboot · **Do this if:** kernel-stack NICs carry latency-critical traffic · **Skip if:** you're working on the management NIC you are logged in through (role `mgmt` is never tuned).
+
+```mermaid
+flowchart LR
+  g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
+  class g04 focus
+  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+```
+
+*Guide 04 uses the CPU layout from Guide 02 to decide where every NIC interrupt goes.*
+
 ---
 
 ## 1. Where network latency hides
 
 A packet arriving on the wire goes through the following stages before the application reads it (details in [concepts/network-tuning.md](../concepts/network-tuning.md)):
 
+```mermaid
+flowchart LR
+  nic["NIC<br/>MAC, DMA to RX ring"] --> co["coalescing<br/>timer"]:::risk --> irq["hard IRQ<br/>CPU X"] --> napi["softirq, CPU X<br/>NAPI, GRO, IP, UDP/TCP"] --> sock["socket<br/>queue"] --> app["app thread<br/>CPU Y"]
+  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
 ```
-wire ─► NIC MAC ─► RX ring (DMA to host memory) ─► [interrupt coalescing timer] ─► hard IRQ on CPU X
-     ─► NAPI poll in softirq on CPU X ─► GRO/IP/UDP/TCP ─► socket queue ─► wake/poll by the app thread on CPU Y
-```
+
+*A received packet crosses six stages. The coalescing timer, highlighted, is where most of the avoidable waiting happens, and the IRQ CPU X is never the application's isolated CPU Y.*
 
 Each stage has a setting that trades latency against throughput or CPU cost:
 
-| Stage | Default behaviour | Latency cost | Setting |
+| Stage | Default behavior | Latency cost | Setting |
 |---|---|---|---|
 | Interrupt coalescing | Wait up to *N* µs, or *M* frames, before raising the IRQ. Often **adaptive**. | +10 to +100 µs per packet at low rates | `ethtool -C` |
 | Receive aggregation (GRO/LRO) | Merge consecutive TCP segments | small, variable | `ethtool -K` |
@@ -48,7 +69,38 @@ The goal of this guide is that a critical packet **never waits** (coalescing 0, 
 
 Latency-critical traffic should never share a NIC, a queue, an IRQ, or a CPU with bulk traffic. A 50 MB log shipment in front of a 200-byte order is head-of-line blocking at every layer. The reference host uses **five roles**:
 
+```mermaid
+flowchart LR
+  subgraph crit["critical · NUMA node 1"]
+    e1["ens1f0<br/>orders, market data"]
+    e2["ens1f1<br/>backend, risk, IPC"]
+  end
+  subgraph other["timing, bulk, mgmt · NUMA node 0"]
+    t["eno1 · timing<br/>PTP"]
+    b1["ens2f0 · bulk<br/>replication, archive"]
+    b2["ens2f1 · bulk<br/>logs, reports"]
+    m["eno2 · mgmt<br/>SSH, config (untouched)"]
+  end
+  e1 --> c1["CPU 1<br/>node-1 housekeeping"]
+  e2 --> c1
+  t --> c0["CPU 0"]
+  m --> c0
+  b1 --> c30["CPU 30<br/>far from critical"]
+  b2 --> c30
+  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
+  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
+  classDef muted fill:#eeeeee,stroke:#777777,color:#333333
+  class e1,e2 iso
+  class c1,c0,c30,t,b1,b2 hk
+  class m muted
 ```
+
+*Both critical NICs sit on node 1 and send their interrupts to CPU 1, the node's only housekeeping CPU. Timing and management interrupts go to CPU 0, and bulk interrupts to CPU 30, away from everything critical.*
+
+<details>
+<summary><b>The same host as text</b>, with link speeds</summary>
+
+```text
                                  ┌──────────────────────── host ─────────────────────────┐
   Exchange / clients  ══10/25G══►│ ens1f0  critical  (orders, market data)   IRQ → CPU 1 │  NUMA node 1
   Internal services   ══10/25G══►│ ens1f1  critical  (backend, risk, IPC)    IRQ → CPU 1 │  (same card, same node
@@ -59,6 +111,8 @@ Latency-critical traffic should never share a NIC, a queue, an IRQ, or a CPU wit
   Ops network         ════1G════►│ eno2    mgmt      (SSH, config mgmt)      IRQ → CPU 0 │  untouched
                                  └────────────────────────────────────────────────────────┘
 ```
+
+</details>
 
 | Role | Examples | Coalescing | Offloads | txqueuelen | IRQ CPUs |
 |---|---|---|---|---|---|
@@ -106,6 +160,15 @@ Save this output **before** tuning (`scripts/04-network` has `show_nic_state <if
 
 ## 5. Per-NIC settings (`tune_nic_low_latency`)
 
+For each `critical` and `timing` NIC, in this order (bulk NICs follow §5.9, `mgmt` NICs are skipped):
+
+1. Queues: one per IRQ CPU (§5.1). **Resets the link.**
+2. Adaptive coalescing off (§5.2), then coalescing 0 (§5.3).
+3. PAUSE frames off (§5.4).
+4. TSO, GSO and LRO off (§5.5). Checksum offload stays on (§5.6).
+5. Rings at maximum (§5.7). **Resets the link.**
+6. Place the IRQs (§6), always after steps 1 and 5.
+
 ### 5.1 Queues (channels): `ethtool -L`
 
 A modern NIC is not one pipe. It is a set of **queues** (rings of packet descriptors), and each queue has its own **MSI-X interrupt vector**. `ethtool` calls a queue together with its interrupt a **channel**:
@@ -127,13 +190,18 @@ Combined:       63           ← the driver default: often one per CPU, up to th
 
 Most current drivers (ixgbe, i40e, ice, mlx5, sfc, bnxt) only use `Combined`. `ethtool -L ens1f0 combined N` therefore means "use N queue pairs, and N interrupts". Where a packet goes:
 
+```mermaid
+flowchart LR
+  nic["NIC:<br/>RSS hash of<br/>src/dst IP + port"] -- "indirection table<br/>(ethtool -x)" --> q0["queue 0"]
+  nic --> q1["queue 1"]
+  nic --> qn["queue N"]
+  q0 --> i0["IRQ 120"] --> cpu["CPU 1<br/>(smp_affinity_list)"]
+  q1 --> i1["IRQ 121"] --> cpu
+  qn --> in["IRQ 12N"] --> cpu
+  cpu --> napi["NAPI poll<br/>softirq"] --> sock["socket"]
 ```
-             RSS hash (src/dst IP + port)            one MSI-X vector per channel
-wire ─► NIC ──────────────┬─► queue 0 ─► IRQ 120 ─► smp_affinity_list ─► CPU 1 ─► NAPI poll (softirq) ─► socket
-                          ├─► queue 1 ─► IRQ 121 ─►        "          ─► CPU 1
-                          └─► queue N ─► IRQ 12N ─►        "          ─► CPU 1
-             indirection table (ethtool -x) maps hash buckets to queues
-```
+
+*The NIC hashes each flow to a queue, each queue has its own MSI-X interrupt, and here every interrupt points at CPU 1. So one CPU drains all the queues in turn, which is why the queue count should follow the number of IRQ CPUs.*
 
 The queue count matters in three places:
 
@@ -180,7 +248,8 @@ With **DPDK on an Intel card** the question disappears: the port is unbound from
 
 In `lowlat.conf`, `KERNEL_BYPASS_DRIVER` and `KERNEL_BYPASS_COMMAND` mark socket-acceleration NICs. The script gives those NICs one queue, whatever their `irq_cpus` field says.
 
-**Changing channels resets the NIC** on most drivers (link down for 1–3 s), and the new queues come up with **default IRQ affinity**. Do it at boot or in a maintenance window, never during trading, and always re-run the IRQ placement (§6) afterwards. `apply-all` and `lowlat-runtime.service` already run the two steps in that order.
+> [!WARNING]
+> **Changing channels resets the NIC** on most drivers (link down for 1–3 s), and the new queues come up with **default IRQ affinity**. Do it at boot or in a maintenance window, never during trading, and always re-run the IRQ placement (§6) afterwards. `apply-all` and `lowlat-runtime.service` already run the two steps in that order.
 
 ### 5.2 Adaptive coalescing off: `ethtool -C adaptive-rx off adaptive-tx off`
 
@@ -249,7 +318,8 @@ Where the NIC interrupt runs is where the **softirq** (protocol processing) runs
 | **B. Busy polling** | NAPI is polled **from the app thread's syscall** (`SO_BUSY_POLL`, `net.core.busy_read`) | isolated CPU | Skips the IRQ → softirq → wake-up chain | CPU cost; the IRQ still fires unless deferred (`napi_defer_hard_irqs`) |
 | **C. Kernel bypass** (§7, [Guide 08](08-kernel-bypass.md)) | none for data (user space polls the NIC) | isolated CPU | Lowest latency, no syscalls | Vendor stack, own tuning, huge pages |
 
-Never put the IRQs of a kernel-stack NIC **on an isolated CPU** that runs a spinning thread. The softirq then has to preempt your thread (or waits in `ksoftirqd` behind it, see [Guide 02 §6.5](02-cpu-core-isolation.md#65-real-time-scheduling-class-usually-unnecessary)).
+> [!WARNING]
+> Never put the IRQs of a kernel-stack NIC **on an isolated CPU** that runs a spinning thread. The softirq then has to preempt your thread (or waits in `ksoftirqd` behind it, see [Guide 02 §6.5](02-cpu-core-isolation.md#65-real-time-scheduling-class-usually-unnecessary)).
 
 Rules for the reference host:
 
@@ -270,7 +340,8 @@ cat /proc/irq/<irq>/effective_affinity_list        # what the interrupt controll
 - With a multi-CPU list, most interrupt controllers (x86 APIC in physical mode) deliver to **one** CPU of the set. Check `effective_affinity_list`.
 - Some drivers on newer kernels use **kernel-managed** IRQs, whose affinity is fixed and `write` fails with `EIO`. The script logs these and continues. For those drivers, reduce the queue count (§5.1) so the managed spreading only covers housekeeping CPUs, or use `isolcpus=managed_irq,...` ([Guide 01](01-grub-bootloader-tuning.md)).
 
-**irqbalance must be off** ([Guide 02 §4.3](02-cpu-core-isolation.md#43-irqbalance-persistent)), or it will rewrite these files within 10 seconds.
+> [!IMPORTANT]
+> **irqbalance must be off** ([Guide 02 §4.3](02-cpu-core-isolation.md#43-irqbalance-persistent)), or it will rewrite these files within 10 seconds.
 
 ### 6.3 RPS, RFS and XPS
 
@@ -297,7 +368,11 @@ Nothing in this guide survives a reboot or a driver reload. Two supported ways t
 
 **A. Oneshot unit (default, used by `apply-all`)**: `scripts/systemd/lowlat-runtime.service` runs after `network-online.target` and calls `04-network --runtime` (and the other runtime parts). One script, one place, and it reads the same `lowlat.conf`.
 
-**B. NetworkManager `ethtool.*` properties (RHEL 9)**: NetworkManager applies them every time the connection comes up, including after a link flap:
+**B. NetworkManager `ethtool.*` properties (RHEL 9)**: NetworkManager applies them every time the connection comes up, including after a link flap.
+
+> [!NOTE]
+> **Not proven in production.** The reference hosts use option A. Option B follows the NetworkManager documentation.
+
 
 ```bash
 nmcli connection modify ens1f0 \
@@ -346,6 +421,21 @@ Record p50/p99/p99.9 before and after. The biggest visible change is usually in 
 
 ## 11. Troubleshooting
 
+```mermaid
+flowchart TD
+  s(["Network latency or drops"]) --> d{"Drops?"}
+  d -- "ethtool -S drop/miss" --> f1["Ring too small or IRQ CPU too slow:<br/>rings at max (§5.7), check squeezed"]
+  d -- "softnet squeezed" --> f2["IRQ CPU cannot keep up:<br/>dedicate it, add a second CPU,<br/>or busy polling / bypass"]
+  d -- none --> r{"Settings<br/>reverted?"}
+  r -- "after minutes" --> f3["irqbalance, adaptive coalescing<br/>or NetworkManager re-applying"]
+  r -- "after reboot" --> f4["systemctl status lowlat-runtime"]
+  r -- no --> i{"NIC IRQs on an<br/>isolated CPU?"}
+  i -- yes --> f5["Run 04-network --runtime after<br/>any channel change; add the device to NICS"]
+  i -- no --> f6["See the table below"]
+```
+
+*Check drops first, then whether settings survived, then where the interrupts land. Each branch ends at the fix from the table.*
+
 | Symptom | Cause | Fix |
 |---|---|---|
 | `ethtool -C` → *Operation not supported* | Driver does not implement that parameter | Check `ethtool -c` for supported keys; skip it |
@@ -359,20 +449,30 @@ Record p50/p99/p99.9 before and after. The biggest visible change is usually in 
 
 ## 12. Rollback
 
-```bash
-sudo systemctl disable lowlat-runtime.service
-sudo systemctl reboot                                   # drivers load with their defaults
-# or, per interface, without a reboot:
-sudo ethtool -C ens1f0 adaptive-rx on adaptive-tx on
-sudo ethtool -K ens1f0 tso on gso on
-sudo ethtool -A ens1f0 autoneg on rx on tx on
-sudo ethtool -L ens1f0 combined <n>                     # the "Current" value you saved in §4 (resets the link)
-sudo ethtool -X ens1f0 default                          # RSS indirection back to the driver default
-sudo ethtool -N ens1f0 delete <rule id>                 # every ntuple rule listed by ethtool -n
-sudo systemctl enable --now irqbalance
-```
+**Whole host:**
 
-## 13. References
+- [ ] Stop re-applying at boot: `sudo systemctl disable lowlat-runtime.service`
+- [ ] Re-enable irqbalance: `sudo systemctl enable --now irqbalance`
+- [ ] Reboot, so the drivers load with their defaults: `sudo systemctl reboot`
+
+**One interface, without a reboot:**
+
+- [ ] Adaptive coalescing on: `sudo ethtool -C ens1f0 adaptive-rx on adaptive-tx on`
+- [ ] Offloads on: `sudo ethtool -K ens1f0 tso on gso on`
+- [ ] PAUSE on: `sudo ethtool -A ens1f0 autoneg on rx on tx on`
+- [ ] Queue count back to the "Current" value you saved in §4 (resets the link): `sudo ethtool -L ens1f0 combined <n>`
+- [ ] RSS indirection back to the driver default: `sudo ethtool -X ens1f0 default`
+- [ ] Every ntuple rule listed by `ethtool -n`: `sudo ethtool -N ens1f0 delete <rule id>`
+
+## 13. Key takeaways
+
+- One traffic class per NIC. Critical traffic never shares a NIC, queue, IRQ or CPU with bulk.
+- Critical NICs: adaptive coalescing off, then `rx-usecs 0`; PAUSE off; TSO/GSO/LRO off; rings at maximum; checksum offload on.
+- On the kernel stack, one queue per IRQ CPU. Add IRQ CPUs first, then queues.
+- NIC interrupts go to a node-local housekeeping CPU, never an isolated one, and irqbalance stays off.
+- Nothing here is persistent. `lowlat-runtime.service` re-applies it at every boot, in the right order.
+
+## 14. References
 
 - `man 8 ethtool`; kernel networking scaling: <https://docs.kernel.org/networking/scaling.html>
 - NAPI and busy polling: <https://docs.kernel.org/networking/napi.html>

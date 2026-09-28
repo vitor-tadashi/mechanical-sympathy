@@ -9,6 +9,24 @@
 | **Applies to** | Bare metal: full set. Virtual machines: the latency subset only. |
 | **Time** | 30 min to prepare, 1 reboot, 15 min to verify. |
 
+## At a glance
+
+- **What:** kernel boot arguments that decide which CPUs the scheduler uses, whether they tick, where RCU work runs, how deep idle CPUs sleep, and which page sizes exist.
+- **Why:** several of them (`isolcpus`, `nohz_full`, `rcu_nocbs`) can only be set at boot, and they remove the rare 20–200 µs interruptions that dominate p99.9.
+- **Cost:** a reboot, 100 % CPU and higher power from `idle=poll`, and, only if you opt in, weaker CPU vulnerability protection.
+
+**Time:** ~45 min + 1 reboot · **Do this if:** you run a latency-critical application on RHEL 8/9 (full set on bare metal, subset in a VM) · **Skip if:** it's a container, or nobody has profiled the application yet.
+
+```mermaid
+flowchart LR
+  g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
+  class g01 focus
+  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+```
+
+*Guide 01 is the first step. Every later guide assumes these boot arguments are in place.*
+
 ---
 
 ## 1. Why the kernel command line matters
@@ -38,6 +56,21 @@ The goal is **not** a lower *average* latency. The goal is to remove the causes 
 
 The script enforces this split automatically, using host-class detection (`systemd-detect-virt` → DMI → the CPU `hypervisor` flag):
 
+```mermaid
+flowchart LR
+  d{"Host class?"} -- bare_metal --> full["Latency subset<br/>+ isolation set"]
+  d -- virtual_machine --> sub["Latency subset only:<br/>idle=poll, C-state caps, THP off"]
+  d -- "container / unknown" --> no["Refuse:<br/>tune the host kernel instead"]
+  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
+  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
+  classDef muted fill:#eeeeee,stroke:#777777,color:#333333
+  class full iso
+  class sub hk
+  class no muted
+```
+
+*Bare metal gets both parameter sets, a VM gets only the latency subset, and a container is refused because the kernel belongs to the host.*
+
 | Capability | `bare_metal` | `virtual_machine` | `container` / `unknown` |
 |---|---|---|---|
 | Latency subset (`idle`, C-states, THP) | apply | apply | refuse |
@@ -66,7 +99,7 @@ Rules for choosing the layout (see [Guide 02 §3](02-cpu-core-isolation.md#3-des
 
 1. Put the latency-critical threads on the **same NUMA node as the latency-critical NIC**.
 2. Keep **at least one CPU on that node** for housekeeping: its NIC interrupts, `rcuo` threads, and the kernel's per-node work.
-3. If Hyper-Threading is on, isolate **both siblings** of a physical core and leave one idle. Otherwise the neighbour thread shares your L1/L2 and execution ports. Better still, disable HT in the BIOS.
+3. If Hyper-Threading is on, isolate **both siblings** of a physical core and leave one idle. Otherwise the neighbor thread shares your L1/L2 and execution ports. Better still, disable HT in the BIOS.
 4. CPU 0 is never isolated. Some interrupts and timers cannot move away from it.
 
 The reference host used throughout this documentation (see [`scripts/lowlat.conf.example`](../scripts/lowlat.conf.example)):
@@ -91,8 +124,26 @@ grubby --update-kernel=ALL --args="isolcpus=3,5,7,9"           # add the new one
 
 Always **remove before adding**. `grubby --args` does not *replace* an existing `name=value`; it adds another one, and then the kernel sees both.
 
+```mermaid
+sequenceDiagram
+  participant S as 01-grub-bootloader
+  participant G as grubby
+  participant B as /boot/loader/entries/*.conf
+  participant K as Kernel at next boot
+  S->>G: --remove-args=isolcpus
+  S->>G: --args=isolcpus=3,5,7,...
+  G->>B: rewrite the options line of every entry
+  S->>S: grub2-mkconfig (grub.cfg)
+  Note over K: reboot
+  B->>K: GRUB passes the options line
+  K->>K: /proc/cmdline, /sys/devices/system/cpu/isolated
+```
+
+*The script removes and re-adds each argument through `grubby`, which rewrites every BLS entry. Nothing changes until the reboot, when GRUB hands the new line to the kernel.*
+
 `--update-kernel=ALL` updates every installed kernel, and new kernels installed by `dnf` inherit the arguments of the default entry. After editing, the script also regenerates `grub.cfg` (`/boot/grub2/grub.cfg`, or the EFI path on RHEL 8 UEFI hosts), the same way the reference implementation does.
 
+> [!IMPORTANT]
 > Editing `GRUB_CMDLINE_LINUX` in `/etc/default/grub` alone is **not enough** on BLS systems. It only affects kernels installed afterwards, or a `grub2-mkconfig` run with `GRUB_ENABLE_BLSCFG=false`. Use `grubby`.
 
 ## 5. The parameters, one by one
@@ -119,10 +170,13 @@ Always **remove before adding**. `grubby --args` does not *replace* an existing 
 | `nohz` | `off` | Disables *idle* dynticks (`CONFIG_NO_HZ_IDLE`). See the note below. |
 | `skew_tick` | `1` | Offsets each CPU's tick timer so that the ticks do not all fire at the same instant. This reduces contention on the jiffies/timekeeping locks on large machines. |
 
+> [!WARNING]
 > **`rcu_nocbs` must list the isolated CPUs.** It names the CPUs whose callbacks are **moved away**. A common mistake, found in real tuning scripts, is to set `rcu_nocbs` to the *housekeeping* CPUs ("the CPUs that do RCU work"). That does the opposite of what you want: the isolated CPUs keep running their callbacks in softirq, and the housekeeping CPUs get an extra layer of kthreads. On recent kernels `nohz_full` implies `rcu_nocbs` for the same CPUs, but setting it explicitly documents intent and covers older kernels.
 
+> [!NOTE]
 > **`rcu_nocb_poll` is a flag.** Writing `rcu_nocb_poll=10` is accepted, but the `10` is ignored. There is no poll-interval parameter.
 
+> [!NOTE]
 > **`nohz=off` together with `nohz_full`: verify on your kernel.** `nohz=off` only disables tickless *idle*. With `idle=poll` your CPUs are never idle anyway, so most of the time the parameter has no effect. It is kept for parity with proven production configurations. After the reboot, verify that the isolated CPUs really stopped ticking (§7). If the `LOC` counter keeps increasing at `HZ` on an isolated CPU that runs a single pinned busy thread, remove `nohz=off` and test again.
 
 **What isolation does *not* do.** `isolcpus` does not move per-CPU kernel threads (`ksoftirqd/N`, `kworker/N:*`, `migration/N`, `cpuhp/N`), and it does not route interrupts. Those are handled by [Guide 02](02-cpu-core-isolation.md) (workqueues, irqbalance), [Guide 04](04-network-optimization.md) (NIC IRQ affinity) and [Guide 05](05-cgroup-isolation.md) (user-space daemons).
@@ -134,6 +188,9 @@ Always **remove before adding**. `grubby --args` does not *replace* an existing 
 | `intel_pstate=disable` | Falls back from the `intel_pstate` driver (which, with HWP, lets the CPU pick its own frequency) to `acpi-cpufreq`, where the OS governor decides. | With `acpi-cpufreq` plus the `performance` governor (set by the tuned profile in [Guide 07](07-os-hygiene.md)), the frequency stays fixed and predictable. HWP-driven frequency changes show up as jitter. |
 
 `intel_pstate=performance` is **not** a valid value. The valid choices are `disable`, `passive`, `active`, `no_hwp`, `hwp_only`, `force`, and a few others. On AMD hosts this parameter has no effect; use `amd_pstate=passive` or keep `acpi-cpufreq`, and set the governor through tuned.
+
+> [!NOTE]
+> **Not proven in production.** The reference hosts are Intel Xeon. The AMD advice above follows the kernel documentation and has not been measured on a production AMD EPYC host.
 
 ### 5.4 Silence the watchdogs and error pollers
 
@@ -152,11 +209,12 @@ Always **remove before adding**. `grubby --args` does not *replace* an existing 
 
 These only set the **page size**. The **count** is deliberately *not* set on the command line (`hugepages=N`), because a boot-time count is split evenly across NUMA nodes and you cannot say "24 GiB on node 1, 4 GiB on node 0". [Guide 03](03-huge-pages-configuration.md) reserves the pages **per node** from an early-boot systemd unit. That unit has `ConditionKernelCommandLine=hugepagesz=2M`, so it only runs on hosts where this guide has been applied.
 
-1 GiB pages are the exception. They must be reserved at boot (`hugepagesz=1G hugepages=N`), because contiguous 1 GiB blocks almost never exist once the system is running. See Guide 03 §6.
+1 GiB pages are the exception. They must be reserved at boot (`hugepagesz=1G hugepages=N`), because contiguous 1 GiB blocks almost never exist once the system is running. See [Guide 03 §7](03-huge-pages-configuration.md#7-1-gib-pages).
 
 ### 5.6 IOMMU and CPU vulnerability mitigations (security-sensitive)
 
-Both groups are **opt-in** in `lowlat.conf` (`GRUB_DISABLE_IOMMU`, `GRUB_DISABLE_MITIGATIONS`).
+> [!CAUTION]
+> This section **removes security controls**. Both groups are **opt-in** in `lowlat.conf` (`GRUB_DISABLE_IOMMU`, `GRUB_DISABLE_MITIGATIONS`) and stay off unless your security team signs off in writing.
 
 With `KERNEL_BYPASS_STACK=dpdk` and the `vfio-pci` driver, the script does the opposite: it sets `intel_iommu=on iommu=pt` whatever `GRUB_DISABLE_IOMMU` says. VFIO cannot work without DMA translation. `iommu=pt` keeps the devices that stay with kernel drivers on identity (passthrough) mappings, so only the ports handed to DPDK go through the IOMMU ([Guide 08 §4](08-kernel-bypass.md#4-prerequisites)).
 
@@ -205,9 +263,10 @@ sudo systemctl reboot
 scripts/01-grub-bootloader --verify
 ```
 
-Dry-run output (abridged, bare metal):
+<details>
+<summary><b>Dry-run output</b> (abridged, bare metal)</summary>
 
-```
+```text
 01. Kernel command line: latency subset (host_class=bare_metal)
     01.01 Polling idle loop instead of halting (idle=poll)
            [dry-run] grubby --update-kernel=ALL --remove-args=idle
@@ -219,6 +278,8 @@ Dry-run output (abridged, bare metal):
 03. Regenerating GRUB configuration
            [dry-run] grub2-mkconfig -o /boot/grub2/grub.cfg
 ```
+
+</details>
 
 Functions you can reuse by sourcing the script (`. scripts/01-grub-bootloader`): `apply_grub_kernel_parameters`, `apply_latency_grub_subset`, `apply_isolation_grub_set`, `verify_grub_kernel_parameters`, `rollback_grub_kernel_parameters`, `grub_set_arg`.
 
@@ -255,26 +316,43 @@ kill $SPIN
 
 ## 8. Troubleshooting
 
+```mermaid
+flowchart TD
+  s(["Problem after the reboot"]) --> b{"Boots?"}
+  b -- no --> f1["GRUB menu: e, delete the argument<br/>from the linux line, Ctrl-x"]
+  b -- yes --> i{"isolated file<br/>empty?"}
+  i -- yes --> f2["Args never reached BLS:<br/>grubby --info=DEFAULT, re-apply"]
+  i -- no --> t{"LOC still<br/>ticks at HZ?"}
+  t -- yes --> f3["More than one task on the CPU,<br/>or a stray kworker: fix the<br/>workqueue mask (Guide 02)"]
+  t -- no --> p{"Threads stacked<br/>on one CPU?"}
+  p -- yes --> f4["Pin each thread to one CPU<br/>(Guide 02 §6)"]
+  p -- no --> f5["See the table below"]
+  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
+  class f1 risk
+```
+
+*Check in order: whether the host boots, whether the kernel accepted the CPU list, whether the tick stopped, and whether each thread has its own CPU.*
+
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `/sys/devices/system/cpu/isolated` is empty after reboot | Arguments went into `/etc/default/grub` only, or the wrong `grub.cfg` was regenerated | `grubby --info=DEFAULT` must show the args. Re-apply with `grubby`. On UEFI RHEL 8, regenerate `/boot/efi/EFI/redhat/grub.cfg`. |
 | Application threads are all on CPU 3 | Threads were started with an affinity mask covering several isolated CPUs. Isolated CPUs have **no load balancing**, so the kernel never moves them. | Pin **each** thread to **one** CPU ([Guide 02](02-cpu-core-isolation.md#6-pinning-the-application)). |
 | LOC counter still ticks at HZ on isolated CPU | More than one runnable task on that CPU, or an unbound timer/kworker landed there | `ps -eLo psr,comm | awk '$1==5'`, then fix the workqueue mask ([Guide 02](02-cpu-core-isolation.md)). Try removing `nohz=off` (§5.2). |
 | Interfaces renamed after reboot | `biosdevname` changed | Remove the argument, or update the network profiles to the new names. |
-| Host is hot / fans at max / power alarms | `idle=poll` | Expected. Check datacentre power budgets. For hosts that are not latency-critical, drop `idle=poll` and keep the C-state caps. |
+| Host is hot / fans at max / power alarms | `idle=poll` | Expected. Check datacenter power budgets. For hosts that are not latency-critical, drop `idle=poll` and keep the C-state caps. |
 | `dmesg` shows "Unknown kernel command line parameters" | Typo, or a parameter this kernel does not support | Fix it. Unknown `name=value` parameters are passed to init as environment variables, which is harmless but means the setting is not active. |
 | Host does not boot | Bad argument (for example a CPU list naming a non-existent CPU) | At the GRUB menu press `e`, delete the argument from the `linux` line, and press `Ctrl-x`. Then fix it with `grubby` once the host is up. |
 
 ## 9. Rollback
 
-```bash
-sudo scripts/01-grub-bootloader --rollback        # removes every argument this guide manages
-sudo systemctl reboot
-```
+> [!WARNING]
+> Before applying anything to a production host, make sure the out-of-band console (iLO/iDRAC/IPMI SOL) works. It is the only way to edit the GRUB line if the host does not come back.
 
-Manual rollback of a single argument: `grubby --update-kernel=ALL --remove-args="nohz_full"`.
-
-Before applying anything to a production host, make sure the out-of-band console (iLO/iDRAC/IPMI SOL) works. It is the only way to edit the GRUB line if the host does not come back.
+- [ ] Remove every argument this guide manages: `sudo scripts/01-grub-bootloader --rollback`
+- [ ] Or remove a single one: `sudo grubby --update-kernel=ALL --remove-args="nohz_full"`
+- [ ] Check the stored line: `sudo grubby --info=DEFAULT`
+- [ ] Reboot: `sudo systemctl reboot`
+- [ ] Confirm: `cat /proc/cmdline` no longer shows the arguments, and `cat /sys/devices/system/cpu/isolated` is empty
 
 ## 10. Bare metal vs VM summary
 
@@ -287,7 +365,15 @@ Before applying anything to a production host, make sure the out-of-band console
 | `hugepagesz` | ✅ | ❌ in this configuration. Possible only if the hypervisor backs guest memory with huge pages. |
 | IOMMU / mitigations | Opt-in | ❌ Never in a shared hypervisor. |
 
-## 11. References
+## 11. Key takeaways
+
+- Boot arguments decide the noise floor. `isolcpus`, `nohz_full` and `rcu_nocbs` can't be changed without a reboot.
+- `rcu_nocbs` lists the **isolated** CPUs, the ones whose callbacks move away, not the housekeeping CPUs.
+- Always use `grubby`, and always remove an argument before adding it again.
+- VMs get only the latency subset. Real isolation in a VM comes from dedicated physical CPUs on the hypervisor.
+- Mitigations and IOMMU stay on unless security signs off. Verify the tick really stopped, don't assume it.
+
+## 12. References
 
 - Kernel parameters: <https://docs.kernel.org/admin-guide/kernel-parameters.html>
 - NO_HZ (adaptive ticks): <https://docs.kernel.org/timers/no_hz.html>
