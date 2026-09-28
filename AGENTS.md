@@ -24,6 +24,7 @@ These rules apply to every change, whoever makes it. If a rule and a request con
 - Guides are deep. For every setting they explain what it does, why this value was chosen, how to verify it, how to troubleshoot it and how to roll it back. Never ship an outline.
 - One script per guide. A new guide `guides/NN-name.md` comes with `scripts/NN-name`, and with entries in `README.md`, `INDEX.md` and `QUICK_START.md`, all in the same change.
 - Advice that has not been proven in production is marked as such in the text.
+- Pages follow [`STYLE.md`](STYLE.md): the short answer first (At a glance), a diagram where a flow, layout or decision needs one, depth folded into `<details>`, and Key takeaways at the end.
 - American English in every committed file.
 
 ## 4. Tuning stance
