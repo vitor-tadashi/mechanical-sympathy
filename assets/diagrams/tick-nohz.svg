@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 290" width="760" height="290" role="img" aria-labelledby="t d">
+<title id="t">The scheduler tick interrupts a busy CPU unless nohz_full stops it</title>
+<desc id="d">Two timelines for one CPU running a single busy-spinning thread. With the default periodic tick, a timer interrupt cuts into the thread hundreds of times per second. With nohz_full and exactly one runnable task, the tick stops and the thread runs uninterrupted, apart from about one residual tick per second.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .run { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+  .tick { fill: #9b1c1c; transform-box: fill-box; transform-origin: center; animation: flash 6s linear infinite; }
+  .resid { fill: #9b1c1c; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @keyframes flash {
+    0%, 3%   { fill: #ff3b3b; transform: scaleY(1.15); }
+    6%, 100% { fill: #9b1c1c; transform: scaleY(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tick, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="290" rx="8"/>
+
+<rect class="lane" x="10" y="10" width="740" height="125" rx="6"/>
+<text class="cap" x="24" y="34">Default: periodic tick (HZ = 1000)</text>
+<text class="sub" x="24" y="52">Every tick is a timer interrupt that takes the CPU away from the thread for 1 to 5 µs.</text>
+<text class="lbl" x="24" y="97">CPU 5</text>
+<rect class="run" x="150" y="72" width="570" height="40" rx="4"/>
+<rect class="tick" x="164.8" y="66" width="6" height="52" rx="2" style="animation-delay:-5.81s"/>
+<rect class="tick" x="200.4" y="66" width="6" height="52" rx="2" style="animation-delay:-5.44s"/>
+<rect class="tick" x="236.1" y="66" width="6" height="52" rx="2" style="animation-delay:-5.06s"/>
+<rect class="tick" x="271.7" y="66" width="6" height="52" rx="2" style="animation-delay:-4.69s"/>
+<rect class="tick" x="307.3" y="66" width="6" height="52" rx="2" style="animation-delay:-4.31s"/>
+<rect class="tick" x="342.9" y="66" width="6" height="52" rx="2" style="animation-delay:-3.94s"/>
+<rect class="tick" x="378.6" y="66" width="6" height="52" rx="2" style="animation-delay:-3.56s"/>
+<rect class="tick" x="414.2" y="66" width="6" height="52" rx="2" style="animation-delay:-3.19s"/>
+<rect class="tick" x="449.8" y="66" width="6" height="52" rx="2" style="animation-delay:-2.81s"/>
+<rect class="tick" x="485.4" y="66" width="6" height="52" rx="2" style="animation-delay:-2.44s"/>
+<rect class="tick" x="521.1" y="66" width="6" height="52" rx="2" style="animation-delay:-2.06s"/>
+<rect class="tick" x="556.7" y="66" width="6" height="52" rx="2" style="animation-delay:-1.69s"/>
+<rect class="tick" x="592.3" y="66" width="6" height="52" rx="2" style="animation-delay:-1.31s"/>
+<rect class="tick" x="627.9" y="66" width="6" height="52" rx="2" style="animation-delay:-0.94s"/>
+<rect class="tick" x="663.6" y="66" width="6" height="52" rx="2" style="animation-delay:-0.56s"/>
+<rect class="tick" x="699.2" y="66" width="6" height="52" rx="2" style="animation-delay:-0.19s"/>
+<text class="axis" x="435" y="130">one second shown; each mark stands for about 60 ticks</text>
+
+<rect class="lane" x="10" y="150" width="740" height="125" rx="6"/>
+<text class="cap" x="24" y="174">nohz_full, one runnable task</text>
+<text class="sub" x="24" y="192">The tick stops. About one residual tick per second remains.</text>
+<text class="lbl" x="24" y="237">CPU 5</text>
+<rect class="run" x="150" y="212" width="570" height="40" rx="4"/>
+<rect class="resid" x="432" y="206" width="6" height="52" rx="2"/>
+<text class="axis" x="435" y="270">the same second: one residual tick</text>
+
+<line class="head" x1="150" y1="62" x2="150" y2="262"/>
+</svg>
