@@ -158,14 +158,14 @@ These only set the **page size**. The **count** is deliberately *not* set on the
 
 Both groups are **opt-in** in `lowlat.conf` (`GRUB_DISABLE_IOMMU`, `GRUB_DISABLE_MITIGATIONS`).
 
-| Parameter | What it disables | Latency gain | Security cost |
+| Parameter | What it does | Latency gain | Security cost |
 |---|---|---|---|
-| `intel_iommu=off`, `iommu=off` | DMA address translation. Every NIC DMA would otherwise go through the IOMMU and its IOTLB. | Removes IOTLB misses on the DMA path. | Devices can DMA anywhere in memory. **Required ON** for SR-IOV/VFIO/DPDK-with-IOMMU and for Thunderbolt/untrusted devices. |
-| `pti=off` | Kernel Page-Table Isolation (Meltdown). | Removes a CR3 switch and TLB flush on **every syscall and interrupt**. This is the largest single gain in this table. | User space can read kernel memory on vulnerable Intel CPUs. |
-| `nospectre_v1` | Spectre v1 barriers (`lfence`, array index masking) in the kernel. | Small. | Bounds-check bypass attacks. |
-| `nospectre_v2` | Retpolines / IBRS / IBPB on context switch. | Noticeable on context-switch-heavy paths. | Branch-target injection across processes and into the kernel. |
-| `mds=off` | Microarchitectural Data Sampling mitigation (buffer clearing with `VERW` on every kernel exit). | Noticeable on syscall-heavy paths. | ZombieLoad/RIDL-class leaks. |
-| `tsx_async_abort=off` | TAA mitigation (same `VERW` mechanism, plus TSX handling). | Pairs with `mds=off`. | TAA-class leaks. |
+| `intel_iommu=off`, `iommu=off` | Turns DMA address translation off. Devices then DMA straight to physical addresses instead of going through the IOMMU and its IOTLB. | Removes IOTLB misses on the DMA path. | Devices can DMA anywhere in memory. **Required ON** for SR-IOV/VFIO/DPDK-with-IOMMU and for Thunderbolt/untrusted devices. |
+| `pti=off` | Turns Kernel Page-Table Isolation (the Meltdown mitigation) off. Kernel and user space share one page table again, so entering and leaving the kernel no longer switches CR3. | Removes a CR3 switch and TLB flush on **every syscall and interrupt**. This is the largest single gain in this table. | User space can read kernel memory on vulnerable Intel CPUs. |
+| `nospectre_v1` | Stops the kernel from inserting Spectre v1 barriers (`lfence`, array index masking) after bounds checks. | Small. | Bounds-check bypass attacks. |
+| `nospectre_v2` | Stops the kernel from using retpolines / IBRS, and from issuing IBPB on context switch, to protect indirect branches. | Noticeable on context-switch-heavy paths. | Branch-target injection across processes and into the kernel. |
+| `mds=off` | Stops the kernel from clearing CPU buffers (`VERW`) on every return to user space (Microarchitectural Data Sampling mitigation). | Noticeable on syscall-heavy paths. | ZombieLoad/RIDL-class leaks. |
+| `tsx_async_abort=off` | Stops the TSX Async Abort mitigation (the same `VERW` buffer clearing, plus TSX handling). | Pairs with `mds=off`. | TAA-class leaks. |
 
 `mitigations=off` is the umbrella switch for all of the above and any future ones. The explicit list is used here so that a kernel update never silently disables a *new* mitigation you have not reviewed.
 

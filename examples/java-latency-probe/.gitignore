@@ -1,2 +1,6 @@
-target/
+build/
+.gradle/
 log/
+# Gradle is the only build tool for this project
+pom.xml
+target/

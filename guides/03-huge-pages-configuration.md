@@ -207,7 +207,7 @@ Check with `numastat -p <pid>` (the `Huge` row per node) or `grep huge /proc/<pi
 
 ### 5.4 Other huge-page consumers in a Java stack
 
-- **IPC/messaging media drivers** that run as a separate JVM (for example, a UDP/IPC transport driver) should be started with the same large-page flags on bare metal. They are latency-critical in exactly the same way. Their memory-mapped log/term buffers normally live in `/dev/shm` (tmpfs, 4 KiB pages). Configure them to be **pre-allocated, not sparse** (the driver option is usually named like `term.buffer.sparse.file=false`), so that page faults happen when the file is created, not when a message is written.
+- **Memory-mapped files and shared-memory queues** (files in `/dev/shm`, off-heap ring buffers shared between processes) are not covered by `-XX:+UseLargePages`. On tmpfs they use 4 KiB pages. **Pre-allocate** them (write every page, or `fallocate`, before use) instead of creating sparse files, so that page faults happen when the file is created, not when the first message is written. Map them from hugetlbfs when they are large and randomly accessed (§6).
 - **Kernel-bypass network stacks** allocate their packet buffers from the huge page pool. Most have a "use huge pages" setting with three modes: off / use if available / **require (fail if unavailable)**. Choose *require* in production, so a missing pool is an immediate start-up error and not a silent latency regression.
 
 A complete, runnable project, with the launcher, both options files and a latency probe, is in [examples/hugepages-java-example.md](../examples/hugepages-java-example.md).

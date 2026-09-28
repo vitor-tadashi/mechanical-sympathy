@@ -88,7 +88,7 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 | Kernel | Stock RHEL kernels (4.18 / 5.14). Notes where newer kernels differ. |
 | CPUs | Intel Xeon (most examples). AMD EPYC notes where parameters differ. |
 | Shell | bash ≥ 4.4. Scripts are `shellcheck`-clean. |
-| Java | JDK 17 / 21 (ZGC) |
+| Java | JDK 25 (ZGC, FFM API for thread affinity). Example built with Gradle; no third-party affinity library. |
 
 ## Repository layout
 

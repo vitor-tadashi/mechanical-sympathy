@@ -1,7 +1,6 @@
 package com.example.lowlat;
 
 import com.sun.management.HotSpotDiagnosticMXBean;
-import net.openhft.affinity.Affinity;
 import org.HdrHistogram.Histogram;
 
 import java.lang.management.ManagementFactory;
@@ -12,11 +11,11 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Latency probe for a tuned host.
- *
+ * <p>
  * Two pinned threads play ping-pong through two padded sequences (one cache line each):
  *   ping: writes i, spins until pong echoes i            -> "rtt" histogram (core-to-core)
  *   ping: then does N dependent random reads in a large table -> "walk" histogram (memory/TLB)
- *
+ * <p>
  * On a tuned bare-metal host with isolated CPUs, huge pages and pre-touch, both
  * distributions are tight; on an untuned host the tails show scheduler, interrupt and
  * TLB noise. Compare runs with and without the launcher's large page flags.
@@ -96,10 +95,10 @@ public final class LatencyProbe {
     private static Thread pinnedThread(String name, int cpu, Runnable body) {
         Thread thread = new Thread(() -> {
             if (cpu >= 0) {
-                Affinity.setAffinity(cpu); // before touching any data: first-touch on the right node
+                ThreadAffinity.pinCurrentThread(cpu); // before touching any data: first-touch on the right node
             }
             System.out.printf("thread %-5s requested cpu=%-3s running on cpu=%d affinity=%s%n",
-                    name, cpu >= 0 ? Integer.toString(cpu) : "-", Affinity.getCpu(), Affinity.getAffinity());
+                    name, cpu >= 0 ? Integer.toString(cpu) : "-", ThreadAffinity.currentCpu(), ThreadAffinity.currentAffinity());
             body.run();
         }, name);
         thread.setDaemon(false);

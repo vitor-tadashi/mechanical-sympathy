@@ -35,7 +35,7 @@ Apply when **all** of these hold:
 - bare metal (the script skips everything here on `virtual_machine`);
 - a single latency-critical application owns the host;
 - the application can pin its threads individually, or you can pin them externally by thread ID;
-- you know which threads are critical. Typically these are the network receive/send loops, the matching/sequencing loop, and IPC conductors. They are rarely more than 5–15 threads.
+- you know which threads are critical. Typically these are the network receive/send loops, the main event-processing loop, and a few worker loops. They are rarely more than 5–15 threads.
 
 Do **not** apply when the application has hundreds of equally important threads (a thread-per-request server). Isolation helps a few busy-spinning threads; it hurts a large, dynamic thread pool, because nothing balances load across isolated CPUs.
 
@@ -63,12 +63,12 @@ cat /sys/class/net/<nic>/device/numa_node
             node 0 (even)                          node 1 (odd)
   ┌─────────────────────────────────┐   ┌──────────────────────────────────────┐
   │ 0  workqueues, mgmt/timing IRQs │   │ 1  housekeeping: critical NIC IRQs   │
-  │ 2  workqueues                   │   │ 3  ISOLATED  media driver conductor  │
-  │ 4  agents (EDR/monitoring)      │   │ 5  ISOLATED  media driver sender     │
-  │ 6  agents slice                 │   │ 7  ISOLATED  media driver receiver   │
-  │ 8..28  OS + non-critical app    │   │ 9  ISOLATED  network RX loop         │
-  │ 30 bulk NIC IRQs                │   │ 11 ISOLATED  network TX loop         │
-  │                                 │   │ 13..31 ISOLATED  business threads    │
+  │ 2  workqueues                   │   │ 3  ISOLATED  network RX loop         │
+  │ 4  agents (EDR/monitoring)      │   │ 5  ISOLATED  network TX loop         │
+  │ 6  agents slice                 │   │ 7  ISOLATED  event loop              │
+  │ 8..28  OS + non-critical app    │   │ 9  ISOLATED  worker 0                │
+  │ 30 bulk NIC IRQs                │   │ 11 ISOLATED  worker 1                │
+  │                                 │   │ 13..31 ISOLATED  timer, spares       │
   └─────────────────────────────────┘   └──────────────────────────────────────┘
   OS_CPUS = 0 1 2 4 6 ... 30            ISOLATED_CPUS = 3 5 7 ... 31
 ```
@@ -157,30 +157,35 @@ Map *thread roles* to CPUs in a properties file that the application reads at st
 
 ```properties
 # affinity.properties - thread role -> CPU (all on NUMA node 1)
-media.driver.conductor.cpu.affinity=3
-media.driver.sender.cpu.affinity=5
-media.driver.receiver.cpu.affinity=7
-network.rx.cpu.affinity=9
-network.tx.cpu.affinity=11
-sequencer.cpu.affinity=13
-inbound.disruptor.cpu.affinity=15,17        # two consumer threads, one CPU each
-outbound.publisher.cpu.affinity=19
-replay.cpu.affinity=21
-admin.cpu.affinity=23
+affinity.enable=true
+net.rx.cpu.affinity=3
+net.tx.cpu.affinity=5
+event.loop.cpu.affinity=7
+worker.0.cpu.affinity=9
+worker.1.cpu.affinity=11
+timer.cpu.affinity=13
+# not listed (logging, metrics, admin): unpinned, they stay on the OS CPUs
 ```
 
-Keep a feature switch (for example `affinity.enable=true`). The same build then runs pinned on bare metal and unpinned on a VM or a laptop, and the launcher can decide which JVM flags to add (see [Guide 03 §5](03-huge-pages-configuration.md#5-java-applications)).
+Keep a feature switch (`affinity.enable` above). The same build then runs pinned on bare metal and unpinned on a VM or a laptop, and the launcher can decide which JVM flags to add (see [Guide 03 §5](03-huge-pages-configuration.md#5-java-applications)).
 
 ### 6.2 Pin inside the application (preferred)
 
 The thread pins **itself** as the first thing in its `run()` method, before it touches its working set. That way its first-touch memory is also allocated on the right NUMA node.
 
-**Java** (OpenHFT Java-Thread-Affinity, `net.openhft:affinity`):
+**Java** (JDK 22+, Foreign Function & Memory API, no library):
 
 ```java
-import net.openhft.affinity.Affinity;
+import java.lang.foreign.*;
+import java.lang.invoke.MethodHandle;
 
 public final class PinnedRunnable implements Runnable {
+    // int sched_setaffinity(pid_t pid, size_t cpusetsize, const cpu_set_t *mask)
+    private static final MethodHandle SCHED_SETAFFINITY = Linker.nativeLinker().downcallHandle(
+            Linker.nativeLinker().defaultLookup().find("sched_setaffinity").orElseThrow(),
+            FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_LONG, ValueLayout.ADDRESS));
+    private static final long CPU_SET_BYTES = 128;          // glibc cpu_set_t: 1024 bits
+
     private final int cpu;
     private final Runnable body;
 
@@ -189,14 +194,24 @@ public final class PinnedRunnable implements Runnable {
     @Override
     public void run() {
         if (cpu >= 0) {
-            Affinity.setAffinity(cpu);          // sched_setaffinity() for the calling thread only
+            try (Arena arena = Arena.ofConfined()) {
+                MemorySegment mask = arena.allocate(CPU_SET_BYTES, Long.BYTES);  // zeroed
+                mask.setAtIndex(ValueLayout.JAVA_LONG, cpu / 64, 1L << (cpu % 64));
+                if ((int) SCHED_SETAFFINITY.invokeExact(0, CPU_SET_BYTES, mask) != 0) {  // pid 0 = this thread
+                    throw new IllegalStateException("sched_setaffinity(" + cpu + ") failed");
+                }
+            } catch (Throwable t) {
+                throw new IllegalStateException(t);
+            }
         }
         body.run();                             // busy-spin loop, never blocks
     }
 }
 ```
 
-`AffinityLock.acquireLock(cpu)` does the same and also records the reservation, so two threads cannot claim one CPU. Use it when the mapping is computed rather than configured. A complete runnable project is in [examples/hugepages-java-example.md](../examples/hugepages-java-example.md).
+Start the JVM with `--enable-native-access=ALL-UNNAMED` (or the module name), otherwise the JDK warns about the restricted call, and future releases deny it. The example's [`ThreadAffinity`](../examples/java-latency-probe/src/main/java/com/example/lowlat/ThreadAffinity.java) adds `errno` capture, `sched_getcpu()`, and reading the mask back for the start-up log.
+
+Validate the mapping at start-up: two roles on one CPU, or a CPU that is not in `/sys/devices/system/cpu/isolated`, is a configuration error, so refuse to start. A complete runnable project is in [examples/hugepages-java-example.md](../examples/hugepages-java-example.md).
 
 **C / C++**:
 
@@ -341,5 +356,6 @@ Every file the script touched is also saved under `/var/lib/lowlat/factory-setti
 - Workqueues: <https://docs.kernel.org/core-api/workqueue.html>
 - RT throttling: <https://docs.kernel.org/scheduler/sched-rt-group.html>
 - `rtla osnoise`: <https://docs.kernel.org/tools/rtla/rtla-osnoise.html>
-- OpenHFT Java-Thread-Affinity: <https://github.com/OpenHFT/Java-Thread-Affinity>
+- `man 2 sched_setaffinity`, `man 3 sched_getcpu`
+- JEP 454, Foreign Function & Memory API: <https://openjdk.org/jeps/454>
 - Deep dive: [concepts/cpu-isolation.md](../concepts/cpu-isolation.md)

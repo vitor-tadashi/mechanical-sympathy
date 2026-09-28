@@ -16,6 +16,7 @@ APP_HOME="${APP_HOME:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)}"
 CONF_DIR="${APP_HOME}/conf"
 APP_CONFIG="${CONF_DIR}/application.properties"
 JAVA="${JAVA_HOME:+${JAVA_HOME}/bin/}java"
+CLASSPATH="build/classes/java/main:build/lib/*"
 
 host_class_detect() {
 	if [[ -n "${LOWLAT_HOST_CLASS:-}" ]]; then
@@ -47,7 +48,13 @@ else
 	JVM_OPTIONS_FILE="${CONF_DIR}/jvm-low-resource.options"
 fi
 
-PARAMS=("-XX:VMOptionsFile=${JVM_OPTIONS_FILE}")
+if [[ ! -d "${APP_HOME}/build/classes/java/main" ]]; then
+	echo "not built: run ./gradlew build in ${APP_HOME}" >&2
+	exit 1
+fi
+
+# --enable-native-access: thread pinning calls sched_setaffinity() through the FFM API
+PARAMS=("-XX:VMOptionsFile=${JVM_OPTIONS_FILE}" --enable-native-access=ALL-UNNAMED)
 
 # Pinned threads + NUMA-aware heap on reserved huge pages + pre-touched heap go
 # together: without isolated CPUs and a reserved pool they only produce warnings.
@@ -70,6 +77,6 @@ mkdir -p "${APP_HOME}/log"
 cd "${APP_HOME}"
 
 printf 'host_class=%s jvm-options=%s\n' "${HOST_CLASS}" "$(basename "${JVM_OPTIONS_FILE}")"
-printf 'exec %s\n' "${PREFIX[*]:+${PREFIX[*]} }${JAVA} ${PARAMS[*]} -cp target/classes:target/lib/* com.example.lowlat.LatencyProbe"
+printf 'exec %s\n' "${PREFIX[*]:+${PREFIX[*]} }${JAVA} ${PARAMS[*]} -cp ${CLASSPATH} com.example.lowlat.LatencyProbe"
 
-exec "${PREFIX[@]}" "${JAVA}" "${PARAMS[@]}" -cp "target/classes:target/lib/*" com.example.lowlat.LatencyProbe
+exec "${PREFIX[@]}" "${JAVA}" "${PARAMS[@]}" -cp "${CLASSPATH}" com.example.lowlat.LatencyProbe
