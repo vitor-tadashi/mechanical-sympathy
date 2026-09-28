@@ -2,6 +2,12 @@
 
 > Used by: [Guide 04](../guides/04-network-optimization.md), [Guide 08](../guides/08-kernel-bypass.md). Related: [network-tuning](network-tuning.md). Example: [network-segmentation-example](../examples/network-segmentation-example.md).
 
+## At a glance
+
+- Lowercase shows, uppercase sets: `-l`/`-L` channels, `-g`/`-G` rings, `-c`/`-C` coalescing, `-k`/`-K` features, `-a`/`-A` PAUSE.
+- Every setting is a request to the driver, lost at reboot or driver reload. Some of them reset the link.
+- Apply in a fixed order: channels, rings, coalescing and features, RSS and ntuple, then IRQ affinity.
+
 `ethtool` is the one tool that talks to the NIC **driver** about the hardware under a network interface: its queues, rings, interrupt timers, offloads, flow control, hash tables, filters, counters and clocks. `ip` configures the network stack above it (addresses, routes, MTU, qdiscs), and `ethtool` configures the device below it. This page explains every `ethtool` option these guides use, and a few more you will meet while debugging, so that a line like `ethtool -L ens1f0 combined 1` never has to be taken on faith.
 
 ## 1. How `ethtool` works (and why answers differ between NICs)
@@ -31,6 +37,40 @@
 | `--show-fec` | `--set-fec` | forward error correction mode | **yes** | §14 |
 | `--show-eee` | `--set-eee` | Energy-Efficient Ethernet | may renegotiate | §14 |
 | `-m` | — | transceiver (SFP/QSFP) diagnostics | — | §14 |
+
+```mermaid
+flowchart TD
+  subgraph obs["Observe only"]
+    direction LR
+    I["-i driver"]
+    ST["-S counters"]
+    T["-T timestamping"]
+    M["-m transceiver"]
+  end
+  subgraph phy["Link"]
+    direction LR
+    A["-A PAUSE<br/>(may renegotiate)"]
+    S["-s speed, FEC, EEE<br/>(resets link)"]
+  end
+  subgraph bufs["Buffers and features"]
+    direction LR
+    G["-G rings<br/>(resets link)"]
+    K["-K offloads<br/>(some reset)"]
+  end
+  subgraph queues["Queues and interrupts"]
+    direction LR
+    L["-L channels<br/>(resets link)"]
+    C["-C coalescing"]
+    X["-X RSS table"]
+    N["-N hash fields, ntuple"]
+  end
+  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
+  classDef muted fill:#eeeeee,stroke:#777777,color:#333333
+  class L,G,S risk
+  class I,ST,T,M muted
+```
+
+*The options fall into four groups. The ones marked "resets link" (in red) stop traffic briefly and bring the queue interrupts back with default affinity. The observe-only group changes nothing.*
 
 "Resets the link" means the driver tears down and rebuilds its queues. Traffic stops for roughly 0.1–3 s, and every queue interrupt comes back with default affinity. Never do this on the interface you are logged in through, and always re-apply IRQ placement afterwards ([Guide 04 §6](../guides/04-network-optimization.md#6-interrupt-affinity-set_nic_irq_affinity)).
 
@@ -277,7 +317,14 @@ Nothing set with `ethtool` survives a reboot or driver reload. The options:
 
 The keys and their spelling are listed in `man nm-settings-nmcli` (section `ethtool`). Whatever the mechanism, the order is fixed: **channels → rings → coalescing/features → RSS/ntuple → IRQ affinity**. Every earlier step can reset or recreate the queues that the later steps configure.
 
-## 16. References
+## 16. Key takeaways
+
+- Lowercase shows, uppercase sets. `[fixed]` means the driver will not let you change the feature.
+- `Pre-set maximums` are per device and per firmware. Never copy values between NIC models.
+- `-L`, `-G` and physical-layer changes reset the link. Never run them on the interface you are logged in through.
+- Nothing persists. Re-apply at boot in the fixed order, and place IRQs last.
+
+## 17. References
 
 - `man 8 ethtool`; the ethtool netlink API: <https://docs.kernel.org/networking/ethtool-netlink.html>
 - Scaling (RSS, RPS, RFS, XPS, ntuple): <https://docs.kernel.org/networking/scaling.html>
