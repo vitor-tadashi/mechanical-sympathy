@@ -1,0 +1,205 @@
+#!/usr/bin/env bash
+#
+# 00-bios-firmware - check what the firmware set up, and set the few firmware-related
+# knobs the OS owns (Guide 00).
+#
+#   set_pcie_aspm_policy     PCIe Active State Power Management policy (runtime, re-applied at boot)
+#   verify_bios_firmware     read-only: SMT, NUMA exposure, turbo, EPB, idle states, ASPM,
+#                            firmware versions, SMI count
+#   show_firmware_facts      one-screen summary of what the OS can see of the BIOS setup
+#
+# Most BIOS settings cannot be changed from Linux in a vendor-neutral way. This script
+# does not try: it verifies their effects, and Guide 00 lists what to set in the setup
+# menu or through the BMC.
+
+set -Eeuo pipefail
+# shellcheck source=lib/common
+. "$(dirname "${BASH_SOURCE[0]}")/lib/common"
+
+ASPM_POLICY_FILE="${ASPM_POLICY_FILE:-/sys/module/pcie_aspm/parameters/policy}"
+ASPM_ORIGINAL_FILE="${LOWLAT_STATE_DIR}/aspm-original-policy"
+
+# aspm_active_policy - the policy in brackets: "default [performance] powersave" -> performance
+aspm_active_policy() {
+	local line
+	line="$(read_value "${ASPM_POLICY_FILE}" none)"
+	line="${line#*[}"
+	printf '%s\n' "${line%%]*}"
+}
+
+set_pcie_aspm_policy() {
+	local wanted="${BIOS_PCIE_ASPM_POLICY:-}" current
+	if [[ -z "${wanted}" ]]; then
+		log_sub_step "BIOS_PCIE_ASPM_POLICY is empty, leaving PCIe ASPM alone"
+		return 0
+	fi
+	if [[ ! -e "${ASPM_POLICY_FILE}" ]]; then
+		log_sub_step "${ASPM_POLICY_FILE} not present (ASPM disabled by firmware or kernel), nothing to do"
+		return 0
+	fi
+	current="$(aspm_active_policy)"
+	if [[ "${DRY_RUN}" -ne 1 && ! -s "${ASPM_ORIGINAL_FILE}" ]]; then
+		mkdir -p "${LOWLAT_STATE_DIR}"
+		printf '%s\n' "${current}" >"${ASPM_ORIGINAL_FILE}"
+	fi
+	log_sub_step "PCIe ASPM policy ${current} -> ${wanted}"
+	sysfs_write "${wanted}" "${ASPM_POLICY_FILE}"
+}
+
+apply_bios_firmware() {
+	log_step "Firmware settings visible to the OS"
+	if require_capability bios_firmware; then
+		set_pcie_aspm_policy
+		log_sub_step "Everything else is set in the BIOS setup: see Guide 00 §4"
+	fi
+}
+
+# ASPM is runtime state: lowlat-runtime.service re-applies it at every boot.
+apply_bios_firmware_runtime() {
+	log_step "Firmware settings visible to the OS"
+	if require_capability bios_firmware; then
+		set_pcie_aspm_policy
+	fi
+}
+
+# --- verification (read-only) ------------------------------------------------
+
+smt_off() {
+	local active
+	active="$(read_value /sys/devices/system/cpu/smt/active unknown)"
+	[[ "${active}" == 0 ]]
+}
+
+# numa_exposed - at least one NUMA node per socket (node interleaving would show one node).
+numa_exposed() {
+	local sockets nodes
+	sockets="$(lscpu -p=SOCKET 2>/dev/null | grep -v '^#' | sort -u | wc -l)"
+	nodes="$(find /sys/devices/system/node -maxdepth 1 -name 'node[0-9]*' 2>/dev/null | wc -l)"
+	((nodes >= sockets))
+}
+
+epb_performance() {
+	local f value
+	for f in /sys/devices/system/cpu/cpu*/power/energy_perf_bias; do
+		[[ -r "${f}" ]] || return 0 # not exposed (AMD, VM): nothing to check
+		value="$(read_value "${f}")"
+		[[ "${value}" == 0 ]] || return 1
+	done
+}
+
+aspm_is_wanted() {
+	[[ -z "${BIOS_PCIE_ASPM_POLICY:-}" || ! -e "${ASPM_POLICY_FILE}" ]] && return 0
+	local active
+	active="$(aspm_active_policy)"
+	[[ "${active}" == "${BIOS_PCIE_ASPM_POLICY}" ]]
+}
+
+turbo_state() {
+	local value
+	if [[ -r /sys/devices/system/cpu/intel_pstate/no_turbo ]]; then
+		value="$(read_value /sys/devices/system/cpu/intel_pstate/no_turbo)"
+		[[ "${value}" == 1 ]] && printf 'off (intel_pstate no_turbo=1)\n' || printf 'on (intel_pstate)\n'
+	elif [[ -r /sys/devices/system/cpu/cpufreq/boost ]]; then
+		value="$(read_value /sys/devices/system/cpu/cpufreq/boost)"
+		[[ "${value}" == 1 ]] && printf 'on (cpufreq boost=1)\n' || printf 'off (cpufreq boost=0)\n'
+	else
+		printf 'not visible to the OS\n'
+	fi
+}
+
+idle_states() {
+	local f names=()
+	for f in /sys/devices/system/cpu/cpu0/cpuidle/state*/name; do
+		[[ -r "${f}" ]] || continue
+		names+=("$(read_value "${f}")")
+	done
+	((${#names[@]} > 0)) && printf '%s\n' "${names[*]}" || printf 'none (idle=poll or no cpuidle driver)\n'
+}
+
+# smi_count - SMIs on CPU 0 during one second, from turbostat (root, bare metal).
+smi_count() {
+	local out
+	command -v turbostat >/dev/null 2>&1 || {
+		printf 'n/a (turbostat not installed)\n'
+		return 0
+	}
+	[[ "${EUID}" -eq 0 ]] || {
+		printf 'n/a (needs root)\n'
+		return 0
+	}
+	out="$(turbostat --quiet --interval 1 --num_iterations 1 --show SMI 2>/dev/null || true)"
+	out="$(awk 'NR == 2 { print $1 }' <<<"${out}")"
+	printf '%s\n' "${out:-n/a}"
+}
+
+show_firmware_facts() {
+	local vendor version date product turbo idle smis
+	vendor="$(read_value /sys/class/dmi/id/bios_vendor)"
+	version="$(read_value /sys/class/dmi/id/bios_version)"
+	date="$(read_value /sys/class/dmi/id/bios_date)"
+	product="$(read_value /sys/class/dmi/id/product_name)"
+	turbo="$(turbo_state)"
+	idle="$(idle_states)"
+	smis="$(smi_count)"
+	verify_info "platform: ${product}, BIOS ${vendor} ${version} (${date})"
+	verify_info "turbo: ${turbo}"
+	verify_info "cpuidle states on CPU 0: ${idle}"
+	verify_info "SMIs in 1 s (all CPUs, from turbostat): ${smis}"
+}
+
+verify_bios_firmware() {
+	if ! host_is_bare_metal; then
+		verify_info "host_class=${HOST_CLASS}: firmware settings belong to the hypervisor owner"
+		return 0
+	fi
+	verify_soft "Hyper-Threading (SMT) off" smt_off
+	verify_soft "NUMA exposed: at least one node per socket (no node interleaving)" numa_exposed
+	verify_soft "energy_perf_bias = 0 (performance) on every CPU" epb_performance
+	verify_soft "PCIe ASPM policy is '${BIOS_PCIE_ASPM_POLICY:-unchanged}'" aspm_is_wanted
+	show_firmware_facts
+	verify_result
+}
+
+rollback_bios_firmware() {
+	local original
+	log_step "Firmware settings visible to the OS"
+	if [[ ! -s "${ASPM_ORIGINAL_FILE}" ]]; then
+		log_sub_step "No recorded ASPM policy, nothing to restore"
+		return 0
+	fi
+	original="$(<"${ASPM_ORIGINAL_FILE}")"
+	log_sub_step "PCIe ASPM policy -> ${original}"
+	sysfs_write "${original}" "${ASPM_POLICY_FILE}"
+	run rm -f "${ASPM_ORIGINAL_FILE}"
+	log_sub_step "Set BIOS_PCIE_ASPM_POLICY=\"\" so that lowlat-runtime.service stops re-applying it"
+}
+
+main() {
+	parse_mode_args "$@" || true
+	case "${MODE}" in
+	apply)
+		require_root
+		load_config
+		apply_bios_firmware
+		;;
+	runtime)
+		require_root
+		load_config
+		apply_bios_firmware_runtime
+		;;
+	verify)
+		load_config
+		verify_bios_firmware
+		;;
+	rollback)
+		require_root
+		load_config
+		rollback_bios_firmware
+		;;
+	*) print_usage ;;
+	esac
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+	main "$@"
+fi

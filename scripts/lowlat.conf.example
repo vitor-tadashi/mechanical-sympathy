@@ -36,6 +36,14 @@ HOUSEKEEPING_PIN_CPUS=(4)
 HOUSEKEEPING_PIN_PROCESSES=(edr-agentd av-scand)
 
 # -----------------------------------------------------------------------------
+# Firmware (Guide 00)
+# -----------------------------------------------------------------------------
+
+# PCIe Active State Power Management policy written at boot: performance keeps links
+# out of low-power states (no L0s/L1 exit latency on the NIC's link). "" = leave alone.
+BIOS_PCIE_ASPM_POLICY=performance
+
+# -----------------------------------------------------------------------------
 # GRUB options (Guide 01)
 # -----------------------------------------------------------------------------
 

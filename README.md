@@ -39,6 +39,7 @@ Every guide explains **what the kernel does**, **why each value is chosen**, **h
 
 | # | Guide | Script | Risk | Reboot | Bare metal | VM |
 |---|---|---|---|---|---|---|
+| 00 | [BIOS and firmware](guides/00-bios-firmware.md) | [`00-bios-firmware`](scripts/00-bios-firmware) | 3 | yes (BIOS) | ✅ | ask the hypervisor owner |
 | 01 | [Kernel command line (GRUB)](guides/01-grub-bootloader-tuning.md) | [`01-grub-bootloader`](scripts/01-grub-bootloader) | 4 | yes | full | latency subset |
 | 02 | [CPU core isolation](guides/02-cpu-core-isolation.md) | [`02-cpu-isolation`](scripts/02-cpu-isolation) | 4 | yes | ✅ | app-side pinning only |
 | 03 | [Huge pages](guides/03-huge-pages-configuration.md) | [`03-huge-pages`](scripts/03-huge-pages) | 3 | recommended | ✅ | THP off only |
@@ -87,7 +88,7 @@ sudo vi /etc/lowlat/lowlat.conf              # describe your CPUs, NICs and memo
 
 scripts/apply-all --plan                     # what applies on this host class
 scripts/apply-all --dry-run | less           # every command and file, nothing changed
-sudo scripts/apply-all --apply               # apply 01-08 + install lowlat-runtime.service
+sudo scripts/apply-all --apply               # apply 00-08 + install lowlat-runtime.service
 sudo systemctl reboot
 scripts/verify-tuning                        # PASS/WARN/FAIL for every guide
 ```
@@ -119,13 +120,13 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 ```
 .
 ├── README.md  QUICK_START.md  INDEX.md  CHEATSHEET.md  FAQ.md  STYLE.md
-├── guides/          01..09 step-by-step guides
+├── guides/          00..09 step-by-step guides
 ├── concepts/        6 deep dives
 ├── examples/        Java on a tuned host (+ runnable probe), multi-NIC segmentation
 └── scripts/
     ├── lib/common            logging, dry-run, host class, backups, CPU list helpers
     ├── lowlat.conf.example    the host description
-    ├── 01..09-*               one script per guide (--apply / --dry-run / --verify / --rollback)
+    ├── 00..09-*               one script per guide (--apply / --dry-run / --verify / --rollback)
     ├── apply-all              sequencing + step timing
     ├── verify-tuning          read-only report
     └── systemd/lowlat-runtime.service

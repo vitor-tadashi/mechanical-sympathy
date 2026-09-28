@@ -293,7 +293,7 @@ capability_decision() {
 	fi
 	case "$1" in
 	# Only meaningful when the hypervisor is not scheduling our vCPUs behind our back.
-	isolation_grub | core_isolation | irqbalance_disable | huge_pages | rt_throttling)
+	isolation_grub | core_isolation | irqbalance_disable | huge_pages | rt_throttling | bios_firmware)
 		if host_is_bare_metal; then printf 'apply\n'; else printf 'skip\n'; fi
 		;;
 	# Safe and useful on both.
