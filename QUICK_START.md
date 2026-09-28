@@ -27,6 +27,8 @@ sudo scripts/apply-all --apply && sudo systemctl reboot
 scripts/verify-tuning
 ```
 
+**Also, on every host:** time synchronization with chrony, or PTP on the timing NIC, with the daemons pinned to a housekeeping CPU ([Guide 10](guides/10-time-sync.md)). `apply-all` runs it after Guide 07.
+
 **Time:** half a day for the first host, including the reboot and verification. Subsequent hosts with the same hardware take minutes (same `lowlat.conf`).
 **What to expect:** the biggest change is in the tail. p99.9 and max typically drop several-fold, while p50 improves modestly. The exact gain depends on how noisy the host was before, so measure against your baseline.
 
@@ -45,7 +47,7 @@ scripts/verify-tuning
 | 5 | [04](guides/04-network-optimization.md) | Coalescing/offloads where the virtual NIC supports them; IRQ affinity for virtio/SR-IOV queues |
 | 6 | App | Low-resource JVM options, **back-off** idle strategy, no large-page flags (`affinity.enable=false`) |
 
-The scripts skip isolation, huge-page reservation, irqbalance and RT throttling automatically on `virtual_machine`.
+The scripts skip isolation, huge-page reservation, irqbalance and RT throttling automatically on `virtual_machine`. Time synchronization still applies: chrony, ideally from the hypervisor's clock ([Guide 10 §12](guides/10-time-sync.md#12-bare-metal-vs-vm)).
 
 **Biggest lever outside the guest:** ask for dedicated physical CPUs with vCPU pinning, huge-page-backed guest memory, and SR-IOV passthrough of the critical NIC. With those, the guest behaves much more like Scenario A.
 

@@ -170,3 +170,19 @@ FLUSH_FIREWALL_RULES=no
 REMOVE_NETFILTER_MODULES=no
 
 TUNED_BASE_PROFILE=network-latency
+
+# -----------------------------------------------------------------------------
+# Time synchronization (Guide 10)
+# -----------------------------------------------------------------------------
+
+# chrony | ptp | "" (leave alone).
+#   chrony  chronyd (NTP, optionally with hardware timestamping), pinned to TIME_SYNC_CPUS
+#   ptp     ptp4l on PTP_INTERFACE + phc2sys (needs hardware timestamping), chronyd stopped
+TIME_SYNC_MODE=chrony
+
+# NIC for ptp4l. Empty = the first NICS entry with role "timing".
+PTP_INTERFACE=""
+
+# CPUs for chronyd / ptp4l / phc2sys: a housekeeping CPU, never an isolated one.
+# The reference host serves the timing NIC's interrupts on CPU 0.
+TIME_SYNC_CPUS=(0)

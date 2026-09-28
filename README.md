@@ -32,6 +32,7 @@ These settings are for **dedicated hosts running a small number of well-understo
 | 06 | [Kernel sysctl](guides/06-kernel-sysctl-tuning.md) | [`06-kernel-sysctl`](scripts/06-kernel-sysctl) | 2 | no | ✅ | ✅ |
 | 07 | [OS hygiene](guides/07-os-hygiene.md) | [`07-os-hygiene`](scripts/07-os-hygiene) | 2 (5 opt-in) | no | ✅ | ✅ |
 | 08 | [Kernel bypass (Onload, DPDK)](guides/08-kernel-bypass.md) | [`08-kernel-bypass`](scripts/08-kernel-bypass) | 4 (optional) | DPDK: yes (IOMMU) | ✅ | SR-IOV VF only |
+| 10 | [Time synchronization (chrony, PTP)](guides/10-time-sync.md) | [`10-time-sync`](scripts/10-time-sync) | 2 | no | ✅ | chrony / `ptp_kvm` |
 
 Plus:
 
@@ -96,13 +97,13 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 ```
 .
 ├── README.md  QUICK_START.md  INDEX.md
-├── guides/          01..08 step-by-step guides
+├── guides/          01..08, 10 step-by-step guides
 ├── concepts/        6 deep dives
 ├── examples/        Java on a tuned host (+ runnable probe), multi-NIC segmentation
 └── scripts/
     ├── lib/common            logging, dry-run, host class, backups, CPU list helpers
     ├── lowlat.conf.example    the host description
-    ├── 01..08-*               one script per guide (--apply / --dry-run / --verify / --rollback)
+    ├── 01..08, 10-*           one script per guide (--apply / --dry-run / --verify / --rollback)
     ├── apply-all              sequencing + step timing
     ├── verify-tuning          read-only report
     └── systemd/lowlat-runtime.service
