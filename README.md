@@ -107,3 +107,16 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
     ├── verify-tuning          read-only report
     └── systemd/lowlat-runtime.service
 ```
+
+## License
+
+Copyright (c) 2026 Vitor Tadashi. Use it freely, with credit.
+
+| What | License |
+|---|---|
+| Prose: `guides/`, `concepts/`, the Markdown in `examples/`, `README.md`, `INDEX.md`, `QUICK_START.md` | [CC BY 4.0](LICENSE-docs) |
+| Code: `scripts/`, `tools/`, `.githooks/`, the Java probe, `Makefile`, CI config | [MIT](LICENSE) |
+
+To reuse the docs, credit them, for example: *"Based on mechanical-sympathy by Vitor Tadashi, CC BY 4.0"*, with a link to this repository and a note of what you changed.
+
+Material that the guides quote or link to, such as kernel and vendor documentation, stays under its authors' terms.
