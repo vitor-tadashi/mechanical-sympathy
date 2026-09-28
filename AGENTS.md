@@ -60,7 +60,7 @@ These rules apply to every change, whoever makes it. If a rule and a request con
 | `make lint-java` | Checkstyle, `-Werror` compile, dependency approval, checksums |
 | `make install-git-hooks` | opt-in hooks: pre-commit runs `make lint`, commit-msg runs `tools/check-commit-title` and `tools/check-description` |
 | `tools/check-commit-title` | Conventional Commits titles with a Google-style subject (section 8). CI checks every PR title and commit |
-| `tools/check-description` | no emojis or tool footers in PR and commit descriptions (section 8). CI checks the PR body and every commit |
+| `tools/check-description` | no emojis, tool footers or tool co-author trailers in PR and commit descriptions (section 8). CI checks the PR body and every commit |
 
 ## 8. Git
 
@@ -70,6 +70,6 @@ These rules apply to every change, whoever makes it. If a rule and a request con
   - Specific: `fix: pin IRQs of bulk NICs to housekeeping CPUs`, not `fix: bug` or `chore: update files`.
   - At most 72 characters, no trailing period, ASCII only.
   - A body is optional. When there is one, leave a blank line after the title and explain what changed and why, wrapped at 72 columns.
-- **Descriptions** (PR bodies and commit bodies) are plain text: no emojis and no tool attribution footers such as "Generated with ...". `tools/check-description` enforces this in the commit-msg hook and in CI.
+- **Descriptions** (PR bodies and commit bodies) are plain text: no emojis, no tool attribution footers such as "Generated with ...", and no `Co-authored-by:` trailers naming a coding tool. `tools/check-description` enforces this in the commit-msg hook and in CI.
 - [Conventional Branch](https://conventional-branch.github.io/) names: `<type>/<kebab-slug>` (`docs/kernel-bypass`, `fix/irq-affinity`).
 - Work lands on `main` through pull requests. Never push directly to `main`.

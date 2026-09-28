@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 #
-# check-description - reject emojis and tool attribution footers in a PR or commit description.
+# check-description - reject emojis and tool attribution in a PR or commit description.
 #
 # Reads the description on stdin. Fails on:
 #   - emoji and pictographic symbols (U+1F000-1FAFF, U+2600-27BF, U+2B00-2BFF,
 #     variation selector U+FE0F)
 #   - "Generated with ..." footers added by coding tools
+#   - "Co-authored-by:" trailers naming a coding tool
 #
 # Usage: tools/check-description <message-file
 #        printf '%s' "${PR_BODY}" | tools/check-description
@@ -24,6 +25,12 @@ fi
 footer_lines="$(grep -n -i -E 'generated (with|by) .*(claude|copilot|cursor|chatgpt)' <<<"${text}" || true)"
 if [[ -n "${footer_lines}" ]]; then
 	printf 'check-description: remove the tool attribution footer\n%s\n' "${footer_lines}" >&2
+	failures=$((failures + 1))
+fi
+
+coauthor_lines="$(grep -n -i -E '^co-authored-by:.*(claude|copilot|cursor|chatgpt)' <<<"${text}" || true)"
+if [[ -n "${coauthor_lines}" ]]; then
+	printf 'check-description: remove the tool co-author trailer\n%s\n' "${coauthor_lines}" >&2
 	failures=$((failures + 1))
 fi
 
