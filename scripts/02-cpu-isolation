@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# 02-cpu-isolation.sh - keep the operating system off the isolated CPUs (Guide 02).
+# 02-cpu-isolation - keep the operating system off the isolated CPUs (Guide 02).
 #
 #   configure_systemd_cpu_affinity  PID 1 and every service inherit OS_CPUS (persistent, reboot)
 #   set_workqueue_affinity          unbound kernel workqueues on WORKQUEUE_CPUS (runtime)
@@ -13,8 +13,8 @@
 # unit re-applies them at boot (see scripts/systemd/).
 
 set -Eeuo pipefail
-# shellcheck source=lib/common.sh
-. "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+# shellcheck source=lib/common
+. "$(dirname "${BASH_SOURCE[0]}")/lib/common"
 
 SYSTEMD_SYSTEM_CONF="${SYSTEMD_SYSTEM_CONF:-/etc/systemd/system.conf}"
 
@@ -68,7 +68,7 @@ disable_irqbalance() {
 set_rt_throttling() {
 	log_sub_step "Disabling real-time throttling (kernel.sched_rt_runtime_us=-1)"
 	write_file /etc/sysctl.d/91-lowlat-rt.conf <<'EOF'
-# Managed by mechanical-sympathy 02-cpu-isolation.sh
+# Managed by mechanical-sympathy 02-cpu-isolation
 # Allow SCHED_FIFO/RR threads on isolated CPUs to run without the 950ms/1s cap.
 kernel.sched_rt_runtime_us = -1
 EOF
@@ -150,19 +150,21 @@ mask_equals() {
 }
 
 pid1_affinity_is() {
-	local actual
+	local actual expanded
 	actual="$(awk -F'\t' '/^Cpus_allowed_list/{print $2}' /proc/1/status)"
-	[[ "$(cpu_list_expand "${actual}")" == "$*" ]]
+	expanded="$(cpu_list_expand "${actual}")"
+	[[ "${expanded}" == "$*" ]]
 }
 
 verify_cpu_isolation() {
-	local cpu stray mask expected
+	local cpu stray mask expected os_cpus
 	if ! host_is_bare_metal; then
 		verify_info "host_class=${HOST_CLASS}: CPU isolation not expected"
 		return 0
 	fi
 
-	verify_check "PID 1 (systemd) affinity is OS_CPUS ($(cpu_list_join "${OS_CPUS[@]}"))" \
+	os_cpus="$(cpu_list_join "${OS_CPUS[@]}")"
+	verify_check "PID 1 (systemd) affinity is OS_CPUS (${os_cpus})" \
 		pid1_affinity_is "${OS_CPUS[@]}"
 	verify_check "systemd.conf CPUAffinity is set" grep -q '^CPUAffinity=' "${SYSTEMD_SYSTEM_CONF}"
 

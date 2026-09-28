@@ -99,7 +99,7 @@ They are read in `setup_arch()`, and the kernel **patches its own code** at boot
 ## 6. Common real-world situations
 
 - **"We set isolcpus but the latency did not change."** Usually the application threads were never pinned (so they run on OS CPUs), or were pinned to a range and all stacked on the first CPU. Check with `ps -eLo psr,comm`.
-- **"After the kernel update the isolation disappeared."** The new BLS entry did not inherit the arguments (a custom `/etc/kernel/cmdline`, or the default entry changed). Check `grubby --info=ALL` after every kernel update. `verify-tuning.sh` flags it on the first boot.
+- **"After the kernel update the isolation disappeared."** The new BLS entry did not inherit the arguments (a custom `/etc/kernel/cmdline`, or the default entry changed). Check `grubby --info=ALL` after every kernel update. `verify-tuning` flags it on the first boot.
 - **"The interfaces were renamed after tuning."** `biosdevname` changed on the command line. The naming scheme is decided in early userspace (udev), based on this argument.
 - **"A security scan flags the host."** Expected when mitigations are off. The exception must be documented and scoped to that host class.
 

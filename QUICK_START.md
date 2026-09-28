@@ -1,6 +1,6 @@
 # Quick Start — Pick Your Scenario
 
-Before anything else, capture a **baseline**: latency percentiles (p50/p99/p99.9/max) of your real workload, or of the [probe](examples/hugepages-java-example.md), plus `scripts/verify-tuning.sh --report baseline.txt`. Without a baseline you cannot tell whether tuning helped.
+Before anything else, capture a **baseline**: latency percentiles (p50/p99/p99.9/max) of your real workload, or of the [probe](examples/hugepages-java-example.md), plus `scripts/verify-tuning --report baseline.txt`. Without a baseline you cannot tell whether tuning helped.
 
 ---
 
@@ -21,9 +21,9 @@ Before anything else, capture a **baseline**: latency percentiles (p50/p99/p99.9
 | 9 | [Example](examples/hugepages-java-example.md) | Launcher: options by host class, large-page flags when pinned, threads pinned by role | |
 
 ```bash
-scripts/apply-all.sh --dry-run | less
-sudo scripts/apply-all.sh --apply && sudo systemctl reboot
-scripts/verify-tuning.sh
+scripts/apply-all --dry-run | less
+sudo scripts/apply-all --apply && sudo systemctl reboot
+scripts/verify-tuning
 ```
 
 **Time:** half a day for the first host, including the reboot and verification. Subsequent hosts with the same hardware take minutes (same `lowlat.conf`).
@@ -66,7 +66,7 @@ The scripts skip isolation, huge-page reservation, irqbalance and RT throttling 
 
 ## Pre-flight checklist
 
-- [ ] Baseline latency and `verify-tuning.sh --report` captured
+- [ ] Baseline latency and `verify-tuning --report` captured
 - [ ] Out-of-band console (iLO/iDRAC/IPMI) tested
 - [ ] CPU layout written down and reviewed (NUMA node of the NICs checked)
 - [ ] Huge page sizing = heap + code cache + off-heap/bypass buffers + 10–20 %
@@ -77,7 +77,7 @@ The scripts skip isolation, huge-page reservation, irqbalance and RT throttling 
 ## After applying
 
 ```bash
-scripts/verify-tuning.sh --report after.txt       # configuration
+scripts/verify-tuning --report after.txt          # configuration
 rtla osnoise top -c <isolated cpus> -d 60s        # noise on the isolated CPUs
 # + your latency histograms vs the baseline
 ```
@@ -86,7 +86,7 @@ rtla osnoise top -c <isolated cpus> -d 60s        # noise on the isolated CPUs
 
 | Problem | First action |
 |---|---|
-| Host does not boot | GRUB menu → `e` → remove the last added arguments → `Ctrl-x`; then `scripts/01-grub-bootloader.sh --rollback` |
+| Host does not boot | GRUB menu → `e` → remove the last added arguments → `Ctrl-x`; then `scripts/01-grub-bootloader --rollback` |
 | SSH slow / host sluggish | Too few OS CPUs: check `mpstat -P ALL 1`; give CPUs back in `lowlat.conf` |
 | Application cannot pin threads | cpuset trap: [Guide 05 §4.4](guides/05-cgroup-isolation.md#44-the-cpuset-trap) |
 | JVM fails with large pages | Pool on the wrong node or too small: [Guide 03 §9](guides/03-huge-pages-configuration.md#9-troubleshooting) |

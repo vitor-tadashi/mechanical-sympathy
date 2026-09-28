@@ -3,7 +3,7 @@
 ## Reading paths
 
 **Operator applying the tuning (1–2 h plus a reboot)**
-[QUICK_START](QUICK_START.md) → [01](guides/01-grub-bootloader-tuning.md) → [02](guides/02-cpu-core-isolation.md) → [03](guides/03-huge-pages-configuration.md) → [04](guides/04-network-optimization.md) → [05](guides/05-cgroup-isolation.md) → [06](guides/06-kernel-sysctl-tuning.md) → [07](guides/07-os-hygiene.md) → `scripts/verify-tuning.sh`
+[QUICK_START](QUICK_START.md) → [01](guides/01-grub-bootloader-tuning.md) → [02](guides/02-cpu-core-isolation.md) → [03](guides/03-huge-pages-configuration.md) → [04](guides/04-network-optimization.md) → [05](guides/05-cgroup-isolation.md) → [06](guides/06-kernel-sysctl-tuning.md) → [07](guides/07-os-hygiene.md) → `scripts/verify-tuning`
 
 **Application developer (how my code should behave on a tuned host)**
 [Guide 02 §6 — pinning the application](guides/02-cpu-core-isolation.md#6-pinning-the-application) → [Guide 03 §5 — Java flags](guides/03-huge-pages-configuration.md#5-java-applications) → [Java example](examples/hugepages-java-example.md) → [concepts/cpu-isolation §5 — caches and coherence](concepts/cpu-isolation.md#5-caches-and-coherence-the-mechanical-sympathy-part)
@@ -48,9 +48,9 @@
 | Script | Use |
 |---|---|
 | [`lowlat.conf.example`](scripts/lowlat.conf.example) | Describe the host. Copy to `/etc/lowlat/lowlat.conf`. |
-| `0N-*.sh --dry-run / --apply / --verify / --rollback` | One guide at a time |
-| [`apply-all.sh`](scripts/apply-all.sh) `--plan / --dry-run / --apply / --runtime` | All guides in order, with step timing |
-| [`verify-tuning.sh`](scripts/verify-tuning.sh) `[--report FILE]` | Read-only PASS/WARN/FAIL for everything |
+| `0N-* --dry-run / --apply / --verify / --rollback` | One guide at a time |
+| [`apply-all`](scripts/apply-all) `--plan / --dry-run / --apply / --runtime` | All guides in order, with step timing |
+| [`verify-tuning`](scripts/verify-tuning) `[--report FILE]` | Read-only PASS/WARN/FAIL for everything |
 | [`systemd/lowlat-runtime.service`](scripts/systemd/lowlat-runtime.service) | Re-applies runtime state at boot |
 
 ## Glossary

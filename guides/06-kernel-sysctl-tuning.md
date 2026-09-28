@@ -1,6 +1,6 @@
 # Guide 06 — Kernel Runtime Parameters (sysctl)
 
-> **Script:** [`scripts/06-kernel-sysctl.sh`](../scripts/06-kernel-sysctl.sh) · **Concepts:** [network-tuning](../concepts/network-tuning.md), [cpu-isolation](../concepts/cpu-isolation.md) · **Previous:** [Guide 05](05-cgroup-isolation.md) · **Next:** [Guide 07 — OS hygiene](07-os-hygiene.md)
+> **Script:** [`scripts/06-kernel-sysctl`](../scripts/06-kernel-sysctl) · **Concepts:** [network-tuning](../concepts/network-tuning.md), [cpu-isolation](../concepts/cpu-isolation.md) · **Previous:** [Guide 05](05-cgroup-isolation.md) · **Next:** [Guide 07 — OS hygiene](07-os-hygiene.md)
 
 | | |
 |---|---|
@@ -102,15 +102,15 @@ Huge-page sysctls (`vm.nr_overcommit_hugepages`, `kernel.shmmni`) live in [Guide
 ## 9. Using the script
 
 ```bash
-scripts/06-kernel-sysctl.sh --dry-run          # shows the complete file it would write
-sudo scripts/06-kernel-sysctl.sh --apply
-scripts/06-kernel-sysctl.sh --verify           # every key compared with the running value
+scripts/06-kernel-sysctl --dry-run             # shows the complete file it would write
+sudo scripts/06-kernel-sysctl --apply
+scripts/06-kernel-sysctl --verify              # every key compared with the running value
 ```
 
 Excerpt of the generated file:
 
 ```ini
-# Managed by mechanical-sympathy 06-kernel-sysctl.sh - see guides/06-kernel-sysctl-tuning.md
+# Managed by mechanical-sympathy 06-kernel-sysctl - see guides/06-kernel-sysctl-tuning.md
 
 # Kernel logging and debug
 # console loglevel 1: only emergencies are printed synchronously on the console
@@ -145,7 +145,7 @@ tuned-adm active; grep -r rmem_max /etc/sysctl.d /usr/lib/sysctl.d /etc/tuned 2>
 ## 12. Rollback
 
 ```bash
-sudo scripts/06-kernel-sysctl.sh --rollback   # removes the file
+sudo scripts/06-kernel-sysctl --rollback      # removes the file
 sudo systemctl reboot                          # or re-apply the defaults with: sysctl --system
 ```
 

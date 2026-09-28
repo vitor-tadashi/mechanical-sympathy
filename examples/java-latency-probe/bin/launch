@@ -58,7 +58,8 @@ PARAMS=("-XX:VMOptionsFile=${JVM_OPTIONS_FILE}" --enable-native-access=ALL-UNNAM
 
 # Pinned threads + NUMA-aware heap on reserved huge pages + pre-touched heap go
 # together: without isolated CPUs and a reserved pool they only produce warnings.
-if [[ "$(property affinity.enable)" == true ]]; then
+AFFINITY_ENABLE="$(property affinity.enable)"
+if [[ "${AFFINITY_ENABLE}" == true ]]; then
 	PARAMS+=(-XX:+UseNUMA -XX:+UseLargePages -XX:+AlwaysPreTouch)
 fi
 

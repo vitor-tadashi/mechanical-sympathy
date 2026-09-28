@@ -4,7 +4,7 @@
 # Persistent settings (GRUB, systemd.conf, sysctl.d, huge page unit, slices, tuned)
 # are not touched here.
 #
-# Installed by `scripts/apply-all.sh --apply`, which rewrites ExecStart with the real
+# Installed by `scripts/apply-all --apply`, which rewrites ExecStart with the real
 # location of the scripts. Latency-critical services should order themselves
 # After=lowlat-runtime.service.
 
@@ -18,7 +18,7 @@ ConditionPathExists=/etc/lowlat/lowlat.conf
 Type=oneshot
 RemainAfterExit=yes
 Environment=LOWLAT_CONFIG=/etc/lowlat/lowlat.conf
-ExecStart=/opt/lowlat/scripts/apply-all.sh --runtime
+ExecStart=/opt/lowlat/scripts/apply-all --runtime
 # Run the tuning itself on a housekeeping CPU.
 CPUAffinity=0
 StandardOutput=journal

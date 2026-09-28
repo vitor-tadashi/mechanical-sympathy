@@ -1,6 +1,6 @@
 # Guide 01 — Kernel Command Line (GRUB) Tuning
 
-> **Script:** [`scripts/01-grub-bootloader.sh`](../scripts/01-grub-bootloader.sh) · **Concept:** [concepts/bootloader.md](../concepts/bootloader.md) · **Next:** [Guide 02 — CPU core isolation](02-cpu-core-isolation.md)
+> **Script:** [`scripts/01-grub-bootloader`](../scripts/01-grub-bootloader) · **Concept:** [concepts/bootloader.md](../concepts/bootloader.md) · **Next:** [Guide 02 — CPU core isolation](02-cpu-core-isolation.md)
 
 | | |
 |---|---|
@@ -193,14 +193,14 @@ sudo cp scripts/lowlat.conf.example /etc/lowlat/lowlat.conf
 sudo vi /etc/lowlat/lowlat.conf          # ISOLATED_CPUS, HUGEPAGE_SIZE, GRUB_* switches
 
 # 1. See exactly what will change
-scripts/01-grub-bootloader.sh --dry-run
+scripts/01-grub-bootloader --dry-run
 
 # 2. Apply and reboot
-sudo scripts/01-grub-bootloader.sh --apply
+sudo scripts/01-grub-bootloader --apply
 sudo systemctl reboot
 
 # 3. Verify the running kernel
-scripts/01-grub-bootloader.sh --verify
+scripts/01-grub-bootloader --verify
 ```
 
 Dry-run output (abridged, bare metal):
@@ -218,7 +218,7 @@ Dry-run output (abridged, bare metal):
            [dry-run] grub2-mkconfig -o /boot/grub2/grub.cfg
 ```
 
-Functions you can reuse by sourcing the script (`. scripts/01-grub-bootloader.sh`): `apply_grub_kernel_parameters`, `apply_latency_grub_subset`, `apply_isolation_grub_set`, `verify_grub_kernel_parameters`, `rollback_grub_kernel_parameters`, `grub_set_arg`.
+Functions you can reuse by sourcing the script (`. scripts/01-grub-bootloader`): `apply_grub_kernel_parameters`, `apply_latency_grub_subset`, `apply_isolation_grub_set`, `verify_grub_kernel_parameters`, `rollback_grub_kernel_parameters`, `grub_set_arg`.
 
 ## 7. Verification
 
@@ -249,7 +249,7 @@ kill $SPIN
 #    column 7 = CPU5 (column 2 is CPU0). Expect a delta of ~10 (1 Hz residual), NOT ~2500 (250 Hz).
 ```
 
-`scripts/verify-tuning.sh` runs checks 1–5 for every guide and prints a PASS/WARN/FAIL report.
+`scripts/verify-tuning` runs checks 1–5 for every guide and prints a PASS/WARN/FAIL report.
 
 ## 8. Troubleshooting
 
@@ -266,7 +266,7 @@ kill $SPIN
 ## 9. Rollback
 
 ```bash
-sudo scripts/01-grub-bootloader.sh --rollback     # removes every argument this guide manages
+sudo scripts/01-grub-bootloader --rollback        # removes every argument this guide manages
 sudo systemctl reboot
 ```
 

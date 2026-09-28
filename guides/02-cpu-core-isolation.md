@@ -1,6 +1,6 @@
 # Guide 02 — CPU Core Isolation
 
-> **Script:** [`scripts/02-cpu-isolation.sh`](../scripts/02-cpu-isolation.sh) · **Concept:** [concepts/cpu-isolation.md](../concepts/cpu-isolation.md) · **Previous:** [Guide 01](01-grub-bootloader-tuning.md) · **Next:** [Guide 03 — Huge pages](03-huge-pages-configuration.md)
+> **Script:** [`scripts/02-cpu-isolation`](../scripts/02-cpu-isolation) · **Concept:** [concepts/cpu-isolation.md](../concepts/cpu-isolation.md) · **Previous:** [Guide 01](01-grub-bootloader-tuning.md) · **Next:** [Guide 03 — Huge pages](03-huge-pages-configuration.md)
 
 | | |
 |---|---|
@@ -103,9 +103,9 @@ echo 00000005 > /sys/bus/workqueue/devices/writeback/cpumask
 
 Unbound workqueues (filesystem writeback, many driver deferred tasks, crypto) run their `kworker/u*` threads on any CPU in this mask. **Per-CPU (bound) workqueues cannot be moved**. They run on the CPU that queued the work, which is why the isolated CPUs must not trigger kernel work: no disk I/O, no page-cache writeback, and no `mprotect`-heavy code on the critical threads.
 
-The mask format is hexadecimal, as comma-separated 32-bit words for hosts with more than 32 CPUs (`00000002,00000001` = CPUs 0 and 33). `cpu_mask_from_list` in `lib/common.sh` builds it for any CPU count. Do not hard-code a 64-bit `printf '%016x'`: it silently breaks on hosts with more than 64 CPUs.
+The mask format is hexadecimal, as comma-separated 32-bit words for hosts with more than 32 CPUs (`00000002,00000001` = CPUs 0 and 33). `cpu_mask_from_list` in `lib/common` builds it for any CPU count. Do not hard-code a 64-bit `printf '%016x'`: it silently breaks on hosts with more than 64 CPUs.
 
-This setting is **not persistent**. `lowlat-runtime.service` re-applies it at every boot (`02-cpu-isolation.sh --runtime`).
+This setting is **not persistent**. `lowlat-runtime.service` re-applies it at every boot (`02-cpu-isolation --runtime`).
 
 ### 4.3 irqbalance (persistent)
 
@@ -242,10 +242,10 @@ taskset -cp 9 <tid>
 numactl --membind=1 --cpunodebind=1 ./my-app
 ```
 
-`scripts/02-cpu-isolation.sh` exports two helpers when sourced:
+`scripts/02-cpu-isolation` exports two helpers when sourced:
 
 ```bash
-. scripts/02-cpu-isolation.sh
+. scripts/02-cpu-isolation
 pin_process "$(pgrep -f my-agent)" 4          # taskset -a (all threads)
 show_affinity "$(pgrep -f my-app)"            # TID, allowed CPUs, last CPU, thread name
 ```
@@ -270,10 +270,10 @@ On an isolated CPU with exactly one runnable thread, `SCHED_OTHER` and `SCHED_FI
 ## 7. Using the script
 
 ```bash
-scripts/02-cpu-isolation.sh --dry-run
-sudo scripts/02-cpu-isolation.sh --apply
+scripts/02-cpu-isolation --dry-run
+sudo scripts/02-cpu-isolation --apply
 sudo systemctl reboot                         # for systemd CPUAffinity
-scripts/02-cpu-isolation.sh --verify
+scripts/02-cpu-isolation --verify
 ```
 
 | Function | Persistent? | Notes |
@@ -317,7 +317,7 @@ How to read `/proc/interrupts` on isolated CPUs:
 | `TLB` | TLB shootdowns | ~0; see [Guide 03](03-huge-pages-configuration.md) |
 | NIC rows | Device interrupts | **0**. If not, see [Guide 04](04-network-optimization.md). |
 
-`scripts/verify-tuning.sh` runs checks 1–3 automatically.
+`scripts/verify-tuning` runs checks 1–3 automatically.
 
 ## 9. Troubleshooting
 

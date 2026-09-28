@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# 03-huge-pages.sh - explicit huge pages reserved per NUMA node at early boot (Guide 03).
+# 03-huge-pages - explicit huge pages reserved per NUMA node at early boot (Guide 03).
 #
 #   install_hugepage_reservation  generates the per-node reservation script + a oneshot
 #                                 unit that runs before dev-hugepages.mount, and enables it
@@ -12,8 +12,8 @@
 # here is about EXPLICIT (hugetlbfs) pages, which applications must request.
 
 set -Eeuo pipefail
-# shellcheck source=lib/common.sh
-. "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+# shellcheck source=lib/common
+. "$(dirname "${BASH_SOURCE[0]}")/lib/common"
 
 HUGETLB_RESERVE_SCRIPT="${HUGETLB_RESERVE_SCRIPT:-/usr/lib/systemd/hugetlb-reserve-pages}"
 HUGETLB_RESERVE_UNIT="${HUGETLB_RESERVE_UNIT:-/etc/systemd/system/hugetlb-reserve-pages.service}"
@@ -46,7 +46,7 @@ install_hugepage_reservation() {
 	log_sub_step "Writing per-node reservation script ${HUGETLB_RESERVE_SCRIPT}"
 	write_file "${HUGETLB_RESERVE_SCRIPT}" 0755 <<EOF
 #!/bin/bash
-# Managed by mechanical-sympathy 03-huge-pages.sh - reserves ${HUGEPAGE_SIZE} huge pages per NUMA node.
+# Managed by mechanical-sympathy 03-huge-pages - reserves ${HUGEPAGE_SIZE} huge pages per NUMA node.
 nodes_path=/sys/devices/system/node
 if [[ ! -d \${nodes_path} ]]; then
 	echo "ERROR: \${nodes_path} does not exist" >&2
@@ -71,7 +71,7 @@ EOF
 
 	log_sub_step "Writing systemd unit ${HUGETLB_RESERVE_UNIT}"
 	write_file "${HUGETLB_RESERVE_UNIT}" 0644 <<EOF
-# Managed by mechanical-sympathy 03-huge-pages.sh
+# Managed by mechanical-sympathy 03-huge-pages
 [Unit]
 Description=Reserve ${HUGEPAGE_SIZE} huge pages per NUMA node
 DefaultDependencies=no
@@ -110,7 +110,8 @@ reserve_hugepages_now() {
 		log_sub_step "Reserving ${count} x ${HUGEPAGE_SIZE} on ${node} now"
 		sysfs_write "${count}" "${file}"
 		if [[ "${DRY_RUN}" -ne 1 && -r "${file}" ]]; then
-			log_sub_step "${node}: $(cat "${file}") pages reserved"
+			count="$(read_value "${file}")"
+			log_sub_step "${node}: ${count} pages reserved"
 		fi
 	done
 }
@@ -120,7 +121,7 @@ set_hugepage_sysctls() {
 	gid="$(getent group "${APP_GROUP}" 2>/dev/null | cut -d: -f3 || true)"
 	log_sub_step "Writing /etc/sysctl.d/92-lowlat-hugepages.conf"
 	write_file /etc/sysctl.d/92-lowlat-hugepages.conf <<EOF
-# Managed by mechanical-sympathy 03-huge-pages.sh
+# Managed by mechanical-sympathy 03-huge-pages
 # Surplus pages the kernel may allocate on demand once the reserved pool is exhausted.
 # Surplus allocation happens at fault time and can fail under fragmentation, so size
 # the reserved pool (hugetlb-reserve-pages.service) for the steady state.
@@ -134,20 +135,24 @@ EOF
 }
 
 show_hugepages() {
-	local dir node
+	local dir node total free surplus
 	grep -E '^(HugePages_|Hugepagesize|Hugetlb|AnonHugePages)' /proc/meminfo
 	for dir in /sys/devices/system/node/node*/hugepages/hugepages-*; do
 		[[ -d "${dir}" ]] || continue
-		node="$(basename "$(dirname "$(dirname "${dir}")")")"
-		printf '%s %s: total=%s free=%s surplus=%s\n' "${node}" "$(basename "${dir}")" \
-			"$(cat "${dir}/nr_hugepages")" "$(cat "${dir}/free_hugepages")" "$(cat "${dir}/surplus_hugepages")"
+		node="${dir#/sys/devices/system/node/}"
+		node="${node%%/*}"
+		total="$(read_value "${dir}/nr_hugepages")"
+		free="$(read_value "${dir}/free_hugepages")"
+		surplus="$(read_value "${dir}/surplus_hugepages")"
+		printf '%s %s: total=%s free=%s surplus=%s\n' "${node}" "${dir##*/}" "${total}" "${free}" "${surplus}"
 	done
 }
 
 node_has_pages() { # node_has_pages <node> <count>
-	local file
-	file="/sys/devices/system/node/$1/hugepages/hugepages-$(hugepage_size_kb)kB/nr_hugepages"
-	[[ -r "${file}" ]] && (($(cat "${file}") >= $2))
+	local size_kb reserved
+	size_kb="$(hugepage_size_kb)"
+	reserved="$(read_value "/sys/devices/system/node/$1/hugepages/hugepages-${size_kb}kB/nr_hugepages" 0)"
+	((reserved >= $2))
 }
 
 thp_is_never() {
@@ -168,7 +173,7 @@ apply_huge_pages() {
 }
 
 verify_huge_pages() {
-	local spec node count line
+	local spec node count line state
 	verify_check "transparent huge pages disabled ([never])" thp_is_never
 	if ! host_is_bare_metal; then
 		verify_info "host_class=${HOST_CLASS}: explicit huge pages not expected"
@@ -183,7 +188,10 @@ verify_huge_pages() {
 	done
 	verify_check "vm.nr_overcommit_hugepages = ${HUGEPAGES_OVERCOMMIT}" \
 		grep -qx "${HUGEPAGES_OVERCOMMIT}" /proc/sys/vm/nr_overcommit_hugepages
-	while read -r line; do verify_info "${line}"; done < <(show_hugepages)
+	state="$(show_hugepages)"
+	while read -r line; do
+		[[ -n "${line}" ]] && verify_info "${line}"
+	done <<<"${state}"
 	verify_result
 }
 

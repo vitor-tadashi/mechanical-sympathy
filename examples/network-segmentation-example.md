@@ -1,22 +1,22 @@
 # Example — Segmenting a Multi-NIC Low-Latency Host
 
-> Guide: [04 Network](../guides/04-network-optimization.md) · Concept: [network-tuning](../concepts/network-tuning.md) · Script: [`scripts/04-network.sh`](../scripts/04-network.sh)
+> Guide: [04 Network](../guides/04-network-optimization.md) · Concept: [network-tuning](../concepts/network-tuning.md) · Script: [`scripts/04-network`](../scripts/04-network)
 
 This walkthrough builds the network side of the reference host from scratch: six interfaces, each with a role, its own subnet, its own IRQ CPU, and the right queueing. At the end, the order path shares nothing with the bulk traffic (no NIC, queue, IRQ, CPU, or qdisc), and every setting is re-applied at boot.
 
 ## 1. The target
 
 ```
-                          ┌─────────────────────────────── host (2 sockets) ─────────────────────────────────┐
-                          │                                                                                   │
-  exchange / clients ─────┤ ens1f0  10.10.1.10/24  critical  gw 10.10.1.1 for 10.200.0.0/16   IRQ → CPU 1    │ node 1
+                          ┌─────────────────────────────── host (2 sockets) ───────────────────────────────────┐
+                          │                                                                                    │
+  exchange / clients ─────┤ ens1f0  10.10.1.10/24  critical  gw 10.10.1.1 for 10.200.0.0/16     IRQ → CPU 1    │ node 1
   internal services ──────┤ ens1f1  10.10.2.10/24  critical  (on-link)                          IRQ → CPU 1    │ (same card)
-                          │                                                                                   │
+                          │                                                                                    │
   PTP grandmaster ────────┤ eno1    10.10.9.10/24  timing    (on-link)                          IRQ → CPU 0    │ node 0
   replication/storage ────┤ ens2f0  10.20.1.10/24  bulk      gw 10.20.1.1 for 10.201.0.0/16     IRQ → CPU 30   │ node 0
   logs/metrics sinks ─────┤ ens2f1  10.20.2.10/24  bulk      (on-link)                          IRQ → CPU 30   │
   ops / SSH ──────────────┤ eno2    10.99.0.10/24  mgmt      DEFAULT ROUTE 10.99.0.1            IRQ → CPU 0    │
-                          └───────────────────────────────────────────────────────────────────────────────────┘
+                          └────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 Principles:
@@ -94,8 +94,8 @@ NIC_DISABLE_CSUM_OFFLOAD=no
 Apply and check:
 
 ```bash
-sudo scripts/04-network.sh --apply
-scripts/04-network.sh --verify
+sudo scripts/04-network --apply
+scripts/04-network --verify
 ```
 
 ## 5. Resulting interrupt and CPU map
@@ -184,7 +184,7 @@ Pin `ptp4l`/`phc2sys` to CPU 0 with a drop-in (`CPUAffinity=0`), not into the ho
 | Setting | Persisted by |
 |---|---|
 | Addresses, routes, `never-default`, IPv6 off | NetworkManager connection profiles (§3) |
-| Coalescing, offloads, pause, rings | `lowlat-runtime.service` (`04-network.sh --runtime`) **or** NM `ethtool.*` properties ([Guide 04 §8](../guides/04-network-optimization.md#8-persistence)) |
+| Coalescing, offloads, pause, rings | `lowlat-runtime.service` (`04-network --runtime`) **or** NM `ethtool.*` properties ([Guide 04 §8](../guides/04-network-optimization.md#8-persistence)) |
 | Channels (`combined`) | `lowlat-runtime.service` (or NM ≥ 1.36 `ethtool.channels-combined`) |
 | IRQ affinity | `lowlat-runtime.service`. It must run **after** any channel change. |
 | `txqueuelen` | `lowlat-runtime.service`, or a udev rule: `ACTION=="add", SUBSYSTEM=="net", KERNEL=="ens2f*", ATTR{tx_queue_len}="300000"` |
@@ -194,7 +194,7 @@ Pin `ptp4l`/`phc2sys` to CPU 0 with a drop-in (`CPUAffinity=0`), not into the ho
 ## 9. Acceptance checks
 
 ```bash
-scripts/verify-tuning.sh                                  # includes "no NIC IRQ on an isolated CPU"
+scripts/verify-tuning                                     # includes "no NIC IRQ on an isolated CPU"
 ip route get 10.200.1.5     # → dev ens1f0 (venue traffic leaves via the critical NIC)
 ip route get 10.201.3.7     # → dev ens2f0 (replication via bulk)
 ip route get 8.8.8.8        # → dev eno2   (everything else via management)
@@ -214,4 +214,4 @@ The critical p99 with and without the bulk load should be the same. If it moves,
 | Replies to venue arrive on `eno2` | ARP answered on the wrong NIC | `arp_ignore=1`; check `ip neigh` on the peer |
 | Packets dropped with `rp_filter` | Asymmetric routing | Fix the routing, or `rp_filter=2` on that interface |
 | Critical RTT rises with bulk load | Shared CPU (IRQ CPUs overlap) or shared switch uplink | §5 map; check switch port utilisation |
-| IRQ affinity lost after the link came back | Driver re-created its queues | Re-run `04-network.sh --runtime`, or use a NetworkManager dispatcher script on `up` |
+| IRQ affinity lost after the link came back | Driver re-created its queues | Re-run `04-network --runtime`, or use a NetworkManager dispatcher script on `up` |

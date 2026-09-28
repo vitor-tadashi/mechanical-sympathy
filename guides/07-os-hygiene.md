@@ -1,6 +1,6 @@
 # Guide 07 — Operating System Hygiene
 
-> **Script:** [`scripts/07-os-hygiene.sh`](../scripts/07-os-hygiene.sh) · **Previous:** [Guide 06](06-kernel-sysctl-tuning.md) · **Then:** [`scripts/verify-tuning.sh`](../scripts/verify-tuning.sh)
+> **Script:** [`scripts/07-os-hygiene`](../scripts/07-os-hygiene) · **Previous:** [Guide 06](06-kernel-sysctl-tuning.md) · **Then:** [`scripts/verify-tuning`](../scripts/verify-tuning)
 
 | | |
 |---|---|
@@ -123,7 +123,7 @@ Alternatives with most of the benefit and less risk:
 - Keep the firewall, but exempt the critical flows from conntrack with `notrack` rules in the `raw` table. The rules still apply, but there is no per-flow state.
 - Use kernel bypass for the critical NICs ([Guide 04 §7](04-network-optimization.md#7-kernel-bypass-optional)). Those packets never reach netfilter.
 
-Module unloading and rule flushing are **not persistent**. When opted in, `lowlat-runtime.service` repeats them at every boot (`07-os-hygiene.sh --runtime`). To make module removal stick, blacklist them in `/etc/modprobe.d/` (`install <module> /bin/false`) as well.
+Module unloading and rule flushing are **not persistent**. When opted in, `lowlat-runtime.service` repeats them at every boot (`07-os-hygiene --runtime`). To make module removal stick, blacklist them in `/etc/modprobe.d/` (`install <module> /bin/false`) as well.
 
 ## 7. Things this guide deliberately does *not* do
 
@@ -136,9 +136,9 @@ Module unloading and rule flushing are **not persistent**. When opted in, `lowla
 ## 8. Using the script
 
 ```bash
-scripts/07-os-hygiene.sh --dry-run
-sudo scripts/07-os-hygiene.sh --apply
-scripts/07-os-hygiene.sh --verify
+scripts/07-os-hygiene --dry-run
+sudo scripts/07-os-hygiene --apply
+scripts/07-os-hygiene --verify
 ```
 
 ## 9. Verification

@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 #
-# 04-network.sh - NIC queue, coalescing, offload and IRQ placement (Guide 04).
+# 04-network - NIC queue, coalescing, offload and IRQ placement (Guide 04).
 #
-#   tune_nic_low_latency <iface> <role> [txqueuelen]  channels, coalescing, pause, offloads, rings
+#   tune_nic_low_latency <iface> <role> [txqueuelen] [irq cpus]  channels, coalescing, pause, offloads, rings
 #   set_nic_irq_affinity <iface> <cpu list>           route every IRQ of the NIC to those CPUs
 #   show_nic_state <iface>                            one-screen summary of what is configured
 #
 # Everything here is RUNTIME state: drivers forget it on reboot, link flap or driver
-# reload. lowlat-runtime.service re-runs `04-network.sh --runtime` at every boot.
+# reload. lowlat-runtime.service re-runs `04-network --runtime` at every boot.
 
 set -Eeuo pipefail
-# shellcheck source=lib/common.sh
-. "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+# shellcheck source=lib/common
+. "$(dirname "${BASH_SOURCE[0]}")/lib/common"
 
 # nic_field <spec> <index> - fields of a NICS entry "name|role|irq_cpus|txqueuelen".
 nic_field() {
@@ -40,13 +40,33 @@ ethtool_max() {
 	{ ethtool "$2" "$1" 2>/dev/null || true; } | awk -v l="$3:" '$1==l {print $2; exit}'
 }
 
-# tune_nic_low_latency <iface> <role> [txqueuelen]
+# ethtool_current <iface> <-l|-g> <label> - first value of <label> in "Current hardware settings".
+ethtool_current() {
+	{ ethtool "$2" "$1" 2>/dev/null || true; } | awk -v l="$3:" '/^Current/ {c = 1} c && $1==l {print $2; exit}'
+}
+
+# nic_queue_count <irq cpus> <hardware max> - one combined queue per CPU that services
+# the NIC's interrupts. More queues than IRQ CPUs buys no parallelism: the extra queues'
+# interrupts land on the same CPUs and only add NAPI contexts, IRQ vectors and memory.
+nic_queue_count() {
+	local expanded count
+	local -a cpu_array
+	expanded="$(cpu_list_expand "$1")"
+	read -r -a cpu_array <<<"${expanded}"
+	count="${#cpu_array[@]}"
+	if [[ "$2" =~ ^[0-9]+$ ]] && ((count > $2)); then
+		count="$2"
+	fi
+	printf '%s\n' "${count}"
+}
+
+# tune_nic_low_latency <iface> <role> [txqueuelen] [irq cpus]
 #   role: critical | timing | bulk | mgmt (mgmt interfaces are never touched)
 tune_nic_low_latency() {
-	local iface="$1" role="$2" txqueuelen="${3:-0}" usecs=0 combined max_rx max_tx
+	local iface="$1" role="$2" txqueuelen="${3:-0}" irq_cpus="${4:-}" usecs=0 combined max_rx max_tx
 
 	if ! nic_exists "${iface}"; then
-		log_sub_step "Network interface ${iface} does not exist, skipping"
+		log_sub_step "Network interface ${iface} does not exist (or is bound to a user-space driver), skipping"
 		return 0
 	fi
 	if [[ "${role}" == mgmt ]]; then
@@ -55,16 +75,19 @@ tune_nic_low_latency() {
 	fi
 	[[ "${role}" == bulk ]] && usecs="${NIC_BULK_COALESCE_USECS:-0}"
 
-	# Queues. Kernel bypass: the bypass stack owns the data path, so the kernel needs a
-	# single queue (fewer IRQ vectors to place, less memory). Kernel stack: as many
-	# queues as the NIC supports, so RSS spreads flows and each queue has its own IRQ.
+	# Queues (Guide 04 §5.1). Kernel bypass: the bypass stack has its own queues for the
+	# accelerated traffic, so the kernel keeps a single queue for what is left (Guide 08).
+	# Kernel stack: one queue per CPU that services the NIC's interrupts.
 	if nic_is_kernel_bypass "${iface}"; then
 		log_sub_step "${iface}: kernel-bypass NIC, 1 combined queue"
 		run_quiet ethtool -L "${iface}" combined 1
 	else
-		combined="$(ethtool_max "${iface}" -l Combined)"
-		if [[ -n "${combined}" && "${combined}" != n/a && "${combined}" -gt 0 ]]; then
-			log_sub_step "${iface}: ${combined} combined queues (hardware maximum)"
+		if [[ -z "${irq_cpus}" ]]; then
+			log_sub_step "${iface}: no IRQ CPUs configured, queue count left at the driver default"
+		else
+			combined="$(ethtool_max "${iface}" -l Combined)"
+			combined="$(nic_queue_count "${irq_cpus}" "${combined}")"
+			log_sub_step "${iface}: ${combined} combined queue(s), one per IRQ CPU (${irq_cpus})"
 			run_quiet ethtool -L "${iface}" combined "${combined}"
 		fi
 		# Adaptive coalescing re-tunes rx/tx-usecs on the fly based on load; with it on,
@@ -128,13 +151,14 @@ nic_irqs() {
 		[[ "${found}" -eq 1 ]] && return 0
 	fi
 	# Match "<iface>" or "<iface>-<suffix>" as a whole word (em1 must not match em10).
+	[[ -r /proc/interrupts ]] || return 0
 	awk -v n="${iface}" '{ for (i = NF; i > 1; i--) if ($i == n || index($i, n "-") == 1) { sub(":", "", $1); print $1; break } }' \
 		/proc/interrupts
 }
 
 # set_nic_irq_affinity <iface> <cpu list> - e.g. set_nic_irq_affinity ens1f0 1
 set_nic_irq_affinity() {
-	local iface="$1" cpus="$2" irq count=0
+	local iface="$1" cpus="$2" irq irqs count=0
 	if ! nic_exists "${iface}"; then
 		log_sub_step "Network interface ${iface} does not exist, skipping"
 		return 0
@@ -144,6 +168,7 @@ set_nic_irq_affinity() {
 		return 0
 	}
 	log_sub_step "${iface}: routing interrupts to CPUs ${cpus}"
+	irqs="$(nic_irqs "${iface}")"
 	while read -r irq; do
 		[[ -n "${irq}" && -e "/proc/irq/${irq}/smp_affinity_list" ]] || continue
 		if [[ "${DRY_RUN}" -eq 1 ]]; then
@@ -154,24 +179,28 @@ set_nic_irq_affinity() {
 			continue
 		fi
 		count=$((count + 1))
-	done < <(nic_irqs "${iface}")
+	done <<<"${irqs}"
 	log_sub_step "${iface}: ${count} IRQ(s) placed"
 }
 
 show_nic_state() {
-	local iface="$1" irq
-	printf '== %s (%s) numa_node=%s\n' "${iface}" \
-		"$(ethtool -i "${iface}" 2>/dev/null | awk -F': ' '/^driver:/{print $2}')" \
-		"$(cat "/sys/class/net/${iface}/device/numa_node" 2>/dev/null || echo n/a)"
+	local iface="$1" irq irqs driver numa_node value
+	driver="$({ ethtool -i "${iface}" 2>/dev/null || true; } | awk -F': ' '/^driver:/{print $2}')"
+	numa_node="$(read_value "/sys/class/net/${iface}/device/numa_node")"
+	printf '== %s (%s) numa_node=%s\n' "${iface}" "${driver:-n/a}" "${numa_node}"
 	ethtool -l "${iface}" 2>/dev/null | awk '/Current/{c=1} c && /Combined/{print "   queues:   " $2; exit}' || true
 	ethtool -c "${iface}" 2>/dev/null | awk '/^Adaptive|^rx-usecs:|^tx-usecs:/{printf "   %s", $0; print ""}' || true
 	ethtool -a "${iface}" 2>/dev/null | awk '/^(Autonegotiate|RX|TX):/{printf "   pause %s\n", $0}' || true
 	ethtool -k "${iface}" 2>/dev/null | awk '/^(tcp-segmentation-offload|generic-segmentation-offload|large-receive-offload|generic-receive-offload|rx-checksumming|tx-checksumming):/{printf "   %s\n", $0}' || true
 	ethtool -g "${iface}" 2>/dev/null | awk '/Current/{c=1} c && /^(RX|TX):/{printf "   ring %s\n", $0}' || true
-	printf '   txqueuelen: %s\n' "$(cat "/sys/class/net/${iface}/tx_queue_len" 2>/dev/null)"
+	value="$(read_value "/sys/class/net/${iface}/tx_queue_len")"
+	printf '   txqueuelen: %s\n' "${value}"
+	irqs="$(nic_irqs "${iface}")"
 	while read -r irq; do
-		printf '   irq %-5s -> %s\n' "${irq}" "$(cat "/proc/irq/${irq}/smp_affinity_list" 2>/dev/null)"
-	done < <(nic_irqs "${iface}")
+		[[ -n "${irq}" ]] || continue
+		value="$(read_value "/proc/irq/${irq}/smp_affinity_list")"
+		printf '   irq %-5s -> %s\n' "${irq}" "${value}"
+	done <<<"${irqs}"
 }
 
 apply_network() {
@@ -182,8 +211,9 @@ apply_network() {
 		for spec in "${NICS[@]}"; do
 			iface="$(nic_field "${spec}" 0)"
 			role="$(nic_field "${spec}" 1)"
+			cpus="$(nic_field "${spec}" 2)"
 			txq="$(nic_field "${spec}" 3)"
-			tune_nic_low_latency "${iface}" "${role}" "${txq:-0}"
+			tune_nic_low_latency "${iface}" "${role}" "${txq:-0}" "${cpus}"
 		done
 	fi
 
@@ -205,7 +235,15 @@ apply_network() {
 # --- verification -----------------------------------------------------------
 
 coalesce_is() { # coalesce_is <iface> <key> <value>
-	[[ "$(ethtool -c "$1" 2>/dev/null | awk -v k="$2:" '$1==k {print $2; exit}')" == "$3" ]]
+	local actual
+	actual="$({ ethtool -c "$1" 2>/dev/null || true; } | awk -v k="$2:" '$1==k {print $2; exit}')"
+	[[ "${actual}" == "$3" ]]
+}
+
+queues_are() { # queues_are <iface> <count>
+	local actual
+	actual="$(ethtool_current "$1" -l Combined)"
+	[[ "${actual}" == "$2" ]]
 }
 
 adaptive_rx_off() {
@@ -213,30 +251,38 @@ adaptive_rx_off() {
 }
 
 irqs_on_cpus() { # irqs_on_cpus <iface> <cpu list>
-	local irq want actual
+	local irq irqs want actual
 	want="$(cpu_list_expand "$2")"
+	irqs="$(nic_irqs "$1")"
 	while read -r irq; do
-		actual="$(cat "/proc/irq/${irq}/smp_affinity_list" 2>/dev/null)" || continue
-		[[ "$(cpu_list_expand "${actual}")" == "${want}" ]] || return 1
-	done < <(nic_irqs "$1")
+		[[ -n "${irq}" ]] || continue
+		actual="$(read_value "/proc/irq/${irq}/smp_affinity_list" "")"
+		[[ -n "${actual}" ]] || continue
+		actual="$(cpu_list_expand "${actual}")"
+		[[ "${actual}" == "${want}" ]] || return 1
+	done <<<"${irqs}"
 }
 
 no_nic_irq_on_isolated_cpus() {
-	local spec iface irq cpu
+	local spec iface irq irqs cpu effective
 	for spec in "${NICS[@]}"; do
 		iface="$(nic_field "${spec}" 0)"
 		nic_exists "${iface}" || continue
+		irqs="$(nic_irqs "${iface}")"
 		while read -r irq; do
-			for cpu in $(cpu_list_expand "$(cat "/proc/irq/${irq}/effective_affinity_list" 2>/dev/null)"); do
+			[[ -n "${irq}" ]] || continue
+			effective="$(read_value "/proc/irq/${irq}/effective_affinity_list" "")"
+			effective="$(cpu_list_expand "${effective}")"
+			for cpu in ${effective}; do
 				[[ " ${ISOLATED_CPUS[*]} " == *" ${cpu} "* ]] && return 1
 			done
-		done < <(nic_irqs "${iface}")
+		done <<<"${irqs}"
 	done
 	return 0
 }
 
 verify_network() {
-	local spec iface role cpus usecs
+	local spec iface role cpus usecs queues
 	for spec in "${NICS[@]}"; do
 		iface="$(nic_field "${spec}" 0)"
 		role="$(nic_field "${spec}" 1)"
@@ -250,6 +296,11 @@ verify_network() {
 		[[ "${role}" == bulk ]] && usecs="${NIC_BULK_COALESCE_USECS:-0}"
 		verify_check "${iface} (${role}) rx-usecs=${usecs}" coalesce_is "${iface}" rx-usecs "${usecs}"
 		verify_soft "${iface} (${role}) adaptive RX off" adaptive_rx_off "${iface}"
+		if [[ -n "${cpus}" ]] && ! nic_is_kernel_bypass "${iface}"; then
+			queues="$(ethtool_max "${iface}" -l Combined)"
+			queues="$(nic_queue_count "${cpus}" "${queues}")"
+			verify_soft "${iface} (${role}) ${queues} combined queue(s)" queues_are "${iface}" "${queues}"
+		fi
 		if [[ -n "${cpus}" ]]; then
 			verify_check "${iface} (${role}) IRQs on CPUs ${cpus}" irqs_on_cpus "${iface}" "${cpus}"
 		fi

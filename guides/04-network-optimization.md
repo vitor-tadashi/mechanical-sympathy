@@ -1,6 +1,6 @@
 # Guide 04 — Network Optimization (NIC, Interrupts, Segmentation)
 
-> **Script:** [`scripts/04-network.sh`](../scripts/04-network.sh) · **Concept:** [concepts/network-tuning.md](../concepts/network-tuning.md) · **Example:** [examples/network-segmentation-example.md](../examples/network-segmentation-example.md) · **Previous:** [Guide 03](03-huge-pages-configuration.md) · **Next:** [Guide 05 — cgroups](05-cgroup-isolation.md)
+> **Script:** [`scripts/04-network`](../scripts/04-network) · **Concept:** [concepts/network-tuning.md](../concepts/network-tuning.md) · **Example:** [examples/network-segmentation-example.md](../examples/network-segmentation-example.md) · **Previous:** [Guide 03](03-huge-pages-configuration.md) · **Next:** [Guide 05 — cgroups](05-cgroup-isolation.md)
 
 | | |
 |---|---|
@@ -100,7 +100,7 @@ ethtool -g ens1f0      # ring sizes: maximum vs current
 grep ens1f0 /proc/interrupts                           # IRQ per queue and which CPUs served them
 ```
 
-Save this output **before** tuning (`scripts/04-network.sh` has `show_nic_state <iface>` for a compact version). It is your rollback reference.
+Save this output **before** tuning (`scripts/04-network` has `show_nic_state <iface>` for a compact version). It is your rollback reference.
 
 ## 5. Per-NIC settings (`tune_nic_low_latency`)
 
@@ -236,7 +236,7 @@ After loading module options, reload the stack's drivers **pinned to a housekeep
 
 Nothing in this guide survives a reboot or a driver reload. Two supported ways to re-apply it:
 
-**A. Oneshot unit (default, used by `apply-all.sh`)**: `scripts/systemd/lowlat-runtime.service` runs after `network-online.target` and calls `04-network.sh --runtime` (and the other runtime parts). One script, one place, and it reads the same `lowlat.conf`.
+**A. Oneshot unit (default, used by `apply-all`)**: `scripts/systemd/lowlat-runtime.service` runs after `network-online.target` and calls `04-network --runtime` (and the other runtime parts). One script, one place, and it reads the same `lowlat.conf`.
 
 **B. NetworkManager `ethtool.*` properties (RHEL 9)**: NetworkManager applies them every time the connection comes up, including after a link flap:
 
@@ -255,8 +255,8 @@ Channel counts (`ethtool.channels-combined`) need a recent NetworkManager (≥ 1
 ## 9. Verification
 
 ```bash
-scripts/04-network.sh --verify          # per-NIC PASS/FAIL, and "no NIC IRQ on an isolated CPU"
-. scripts/04-network.sh && show_nic_state ens1f0
+scripts/04-network --verify             # per-NIC PASS/FAIL, and "no NIC IRQ on an isolated CPU"
+. scripts/04-network && show_nic_state ens1f0
 
 # Interrupts: the critical NIC's counters increase only in the CPU1 column
 watch -d -n1 "grep -E 'CPU|ens1f0' /proc/interrupts"
@@ -293,7 +293,7 @@ Record p50/p99/p99.9 before and after. The biggest visible change is usually in 
 | Settings revert after a few minutes | irqbalance (IRQ), adaptive coalescing (usecs), NetworkManager re-applying a profile | Disable irqbalance; `adaptive-rx off`; put the values in the NM profile |
 | Settings gone after reboot/link flap | Runtime-only | `systemctl status lowlat-runtime`; NM `ethtool.*` properties |
 | IRQ affinity write fails with *Input/output error* | Kernel-managed IRQ | §6.2 |
-| Interrupt counts rise on an isolated CPU | IRQ not placed (new queue after `ethtool -L`, or a device not in `NICS`) | Run `04-network.sh --runtime` after any channel change; add the device |
+| Interrupt counts rise on an isolated CPU | IRQ not placed (new queue after `ethtool -L`, or a device not in `NICS`) | Run `04-network --runtime` after any channel change; add the device |
 | `softnet_stat` squeezed column increasing | The IRQ CPU cannot keep up (coalescing 0 at a high packet rate) | Dedicate that CPU to IRQs, spread the queues over two housekeeping CPUs, or use busy polling / bypass |
 | Latency better but throughput collapsed on bulk NIC | Coalescing 0 + offloads off at a high rate | §5.9 bulk profile |
 | SSH session dropped while applying | `ethtool -L`/`-G` on the management NIC | Mark it `mgmt` in `NICS` |

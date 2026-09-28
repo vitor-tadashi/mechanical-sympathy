@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# common.sh - shared helpers for the mechanical-sympathy tuning scripts.
+# common - shared helpers for the mechanical-sympathy tuning scripts.
 #
-# Sourced by every guide script (scripts/0N-*.sh). It provides:
+# Sourced by every guide script (scripts/0N-*). It provides:
 #   * configuration loading (lowlat.conf)
 #   * host-class detection (bare_metal / virtual_machine / container / unknown)
 #   * capability gating (which tuning is allowed on which host class)
@@ -61,10 +61,11 @@ STEP_TIMING_ACTIVE_DESCRIPTION=""
 
 now_ms() {
 	# GNU date supports %N; fall back to seconds elsewhere (e.g. macOS dry-runs).
-	local ns
+	local ns s
 	ns="$(date +%s%N 2>/dev/null)"
 	if [[ "${ns}" == *N ]]; then
-		printf '%s\n' "$(($(date +%s) * 1000))"
+		s="$(date +%s)"
+		printf '%s\n' "$((s * 1000))"
 	else
 		printf '%s\n' "$((ns / 1000000))"
 	fi
@@ -114,7 +115,7 @@ format_duration_ms() {
 
 # print_step_timing_table - prints how long each step took (useful to spot slow ethtool resets).
 print_step_timing_table() {
-	local i total=0
+	local i total=0 duration
 	step_timing_close
 	((${#STEP_TIMING_STEPS[@]} > 0)) || return 0
 	printf '\nStep timing summary\n'
@@ -123,11 +124,12 @@ print_step_timing_table() {
 	printf '+------+----------------------------------------------------------+------------+\n'
 	for i in "${!STEP_TIMING_STEPS[@]}"; do
 		total=$((total + STEP_TIMING_MS[i]))
-		printf '| %-4s | %-56.56s | %10s |\n' "${STEP_TIMING_STEPS[i]}" \
-			"${STEP_TIMING_DESCRIPTIONS[i]}" "$(format_duration_ms "${STEP_TIMING_MS[i]}")"
+		duration="$(format_duration_ms "${STEP_TIMING_MS[i]}")"
+		printf '| %-4s | %-56.56s | %10s |\n' "${STEP_TIMING_STEPS[i]}" "${STEP_TIMING_DESCRIPTIONS[i]}" "${duration}"
 	done
+	duration="$(format_duration_ms "${total}")"
 	printf '+------+----------------------------------------------------------+------------+\n'
-	printf '| %-4s | %-56s | %10s |\n' "" "TOTAL" "$(format_duration_ms "${total}")"
+	printf '| %-4s | %-56s | %10s |\n' "" "TOTAL" "${duration}"
 	printf '+------+----------------------------------------------------------+------------+\n'
 }
 
@@ -142,9 +144,9 @@ run() {
 		printf '           [dry-run] %s\n' "$*"
 		return 0
 	fi
-	local rc=0
-	"$@" 2>&1 | sed 's/^/           /' || rc=$?
-	return "${rc}"
+	# Every caller sets pipefail, so the pipeline returns the command's status, not sed's.
+	# shellcheck disable=SC2312
+	"$@" 2>&1 | sed 's/^/           /'
 }
 
 # run_quiet <command> [args...] - like run, but tolerates failure (driver does not
@@ -342,11 +344,12 @@ require_commands() {
 # load_config - sources LOWLAT_CONFIG. In dry-run mode, falls back to the example.
 load_config() {
 	if [[ -r "${LOWLAT_CONFIG}" ]]; then
-		# shellcheck source=/dev/null
+		# The real config has the same variables as the example; let ShellCheck read those.
+		# shellcheck source=lowlat.conf.example
 		. "${LOWLAT_CONFIG}"
 	elif [[ "${DRY_RUN}" -eq 1 ]]; then
 		log_warn "${LOWLAT_CONFIG} not found, using ${LOWLAT_SCRIPTS_DIR}/lowlat.conf.example"
-		# shellcheck source=/dev/null
+		# shellcheck source=lowlat.conf.example
 		. "${LOWLAT_SCRIPTS_DIR}/lowlat.conf.example"
 	else
 		die "configuration ${LOWLAT_CONFIG} not found (copy scripts/lowlat.conf.example)" "${EXIT_PRECHECK}"
@@ -453,7 +456,20 @@ cpu_mask_from_list() {
 
 # online_cpus - prints the online CPU list, e.g. "0-31".
 online_cpus() {
-	cat /sys/devices/system/cpu/online 2>/dev/null || printf '0-%s\n' "$(($(getconf _NPROCESSORS_ONLN) - 1))"
+	local count
+	cat /sys/devices/system/cpu/online 2>/dev/null && return 0
+	count="$(getconf _NPROCESSORS_ONLN)"
+	printf '0-%s\n' "$((count - 1))"
+}
+
+# read_value <file> [default] - first line of a sysfs/procfs file, or the default ("n/a").
+read_value() {
+	local value
+	if { IFS= read -r value <"$1"; } 2>/dev/null; then
+		printf '%s\n' "${value}"
+		return 0
+	fi
+	printf '%s\n' "${2:-n/a}"
 }
 
 # -----------------------------------------------------------------------------

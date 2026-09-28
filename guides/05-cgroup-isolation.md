@@ -1,6 +1,6 @@
 # Guide 05 — Process Isolation with cgroups and systemd Slices
 
-> **Script:** [`scripts/05-cgroup-isolation.sh`](../scripts/05-cgroup-isolation.sh) · **Concept:** [concepts/cgroups.md](../concepts/cgroups.md) · **Previous:** [Guide 04](04-network-optimization.md) · **Next:** [Guide 06 — Kernel sysctl](06-kernel-sysctl-tuning.md)
+> **Script:** [`scripts/05-cgroup-isolation`](../scripts/05-cgroup-isolation) · **Concept:** [concepts/cgroups.md](../concepts/cgroups.md) · **Previous:** [Guide 04](04-network-optimization.md) · **Next:** [Guide 06 — Kernel sysctl](06-kernel-sysctl-tuning.md)
 
 | | |
 |---|---|
@@ -90,7 +90,7 @@ IOSchedulingClass=idle    # only gets disk time when nobody else wants it
 ```
 
 ```bash
-sudo scripts/05-cgroup-isolation.sh --apply
+sudo scripts/05-cgroup-isolation --apply
 sudo systemctl restart node_exporter fluent-bit      # the units listed in HOUSEKEEPING_SLICE_UNITS
 systemd-cgls /housekeeping.slice
 ```
@@ -105,7 +105,7 @@ for proc in edr-agentd av-scand; do
 done
 ```
 
-Pin them to **one** housekeeping CPU that serves no IRQs. Letting a scanner roam across all OS CPUs means it will eventually share a core with NIC interrupt handling. `lowlat-runtime.service` runs this at boot (`05-cgroup-isolation.sh --runtime`). If the agent restarts often, add a systemd timer that re-runs it, or better, ask the vendor for a supported way to run it under a unit, and use §4.2.
+Pin them to **one** housekeeping CPU that serves no IRQs. Letting a scanner roam across all OS CPUs means it will eventually share a core with NIC interrupt handling. `lowlat-runtime.service` runs this at boot (`05-cgroup-isolation --runtime`). If the agent restarts often, add a systemd timer that re-runs it, or better, ask the vendor for a supported way to run it under a unit, and use §4.2.
 
 ### 4.4 The cpuset trap
 
@@ -183,7 +183,7 @@ Some agents refuse to run with low limits, or report "degraded" health. Agree th
 ## 6. Verification
 
 ```bash
-scripts/05-cgroup-isolation.sh --verify
+scripts/05-cgroup-isolation --verify
 
 systemd-cgls --no-pager /housekeeping.slice            # what is inside
 systemctl show -p Slice,CPUAffinity,AllowedCPUs node_exporter
@@ -214,7 +214,7 @@ cat /sys/fs/cgroup/housekeeping.slice/cpu.stat
 ## 8. Rollback
 
 ```bash
-sudo scripts/05-cgroup-isolation.sh --rollback
+sudo scripts/05-cgroup-isolation --rollback
 sudo systemctl restart node_exporter fluent-bit
 ```
 

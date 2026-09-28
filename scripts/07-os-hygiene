@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# 07-os-hygiene.sh - remove background noise from the operating system (Guide 07).
+# 07-os-hygiene - remove background noise from the operating system (Guide 07).
 #
 #   disable_unnecessary_services   stop + disable services from DISABLE_SERVICES
 #   ensure_rsyslog                 keep local logging on (it is cheap and you need it)
@@ -13,8 +13,8 @@
 # The two opt-in functions remove host-level packet filtering. Read Guide 07 §6 first.
 
 set -Eeuo pipefail
-# shellcheck source=lib/common.sh
-. "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+# shellcheck source=lib/common
+. "$(dirname "${BASH_SOURCE[0]}")/lib/common"
 
 LIMITS_FILE="${LIMITS_FILE:-/etc/security/limits.d/90-lowlat.conf}"
 TUNED_PROFILE_DIR="${TUNED_PROFILE_DIR:-/etc/tuned/low-latency}"
@@ -54,7 +54,7 @@ ensure_rsyslog() {
 set_security_limits() {
 	log_sub_step "Writing ${LIMITS_FILE} for @${APP_GROUP}"
 	write_file "${LIMITS_FILE}" <<EOF
-# Managed by mechanical-sympathy 07-os-hygiene.sh
+# Managed by mechanical-sympathy 07-os-hygiene
 # Applies to login sessions (PAM). systemd services use LimitXXX= in the unit instead.
 @${APP_GROUP}  soft  nproc    ${NPROC_LIMIT}
 @${APP_GROUP}  hard  nproc    ${NPROC_LIMIT}
@@ -72,7 +72,7 @@ EOF
 # Adds noatime to local ext4/xfs entries that do not have it yet. Every read of a file
 # otherwise turns into a metadata write (atime update) - journal I/O from a read path.
 set_noatime_mounts() {
-	local updated mountpoint
+	local current updated mountpoint mountpoints
 	[[ -r "${FSTAB}" ]] || {
 		log_warn "${FSTAB} not readable"
 		return 0
@@ -84,16 +84,19 @@ set_noatime_mounts() {
 			print; next
 		}
 		{ print }' "${FSTAB}")"
-	if [[ "${updated}" == "$(cat "${FSTAB}")" ]]; then
+	current="$(<"${FSTAB}")"
+	if [[ "${updated}" == "${current}" ]]; then
 		log_sub_step "${FSTAB}: all local ext4/xfs mounts already use noatime"
 		return 0
 	fi
 	log_sub_step "Adding noatime to local ext4/xfs mounts in ${FSTAB}"
 	printf '%s\n' "${updated}" | write_file "${FSTAB}"
+	mountpoints="$(awk '!/^[[:space:]]*#/ && ($3=="xfs"||$3=="ext4"||$3=="ext3") {print $2}' "${FSTAB}")"
 	while read -r mountpoint; do
+		[[ -n "${mountpoint}" ]] || continue
 		log_sub_step "Remounting ${mountpoint} with noatime"
 		run_quiet mount -o remount,noatime "${mountpoint}"
-	done < <(awk '!/^[[:space:]]*#/ && ($3=="xfs"||$3=="ext4"||$3=="ext3") {print $2}' "${FSTAB}")
+	done <<<"${mountpoints}"
 }
 
 # A custom profile that inherits network-latency (-> latency-performance): performance
@@ -103,7 +106,7 @@ set_noatime_mounts() {
 install_tuned_profile() {
 	log_sub_step "Writing ${TUNED_PROFILE_DIR}/tuned.conf (include=${TUNED_BASE_PROFILE})"
 	write_file "${TUNED_PROFILE_DIR}/tuned.conf" <<EOF
-# Managed by mechanical-sympathy 07-os-hygiene.sh
+# Managed by mechanical-sympathy 07-os-hygiene
 [main]
 summary=Low latency: ${TUNED_BASE_PROFILE} + mechanical-sympathy host settings
 include=${TUNED_BASE_PROFILE}
@@ -154,7 +157,9 @@ remove_netfilter_modules() {
 
 apply_os_hygiene() {
 	log_step "Unnecessary services"
-	require_capability os_hygiene && disable_unnecessary_services
+	if require_capability os_hygiene; then
+		disable_unnecessary_services
+	fi
 	ensure_rsyslog
 
 	log_step "Resource limits for ${APP_USER}"
@@ -194,7 +199,7 @@ apply_os_hygiene_runtime() {
 service_inactive() { not systemctl is-active --quiet "$1"; }
 
 verify_os_hygiene() {
-	local unit
+	local unit rules tables
 	for unit in "${DISABLE_SERVICES[@]}"; do
 		systemctl cat "${unit}" >/dev/null 2>&1 || continue
 		verify_soft "${unit} not running" service_inactive "${unit}"
@@ -204,7 +209,9 @@ verify_os_hygiene() {
 	verify_check "tuned profile low-latency active" sh -c 'tuned-adm active | grep -q "low-latency"'
 	verify_soft "local ext4/xfs mounted with noatime" sh -c \
 		"! findmnt -rn -t xfs,ext4 -o OPTIONS | grep -v noatime | grep -q ."
-	verify_info "iptables rules: $({ iptables -S 2>/dev/null || true; } | grep -vc '^-P' || true), nft tables: $({ nft list tables 2>/dev/null || true; } | wc -l | tr -d ' ')"
+	rules="$({ iptables -S 2>/dev/null || true; } | grep -vc '^-P' || true)"
+	tables="$({ nft list tables 2>/dev/null || true; } | wc -l | tr -d ' ')"
+	verify_info "iptables rules: ${rules}, nft tables: ${tables}"
 	verify_result
 }
 

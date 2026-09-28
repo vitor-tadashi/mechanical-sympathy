@@ -1,6 +1,6 @@
 # Guide 03 — Huge Pages
 
-> **Script:** [`scripts/03-huge-pages.sh`](../scripts/03-huge-pages.sh) · **Concept:** [concepts/huge-pages.md](../concepts/huge-pages.md) · **Example:** [examples/hugepages-java-example.md](../examples/hugepages-java-example.md) · **Previous:** [Guide 02](02-cpu-core-isolation.md) · **Next:** [Guide 04 — Network](04-network-optimization.md)
+> **Script:** [`scripts/03-huge-pages`](../scripts/03-huge-pages) · **Concept:** [concepts/huge-pages.md](../concepts/huge-pages.md) · **Example:** [examples/hugepages-java-example.md](../examples/hugepages-java-example.md) · **Previous:** [Guide 02](02-cpu-core-isolation.md) · **Next:** [Guide 04 — Network](04-network-optimization.md)
 
 | | |
 |---|---|
@@ -131,10 +131,10 @@ Writing to `nr_hugepages` is a *request*. The kernel reserves as many pages as i
 ### 4.4 Using the script
 
 ```bash
-scripts/03-huge-pages.sh --dry-run
-sudo scripts/03-huge-pages.sh --apply        # installs the unit and tries a runtime reservation
+scripts/03-huge-pages --dry-run
+sudo scripts/03-huge-pages --apply           # installs the unit and tries a runtime reservation
 sudo systemctl reboot                        # the boot-time reservation is the one that counts
-scripts/03-huge-pages.sh --verify
+scripts/03-huge-pages --verify
 ```
 
 ## 5. Java applications
@@ -286,7 +286,7 @@ java -Xlog:pagesize ... -version                         # page size used for he
 grep -B11 'KernelPageSize: *2048 kB' /proc/<pid>/smaps | grep -E '^[0-9a-f]+-' | head
 ```
 
-`scripts/03-huge-pages.sh --verify` covers 1–2. `scripts/verify-tuning.sh` covers all guides.
+`scripts/03-huge-pages --verify` covers 1–2. `scripts/verify-tuning` covers all guides.
 
 ## 9. Troubleshooting
 
@@ -303,7 +303,7 @@ grep -B11 'KernelPageSize: *2048 kB' /proc/<pid>/smaps | grep -E '^[0-9a-f]+-' |
 ## 10. Rollback
 
 ```bash
-sudo scripts/03-huge-pages.sh --rollback     # disables the unit, removes the files, releases free pages
+sudo scripts/03-huge-pages --rollback        # disables the unit, removes the files, releases free pages
 sudo systemctl reboot
 ```
 

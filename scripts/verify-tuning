@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# verify-tuning.sh - read-only report of every tuning guide (01-07) on this host.
+# verify-tuning - read-only report of every tuning guide (01-07) on this host.
 #
-#   verify-tuning.sh [--config FILE] [--report FILE]
+#   verify-tuning [--config FILE] [--report FILE]
 #
 # Exit status: 0 = no FAIL (warnings allowed), 5 = at least one FAIL.
 # Does not need root, but some checks (IRQ affinity of other users' processes, tuned)
@@ -26,14 +26,16 @@ while (($# > 0)); do
 done
 
 if [[ -n "${REPORT_FILE}" ]]; then
+	# tee only copies the report to a file; a tee failure must not hide the verification result.
+	# shellcheck disable=SC2312
 	exec > >(tee "${REPORT_FILE}") 2>&1
 fi
 
-# shellcheck source=lib/common.sh
-. "${SCRIPTS_DIR}/lib/common.sh"
+# shellcheck source=lib/common
+. "${SCRIPTS_DIR}/lib/common"
 for guide in 01-grub-bootloader 02-cpu-isolation 03-huge-pages 04-network 05-cgroup-isolation 06-kernel-sysctl 07-os-hygiene; do
 	# shellcheck source=/dev/null
-	. "${SCRIPTS_DIR}/${guide}.sh"
+	. "${SCRIPTS_DIR}/${guide}"
 done
 
 parse_mode_args --verify "${ARGS[@]}" || true
@@ -46,20 +48,25 @@ section() {
 # --- host-wide checks that do not belong to a single guide -------------------
 
 cpu_governor_is_performance() {
-	local f
+	local f governor
 	for f in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
 		[[ -r "${f}" ]] || return 0 # no cpufreq (VM): nothing to check
-		[[ "$(cat "${f}")" == performance ]] || return 1
+		governor="$(read_value "${f}")"
+		[[ "${governor}" == performance ]] || return 1
 	done
 }
 
 no_deep_cstate_usage() {
 	# With idle=poll there is no cpuidle driver; otherwise states deeper than C1 must be disabled or unused.
-	[[ "$(cat /sys/devices/system/cpu/cpuidle/current_driver 2>/dev/null || echo none)" == none ]]
+	local driver
+	driver="$(read_value /sys/devices/system/cpu/cpuidle/current_driver none)"
+	[[ "${driver}" == none ]]
 }
 
 swap_off_or_unused() {
-	[[ "$(awk '/^SwapTotal/{t=$2} /^SwapFree/{f=$2} END{print t-f}' /proc/meminfo)" -eq 0 ]]
+	local used
+	used="$(awk '/^SwapTotal/{t=$2} /^SwapFree/{f=$2} END{print t-f}' /proc/meminfo)"
+	((used == 0))
 }
 
 clocksource_is_tsc() {
@@ -77,18 +84,26 @@ verify_host_wide() {
 	verify_soft "clocksource is tsc (cheap, vDSO-accelerated clock_gettime)" clocksource_is_tsc
 	verify_soft "no swap in use" swap_off_or_unused
 	verify_soft "clock synchronized (chrony/PTP)" time_synchronized
-	verify_info "vulnerability mitigations: $(grep -l -v -i '^not affected' /sys/devices/system/cpu/vulnerabilities/* 2>/dev/null | xargs -r -n1 basename | tr '\n' ' ')"
-	verify_info "load average: $(cut -d' ' -f1-3 /proc/loadavg), uptime: $(uptime -p 2>/dev/null || true)"
+	local mitigations load up
+	mitigations="$({ grep -l -v -i '^not affected' /sys/devices/system/cpu/vulnerabilities/* 2>/dev/null || true; } | xargs -r -n1 basename | tr '\n' ' ')"
+	load="$(read_value /proc/loadavg)"
+	load="${load% * *}"
+	up="$(uptime -p 2>/dev/null || true)"
+	verify_info "vulnerability mitigations: ${mitigations}"
+	verify_info "load average: ${load}, uptime: ${up}"
 }
 
 # --- report --------------------------------------------------------------------
 
 printf '%sLOW-LATENCY TUNING VERIFICATION%s\n' "${BOLD}" "${RESET}"
-printf '  host:       %s\n' "$(hostname -s 2>/dev/null || hostname)"
-printf '  kernel:     %s\n' "$(uname -r)"
+host="$(hostname -s 2>/dev/null || hostname)"
+kernel="$(uname -r)"
+now="$(date '+%Y-%m-%d %H:%M:%S')"
+printf '  host:       %s\n' "${host}"
+printf '  kernel:     %s\n' "${kernel}"
 printf '  host class: %s\n' "${HOST_CLASS}"
 printf '  config:     %s\n' "${LOWLAT_CONFIG}"
-printf '  date:       %s\n' "$(date '+%Y-%m-%d %H:%M:%S')"
+printf '  date:       %s\n' "${now}"
 
 # Each verify_* function uses the shared VERIFY_FAILURES / VERIFY_WARNINGS counters and
 # returns non-zero on failures; we keep going and summarise at the end.

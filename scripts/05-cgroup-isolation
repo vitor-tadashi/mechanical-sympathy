@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# 05-cgroup-isolation.sh - fence non-critical processes (Guide 05).
+# 05-cgroup-isolation - fence non-critical processes (Guide 05).
 #
 #   create_housekeeping_slice        housekeeping.slice with CPU/memory/IO limits
 #   move_service_to_slice <unit>     drop-in: Slice=housekeeping.slice + CPUAffinity
@@ -13,14 +13,16 @@
 # cannot exhaust memory, I/O or the housekeeping CPUs the kernel and NIC IRQs need.
 
 set -Eeuo pipefail
-# shellcheck source=lib/common.sh
-. "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+# shellcheck source=lib/common
+. "$(dirname "${BASH_SOURCE[0]}")/lib/common"
 
 HOUSEKEEPING_SLICE="${HOUSEKEEPING_SLICE:-housekeeping.slice}"
 SYSTEMD_UNIT_DIR="${SYSTEMD_UNIT_DIR:-/etc/systemd/system}"
 
 cgroup_version() {
-	if [[ "$(stat -fc %T /sys/fs/cgroup 2>/dev/null)" == cgroup2fs ]]; then
+	local fs_type
+	fs_type="$(stat -fc %T /sys/fs/cgroup 2>/dev/null || true)"
+	if [[ "${fs_type}" == cgroup2fs ]]; then
 		printf '2\n'
 	else
 		printf '1\n'
@@ -35,7 +37,7 @@ create_housekeeping_slice() {
 	log_sub_step "Writing ${SYSTEMD_UNIT_DIR}/${HOUSEKEEPING_SLICE} (cgroup v${version})"
 	if [[ "${version}" -eq 2 ]]; then
 		write_file "${SYSTEMD_UNIT_DIR}/${HOUSEKEEPING_SLICE}" <<EOF
-# Managed by mechanical-sympathy 05-cgroup-isolation.sh
+# Managed by mechanical-sympathy 05-cgroup-isolation
 [Unit]
 Description=Housekeeping processes (agents, log shippers, monitoring)
 Before=slices.target
@@ -55,7 +57,7 @@ IOWeight=${HOUSEKEEPING_SLICE_IO_WEIGHT}
 EOF
 	else
 		write_file "${SYSTEMD_UNIT_DIR}/${HOUSEKEEPING_SLICE}" <<EOF
-# Managed by mechanical-sympathy 05-cgroup-isolation.sh (cgroup v1: no AllowedCPUs,
+# Managed by mechanical-sympathy 05-cgroup-isolation (cgroup v1: no AllowedCPUs,
 # CPU placement is done with CPUAffinity= in each unit's drop-in)
 [Unit]
 Description=Housekeeping processes (agents, log shippers, monitoring)
@@ -80,7 +82,7 @@ move_service_to_slice() {
 	dropin="${SYSTEMD_UNIT_DIR}/${unit}.d/10-lowlat-housekeeping.conf"
 	log_sub_step "Moving ${unit} into ${HOUSEKEEPING_SLICE}"
 	write_file "${dropin}" <<EOF
-# Managed by mechanical-sympathy 05-cgroup-isolation.sh
+# Managed by mechanical-sympathy 05-cgroup-isolation
 [Service]
 Slice=${HOUSEKEEPING_SLICE}
 CPUAffinity=${HOUSEKEEPING_SLICE_CPUS[*]}
@@ -139,19 +141,23 @@ apply_cgroup_isolation_runtime() {
 # --- verification -----------------------------------------------------------
 
 unit_in_slice() { # unit_in_slice <unit>
-	[[ "$(systemctl show -p Slice --value "$1" 2>/dev/null)" == "${HOUSEKEEPING_SLICE}" ]]
+	local slice
+	slice="$(systemctl show -p Slice --value "$1" 2>/dev/null || true)"
+	[[ "${slice}" == "${HOUSEKEEPING_SLICE}" ]]
 }
 
 pid_on_cpus() { # pid_on_cpus <pid> <cpu>...
 	local pid="$1" actual
 	shift
 	actual="$(awk -F'\t' '/^Cpus_allowed_list/{print $2}' "/proc/${pid}/status" 2>/dev/null)"
-	[[ "$(cpu_list_expand "${actual}")" == "$*" ]]
+	actual="$(cpu_list_expand "${actual}")"
+	[[ "${actual}" == "$*" ]]
 }
 
 verify_cgroup_isolation() {
-	local unit proc pid
-	verify_info "cgroup version: v$(cgroup_version)"
+	local unit proc pid version effective
+	version="$(cgroup_version)"
+	verify_info "cgroup version: v${version}"
 	verify_check "${HOUSEKEEPING_SLICE} exists" test -f "${SYSTEMD_UNIT_DIR}/${HOUSEKEEPING_SLICE}"
 	for unit in "${HOUSEKEEPING_SLICE_UNITS[@]}"; do
 		if systemctl cat "${unit}" >/dev/null 2>&1; then
@@ -166,8 +172,9 @@ verify_cgroup_isolation() {
 			verify_check "${proc} (${pid}) pinned to ${HOUSEKEEPING_PIN_CPUS[*]}" pid_on_cpus "${pid}" "${HOUSEKEEPING_PIN_CPUS[@]}"
 		done < <(pgrep -x "${proc}" 2>/dev/null || true)
 	done
-	if [[ "$(cgroup_version)" -eq 2 && -r "/sys/fs/cgroup/${HOUSEKEEPING_SLICE}/cpuset.cpus.effective" ]]; then
-		verify_info "${HOUSEKEEPING_SLICE} cpuset.cpus.effective = $(cat "/sys/fs/cgroup/${HOUSEKEEPING_SLICE}/cpuset.cpus.effective")"
+	if [[ "${version}" -eq 2 && -r "/sys/fs/cgroup/${HOUSEKEEPING_SLICE}/cpuset.cpus.effective" ]]; then
+		effective="$(read_value "/sys/fs/cgroup/${HOUSEKEEPING_SLICE}/cpuset.cpus.effective")"
+		verify_info "${HOUSEKEEPING_SLICE} cpuset.cpus.effective = ${effective}"
 	fi
 	verify_result
 }

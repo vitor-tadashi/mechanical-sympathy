@@ -34,7 +34,7 @@ java-latency-probe/
 | Requirement | Check |
 |---|---|
 | JDK 25 (FFM API, final since 22). With SDKMAN: `sdk env install` in the project reads `.sdkmanrc` | `java -version`, `./gradlew -v` |
-| Guides 01–03 applied (bare metal) | `scripts/verify-tuning.sh` |
+| Guides 01–03 applied (bare metal) | `scripts/verify-tuning` |
 | CPUs 9 and 11 isolated and on the NIC's node (edit `application.properties` for your layout) | `cat /sys/devices/system/cpu/isolated` |
 | Enough huge pages **on that node** for heap + code cache: 4 GiB heap + 240 MiB code cache ≈ **2,200 × 2 MiB** | `cat /sys/devices/system/node/node1/hugepages/hugepages-2048kB/free_hugepages` |
 | `numactl` installed (optional, for `APP_NUMA_NODE`) | `numactl -H` |

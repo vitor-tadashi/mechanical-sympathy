@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# 06-kernel-sysctl.sh - kernel runtime parameters (Guide 06).
+# 06-kernel-sysctl - kernel runtime parameters (Guide 06).
 #
 #   write_sysctl_profile   generates /etc/sysctl.d/90-lowlat.conf (persistent)
 #   apply_sysctl_profile   loads it now (sysctl -p)
@@ -10,8 +10,8 @@
 # /etc/sysctl.conf is never modified.
 
 set -Eeuo pipefail
-# shellcheck source=lib/common.sh
-. "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+# shellcheck source=lib/common
+. "$(dirname "${BASH_SOURCE[0]}")/lib/common"
 
 SYSCTL_PROFILE="${SYSCTL_PROFILE:-/etc/sysctl.d/90-lowlat.conf}"
 
@@ -100,8 +100,9 @@ per_interface_lines() {
 }
 
 write_sysctl_profile() {
-	local line key value why content skipped=()
-	content="# Managed by mechanical-sympathy 06-kernel-sysctl.sh - see guides/06-kernel-sysctl-tuning.md"$'\n'
+	local line key value why content table kernel skipped=()
+	table="$(sysctl_table)"
+	content="# Managed by mechanical-sympathy 06-kernel-sysctl - see guides/06-kernel-sysctl-tuning.md"$'\n'
 	while IFS= read -r line; do
 		if [[ "${line}" == \#* ]]; then
 			content+=$'\n'"${line}"$'\n'
@@ -113,11 +114,12 @@ write_sysctl_profile() {
 			continue
 		fi
 		content+="# ${why}"$'\n'"${key} = ${value}"$'\n'
-	done < <(sysctl_table)
+	done <<<"${table}"
 	content+="$(per_interface_lines)"
 
 	if ((${#skipped[@]} > 0)); then
-		log_sub_step "Not available on kernel $(uname -r), skipped: ${skipped[*]}"
+		kernel="$(uname -r)"
+		log_sub_step "Not available on kernel ${kernel}, skipped: ${skipped[*]}"
 	fi
 	log_sub_step "Writing ${SYSCTL_PROFILE}"
 	printf '%s\n' "${content}" | write_file "${SYSCTL_PROFILE}"
@@ -143,7 +145,8 @@ sysctl_is() { # sysctl_is <key> <value>
 }
 
 verify_kernel_sysctl() {
-	local line key value why
+	local line key value why table
+	table="$(sysctl_table)"
 	verify_check "${SYSCTL_PROFILE} exists" test -f "${SYSCTL_PROFILE}"
 	while IFS= read -r line; do
 		[[ "${line}" == \#* ]] && continue
@@ -151,7 +154,7 @@ verify_kernel_sysctl() {
 		if [[ -e "/proc/sys/${key//./\/}" ]]; then
 			verify_check "${key} = ${value}" sysctl_is "${key}" "${value}"
 		fi
-	done < <(sysctl_table)
+	done <<<"${table}"
 	verify_result
 }
 

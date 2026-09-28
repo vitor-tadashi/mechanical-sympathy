@@ -24,19 +24,19 @@ These settings are for **dedicated hosts running a small number of well-understo
 
 | # | Guide | Script | Risk | Reboot | Bare metal | VM |
 |---|---|---|---|---|---|---|
-| 01 | [Kernel command line (GRUB)](guides/01-grub-bootloader-tuning.md) | [`01-grub-bootloader.sh`](scripts/01-grub-bootloader.sh) | 4 | yes | full | latency subset |
-| 02 | [CPU core isolation](guides/02-cpu-core-isolation.md) | [`02-cpu-isolation.sh`](scripts/02-cpu-isolation.sh) | 4 | yes | ✅ | app-side pinning only |
-| 03 | [Huge pages](guides/03-huge-pages-configuration.md) | [`03-huge-pages.sh`](scripts/03-huge-pages.sh) | 3 | recommended | ✅ | THP off only |
-| 04 | [Network: NIC, IRQs, segmentation](guides/04-network-optimization.md) | [`04-network.sh`](scripts/04-network.sh) | 3 | no | ✅ | partial |
-| 05 | [Process isolation with cgroups](guides/05-cgroup-isolation.md) | [`05-cgroup-isolation.sh`](scripts/05-cgroup-isolation.sh) | 3 | no | ✅ | ✅ |
-| 06 | [Kernel sysctl](guides/06-kernel-sysctl-tuning.md) | [`06-kernel-sysctl.sh`](scripts/06-kernel-sysctl.sh) | 2 | no | ✅ | ✅ |
-| 07 | [OS hygiene](guides/07-os-hygiene.md) | [`07-os-hygiene.sh`](scripts/07-os-hygiene.sh) | 2 (5 opt-in) | no | ✅ | ✅ |
+| 01 | [Kernel command line (GRUB)](guides/01-grub-bootloader-tuning.md) | [`01-grub-bootloader`](scripts/01-grub-bootloader) | 4 | yes | full | latency subset |
+| 02 | [CPU core isolation](guides/02-cpu-core-isolation.md) | [`02-cpu-isolation`](scripts/02-cpu-isolation) | 4 | yes | ✅ | app-side pinning only |
+| 03 | [Huge pages](guides/03-huge-pages-configuration.md) | [`03-huge-pages`](scripts/03-huge-pages) | 3 | recommended | ✅ | THP off only |
+| 04 | [Network: NIC, IRQs, segmentation](guides/04-network-optimization.md) | [`04-network`](scripts/04-network) | 3 | no | ✅ | partial |
+| 05 | [Process isolation with cgroups](guides/05-cgroup-isolation.md) | [`05-cgroup-isolation`](scripts/05-cgroup-isolation) | 3 | no | ✅ | ✅ |
+| 06 | [Kernel sysctl](guides/06-kernel-sysctl-tuning.md) | [`06-kernel-sysctl`](scripts/06-kernel-sysctl) | 2 | no | ✅ | ✅ |
+| 07 | [OS hygiene](guides/07-os-hygiene.md) | [`07-os-hygiene`](scripts/07-os-hygiene) | 2 (5 opt-in) | no | ✅ | ✅ |
 
 Plus:
 
 - **Concepts**: why it works. [Boot path](concepts/bootloader.md) · [CPU isolation](concepts/cpu-isolation.md) · [Network path](concepts/network-tuning.md) · [Huge pages & NUMA](concepts/huge-pages.md) · [cgroups](concepts/cgroups.md)
 - **Examples**: [Java on a tuned host](examples/hugepages-java-example.md), with a [runnable probe](examples/java-latency-probe/) · [Multi-NIC segmentation](examples/network-segmentation-example.md)
-- **Tools**: [`apply-all.sh`](scripts/apply-all.sh) (plan / dry-run / apply / runtime) · [`verify-tuning.sh`](scripts/verify-tuning.sh) (PASS/WARN/FAIL report) · [`lowlat-runtime.service`](scripts/systemd/lowlat-runtime.service) (re-applies runtime state at boot)
+- **Tools**: [`apply-all`](scripts/apply-all) (plan / dry-run / apply / runtime) · [`verify-tuning`](scripts/verify-tuning) (PASS/WARN/FAIL report) · [`lowlat-runtime.service`](scripts/systemd/lowlat-runtime.service) (re-applies runtime state at boot)
 
 ## How it fits together
 
@@ -50,7 +50,7 @@ Plus:
                     06 /etc/sysctl.d/90-lowlat.conf             07 opt-in firewall/modules      busy-spin idle strategy
                     07 services, limits, noatime, tuned
                     └─────────────────────────────────────┘   └────────────────────────────┘   └───────────────────┘
-                                                        verify-tuning.sh  ──► PASS / WARN / FAIL
+                                                        verify-tuning  ──► PASS / WARN / FAIL
 ```
 
 All scripts read one file, **`/etc/lowlat/lowlat.conf`** ([example](scripts/lowlat.conf.example)), which describes *your* hardware: isolated CPUs, OS CPUs, workqueue CPUs, NIC roles and their IRQ CPUs, and huge pages per NUMA node. Nothing is hard-coded. The scripts detect the host class (`bare_metal`, `virtual_machine`, `container`) and apply only what makes sense there.
@@ -61,11 +61,11 @@ All scripts read one file, **`/etc/lowlat/lowlat.conf`** ([example](scripts/lowl
 sudo mkdir -p /etc/lowlat && sudo cp scripts/lowlat.conf.example /etc/lowlat/lowlat.conf
 sudo vi /etc/lowlat/lowlat.conf              # describe your CPUs, NICs and memory
 
-scripts/apply-all.sh --plan                  # what applies on this host class
-scripts/apply-all.sh --dry-run | less        # every command and file, nothing changed
-sudo scripts/apply-all.sh --apply            # apply 01-07 + install lowlat-runtime.service
+scripts/apply-all --plan                     # what applies on this host class
+scripts/apply-all --dry-run | less           # every command and file, nothing changed
+sudo scripts/apply-all --apply               # apply 01-07 + install lowlat-runtime.service
 sudo systemctl reboot
-scripts/verify-tuning.sh                     # PASS/WARN/FAIL for every guide
+scripts/verify-tuning                        # PASS/WARN/FAIL for every guide
 ```
 
 Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](INDEX.md) for reading paths.
@@ -76,7 +76,7 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 2. **One source of truth.** One config file describes the host; scripts derive everything from it.
 3. **Persist the right way.** Kernel args via `grubby`, services via systemd, sysctls via `sysctl.d`, and runtime state via a oneshot unit. No wiping of system files, no `rc.local`.
 4. **Dry-run everything.** Every function prints what it would do before it does it.
-5. **Verify, then measure.** `verify-tuning.sh` proves the configuration. Your latency histograms prove the benefit.
+5. **Verify, then measure.** `verify-tuning` proves the configuration. Your latency histograms prove the benefit.
 6. **Bare metal first.** VMs get the subset that helps without pretending to isolate what the hypervisor controls.
 7. **Reversible.** Each guide has a rollback section, and every file touched is backed up under `/var/lib/lowlat/`.
 
@@ -99,10 +99,10 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 ├── concepts/        5 deep dives
 ├── examples/        Java on a tuned host (+ runnable probe), multi-NIC segmentation
 └── scripts/
-    ├── lib/common.sh            logging, dry-run, host class, backups, CPU list helpers
-    ├── lowlat.conf.example      the host description
-    ├── 01..07-*.sh              one script per guide (--apply / --dry-run / --verify / --rollback)
-    ├── apply-all.sh             sequencing + step timing
-    ├── verify-tuning.sh         read-only report
+    ├── lib/common            logging, dry-run, host class, backups, CPU list helpers
+    ├── lowlat.conf.example    the host description
+    ├── 01..07-*               one script per guide (--apply / --dry-run / --verify / --rollback)
+    ├── apply-all              sequencing + step timing
+    ├── verify-tuning          read-only report
     └── systemd/lowlat-runtime.service
 ```
