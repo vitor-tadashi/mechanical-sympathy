@@ -182,10 +182,10 @@ AllowedCPUs=0-31          # everything: non-critical JVM threads on OS CPUs, cri
 IOWeight=1000
 ```
 
-`/etc/systemd/system/trading-app.service` starts the launcher as `app-user` in `latency.slice`, on the OS CPUs (the critical threads re-pin themselves), with RT, memlock and file limits, a low OOM score, and no automatic restart:
+`/etc/systemd/system/lowlat-app.service` starts the launcher as `app-user` in `latency.slice`, on the OS CPUs (the critical threads re-pin themselves), with RT, memlock and file limits, a low OOM score, and no automatic restart:
 
 <details>
-<summary><b>Full unit: <code>trading-app.service</code></b></summary>
+<summary><b>Full unit: <code>lowlat-app.service</code></b></summary>
 
 ```ini
 [Unit]
@@ -205,7 +205,7 @@ LimitRTPRIO=99
 LimitMEMLOCK=infinity
 LimitNOFILE=65535
 OOMScoreAdjust=-900                              # the OOM killer picks almost anything else first
-Restart=no                                       # a trading process should not silently restart mid-session
+Restart=no                                       # fail loudly: a silent restart loses warm caches and pinning
 TimeoutStopSec=60
 
 [Install]

@@ -59,7 +59,7 @@ The goal of this guide is that a critical packet **never waits** (coalescing 0, 
 
 | Situation | Apply? |
 |---|---|
-| Physical NICs carrying order entry, market data, or a latency-critical backend | **Yes** |
+| Physical NICs carrying latency-critical requests, event streams, or a latency-critical backend | **Yes** |
 | Bulk links (replication, logs, reports) on the same host | Yes, with the *bulk* profile (§5.9) |
 | The management interface you are logged in through | **No.** Role `mgmt` is never touched, except for moving its IRQs off isolated CPUs. |
 | VMs with virtio/ENA/vmxnet3 | Partially: see §10 |
@@ -67,13 +67,13 @@ The goal of this guide is that a critical packet **never waits** (coalescing 0, 
 
 ## 3. Network segmentation: give each traffic class its own NIC
 
-Latency-critical traffic should never share a NIC, a queue, an IRQ, or a CPU with bulk traffic. A 50 MB log shipment in front of a 200-byte order is head-of-line blocking at every layer. The reference host uses **five roles**:
+Latency-critical traffic should never share a NIC, a queue, an IRQ, or a CPU with bulk traffic. A 50 MB log shipment in front of a 200-byte request is head-of-line blocking at every layer. The reference host uses **five roles**:
 
 ```mermaid
 flowchart LR
   subgraph crit["critical · NUMA node 1"]
-    e1["ens1f0<br/>orders, market data"]
-    e2["ens1f1<br/>backend, risk, IPC"]
+    e1["ens1f0<br/>client requests, events"]
+    e2["ens1f1<br/>backend, cache, IPC"]
   end
   subgraph other["timing, bulk, mgmt · NUMA node 0"]
     t["eno1 · timing<br/>PTP"]
@@ -102,8 +102,8 @@ flowchart LR
 
 ```text
                                  ┌──────────────────────── host ─────────────────────────┐
-  Exchange / clients  ══10/25G══►│ ens1f0  critical  (orders, market data)   IRQ → CPU 1 │  NUMA node 1
-  Internal services   ══10/25G══►│ ens1f1  critical  (backend, risk, IPC)    IRQ → CPU 1 │  (same card, same node
+  Clients / peers     ══10/25G══►│ ens1f0  critical  (requests, events)      IRQ → CPU 1 │  NUMA node 1
+  Internal services   ══10/25G══►│ ens1f1  critical  (backend, cache, IPC)   IRQ → CPU 1 │  (same card, same node
                                  │                                                        │   as the isolated CPUs)
   Grandmaster clock   ════1G════►│ eno1    timing    (PTP)                   IRQ → CPU 0 │  node 0
   Storage / replicas  ══10G═════►│ ens2f0  bulk      (replication, archive)  IRQ → CPU 30│  node 0
@@ -116,7 +116,7 @@ flowchart LR
 
 | Role | Examples | Coalescing | Offloads | txqueuelen | IRQ CPUs |
 |---|---|---|---|---|---|
-| **critical** | order entry, market data, critical backend | 0 µs, adaptive off | TSO/GSO/LRO off | default | node-local **housekeeping** CPU |
+| **critical** | client requests, event streams, critical backend | 0 µs, adaptive off | TSO/GSO/LRO off | default | node-local **housekeeping** CPU |
 | **timing** | PTP (hardware timestamping) | 0 µs, adaptive off | off | default | housekeeping CPU |
 | **bulk** | replication, logging, reports | 0 µs (reference) or 50–100 µs | off (reference) or on | **large** (300000 in the reference) | a CPU on the *other* node |
 | **mgmt** | SSH, monitoring, config management | untouched | untouched | untouched | any housekeeping CPU |
@@ -249,7 +249,7 @@ With **DPDK on an Intel card** the question disappears: the port is unbound from
 In `lowlat.conf`, `KERNEL_BYPASS_DRIVER` and `KERNEL_BYPASS_COMMAND` mark socket-acceleration NICs. The script gives those NICs one queue, whatever their `irq_cpus` field says.
 
 > [!WARNING]
-> **Changing channels resets the NIC** on most drivers (link down for 1–3 s), and the new queues come up with **default IRQ affinity**. Do it at boot or in a maintenance window, never during trading, and always re-run the IRQ placement (§6) afterwards. `apply-all` and `lowlat-runtime.service` already run the two steps in that order.
+> **Changing channels resets the NIC** on most drivers (link down for 1–3 s), and the new queues come up with **default IRQ affinity**. Do it at boot or in a maintenance window, never under live traffic, and always re-run the IRQ placement (§6) afterwards. `apply-all` and `lowlat-runtime.service` already run the two steps in that order.
 
 ### 5.2 Adaptive coalescing off: `ethtool -C adaptive-rx off adaptive-tx off`
 
@@ -290,7 +290,7 @@ This is **flow control** (IEEE 802.3x PAUSE), not an offload. With RX pause on, 
 
 ### 5.7 Ring sizes at maximum: `ethtool -G rx <max> tx <max>`
 
-The RX ring is where the NIC DMAs packets before software picks them up. If a burst (market open, a reconnect storm, a GC-less but busy consumer) arrives faster than NAPI drains it, packets are **dropped in hardware**, and a dropped TCP segment costs a retransmit timeout of ≥ 200 ms. A larger ring does not add latency while it is empty. It only absorbs bursts. Watch `ethtool -S <iface> | grep -iE 'drop|miss|fifo|no_buf'`.
+The RX ring is where the NIC DMAs packets before software picks them up. If a burst (a traffic spike, a reconnect storm, a GC-less but busy consumer) arrives faster than NAPI drains it, packets are **dropped in hardware**, and a dropped TCP segment costs a retransmit timeout of ≥ 200 ms. A larger ring does not add latency while it is empty. It only absorbs bursts. Watch `ethtool -S <iface> | grep -iE 'drop|miss|fifo|no_buf'`.
 
 ### 5.8 `txqueuelen` (bulk NICs)
 

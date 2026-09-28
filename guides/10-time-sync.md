@@ -35,7 +35,7 @@ flowchart LR
 
 A latency-critical host needs a good clock for three reasons:
 
-- **Comparable timestamps.** Order, market-data and audit timestamps from different hosts must line up. Some regulations require traceable timestamps with a stated accuracy.
+- **Comparable timestamps.** Request, event and audit timestamps from different hosts must line up, or distributed traces, logs and event ordering across hosts stop making sense. Some industries also require traceable timestamps with a stated accuracy.
 - **Measurement.** A one-way latency between two hosts (host A stamps, host B stamps) is only as accurate as the offset between their clocks. With NTP-level sync (tens of µs to ms), one-way numbers below that are noise.
 - **No surprises.** A clock **step** (a jump) breaks timeouts and makes durations negative. A **slew** (small rate adjustment) does not. Configure the daemon to step only at boot.
 

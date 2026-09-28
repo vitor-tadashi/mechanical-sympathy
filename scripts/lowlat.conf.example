@@ -93,7 +93,7 @@ SHMMNI=24576
 # -----------------------------------------------------------------------------
 
 # One entry per interface: "name|role|irq_cpus|txqueuelen"
-#   role       critical  - order entry / market data / critical backend (lowest latency)
+#   role       critical  - client requests / event streams / critical backend (lowest latency)
 #              timing    - PTP / time synchronisation (latency-sensitive, low volume)
 #              bulk      - replication, logging, reporting (throughput, not latency)
 #              mgmt      - SSH, monitoring, configuration management (never touched)

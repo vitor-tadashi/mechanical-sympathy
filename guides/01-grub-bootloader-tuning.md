@@ -41,7 +41,7 @@ Most of what makes a Linux host "noisy" for a latency-critical thread is decided
 
 These decisions are made while the kernel boots, from parameters that the bootloader passes on the kernel command line. Some of them (`isolcpus`, `nohz_full`, `rcu_nocbs`) **cannot be changed at runtime at all**. That is why this is the first guide: every other guide assumes these settings are already in place.
 
-The goal is **not** a lower *average* latency. The goal is to remove the causes of the rare, large outliers: a 20–200 µs timer interrupt, a C-state exit, an RCU callback batch, or a soft-lockup watchdog that lands on the core running your order path. These are the events that dominate p99.9 and p99.99.
+The goal is **not** a lower *average* latency. The goal is to remove the causes of the rare, large outliers: a 20–200 µs timer interrupt, a C-state exit, an RCU callback batch, or a soft-lockup watchdog that lands on the core running your hot path. These are the events that dominate p99.9 and p99.99.
 
 ## 2. When to apply and when not to
 

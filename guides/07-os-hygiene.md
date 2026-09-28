@@ -62,7 +62,7 @@ The reference list, and why each entry is there:
 | `sysstat-collect.timer`, `sysstat-summary.timer` | `sar` data collection every 10 min | Periodic `/proc` walks. Keep them if `sar` is your capacity-planning tool, and move them into `housekeeping.slice`. |
 | `pcscd` | Smart-card daemon | No smart cards on servers |
 | `cpupower`, `cpuspeed`, `cpufreqd`, `powerd` | Frequency/power daemons | They fight the fixed `performance` governor that tuned sets (§5) |
-| **EDR / antivirus / cloud agents** | Security and management agents | **Do not disable them without your security team.** Either the site policy allows turning them off on trading hosts (and then do it, add them to the list), or confine them: [Guide 05](05-cgroup-isolation.md) slice plus pinning. A launcher that **refuses to start** while such an agent is running, unless the environment explicitly allows it, is a useful guard rail in production. |
+| **EDR / antivirus / cloud agents** | Security and management agents | **Do not disable them without your security team.** Either the site policy allows turning them off on latency-critical hosts (and then do it, add them to the list), or confine them: [Guide 05](05-cgroup-isolation.md) slice plus pinning. A launcher that **refuses to start** while such an agent is running, unless the environment explicitly allows it, is a useful guard rail in production. |
 
 `firewalld` has its own switch (`DISABLE_FIREWALLD`, default `no`). See §6.
 
@@ -98,7 +98,7 @@ These limits apply to **PAM sessions** (SSH logins, `su -`). Services started by
 
 By default (`relatime`), reading a file can still update its access time on disk, which means a metadata write, a journal transaction, and eventually I/O. `set_noatime_mounts` adds `noatime` to local `xfs`/`ext4` entries in `/etc/fstab` and remounts them. (`noatime` implies `nodiratime`.) Swap, tmpfs, NFS and other types are left alone.
 
-Side effect: tools that rely on atime, such as some mail readers and `tmpwatch` in atime mode, see stale values. That is irrelevant on a trading host.
+Side effect: tools that rely on atime, such as some mail readers and `tmpwatch` in atime mode, see stale values. That is irrelevant on a dedicated latency-critical host.
 
 ## 5. tuned profile
 
@@ -150,7 +150,7 @@ Reference implementations do three things, which map to three switches:
 
 **Sign-off checklist. Every box must be ticked before any switch is set to `yes`:**
 
-- [ ] The host sits behind a **network firewall/ACL** that enforces the same policy (only the exchange, the internal peers, and the management network can reach it).
+- [ ] The host sits behind a **network firewall/ACL** that enforces the same policy (only the upstream clients and peers, the internal services, and the management network can reach it).
 - [ ] The management network is separate ([Guide 04 §3](04-network-optimization.md#3-network-segmentation-give-each-traffic-class-its-own-nic)) and access-controlled.
 - [ ] Your security team has approved it in writing, as an exception for this host class.
 - [ ] No local service depends on NAT, masquerading, or port forwarding (containers, libvirt).

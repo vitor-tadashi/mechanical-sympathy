@@ -76,13 +76,13 @@ flowchart LR
 | `net.ipv4.tcp_timestamps` | `1` | RFC 7323 timestamps. They improve RTT estimation, protect against wrapped sequence numbers (PAWS), and are **required** by `tcp_tw_reuse`. Some scripts claim to *disable* timestamps here while setting `1`. `1` is correct. |
 | `net.ipv4.tcp_sack` | `1` | Selective ACKs let the sender retransmit only the missing segments, recovering several losses in one RTT. |
 | `net.ipv4.tcp_window_scaling` | `1` | Windows above 64 KiB. Needed for the socket buffer sizes in §4. |
-| `net.ipv4.tcp_slow_start_after_idle` | `0` | By default, after an idle period of one RTO, TCP resets the congestion window to its initial value. For an order connection that is quiet for a few seconds, the next burst would then be throttled. `0` keeps the window. |
+| `net.ipv4.tcp_slow_start_after_idle` | `0` | By default, after an idle period of one RTO, TCP resets the congestion window to its initial value. For a long-lived connection that is quiet for a few seconds, the next burst would then be throttled. `0` keeps the window. |
 | `net.ipv4.tcp_fastopen` | `3` | TCP Fast Open for client (1) and server (2). On a reconnect, data rides in the SYN, which saves one RTT. Only helps if both ends support it. |
 | `net.ipv4.tcp_fin_timeout` | `5` | How long an **orphaned** socket stays in `FIN_WAIT_2` (default 60 s). It does **not** shorten `TIME_WAIT`, whatever many blog posts say. That is fixed at 60 s. |
 | `net.ipv4.tcp_tw_reuse` | `1` | Lets **new outgoing** connections reuse a `TIME_WAIT` socket's port when timestamps prove it is safe. Useful for gateways that reconnect often. It does not affect incoming connections. |
 | `net.ipv4.tcp_max_tw_buckets` | `262144` | Upper bound on `TIME_WAIT` sockets before the kernel destroys them early and logs a warning. |
 | `net.ipv4.tcp_max_orphans` | `32768` | Sockets not attached to any process (closed but not finished) allowed before the kernel resets them. |
-| `net.ipv4.tcp_syn_retries` | `1` | ⚠️ A `connect()` gives up after the initial SYN plus **one** retry (~3 s) instead of 6 retries (~127 s). For a trading gateway, fast failure means fast failover to the backup venue/session. **Risk:** on a lossy path, a single lost SYN plus a lost retry fails the connection. Applications must retry `connect()` themselves. |
+| `net.ipv4.tcp_syn_retries` | `1` | ⚠️ A `connect()` gives up after the initial SYN plus **one** retry (~3 s) instead of 6 retries (~127 s). For a latency-critical client, fast failure means fast failover to a backup peer or path. **Risk:** on a lossy path, a single lost SYN plus a lost retry fails the connection. Applications must retry `connect()` themselves. |
 | `net.ipv4.tcp_syncookies` | `1` | Keep SYN-flood protection. Cookies are only used when the SYN queue overflows. |
 | `net.ipv4.tcp_abort_on_overflow` | `0` | When the accept queue is full, drop the final ACK instead of sending a RST, so the client's retransmission can succeed a moment later. |
 | `net.core.somaxconn` / `net.ipv4.tcp_max_syn_backlog` | `2048` | Accept queue and half-open queue limits. `listen(fd, backlog)` is capped by `somaxconn`. |

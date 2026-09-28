@@ -113,7 +113,7 @@ Design decisions:
 | Two options files, selected by host class | The same artifact runs everywhere. VMs get a heap that can shrink (`SoftMaxHeapSize`) and no large-page dependency. |
 | Large-page flags tied to `affinity.enable` | Pinning, NUMA placement, and a reserved pool only make sense together. On a host without a pool, `UseLargePages` degrades (G1) or fails (ZGC). |
 | `-Xms` = `-Xmx` in `jvm.options` | The whole heap is committed and, with pre-touch, faulted in before the first message |
-| `-XX:-ZUncommit` | ZGC never gives memory back, so it never has to fault it in again mid-session |
+| `-XX:-ZUncommit` | ZGC never gives memory back, so it never has to fault it in again while serving |
 | `numactl --membind` (optional) | All heap pages come from the critical node's pool. Size that node's pool for the full heap. |
 | Refuses to run as root | Production processes should run under an application account with explicit `rtprio`/`memlock` limits |
 | `--enable-native-access=ALL-UNNAMED` | Thread pinning calls `sched_setaffinity()` through the FFM API, a restricted operation |

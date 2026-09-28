@@ -76,7 +76,7 @@ Without moderation, every packet raises an interrupt. At 1 Mpps that is 1 M inte
 - `rx-frames = M`: interrupt after M packets, whichever comes first.
 - **Adaptive (DIM)**: the driver measures the rate and moves N between a low and a high value.
 
-For a trading flow (a few thousand to a few hundred thousand small messages per second, arriving in bursts), the first packet of a burst is exactly the one that matters, and moderation delays it by the full N. Setting `rx-usecs 0` interrupts immediately. The extra IRQ load is absorbed by a housekeeping CPU dedicated to that NIC, and NAPI switches to polling automatically under load, so the interrupt rate stays bounded: while the ring has packets, interrupts stay masked.
+For a latency-critical flow (requests, RPCs or event messages: a few thousand to a few hundred thousand small messages per second, arriving in bursts), the first packet of a burst is exactly the one that matters, and moderation delays it by the full N. Setting `rx-usecs 0` interrupts immediately. The extra IRQ load is absorbed by a housekeeping CPU dedicated to that NIC, and NAPI switches to polling automatically under load, so the interrupt rate stays bounded: while the ring has packets, interrupts stay masked.
 
 ## 4. NAPI, softirq budget and `ksoftirqd`
 
@@ -128,7 +128,7 @@ A user-space driver maps the NIC's rings (descriptor queues and doorbells) into 
 
 ## 11. Illustrative scenario
 
-A market-data consumer saw p50 = 7 µs and p99 = 60 µs on a quiet feed, but p99 = 12 µs during busy periods, which is backwards. The cause was adaptive coalescing: at low rates the driver raised `rx-usecs` to save interrupts, and the first packet after a lull waited the full interval. With `adaptive-rx off rx-usecs 0`, p99 was 11 µs at all rates.
+An event-stream consumer saw p50 = 7 µs and p99 = 60 µs on a quiet stream, but p99 = 12 µs during busy periods, which is backwards. The cause was adaptive coalescing: at low rates the driver raised `rx-usecs` to save interrupts, and the first packet after a lull waited the full interval. With `adaptive-rx off rx-usecs 0`, p99 was 11 µs at all rates.
 
 ## 12. Key takeaways
 

@@ -35,7 +35,7 @@ TLB sizes on a recent server core (approximately):
 | L1 DTLB | 64–96 | 32 | 4–8 |
 | L2 STLB (shared) | 1,536–2,048 | shared with 4 KiB | 16–1,024 (varies) |
 
-**TLB reach** = entries × page size. With 2,048 × 4 KiB = 8 MiB, a 256 MiB order book walked randomly misses the TLB almost every time. With 2 MiB pages, the same entries cover 4 GiB.
+**TLB reach** = entries × page size. With 2,048 × 4 KiB = 8 MiB, a 256 MiB hash table walked randomly misses the TLB almost every time. With 2 MiB pages, the same entries cover 4 GiB.
 
 <img src="../assets/diagrams/tlb-reach.svg" alt="Animation: random reads over a 256 MiB working set; with 4 KiB pages only a tiny slice is inside TLB reach and most reads miss, with 2 MiB pages the whole set is inside reach and every read hits" width="720">
 
@@ -49,7 +49,7 @@ A virtual mapping (`mmap`, `malloc` of a large block, JVM heap reservation) does
 2. **zeroes it** (4 KiB takes ~100 ns; 2 MiB takes ~50–100 µs);
 3. installs the page-table entry, and returns.
 
-A minor fault on 4 KiB costs ~0.5–2 µs. If memory is low, allocation can fall into **direct reclaim or compaction**, costing ms. A JVM that grows its heap during the day, an off-heap buffer touched for the first time at market open, or a new thread's stack all fault on the hot path.
+A minor fault on 4 KiB costs ~0.5–2 µs. If memory is low, allocation can fall into **direct reclaim or compaction**, costing ms. A JVM that grows its heap during the day, an off-heap buffer touched for the first time by the first burst of traffic, or a new thread's stack all fault on the hot path.
 
 **Pre-touching** (`-XX:+AlwaysPreTouch`, `memset`, `MAP_POPULATE`, or pre-allocated non-sparse files) moves all of that to start-up.
 
@@ -61,7 +61,7 @@ A minor fault on 4 KiB costs ~0.5–2 µs. If memory is low, allocation can fall
 - in the background, where `khugepaged` scans processes and collapses 4 KiB pages into huge pages. That needs locks and TLB shootdowns in the target process;
 - huge pages get **split** again on partial `munmap`/`mprotect`.
 
-That is great for throughput workloads and unpredictable for latency. Databases (Redis, MongoDB, Oracle) and trading systems commonly recommend turning it off.
+That is great for throughput workloads and unpredictable for latency. Databases (Redis, MongoDB, Oracle) and low-latency systems commonly recommend turning it off.
 
 **hugetlbfs** (explicit huge pages) keeps a **pool** of huge pages that the kernel sets aside when you ask (`nr_hugepages`). They are never used for anything else, never swapped, never split, and never migrated by NUMA balancing. Applications must ask for them explicitly (`MAP_HUGETLB`, a hugetlbfs file, `SHM_HUGETLB`, the JVM's `-XX:+UseLargePages`). If the pool cannot satisfy a mapping, the mapping fails, or the fault gets `SIGBUS`, so under-provisioning shows up immediately.
 
@@ -132,7 +132,7 @@ Off-heap memory (`ByteBuffer.allocateDirect`, `Unsafe`, memory-mapped files) is 
 
 ## 9. Illustrative scenario
 
-A risk engine kept a 12 GiB position cache and saw 30 µs p99 on lookups that took 1 µs at p50. `perf stat -e dtlb_load_misses.walk_completed,dtlb_load_misses.walk_active` showed that ~35 % of cycles in the lookup were spent in page walks. Moving the JVM to `-XX:+UseLargePages` with a 16 GiB per-node pool, plus pre-touch, brought p99 to 4 µs. `HugePages_Free` dropping by 8,192 pages at start-up confirmed the heap was actually on huge pages.
+A lookup service kept a 12 GiB in-memory cache and saw 30 µs p99 on lookups that took 1 µs at p50. `perf stat -e dtlb_load_misses.walk_completed,dtlb_load_misses.walk_active` showed that ~35 % of cycles in the lookup were spent in page walks. Moving the JVM to `-XX:+UseLargePages` with a 16 GiB per-node pool, plus pre-touch, brought p99 to 4 µs. `HugePages_Free` dropping by 8,192 pages at start-up confirmed the heap was actually on huge pages.
 
 ## 10. Key takeaways
 
