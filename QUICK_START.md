@@ -11,15 +11,16 @@ Before anything else, capture a **baseline**: latency percentiles (p50/p99/p99.9
 | Step | Guide | What you do | Reboot |
 |---|---|---|---|
 | 1 | — | Design the CPU layout: NIC NUMA node, isolated CPUs, housekeeping CPUs ([Guide 02 §3](guides/02-cpu-core-isolation.md#3-designing-the-cpu-layout)) and write `/etc/lowlat/lowlat.conf` | |
-| 2 | [01](guides/01-grub-bootloader-tuning.md) | Kernel command line: isolation + latency set. Decide on mitigations with security. | ✔ |
-| 3 | [02](guides/02-cpu-core-isolation.md) | systemd CPUAffinity, workqueues, irqbalance off, RT throttling | ✔ (same reboot) |
-| 4 | [03](guides/03-huge-pages-configuration.md) | Per-NUMA huge page reservation, sized for heap + code cache + bypass buffers | ✔ (same reboot) |
-| 5 | [06](guides/06-kernel-sysctl-tuning.md) | sysctl profile | |
-| 6 | [07](guides/07-os-hygiene.md) | Services, limits, noatime, tuned. Firewall section only with sign-off. | |
-| 7 | [05](guides/05-cgroup-isolation.md) | housekeeping.slice for agents, pin EDR/AV | |
-| 8 | [04](guides/04-network-optimization.md) | NIC roles, coalescing, IRQ affinity. Installs `lowlat-runtime.service`. | |
-| 9 | [Example](examples/hugepages-java-example.md) | Launcher: options by host class, large-page flags when pinned, threads pinned by role | |
-| 10 | [08](guides/08-kernel-bypass.md) | *Optional.* Kernel bypass: Onload on Solarflare/AMD NICs, or DPDK on Intel NICs (enables the IOMMU in step 2) | DPDK: ✔ (same reboot) |
+| 2 | [00](guides/00-bios-firmware.md) | BIOS: maximum-performance profile, C1E and deep C-states off, OS-controlled P-states, Hyper-Threading off, NUMA per socket, SMI sources off | ✔ (BIOS) |
+| 3 | [01](guides/01-grub-bootloader-tuning.md) | Kernel command line: isolation + latency set. Decide on mitigations with security. | ✔ |
+| 4 | [02](guides/02-cpu-core-isolation.md) | systemd CPUAffinity, workqueues, irqbalance off, RT throttling | ✔ (same reboot) |
+| 5 | [03](guides/03-huge-pages-configuration.md) | Per-NUMA huge page reservation, sized for heap + code cache + bypass buffers | ✔ (same reboot) |
+| 6 | [06](guides/06-kernel-sysctl-tuning.md) | sysctl profile | |
+| 7 | [07](guides/07-os-hygiene.md) | Services, limits, noatime, tuned. Firewall section only with sign-off. | |
+| 8 | [05](guides/05-cgroup-isolation.md) | housekeeping.slice for agents, pin EDR/AV | |
+| 9 | [04](guides/04-network-optimization.md) | NIC roles, coalescing, IRQ affinity. Installs `lowlat-runtime.service`. | |
+| 10 | [Example](examples/hugepages-java-example.md) | Launcher: options by host class, large-page flags when pinned, threads pinned by role | |
+| 11 | [08](guides/08-kernel-bypass.md) | *Optional.* Kernel bypass: Onload on Solarflare/AMD NICs, or DPDK on Intel NICs (enables the IOMMU in step 3) | DPDK: ✔ (same reboot) |
 
 ```bash
 scripts/apply-all --dry-run | less
@@ -47,7 +48,7 @@ scripts/verify-tuning
 
 The scripts skip isolation, huge-page reservation, irqbalance and RT throttling automatically on `virtual_machine`.
 
-**Biggest lever outside the guest:** ask for dedicated physical CPUs with vCPU pinning, huge-page-backed guest memory, and SR-IOV passthrough of the critical NIC. With those, the guest behaves much more like Scenario A.
+**Biggest lever outside the guest:** ask for dedicated physical CPUs with vCPU pinning, huge-page-backed guest memory, SR-IOV passthrough of the critical NIC, and the host BIOS settings from [Guide 00](guides/00-bios-firmware.md). With those, the guest behaves much more like Scenario A.
 
 ---
 
@@ -69,6 +70,7 @@ The scripts skip isolation, huge-page reservation, irqbalance and RT throttling 
 
 - [ ] Baseline latency and `verify-tuning --report` captured
 - [ ] Out-of-band console (iLO/iDRAC/IPMI) tested
+- [ ] BIOS profile set, checked with `00-bios-firmware --verify`, and exported through the BMC ([Guide 00](guides/00-bios-firmware.md))
 - [ ] CPU layout written down and reviewed (NUMA node of the NICs checked)
 - [ ] Huge page sizing = heap + code cache + off-heap/bypass buffers + 10–20 %
 - [ ] Security sign-off for mitigations and firewall changes (or leave them at `no`)
