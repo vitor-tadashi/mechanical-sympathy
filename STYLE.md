@@ -100,7 +100,9 @@ Mermaid renders natively on GitHub, in both themes. Use only these diagram types
 - Quote labels that contain punctuation: `A["idle=poll (C0 only)"]`.
 - Keep decision (`{ }`) labels to two or three words, such as `{"Bare metal?"}`, and put the detail on the edge label. Mermaid sizes a diamond from its text, so a long question becomes a huge diamond.
 - Mermaid wraps node text at 200 px. For wide multi-line boxes, raise the limit with `%%{init: {"flowchart": {"wrappingWidth": 480}}}%%` as the first line of the block.
-- `direction` inside a `subgraph` is ignored as soon as the subgraph is linked from outside. For stacked lists, use one multi-line node instead.
+- `direction` inside a `subgraph` is ignored as soon as a node inside it is linked from outside. For stacked lists, use one multi-line node instead.
+- Nodes with no edges between them share a rank, so they line up **across** the flow direction. For side-by-side columns (one per NUMA node, say), use `flowchart TD` with `direction LR` inside each subgraph. For stacked lanes, link the subgraphs with invisible edges (`laneA ~~~ laneB`).
+- Give subgraphs descriptive ids (`kpath`, `numa0`). One-letter ids such as `b` can collide with Mermaid internals and silently break the layout.
 - **Right after every diagram, one plain sentence says what it shows.** Screen readers and readers who skip images get the same point.
 
 ### 3.2 Palette
