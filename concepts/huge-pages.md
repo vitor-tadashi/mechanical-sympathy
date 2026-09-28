@@ -2,6 +2,12 @@
 
 > Used by: [Guide 03](../guides/03-huge-pages-configuration.md). Related: [cpu-isolation](cpu-isolation.md), [bootloader](bootloader.md). Example: [hugepages-java-example](../examples/hugepages-java-example.md).
 
+## At a glance
+
+- Every memory access needs an address translation. With 4 KiB pages, the TLB covers only about 8 MiB, so large working sets pay page walks on the hot path.
+- 2 MiB pages cover 4 GiB with the same TLB entries. Pre-touching moves page faults to start-up.
+- Explicit pools (hugetlbfs), reserved per NUMA node early in boot, are predictable. THP is not.
+
 ## 1. Why it matters
 
 Every load and store your code issues uses a **virtual** address. Before the cache can even be checked, the CPU has to translate it to a physical address. With 4 KiB pages and multi-GiB working sets, translation becomes a measurable share of memory latency. Page faults, which allocate and zero memory on first touch, can land in the middle of a latency-critical code path. Huge pages and pre-touching remove both problems.
@@ -30,6 +36,10 @@ TLB sizes on a recent server core (approximately):
 | L2 STLB (shared) | 1,536–2,048 | shared with 4 KiB | 16–1,024 (varies) |
 
 **TLB reach** = entries × page size. With 2,048 × 4 KiB = 8 MiB, a 256 MiB order book walked randomly misses the TLB almost every time. With 2 MiB pages, the same entries cover 4 GiB.
+
+<img src="../assets/diagrams/tlb-reach.svg" alt="Animation: random reads over a 256 MiB working set; with 4 KiB pages only a tiny slice is inside TLB reach and most reads miss, with 2 MiB pages the whole set is inside reach and every read hits" width="720">
+
+*With 4 KiB pages the TLB reach is a thin slice of the working set, and most reads trigger a page walk. With 2 MiB pages the reach covers the whole set.*
 
 ## 3. Page faults
 
@@ -74,7 +84,24 @@ The buddy allocator hands out physical memory in power-of-two blocks. After a ho
 
 On a multi-socket server, each socket has its own memory controllers. Access to local memory costs ~80–100 ns, and to the other socket's memory ~130–200 ns, with lower bandwidth. `numactl --hardware` shows the node distance matrix.
 
-- **First touch**: by default, a page is allocated on the node of the CPU that first touches it. A thread pinned on node 1 that initialises its data gets node-1 memory. A main thread on node 0 that initialises everything before handing it over puts everything on node 0.
+- **First touch**: by default, a page is allocated on the node of the CPU that first touches it. A thread pinned on node 1 that initializes its data gets node-1 memory. A main thread on node 0 that initializes everything before handing it over puts everything on node 0.
+```mermaid
+sequenceDiagram
+  participant M as main thread (node 0)
+  participant W as worker, pinned on node 1
+  participant K as kernel
+  Note over M,K: wrong: the main thread touches first
+  M->>K: first write to the buffer
+  K-->>M: pages allocated on node 0
+  M->>W: hand over the buffer
+  W->>K: every cache miss crosses the socket interconnect
+  Note over M,K: right: the worker pins itself, then touches
+  W->>K: sched_setaffinity(node-1 CPU), then first write
+  K-->>W: pages allocated on node 1, local from then on
+```
+
+*Under the default first-touch policy, memory lands on the node of whichever thread writes it first. So a thread should pin itself before it touches its own working set.*
+
 - **Policies**: `numactl --membind` / `mbind(MPOL_BIND)` force a node, `--interleave` spreads pages round-robin (good for shared read-mostly data), and `--preferred` tries a node first.
 - **Huge-page pools are per node**. A process bound to node 1 can only use node 1's pool. The system-wide `vm.nr_hugepages` splits the pool evenly, which is why [Guide 03](../guides/03-huge-pages-configuration.md) writes the per-node sysfs files instead.
 - **Automatic NUMA balancing** (`kernel.numa_balancing`) samples accesses by unmapping pages (hint faults) and migrates them. That is useful for unpinned workloads and pure overhead for pinned ones.
@@ -107,7 +134,15 @@ Off-heap memory (`ByteBuffer.allocateDirect`, `Unsafe`, memory-mapped files) is 
 
 A risk engine kept a 12 GiB position cache and saw 30 µs p99 on lookups that took 1 µs at p50. `perf stat -e dtlb_load_misses.walk_completed,dtlb_load_misses.walk_active` showed that ~35 % of cycles in the lookup were spent in page walks. Moving the JVM to `-XX:+UseLargePages` with a 16 GiB per-node pool, plus pre-touch, brought p99 to 4 µs. `HugePages_Free` dropping by 8,192 pages at start-up confirmed the heap was actually on huge pages.
 
-## 10. References
+## 10. Key takeaways
+
+- TLB reach is entries × page size. 4 KiB pages cover megabytes, and 2 MiB pages cover gigabytes.
+- Page faults allocate and zero memory. Pre-touch at start-up so none happen on the hot path.
+- THP is best-effort and can compact memory synchronously. hugetlbfs pools are reserved in advance and fail loudly.
+- Reserve per node, early in boot, before memory fragments.
+- Pin first, then touch: first-touch decides the NUMA node.
+
+## 11. References
 
 - <https://docs.kernel.org/admin-guide/mm/hugetlbpage.html>
 - <https://docs.kernel.org/admin-guide/mm/transhuge.html>
