@@ -9,6 +9,7 @@
 #   - at most 72 characters in total, no trailing period, ASCII only
 # "fixup! " and "squash! " prefixes are accepted; autosquash removes them.
 # git's own 'Revert "..."' titles are accepted as they are.
+# --range skips merge commits: squash merges drop them, and "Update branch" creates them.
 #
 # Usage: tools/check-commit-title "<title>"
 #        tools/check-commit-title --range <base>..<head>
@@ -70,7 +71,7 @@ check_title() {
 }
 
 if (($# == 2)) && [[ "$1" == --range ]]; then
-	titles="$(git log --format=%s "$2")"
+	titles="$(git log --no-merges --format=%s "$2")"
 	while IFS= read -r title; do
 		[[ -n "${title}" ]] && check_title "${title}"
 	done <<<"${titles}"
