@@ -1,0 +1,50 @@
+# .gitignore - mechanical-sympathy
+# Stack: Markdown guides, bash tuning scripts, one Java 25 / Gradle example (examples/java-latency-probe).
+
+# ── OS ─────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDEs ───────────────────────────────────────────────────────────────────────
+.idea/
+*.iml
+.vscode/
+out/
+.settings/
+.classpath
+.project
+
+# ── Gradle ─────────────────────────────────────────────────────────────────────
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# ── Gradle is the only build tool: never commit Maven files ─────────────────────
+pom.xml
+target/
+mvnw
+mvnw.cmd
+.mvn/
+
+# ── JVM output ─────────────────────────────────────────────────────────────────
+*.class
+hs_err_pid*.log
+replay_pid*.log
+*.hprof
+*.jfr
+
+# ── Logs and probe output ──────────────────────────────────────────────────────
+log/
+*.log
+*.hgrm
+
+# ── Host configuration: the example is tracked, a real host description is not ──
+scripts/lowlat.conf
+*.conf.local
+
+# ── Archives ───────────────────────────────────────────────────────────────────
+*.zip
+*.tar.gz
+
+# ── Local AI tooling state ─────────────────────────────────────────────────────
+.claude/settings.local.json

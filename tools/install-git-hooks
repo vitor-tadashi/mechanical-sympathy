@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#
+# install-git-hooks - opt in to the repository git hooks (.githooks/).
+#
+# pre-commit runs `make lint` (ShellCheck + Checkstyle), the same gate CI enforces.
+# Undo with: git config --unset core.hooksPath
+
+set -Eeuo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+git -C "${ROOT}" config core.hooksPath .githooks
+printf 'install-git-hooks: core.hooksPath=.githooks (pre-commit runs make lint)\n'
