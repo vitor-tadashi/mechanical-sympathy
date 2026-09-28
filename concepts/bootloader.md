@@ -2,13 +2,36 @@
 
 > Used by: [Guide 01](../guides/01-grub-bootloader-tuning.md). Related: [cpu-isolation](cpu-isolation.md), [huge-pages](huge-pages.md).
 
+## At a glance
+
+- A few kernel decisions happen only once, at boot: scheduler domains, the tick, where RCU work runs, the idle driver, and the huge page sizes.
+- On RHEL 8/9 the arguments live in BootLoaderSpec entries, one per kernel, and `grubby` is the tool that edits them.
+- `isolcpus`, `nohz_full` and `rcu_nocbs` each move a different kind of work to housekeeping CPUs, so they are used together with the same CPU list.
+
 ## 1. Why it matters
 
-A handful of kernel decisions can only be made **once**, while the kernel initialises: how the scheduler groups CPUs, which CPUs run the timekeeping duty, where RCU callbacks run, which idle driver is registered, and which huge page sizes exist. The kernel command line is the only way to influence them. Getting it right is the foundation for every other latency setting. Getting it wrong can mean a host that does not boot, or one that boots and silently ignores what you asked for.
+A handful of kernel decisions can only be made **once**, while the kernel initializes: how the scheduler groups CPUs, which CPUs run the timekeeping duty, where RCU callbacks run, which idle driver is registered, and which huge page sizes exist. The kernel command line is the only way to influence them. Getting it right is the foundation for every other latency setting. Getting it wrong can mean a host that does not boot, or one that boots and silently ignores what you asked for.
 
 ## 2. From power-on to `/proc/cmdline` (RHEL 8/9)
 
+```mermaid
+flowchart TD
+  fw["Firmware<br/>UEFI or BIOS"] --> grub["shim + GRUB2<br/>reads grub.cfg"]
+  grub --> bls[["blscfg loads a BLS entry<br/>/boot/loader/entries/*.conf<br/>options = the command line"]]
+  bls --> early["Kernel: early_param() handlers<br/>memory, CPUs, IOMMU, mitigations"]
+  early --> setup["Kernel: __setup() handlers<br/>unknown name=value goes to init as env"]
+  setup --> init["initramfs (dracut), switch_root"]
+  init --> sd(["systemd, PID 1"])
+  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+  class bls focus
 ```
+
+*The command line is the `options` line of a BLS entry. GRUB hands it to the kernel, which parses the early parameters before anything else runs, and passes anything it does not recognize to init.*
+
+<details>
+<summary><b>The same path as text</b>, with a sample BLS entry</summary>
+
+```text
 Firmware (UEFI or BIOS)
   └─► shim + GRUB2 (/boot/efi/EFI/redhat/ or MBR)
         └─► reads grub.cfg ─► "blscfg" command loads BootLoaderSpec entries
@@ -20,10 +43,12 @@ Firmware (UEFI or BIOS)
         └─► loads kernel + initramfs, passes "options" as the command line
   └─► kernel: early_param() handlers run during setup_arch() (very early: memory, CPUs, IOMMU)
               __setup() handlers run later during start_kernel()
-              anything unrecognised with "=" becomes an environment variable for init,
-              anything unrecognised without "=" becomes an argument to init
+              anything unrecognized with "=" becomes an environment variable for init,
+              anything unrecognized without "=" becomes an argument to init
   └─► initramfs (dracut) ─► switch_root ─► systemd (PID 1)
 ```
+
+</details>
 
 Three details matter in practice:
 
@@ -33,7 +58,7 @@ Three details matter in practice:
 
 ## 3. The housekeeping model
 
-Recent kernels organise CPU isolation around a **housekeeping mask**: the set of CPUs allowed to run kernel duties that could otherwise land anywhere. `isolcpus` and `nohz_full` remove CPUs from this mask for different *types* of work:
+Recent kernels organize CPU isolation around a **housekeeping mask**: the set of CPUs allowed to run kernel duties that could otherwise land anywhere. `isolcpus` and `nohz_full` remove CPUs from this mask for different *types* of work:
 
 | Housekeeping type | Removed by | Work that moves to housekeeping CPUs |
 |---|---|---|
@@ -43,6 +68,21 @@ Recent kernels organise CPU isolation around a **housekeeping mask**: the set of
 | `rcu` | `nohz_full=` / `rcu_nocbs=` | RCU callback processing (`rcuo*` kthreads) and grace-period kthreads |
 | `misc`, `kthread` | `nohz_full=` | Unbound kernel threads created at runtime (`kthreadd` children) |
 | `wq` | `nohz_full=` (default unbound workqueue mask) | Unbound workqueue items. Refine with `/sys/devices/virtual/workqueue/cpumask`. |
+
+```mermaid
+flowchart LR
+  iso["isolcpus="] --> dom["domain<br/>load balancing"]
+  isoirq["isolcpus=managed_irq,"] --> mirq["managed_irq<br/>managed IRQ vectors"]
+  nohz["nohz_full="] --> tim["timer<br/>unbound timers, do_timer"]
+  nohz --> rcu["rcu<br/>callbacks, GP kthreads"]
+  nocb["rcu_nocbs="] --> rcu
+  nohz --> kt["misc, kthread<br/>unbound kthreads"]
+  nohz --> wq["wq<br/>unbound workqueues"]
+  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
+  class dom,mirq,tim,rcu,kt,wq hk
+```
+
+*Each parameter removes the isolated CPUs from one or more housekeeping types. `nohz_full` covers most of them, `isolcpus` covers load balancing, and only together do they leave the CPU quiet.*
 
 This is why the parameters are used **together** and with the **same CPU list**. Each one removes a different class of work, and none of them alone produces a quiet CPU.
 
@@ -103,7 +143,15 @@ They are read in `setup_arch()`, and the kernel **patches its own code** at boot
 - **"The interfaces were renamed after tuning."** `biosdevname` changed on the command line. The naming scheme is decided in early userspace (udev), based on this argument.
 - **"A security scan flags the host."** Expected when mitigations are off. The exception must be documented and scoped to that host class.
 
-## 7. References
+## 7. Key takeaways
+
+- Arguments live per kernel in BLS entries. Use `grubby`, and check new kernels after every update.
+- Unknown parameters fail silently. Always read the kernel's own view in `/sys` after the reboot.
+- The housekeeping model explains why `isolcpus`, `nohz_full` and `rcu_nocbs` go together, with the same CPU list.
+- `nohz_full` makes syscalls slightly more expensive. The isolated thread should stay in user space.
+- Mitigation switches patch kernel code at boot, which is why they cannot change at runtime.
+
+## 8. References
 
 - <https://docs.kernel.org/admin-guide/kernel-parameters.html>
 - <https://docs.kernel.org/timers/no_hz.html>

@@ -116,7 +116,7 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 
 ```
 .
-├── README.md  QUICK_START.md  INDEX.md
+├── README.md  QUICK_START.md  INDEX.md  STYLE.md
 ├── guides/          01..08 step-by-step guides
 ├── concepts/        6 deep dives
 ├── examples/        Java on a tuned host (+ runnable probe), multi-NIC segmentation
