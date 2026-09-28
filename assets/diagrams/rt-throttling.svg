@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 290" width="760" height="290" role="img" aria-labelledby="t d">
+<title id="t">RT throttling stops a spinning SCHED_FIFO thread for 50 ms every second</title>
+<desc id="d">One second of a CPU that runs one busy-spinning SCHED_FIFO thread. With the default sched_rt_runtime_us of 950000, the kernel deschedules the thread after 950 ms and keeps it off the CPU for 50 ms, so a message that arrives in that window waits up to 50 ms. With sched_rt_runtime_us set to -1 the thread keeps running and handles the same message at once.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .in { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0b2613; text-anchor: middle; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+  .msg { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .late { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; text-anchor: end; }
+  .ok { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; text-anchor: end; }
+  .cover { fill: #f6f8fa; }
+
+  /* Base styles are the final frame; the animation replays one second. */
+  .cover { transform: scaleX(0); transform-origin: 721px 0; transform-box: view-box; animation: reveal 6s linear infinite; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  .show { opacity: 1; animation: show 6s linear infinite; }
+
+  @keyframes reveal { 0% { transform: scaleX(1); } 80%, 100% { transform: scaleX(0); } }
+  @keyframes sweep { 0% { transform: translateX(0); } 80%, 100% { transform: translateX(570px); } }
+  @keyframes show { 0%, 76% { opacity: 0; } 78%, 100% { opacity: 1; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cover, .head, .show { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="290" rx="8"/>
+
+<!-- Lane 1: default RT throttling -->
+<rect class="lane" x="10" y="10" width="740" height="125" rx="6"/>
+<text class="cap" x="24" y="34">Default: sched_rt_runtime_us = 950000 (of 1000000)</text>
+<text class="sub" x="24" y="52">After 950 ms the kernel takes the CPU away from the FIFO thread for 50 ms, every second.</text>
+<text class="lbl" x="24" y="97">CPU 7</text>
+<rect class="app" x="150" y="76" width="541" height="36" rx="4"/>
+<text class="in" x="420" y="99">SCHED_FIFO thread spinning (event.loop)</text>
+<rect class="wait" x="692" y="76" width="28" height="36" rx="3"/>
+<text class="lbl" x="706" y="99" text-anchor="middle">T</text>
+<rect class="cover" x="150" y="64" width="571" height="52"/>
+<g class="show">
+  <path class="msg" d="M697 60 l6 6 l-6 6 l-6 -6 z"/>
+  <text class="late" x="686" y="70">message waits up to 50 ms</text>
+</g>
+<text class="axis" x="150" y="128">0</text>
+<text class="axis" x="692" y="128">950 ms</text>
+<text class="axis" x="734" y="128">1 s</text>
+<text class="axis" x="420" y="128">T = throttled: the thread is off the CPU for 50 ms</text>
+
+<!-- Lane 2: throttling off -->
+<rect class="lane" x="10" y="150" width="740" height="125" rx="6"/>
+<text class="cap" x="24" y="174">sched_rt_runtime_us = -1</text>
+<text class="sub" x="24" y="192">No cap. The thread on the isolated CPU keeps running for the whole second.</text>
+<text class="lbl" x="24" y="237">CPU 7</text>
+<rect class="app" x="150" y="216" width="570" height="36" rx="4"/>
+<text class="in" x="420" y="239">SCHED_FIFO thread spinning (event.loop)</text>
+<rect class="cover" x="150" y="204" width="571" height="52"/>
+<g class="show">
+  <path class="msg" d="M697 200 l6 6 l-6 6 l-6 -6 z"/>
+  <text class="ok" x="686" y="210">message handled at once</text>
+</g>
+<text class="axis" x="150" y="268">0</text>
+<text class="axis" x="692" y="268">950 ms</text>
+<text class="axis" x="734" y="268">1 s</text>
+
+<line class="head" x1="150" y1="62" x2="150" y2="258"/>
+</svg>

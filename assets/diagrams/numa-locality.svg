@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" width="760" height="300" role="img" aria-labelledby="t d">
+<title id="t">Keep the critical thread on the NUMA node of its NIC and memory</title>
+<desc id="d">Two sockets joined by the socket interconnect. The critical NIC and the packet buffers sit on node 1. A thread on node 1 reads them locally. A thread on node 0 crosses the interconnect on every cache miss, which adds about 60 to 100 nanoseconds each time.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .sock { fill: #f6f8fa; stroke: #57606a; stroke-width: 1.5; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .link { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; text-anchor: middle; }
+  .good { stroke: #1d6b33; stroke-width: 3; fill: none; }
+  .bad { stroke: #9b1c1c; stroke-width: 3; fill: none; stroke-dasharray: 7 4; }
+  .gtxt { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; text-anchor: middle; }
+  .btxt { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; text-anchor: middle; }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="300" rx="8"/>
+
+<!-- Node 0 -->
+<rect class="sock" x="20" y="20" width="300" height="200" rx="8"/>
+<text class="cap" x="36" y="44">NUMA node 0</text>
+<rect class="wait" x="60" y="70" width="200" height="50" rx="5"/>
+<text class="lbl" x="160" y="92">CPU 8: net.rx</text>
+<text class="sub" x="160" y="109">remote: wrong node</text>
+<rect class="box" x="60" y="150" width="200" height="46" rx="5"/>
+<text class="lbl" x="160" y="178">node 0 memory</text>
+
+<!-- Interconnect -->
+<rect class="link" x="320" y="95" width="120" height="30" rx="4"/>
+<text class="lbl" x="380" y="115">interconnect</text>
+
+<!-- Node 1 -->
+<rect class="sock" x="440" y="20" width="300" height="200" rx="8"/>
+<text class="cap" x="456" y="44">NUMA node 1</text>
+<rect class="app" x="480" y="70" width="110" height="50" rx="5"/>
+<text class="lbl" x="535" y="92">CPU 3</text>
+<text class="sub" x="535" y="109">net.rx: local</text>
+<rect class="box" x="610" y="70" width="110" height="50" rx="5"/>
+<text class="lbl" x="665" y="92">critical NIC</text>
+<text class="sub" x="665" y="109">DMA target</text>
+<rect class="box" x="480" y="150" width="240" height="46" rx="5"/>
+<text class="lbl" x="600" y="170">node 1 memory</text>
+<text class="sub" x="600" y="187">packet buffers, huge pages</text>
+
+<!-- Paths -->
+<path class="good" d="M535 120 L535 150"/>
+<path class="good" d="M665 120 L665 150"/>
+<path class="bad" d="M260 110 L320 110 M440 110 L470 110 L470 173 L480 173"/>
+
+<text class="gtxt" x="600" y="244">Local: thread, NIC and memory on node 1.</text>
+<text class="btxt" x="190" y="244">Remote: every cache miss crosses sockets,</text>
+<text class="btxt" x="190" y="262">about +60–100 ns each.</text>
+<text class="sub" x="380" y="288">Solid green = local access. Dashed red = cross-socket access.</text>
+</svg>

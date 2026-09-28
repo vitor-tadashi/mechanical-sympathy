@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 290" width="760" height="290" role="img" aria-labelledby="t d">
+<title id="t">Software timestamps land late by a varying delay; hardware timestamps sit on the wire</title>
+<desc id="d">Three PTP packets cross the wire at even intervals. A software timestamp is taken only after the interrupt, the softirq and the scheduling delay, which differ for every packet, so the stamps are late and uneven. A hardware timestamp is taken by the NIC as the packet crosses the wire, so every stamp matches the real crossing time.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+  .wire { stroke: #57606a; stroke-width: 2; }
+  .guide { stroke: #57606a; stroke-width: 1; stroke-dasharray: 2 3; }
+  .pkt { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .sw { fill: #9b1c1c; }
+  .hw { fill: #1d6b33; }
+  .late { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; text-anchor: middle; }
+  .ok { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; text-anchor: middle; }
+
+  /* Base styles are the final frame; the animation replays the three packets. */
+  .cover { fill: #f6f8fa; transform: scaleX(0); transform-origin: 721px 0; transform-box: view-box; animation: reveal 6s linear infinite; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+
+  @keyframes reveal { 0% { transform: scaleX(1); } 80%, 100% { transform: scaleX(0); } }
+  @keyframes sweep { 0% { transform: translateX(0); } 80%, 100% { transform: translateX(570px); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cover, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="290" rx="8"/>
+
+<!-- Lane 1: software timestamps -->
+<rect class="lane" x="10" y="10" width="740" height="125" rx="6"/>
+<text class="cap" x="24" y="34">Software timestamps</text>
+<text class="sub" x="24" y="52">The kernel stamps the packet after the IRQ, the softirq and scheduling: late, and by a different amount each time.</text>
+<text class="lbl" x="24" y="82">wire</text>
+<text class="lbl" x="24" y="112">stamp</text>
+<line class="wire" x1="150" y1="78" x2="720" y2="78"/>
+<line class="guide" x1="230" y1="86" x2="230" y2="118"/>
+<line class="guide" x1="420" y1="86" x2="420" y2="118"/>
+<line class="guide" x1="610" y1="86" x2="610" y2="118"/>
+<rect class="wait" x="230" y="102" width="38" height="12" rx="2"/>
+<rect class="wait" x="420" y="102" width="86" height="12" rx="2"/>
+<rect class="wait" x="610" y="102" width="18" height="12" rx="2"/>
+<rect class="sw" x="267" y="94" width="4" height="26" rx="1"/>
+<rect class="sw" x="505" y="94" width="4" height="26" rx="1"/>
+<rect class="sw" x="627" y="94" width="4" height="26" rx="1"/>
+<path class="pkt" d="M230 71 l7 7 l-7 7 l-7 -7 z"/>
+<path class="pkt" d="M420 71 l7 7 l-7 7 l-7 -7 z"/>
+<path class="pkt" d="M610 71 l7 7 l-7 7 l-7 -7 z"/>
+<text class="late" x="463" y="130">red = how late each software stamp is: never the same twice</text>
+<rect class="cover" x="150" y="64" width="571" height="70"/>
+
+<!-- Lane 2: hardware timestamps -->
+<rect class="lane" x="10" y="150" width="740" height="125" rx="6"/>
+<text class="cap" x="24" y="174">Hardware timestamps (ethtool -T: hardware-receive)</text>
+<text class="sub" x="24" y="192">The NIC stamps the packet as it crosses the wire. The stack's delays never reach the stamp.</text>
+<text class="lbl" x="24" y="222">wire</text>
+<text class="lbl" x="24" y="252">stamp</text>
+<line class="wire" x1="150" y1="218" x2="720" y2="218"/>
+<line class="guide" x1="230" y1="226" x2="230" y2="258"/>
+<line class="guide" x1="420" y1="226" x2="420" y2="258"/>
+<line class="guide" x1="610" y1="226" x2="610" y2="258"/>
+<rect class="hw" x="228" y="234" width="4" height="26" rx="1"/>
+<rect class="hw" x="418" y="234" width="4" height="26" rx="1"/>
+<rect class="hw" x="608" y="234" width="4" height="26" rx="1"/>
+<path class="pkt" d="M230 211 l7 7 l-7 7 l-7 -7 z"/>
+<path class="pkt" d="M420 211 l7 7 l-7 7 l-7 -7 z"/>
+<path class="pkt" d="M610 211 l7 7 l-7 7 l-7 -7 z"/>
+<text class="ok" x="463" y="270">every stamp is exactly on the wire crossing</text>
+<rect class="cover" x="150" y="204" width="571" height="70"/>
+
+<line class="head" x1="150" y1="62" x2="150" y2="262"/>
+</svg>

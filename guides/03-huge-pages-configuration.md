@@ -39,6 +39,10 @@ Every memory access goes through a virtual → physical translation, and the CPU
 | 2 MiB | 4 GiB | 3 |
 | 1 GiB | 2 TiB | 2 |
 
+<img src="../assets/diagrams/tlb-reach.svg" alt="Animation: random reads over a 256 MiB working set; with 4 KiB pages only a tiny slice is inside TLB reach and most reads miss, with 2 MiB pages the whole set is inside reach and every read hits" width="720">
+
+*With 4 KiB pages, a 256 MiB working set is mostly outside TLB reach and most reads take a page walk. With 2 MiB pages, all of it fits.*
+
 Huge pages also:
 
 - **remove page faults from the hot path**: the pages are allocated and zeroed up front, and pre-touched at start-up;

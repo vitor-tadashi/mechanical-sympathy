@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 340" width="760" height="340" role="img" aria-labelledby="t d">
+<title id="t">Where the NIC interrupt lands decides whether the spinning thread is interrupted</title>
+<desc id="d">Three packets arrive for a net.rx thread that spins on isolated CPU 3. When the NIC interrupt points at CPU 3, each packet cuts into the spin with a hardirq and softirq. When the interrupt points at housekeeping CPU 1, CPU 1 does that work, the spin on CPU 3 is never cut, and the data reaches CPU 3 as one cache-line transfer.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .irq { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .role { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .in { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .inw { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #ffffff; text-anchor: middle; }
+  .inr { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #2b0a0a; text-anchor: middle; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .xfer { stroke: #1d6b33; stroke-width: 2; fill: none; }
+
+  /* Base styles are the final frame; the animation replays the three packets. */
+  .cover { fill: #f6f8fa; transform: scaleX(0); transform-origin: 721px 0; transform-box: view-box; animation: reveal 6s linear infinite; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+
+  @keyframes reveal { 0% { transform: scaleX(1); } 80%, 100% { transform: scaleX(0); } }
+  @keyframes sweep { 0% { transform: translateX(0); } 80%, 100% { transform: translateX(570px); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cover, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="340" rx="8"/>
+
+<!-- Lane 1: IRQ on the isolated CPU -->
+<rect class="lane" x="10" y="10" width="740" height="155" rx="6"/>
+<text class="cap" x="24" y="34">NIC IRQ on isolated CPU 3 (wrong)</text>
+<text class="sub" x="24" y="52">Every packet preempts the spinning thread for 1 to 50 µs of hardirq and softirq work.</text>
+<text class="lbl" x="24" y="84">CPU 3</text>
+<text class="role" x="24" y="98">isolated, net.rx</text>
+<rect class="app" x="150" y="70" width="570" height="30" rx="4"/>
+<text class="in" x="190" y="89">spin</text>
+<rect class="wait" x="238" y="66" width="34" height="38" rx="3"/>
+<text class="inr" x="255" y="89">IRQ</text>
+<rect class="wait" x="418" y="66" width="34" height="38" rx="3"/>
+<text class="inr" x="435" y="89">IRQ</text>
+<rect class="wait" x="598" y="66" width="34" height="38" rx="3"/>
+<text class="inr" x="615" y="89">IRQ</text>
+<text class="lbl" x="24" y="132">CPU 1</text>
+<text class="role" x="24" y="146">housekeeping</text>
+<rect class="box" x="150" y="118" width="570" height="30" rx="4"/>
+<text class="in" x="435" y="137">no network work</text>
+<rect class="cover" x="150" y="62" width="571" height="90"/>
+
+<!-- Lane 2: IRQ on the housekeeping CPU -->
+<rect class="lane" x="10" y="175" width="740" height="155" rx="6"/>
+<text class="cap" x="24" y="199">NIC IRQ on housekeeping CPU 1 (reference layout)</text>
+<text class="sub" x="24" y="217">CPU 1 takes the interrupts and hands each packet to CPU 3 as one cache-line transfer (~40–80 ns).</text>
+<text class="lbl" x="24" y="249">CPU 3</text>
+<text class="role" x="24" y="263">isolated, net.rx</text>
+<rect class="app" x="150" y="235" width="570" height="30" rx="4"/>
+<text class="in" x="190" y="254">spin</text>
+<text class="lbl" x="24" y="297">CPU 1</text>
+<text class="role" x="24" y="311">housekeeping</text>
+<rect class="box" x="150" y="283" width="570" height="30" rx="4"/>
+<rect class="irq" x="238" y="283" width="34" height="30" rx="3"/>
+<text class="inw" x="255" y="302">IRQ</text>
+<rect class="irq" x="418" y="283" width="34" height="30" rx="3"/>
+<text class="inw" x="435" y="302">IRQ</text>
+<rect class="irq" x="598" y="283" width="34" height="30" rx="3"/>
+<text class="inw" x="615" y="302">IRQ</text>
+<path class="xfer" d="M272 290 l12 -22 m-6 1 l6 -1 l1 6"/>
+<path class="xfer" d="M452 290 l12 -22 m-6 1 l6 -1 l1 6"/>
+<path class="xfer" d="M632 290 l12 -22 m-6 1 l6 -1 l1 6"/>
+<rect class="cover" x="150" y="227" width="571" height="90"/>
+
+<line class="head" x1="150" y1="60" x2="150" y2="320"/>
+</svg>

@@ -170,6 +170,10 @@ sequenceDiagram
 | `nohz` | `off` | Disables *idle* dynticks (`CONFIG_NO_HZ_IDLE`). See the note below. |
 | `skew_tick` | `1` | Offsets each CPU's tick timer so that the ticks do not all fire at the same instant. This reduces contention on the jiffies/timekeeping locks on large machines. |
 
+<img src="../assets/diagrams/tick-nohz.svg" alt="Animation: a busy CPU is interrupted by a timer tick many times per second; with nohz_full the same CPU runs uninterrupted except for one residual tick" width="720">
+
+*`nohz_full` in one picture: with exactly one runnable task, the periodic tick stops and only about one residual tick per second is left.*
+
 > [!WARNING]
 > **`rcu_nocbs` must list the isolated CPUs.** It names the CPUs whose callbacks are **moved away**. A common mistake, found in real tuning scripts, is to set `rcu_nocbs` to the *housekeeping* CPUs ("the CPUs that do RCU work"). That does the opposite of what you want: the isolated CPUs keep running their callbacks in softirq, and the housekeeping CPUs get an extra layer of kthreads. On recent kernels `nohz_full` implies `rcu_nocbs` for the same CPUs, but setting it explicitly documents intent and covers older kernels.
 

@@ -85,6 +85,10 @@ ethtool -T eno1
 
 `hardware-transmit` and `hardware-receive` mean the NIC stamps packets as they cross the wire, so neither the stack's scheduling nor its interrupt latency ends up in the timestamp. Without them, PTP falls back to software timestamps and loses most of its advantage, and the script refuses `TIME_SYNC_MODE=ptp`.
 
+<img src="../assets/diagrams/hw-timestamping.svg" alt="Animation: three packets cross the wire at even intervals; software timestamps land late by a different delay each time, hardware timestamps sit exactly on the wire crossing" width="720">
+
+*A software stamp includes the interrupt, softirq and scheduling delay, which changes with every packet. A hardware stamp is taken on the wire, so that noise never reaches the clock.*
+
 ## 5. Placement: the timing NIC and the daemon CPUs
 
 - **The `timing` NIC role** ([Guide 04 §3](04-network-optimization.md#3-network-segmentation-give-each-traffic-class-its-own-nic)) carries PTP only. It gets the critical profile (coalescing 0, no PAUSE), so event messages are timestamped and processed promptly.
