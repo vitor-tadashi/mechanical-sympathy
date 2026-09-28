@@ -2,11 +2,13 @@
 #
 # check-commit-title - enforce the commit title rules of AGENTS.md section 8.
 #
-# A title is one line that completes "If applied, this commit will ...":
-#   - imperative mood, starting with a capital ASCII letter (Add, Fix, Remove)
-#   - at most 72 characters, no trailing period, ASCII only
-#   - no Conventional Commits "type(scope):" or "[TICKET]" prefix
+# A title is a Conventional Commits prefix plus a Google-style subject that
+# completes "If applied, this commit will ...":
+#   - type(scope)!: subject, type in TYPES, scope and "!" optional
+#   - the subject is imperative and starts lowercase (fix: add x, not fix: Added x)
+#   - at most 72 characters in total, no trailing period, ASCII only
 # "fixup! " and "squash! " prefixes are accepted; autosquash removes them.
+# git's own 'Revert "..."' titles are accepted as they are.
 #
 # Usage: tools/check-commit-title "<title>"
 #        tools/check-commit-title --range <base>..<head>
@@ -14,13 +16,14 @@
 set -Eeuo pipefail
 
 MAX_LENGTH=72
+TYPES="feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert"
 
 # First words that are not imperative. Extend when a new offender shows up.
 NON_IMPERATIVE=(
-	Added Adding Adds Bumped Bumping Bumps Changed Changes Changing Created Creates Creating
-	Deleted Deletes Deleting Fixed Fixes Fixing Improved Improves Improving Merged Merges
-	Moved Moves Moving Refactored Refactoring Refactors Removed Removes Removing Renamed
-	Renames Renaming Updated Updates Updating Wip WIP
+	added adding adds bumped bumping bumps changed changes changing created creates creating
+	deleted deletes deleting fixed fixes fixing improved improves improving merged merges
+	moved moves moving refactored refactoring refactors removed removes removing renamed
+	renames renaming updated updates updating wip
 )
 
 failures=0
@@ -31,9 +34,10 @@ fail() {
 }
 
 check_title() {
-	local title="$1" first_word word
+	local title="$1" subject first_word word
 	title="${title#fixup! }"
 	title="${title#squash! }"
+	[[ "${title}" == 'Revert "'*'"' ]] && return
 
 	if [[ -z "${title}" || "${title}" != "${title#[[:space:]]}" || "${title}" != "${title%[[:space:]]}" ]]; then
 		fail "'${title}'" "title is empty or has leading/trailing whitespace"
@@ -45,19 +49,21 @@ check_title() {
 	if LC_ALL=C grep -q '[^ -~]' <<<"${title}"; then
 		fail "'${title}'" "non-ASCII or control character, write it in American English"
 	fi
-	if [[ "${title}" =~ ^\[[^]]+\] || "${title}" =~ ^[a-z]+(\([^\)]*\))?!?:\  ]]; then
-		fail "'${title}'" "drop the prefix, the title is plain text (Add x, not feat: add x)"
+	if [[ ! "${title}" =~ ^(${TYPES})(\([a-z0-9._/-]+\))?!?:\ (.+)$ ]]; then
+		fail "'${title}'" "start with type(scope): where type is one of ${TYPES//|/, } (fix: add x)"
+		return
 	fi
-	if [[ "${title}" != [A-Z]* ]]; then
-		fail "'${title}'" "start with a capital letter"
+	subject="${BASH_REMATCH[3]}"
+	if [[ "${subject}" != [a-z0-9]* ]]; then
+		fail "'${title}'" "start the subject lowercase (fix: add x, not fix: Add x)"
 	fi
-	if [[ "${title}" == *. ]]; then
+	if [[ "${subject}" == *. ]]; then
 		fail "'${title}'" "drop the trailing period"
 	fi
-	first_word="${title%% *}"
+	first_word="${subject%% *}"
 	for word in "${NON_IMPERATIVE[@]}"; do
 		if [[ "${first_word}" == "${word}" ]]; then
-			fail "'${title}'" "use the imperative mood (Add, not Added or Adds)"
+			fail "'${title}'" "use the imperative mood (add, not added or adds)"
 			break
 		fi
 	done

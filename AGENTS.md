@@ -59,16 +59,16 @@ These rules apply to every change, whoever makes it. If a rule and a request con
 | `make lint-scripts` | no `.sh`/`.bash` files, exec bits, ShellCheck `enable=all`, `bash -n` |
 | `make lint-java` | Checkstyle, `-Werror` compile, dependency approval, checksums |
 | `make install-git-hooks` | opt-in hooks: pre-commit runs `make lint`, commit-msg runs `tools/check-commit-title` and `tools/check-description` |
-| `tools/check-commit-title` | commit and PR title rules (section 8). CI checks every PR title and commit |
+| `tools/check-commit-title` | Conventional Commits titles with a Google-style subject (section 8). CI checks every PR title and commit |
 | `tools/check-description` | no emojis or tool footers in PR and commit descriptions (section 8). CI checks the PR body and every commit |
 
 ## 8. Git
 
-- **Commit titles** follow Google's guidance for change descriptions. The title completes "If applied, this commit will ...". PR titles follow the same rules, because a squash merge turns the PR title into the commit title.
-  - Imperative mood, capitalized: `Add kernel-bypass guide`, not `Added kernel-bypass guide` or `add kernel-bypass guide`.
-  - Plain text, no prefix: no `docs:`, `feat(scope):` or `[TICKET]`.
+- **Commit titles** use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) types with a subject written to Google's guidance for change descriptions. PR titles follow the same rules, because a squash merge turns the PR title into the commit title. `tools/check-commit-title` enforces them.
+  - Format `type(scope)!: subject`. `type` is one of `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`. The scope and `!` (breaking change) are optional. No ticket prefix.
+  - The subject completes "If applied, this commit will ...": imperative and lowercase, `docs(network): add ethtool reference`, not `docs(network): Added ethtool reference`.
+  - Specific: `fix: pin IRQs of bulk NICs to housekeeping CPUs`, not `fix: bug` or `chore: update files`.
   - At most 72 characters, no trailing period, ASCII only.
-  - Specific: `Pin IRQs of bulk NICs to housekeeping CPUs`, not `Fix bug` or `Update files`.
   - A body is optional. When there is one, leave a blank line after the title and explain what changed and why, wrapped at 72 columns.
 - **Descriptions** (PR bodies and commit bodies) are plain text: no emojis and no tool attribution footers such as "Generated with ...". `tools/check-description` enforces this in the commit-msg hook and in CI.
 - [Conventional Branch](https://conventional-branch.github.io/) names: `<type>/<kebab-slug>` (`docs/kernel-bypass`, `fix/irq-affinity`).
