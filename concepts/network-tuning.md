@@ -2,13 +2,41 @@
 
 > Used by: [Guide 04](../guides/04-network-optimization.md), [Guide 06](../guides/06-kernel-sysctl-tuning.md). Related: [cpu-isolation](cpu-isolation.md), [huge-pages](huge-pages.md).
 
+## At a glance
+
+- A received packet waits in up to ten places between the wire and `recv()`. On a tuned host, only the interrupt, softirq and wake-up are left.
+- The median barely changes with tuning. The tail does: coalescing adds 30–100 µs, PAUSE frames add milliseconds, and a dropped segment adds hundreds of milliseconds.
+- Each stage has one knob. Know the stage and you know which knob fixes which part of the histogram.
+
 ## 1. Why it matters
 
 On a well-tuned host, the time between a packet arriving at the NIC and the application seeing it is 2–5 µs with the kernel stack, and about 1 µs with kernel bypass. On an untuned host the *median* is often similar. The difference shows up in the tail: 30–100 µs from interrupt coalescing, milliseconds from PAUSE frames, and hundreds of ms from a dropped segment that TCP has to retransmit. Understanding each stage tells you which knob fixes which part of the histogram.
 
 ## 2. The receive path, step by step
 
+```mermaid
+sequenceDiagram
+  participant N as NIC
+  participant H as IRQ CPU (housekeeping)
+  participant S as Socket
+  participant A as App thread (isolated CPU)
+  N->>N: FCS check, MAC/VLAN filter, RSS picks a queue
+  N->>N: DMA into the RX ring
+  Note over N: coalescing: wait rx-usecs or rx-frames
+  N->>H: MSI-X interrupt (hard IRQ)
+  H->>H: softirq: NAPI poll, GRO, netfilter, IP, UDP/TCP
+  H->>S: enqueue on the socket
+  S->>A: wake a blocked reader (IPI), or a spinning reader sees data
+  A->>S: recv() copies the data to user space
+  H->>N: NAPI re-enables the queue interrupt once the ring is drained
 ```
+
+*The NIC receives, hashes and DMAs the frame, may wait for the coalescing timer, and interrupts the housekeeping CPU. That CPU runs the protocol stack in softirq and queues the data on the socket, where the application thread on its isolated CPU picks it up.*
+
+<details>
+<summary><b>The same path as a numbered list</b></summary>
+
+```text
  1. Frame arrives; NIC checks FCS, filters by MAC/VLAN
  2. RSS: NIC hashes the flow (src/dst IP + ports) → picks an RX queue
  3. NIC DMAs the frame into a buffer described by the next RX descriptor in that queue's ring
@@ -21,6 +49,8 @@ On a well-tuned host, the time between a packet arriving at the NIC and the appl
  9. Application: recv()/recvmsg() copies data to user space
 10. NAPI re-enables the queue interrupt when the ring is drained
 ```
+
+</details>
 
 Latency added at each step, and the knob for it:
 
@@ -35,6 +65,10 @@ Latency added at each step, and the knob for it:
 | 9 copy | ~0.1 µs per KiB | Small messages; zero-copy APIs for large ones |
 
 ## 3. Interrupt moderation, with numbers
+
+<img src="../assets/diagrams/rx-coalescing.svg" alt="Animation: with adaptive coalescing, the first packet waits in the NIC until the timer fires; with rx-usecs 0 the same packet reaches the application immediately" width="720">
+
+*With coalescing, the first packet of a burst sits in the NIC until the timer expires. With `rx-usecs 0`, it raises the interrupt at once and reaches the application much earlier.*
 
 Without moderation, every packet raises an interrupt. At 1 Mpps that is 1 M interrupts/s on one CPU, each costing ~1 µs of entry/exit, which is too much. Moderation trades latency for efficiency:
 
@@ -96,7 +130,15 @@ A user-space driver maps the NIC's rings (descriptor queues and doorbells) into 
 
 A market-data consumer saw p50 = 7 µs and p99 = 60 µs on a quiet feed, but p99 = 12 µs during busy periods, which is backwards. The cause was adaptive coalescing: at low rates the driver raised `rx-usecs` to save interrupts, and the first packet after a lull waited the full interval. With `adaptive-rx off rx-usecs 0`, p99 was 11 µs at all rates.
 
-## 12. References
+## 12. Key takeaways
+
+- The first packet after a quiet period is the one coalescing hurts most. Turn adaptive coalescing off and set `rx-usecs 0` on critical NICs.
+- NAPI bounds the interrupt rate by itself: while the ring has packets, interrupts stay masked.
+- Keep RPS and RFS off for critical flows. Use RSS and deliberate IRQ placement instead.
+- Set `TCP_NODELAY` on every latency-critical TCP socket, and keep PAUSE frames off end to end.
+- Busy polling sits between the kernel path and bypass. It is the cheapest next step when the tuned kernel path is not enough.
+
+## 13. References
 
 - [concepts/ethtool.md](ethtool.md): every `ethtool` option used in these guides
 - <https://docs.kernel.org/networking/scaling.html> (RSS/RPS/RFS/XPS)

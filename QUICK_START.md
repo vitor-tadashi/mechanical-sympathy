@@ -1,6 +1,30 @@
 # Quick Start — Pick Your Scenario
 
-Before anything else, capture a **baseline**: latency percentiles (p50/p99/p99.9/max) of your real workload, or of the [probe](examples/hugepages-java-example.md), plus `scripts/verify-tuning --report baseline.txt`. Without a baseline you cannot tell whether tuning helped.
+> [!IMPORTANT]
+> Before anything else, capture a **baseline**: latency percentiles (p50/p99/p99.9/max) of your real workload, or of the [probe](examples/hugepages-java-example.md), plus a host bundle with `sudo scripts/09-measure-latency --apply && sudo scripts/09-measure-latency --run` ([Guide 09](guides/09-measuring-latency.md)). Without a baseline you cannot tell whether tuning helped.
+
+## Which scenario am I?
+
+```mermaid
+flowchart TD
+  start(["Start: one host to tune"]) --> vm{"Bare metal?"}
+  vm -- "no: systemd-detect-virt<br/>prints a hypervisor" --> B["<b>Scenario B</b><br/>Virtual machine"]
+  vm -- yes --> shared{"One critical<br/>app only?"}
+  shared -- "no, several tenants" --> C["<b>Scenario C</b><br/>Shared bare-metal host"]
+  shared -- yes --> pins{"Threads<br/>pinnable?"}
+  pins -- "yes, one per CPU" --> A["<b>Scenario A</b><br/>Dedicated bare metal, full treatment"]
+  pins -- "no, large dynamic thread pools" --> C
+  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+  class A,B,C focus
+```
+
+*A VM goes to Scenario B. A physical host shared by several tenants, or one whose application cannot pin its threads, goes to Scenario C. A dedicated physical host with pinnable threads gets the full treatment, Scenario A.*
+
+| Scenario | Jump to |
+|---|---|
+| A: dedicated bare metal | [Scenario A](#scenario-a-dedicated-bare-metal-host-the-full-treatment) |
+| B: virtual machine | [Scenario B](#scenario-b-virtual-machine) |
+| C: shared bare metal | [Scenario C](#scenario-c-shared-bare-metal-host-several-applications) |
 
 ---
 
@@ -11,15 +35,16 @@ Before anything else, capture a **baseline**: latency percentiles (p50/p99/p99.9
 | Step | Guide | What you do | Reboot |
 |---|---|---|---|
 | 1 | — | Design the CPU layout: NIC NUMA node, isolated CPUs, housekeeping CPUs ([Guide 02 §3](guides/02-cpu-core-isolation.md#3-designing-the-cpu-layout)) and write `/etc/lowlat/lowlat.conf` | |
-| 2 | [01](guides/01-grub-bootloader-tuning.md) | Kernel command line: isolation + latency set. Decide on mitigations with security. | ✔ |
-| 3 | [02](guides/02-cpu-core-isolation.md) | systemd CPUAffinity, workqueues, irqbalance off, RT throttling | ✔ (same reboot) |
-| 4 | [03](guides/03-huge-pages-configuration.md) | Per-NUMA huge page reservation, sized for heap + code cache + bypass buffers | ✔ (same reboot) |
-| 5 | [06](guides/06-kernel-sysctl-tuning.md) | sysctl profile | |
-| 6 | [07](guides/07-os-hygiene.md) | Services, limits, noatime, tuned. Firewall section only with sign-off. | |
-| 7 | [05](guides/05-cgroup-isolation.md) | housekeeping.slice for agents, pin EDR/AV | |
-| 8 | [04](guides/04-network-optimization.md) | NIC roles, coalescing, IRQ affinity. Installs `lowlat-runtime.service`. | |
-| 9 | [Example](examples/hugepages-java-example.md) | Launcher: options by host class, large-page flags when pinned, threads pinned by role | |
-| 10 | [08](guides/08-kernel-bypass.md) | *Optional.* Kernel bypass: Onload on Solarflare/AMD NICs, or DPDK on Intel NICs (enables the IOMMU in step 2) | DPDK: ✔ (same reboot) |
+| 2 | [00](guides/00-bios-firmware.md) | BIOS: maximum-performance profile, C1E and deep C-states off, OS-controlled P-states, Hyper-Threading off, NUMA per socket, SMI sources off | ✔ (BIOS) |
+| 3 | [01](guides/01-grub-bootloader-tuning.md) | Kernel command line: isolation + latency set. Decide on mitigations with security. | ✔ |
+| 4 | [02](guides/02-cpu-core-isolation.md) | systemd CPUAffinity, workqueues, irqbalance off, RT throttling | ✔ (same reboot) |
+| 5 | [03](guides/03-huge-pages-configuration.md) | Per-NUMA huge page reservation, sized for heap + code cache + bypass buffers | ✔ (same reboot) |
+| 6 | [06](guides/06-kernel-sysctl-tuning.md) | sysctl profile | |
+| 7 | [07](guides/07-os-hygiene.md) | Services, limits, noatime, tuned. Firewall section only with sign-off. | |
+| 8 | [05](guides/05-cgroup-isolation.md) | housekeeping.slice for agents, pin EDR/AV | |
+| 9 | [04](guides/04-network-optimization.md) | NIC roles, coalescing, IRQ affinity. Installs `lowlat-runtime.service`. | |
+| 10 | [Example](examples/hugepages-java-example.md) | Launcher: options by host class, large-page flags when pinned, threads pinned by role | |
+| 11 | [08](guides/08-kernel-bypass.md) | *Optional.* Kernel bypass: Onload on Solarflare/AMD NICs, or DPDK on Intel NICs (enables the IOMMU in step 3) | DPDK: ✔ (same reboot) |
 
 ```bash
 scripts/apply-all --dry-run | less
@@ -30,6 +55,26 @@ scripts/verify-tuning
 **Also, on every host:** time synchronization with chrony, or PTP on the timing NIC, with the daemons pinned to a housekeeping CPU ([Guide 10](guides/10-time-sync.md)). `apply-all` runs it after Guide 07.
 
 **Time:** half a day for the first host, including the reboot and verification. Subsequent hosts with the same hardware take minutes (same `lowlat.conf`).
+
+```mermaid
+gantt
+  title Scenario A, first host (about half a day)
+  dateFormat HH:mm
+  axisFormat %H:%M
+  section Prepare
+    Baseline and verify-tuning report     :p1, 09:00, 45m
+    CPU layout and lowlat.conf            :p2, after p1, 60m
+    Security sign-off check               :p3, after p2, 15m
+  section Apply
+    apply-all --dry-run and review        :a1, after p3, 30m
+    apply-all --apply                     :a2, after a1, 15m
+    Reboot (one reboot for 01, 02, 03)    :crit, a3, after a2, 15m
+  section Check
+    verify-tuning and rtla osnoise        :c1, after a3, 30m
+    Application launch and latency run    :c2, after c1, 60m
+```
+
+*About an hour to measure and design, under an hour to apply with a single reboot, then about 90 minutes to verify and compare against the baseline. The times are indicative.*
 **What to expect:** the biggest change is in the tail. p99.9 and max typically drop several-fold, while p50 improves modestly. The exact gain depends on how noisy the host was before, so measure against your baseline.
 
 ---
@@ -49,7 +94,7 @@ scripts/verify-tuning
 
 The scripts skip isolation, huge-page reservation, irqbalance and RT throttling automatically on `virtual_machine`. Time synchronization still applies: chrony, ideally from the hypervisor's clock ([Guide 10 §12](guides/10-time-sync.md#12-bare-metal-vs-vm)).
 
-**Biggest lever outside the guest:** ask for dedicated physical CPUs with vCPU pinning, huge-page-backed guest memory, and SR-IOV passthrough of the critical NIC. With those, the guest behaves much more like Scenario A.
+**Biggest lever outside the guest:** ask for dedicated physical CPUs with vCPU pinning, huge-page-backed guest memory, SR-IOV passthrough of the critical NIC, and the host BIOS settings from [Guide 00](guides/00-bios-firmware.md). With those, the guest behaves much more like Scenario A.
 
 ---
 
@@ -62,15 +107,16 @@ The scripts skip isolation, huge-page reservation, irqbalance and RT throttling 
 | 1 | [01](guides/01-grub-bootloader-tuning.md) | Latency subset. Isolation only for the CPUs of the one application that pins its threads (small `ISOLATED_CPUS`). |
 | 2 | [05](guides/05-cgroup-isolation.md) | **One slice per tenant**: `AllowedCPUs`, `MemoryMax`, `IOWeight`. This is the main tool here. |
 | 3 | [03](guides/03-huge-pages-configuration.md) | Per-node pool sized only for the latency-critical tenant |
-| 4 | [04](guides/04-network-optimization.md) | Dedicated NIC (or VLAN + `tc` prioritisation, see the [segmentation example §6.3](examples/network-segmentation-example.md#63-when-traffic-classes-must-share-a-nic)) for the critical tenant |
+| 4 | [04](guides/04-network-optimization.md) | Dedicated NIC (or VLAN + `tc` prioritization, see the [segmentation example §6.3](examples/network-segmentation-example.md#63-when-traffic-classes-must-share-a-nic)) for the critical tenant |
 | 5 | [06](guides/06-kernel-sysctl-tuning.md), [07](guides/07-os-hygiene.md) | As usual, without disabling services other tenants need |
 
 ---
 
 ## Pre-flight checklist
 
-- [ ] Baseline latency and `verify-tuning --report` captured
+- [ ] Baseline latency captured, plus a host bundle (`09-measure-latency --run`, [Guide 09](guides/09-measuring-latency.md))
 - [ ] Out-of-band console (iLO/iDRAC/IPMI) tested
+- [ ] BIOS profile set, checked with `00-bios-firmware --verify`, and exported through the BMC ([Guide 00](guides/00-bios-firmware.md))
 - [ ] CPU layout written down and reviewed (NUMA node of the NICs checked)
 - [ ] Huge page sizing = heap + code cache + off-heap/bypass buffers + 10–20 %
 - [ ] Security sign-off for mitigations and firewall changes (or leave them at `no`)
@@ -81,11 +127,29 @@ The scripts skip isolation, huge-page reservation, irqbalance and RT throttling 
 
 ```bash
 scripts/verify-tuning --report after.txt          # configuration
-rtla osnoise top -c <isolated cpus> -d 60s        # noise on the isolated CPUs
-# + your latency histograms vs the baseline
+sudo scripts/09-measure-latency --run             # host bundle: interrupts, SMIs, OS noise (before the app starts)
+# + your latency histograms vs the baseline (Guide 09 §7 explains how to read them)
 ```
 
 ## When something goes wrong
+
+```mermaid
+flowchart TD
+  s(["Something is wrong after tuning"]) --> boot{"Boots?"}
+  boot -- no --> f1["GRUB menu, e, remove the last added arguments, Ctrl-x.<br/>Then 01-grub-bootloader --rollback"]
+  boot -- yes --> slow{"SSH slow?"}
+  slow -- yes --> f2["Too few OS CPUs: check mpstat -P ALL 1,<br/>give CPUs back in lowlat.conf"]
+  slow -- no --> app{"App fails?"}
+  app -- "cannot pin threads" --> f3["cpuset trap: Guide 05 section 4.4"]
+  app -- "JVM large pages fail" --> f4["Pool on the wrong node or too small:<br/>Guide 03 section 9"]
+  app -- no --> net{"NIC settings<br/>lost at boot?"}
+  net -- yes --> f5["systemctl status lowlat-runtime"]
+  net -- no --> f6["Find the row in the table below"]
+  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
+  class f1 risk
+```
+
+*Check in this order: does it boot, is the OS starved, does the application start and pin, did runtime settings survive the reboot. Each branch ends at the first action from the table.*
 
 | Problem | First action |
 |---|---|

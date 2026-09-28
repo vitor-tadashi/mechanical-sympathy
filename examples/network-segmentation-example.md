@@ -2,11 +2,68 @@
 
 > Guide: [04 Network](../guides/04-network-optimization.md) · Concept: [network-tuning](../concepts/network-tuning.md) · Script: [`scripts/04-network`](../scripts/04-network)
 
+## At a glance
+
+- **What:** six NICs, each with one role, its own subnet, its own IRQ CPU and the right qdisc.
+- **Rule:** one traffic class per NIC, and the only default route on the management network.
+- **Check:** the critical round-trip p99 must not move when bulk traffic runs.
+
 This walkthrough builds the network side of the reference host from scratch: six interfaces, each with a role, its own subnet, its own IRQ CPU, and the right queueing. At the end, the order path shares nothing with the bulk traffic (no NIC, queue, IRQ, CPU, or qdisc), and every setting is re-applied at boot.
 
 ## 1. The target
 
+```mermaid
+flowchart LR
+  subgraph peers["Peers"]
+    direction TB
+    ex["exchange, clients"]
+    int["internal services"]
+    gm["PTP grandmaster"]
+    st["replication, storage"]
+    lg["logs, metrics sinks"]
+    ops["ops, SSH"]
+  end
+  subgraph nics["NICs and roles"]
+    direction TB
+    n1["ens1f0 · critical"]
+    n2["ens1f1 · critical"]
+    n3["eno1 · timing"]
+    n4["ens2f0 · bulk"]
+    n5["ens2f1 · bulk"]
+    n6["eno2 · mgmt<br/>default route"]
+  end
+  subgraph cpus["IRQ CPUs"]
+    direction TB
+    c1["CPU 1 · node 1"]
+    c0["CPU 0 · node 0"]
+    c30["CPU 30 · node 0"]
+  end
+  ex --> n1
+  int --> n2
+  gm --> n3
+  st --> n4
+  lg --> n5
+  ops --> n6
+  n1 --> c1
+  n2 --> c1
+  n3 --> c0
+  n6 --> c0
+  n4 --> c30
+  n5 --> c30
+  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
+  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
+  classDef muted fill:#eeeeee,stroke:#777777,color:#333333
+  class n1,n2,c1 iso
+  class n3,n4,n5,c0,c30 hk
+  class n6 muted
 ```
+
+*Each peer group reaches the host through its own NIC. The two critical NICs share CPU 1 on node 1, timing and management go to CPU 0, and bulk goes to CPU 30. Only the management NIC carries the default route.*
+
+<details>
+<summary><b>The same target as text</b>, with addresses and routes</summary>
+
+```text
                           ┌─────────────────────────────── host (2 sockets) ───────────────────────────────────┐
                           │                                                                                    │
   exchange / clients ─────┤ ens1f0  10.10.1.10/24  critical  gw 10.10.1.1 for 10.200.0.0/16     IRQ → CPU 1    │ node 1
@@ -18,6 +75,8 @@ This walkthrough builds the network side of the reference host from scratch: six
   ops / SSH ──────────────┤ eno2    10.99.0.10/24  mgmt      DEFAULT ROUTE 10.99.0.1            IRQ → CPU 0    │
                           └────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+</details>
 
 Principles:
 
@@ -67,6 +126,16 @@ nmcli con add type ethernet ifname ens2f1 con-name bulk-logs ipv4.method manual 
 
 ip route        # exactly one "default via 10.99.0.1 dev eno2"
 ```
+
+```mermaid
+flowchart LR
+  d{"Destination?"} -- "10.200.0.0/16 venues" --> e1["ens1f0 · critical"]
+  d -- "10.10.2.0/24 backend" --> e2["ens1f1 · critical"]
+  d -- "10.201.0.0/16 replicas" --> e4["ens2f0 · bulk"]
+  d -- "anything else" --> e6["eno2 · mgmt (default)"]
+```
+
+*Every network gets an explicit route to its own NIC. Only unknown destinations fall through to the management default route, so bulk or management traffic can never drift onto a critical link.*
 
 Multi-homed hosts also need:
 
@@ -146,7 +215,7 @@ tc qdisc replace dev ens2f1 root fq_codel
 
 ### 6.3 When traffic classes must share a NIC
 
-Sometimes a dedicated NIC is not available: for example, a single uplink in a cloud VM, or a critical and a bulk VLAN on one physical port. Then prioritise at the qdisc and mark the traffic so the switches can do the same:
+Sometimes a dedicated NIC is not available: for example, a single uplink in a cloud VM, or a critical and a bulk VLAN on one physical port. Then prioritize at the qdisc and mark the traffic so the switches can do the same:
 
 ```bash
 # Three-band priority qdisc: band 0 (critical) is always dequeued first
@@ -197,7 +266,7 @@ Pin `ptp4l`/`phc2sys` to CPU 0 with a drop-in (`CPUAffinity=0`), not into the ho
 scripts/verify-tuning                                     # includes "no NIC IRQ on an isolated CPU"
 ip route get 10.200.1.5     # → dev ens1f0 (venue traffic leaves via the critical NIC)
 ip route get 10.201.3.7     # → dev ens2f0 (replication via bulk)
-ip route get 8.8.8.8        # → dev eno2   (everything else via management)
+ip route get 203.0.113.7    # → dev eno2   (everything else via management)
 
 # Under load: generate bulk traffic on ens2f0 and confirm the critical round-trip does not move
 iperf3 -c 10.20.1.20 -t 60 -P 4 &                                          # bulk load
@@ -213,5 +282,13 @@ The critical p99 with and without the bulk load should be the same. If it moves,
 | Replication traffic appears on `ens1f0` | Missing specific route; default route used | `ip route get <peer>`; add the route to the bulk connection |
 | Replies to venue arrive on `eno2` | ARP answered on the wrong NIC | `arp_ignore=1`; check `ip neigh` on the peer |
 | Packets dropped with `rp_filter` | Asymmetric routing | Fix the routing, or `rp_filter=2` on that interface |
-| Critical RTT rises with bulk load | Shared CPU (IRQ CPUs overlap) or shared switch uplink | §5 map; check switch port utilisation |
+| Critical RTT rises with bulk load | Shared CPU (IRQ CPUs overlap) or shared switch uplink | §5 map; check switch port utilization |
 | IRQ affinity lost after the link came back | Driver re-created its queues | Re-run `04-network --runtime`, or use a NetworkManager dispatcher script on `up` |
+
+## 11. Key takeaways
+
+- One traffic class per NIC and per VLAN. Critical links never carry bulk traffic.
+- The default route lives on the management network. Every other network gets an explicit route.
+- Critical NICs sit on the isolated CPUs' NUMA node and interrupt that node's housekeeping CPU. Bulk interrupts go to the other node.
+- Persist every layer: NetworkManager for addresses and routes, `lowlat-runtime.service` for NIC settings and IRQs, `sysctl.d` for ARP and buffers.
+- Accept a host only when the critical p99 stays flat under bulk load.

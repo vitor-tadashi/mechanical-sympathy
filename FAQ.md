@@ -1,0 +1,94 @@
+# FAQ
+
+Short answers, each with a link to the long one.
+
+<details>
+<summary><b>Will this make my application faster?</b></summary>
+
+Mostly it makes it **more predictable**. The median (p50) usually improves a little. The tail (p99.9, max) often drops several-fold, because the tuning removes the rare events that interrupt a thread: ticks, interrupts, kernel work, deep sleep states. Measure your own workload before and after. See [Quick start](QUICK_START.md).
+
+</details>
+
+<details>
+<summary><b>Can I apply this on a virtual machine?</b></summary>
+
+Partly. The scripts detect a VM and apply only what helps there: the latency subset of the boot arguments, sysctls, OS hygiene, cgroups and NIC settings the virtual NIC supports. CPU isolation inside a guest does not isolate anything from the hypervisor. The biggest wins in a VM come from the host: dedicated physical CPUs, huge-page-backed memory, SR-IOV. See [Quick start, Scenario B](QUICK_START.md#scenario-b-virtual-machine).
+
+</details>
+
+<details>
+<summary><b>How many CPUs should I isolate?</b></summary>
+
+One per latency-critical thread, plus one or two spares, all on the NIC's NUMA node. Keep at least one non-isolated CPU on that node for the NIC's interrupts. Typical applications have 5–15 critical threads. See [Guide 02 §3](guides/02-cpu-core-isolation.md#3-designing-the-cpu-layout).
+
+</details>
+
+<details>
+<summary><b>My application does not pin its threads. Does isolation still help?</b></summary>
+
+No, it hurts. Nothing is ever scheduled onto an isolated CPU unless it is pinned there, so those CPUs sit idle while your threads compete for the rest. Pin the critical threads first (inside the application, or with `taskset` per thread ID), or skip isolation. See [Guide 02 §6](guides/02-cpu-core-isolation.md#6-pinning-the-application).
+
+</details>
+
+<details>
+<summary><b>Why is transparent huge pages (THP) off, if huge pages are good?</b></summary>
+
+THP gets huge pages on a best-effort basis, at fault time or in the background, and may compact memory **synchronously** while your thread waits. Explicit huge pages come from a pool reserved at boot: no allocation work on the hot path, and a missing pool fails at start-up instead of silently. See [Guide 03 §2](guides/03-huge-pages-configuration.md#2-transparent-vs-explicit-huge-pages-why-thp-is-off).
+
+</details>
+
+<details>
+<summary><b>Is it safe to turn CPU vulnerability mitigations off?</b></summary>
+
+Only on single-tenant hosts that run no untrusted code, in a controlled network, with written approval from your security team. It is opt-in and off by default. See [Guide 01 §5.6](guides/01-grub-bootloader-tuning.md#56-iommu-and-cpu-vulnerability-mitigations-security-sensitive).
+
+</details>
+
+<details>
+<summary><b>Why is my host at 100 % CPU and running hot?</b></summary>
+
+`idle=poll`: idle CPUs spin instead of sleeping, so wake-up costs nothing. That is expected. It costs power and heat, so check the datacenter power budget and the fan profile. See [Guide 01 §5.1](guides/01-grub-bootloader-tuning.md#51-latency-subset-bare-metal-and-vms).
+
+</details>
+
+<details>
+<summary><b>Why turn irqbalance off?</b></summary>
+
+It rewrites interrupt affinity every 10 seconds by its own rules. It would undo the NIC placement and could put a NIC interrupt on an isolated CPU. See [Guide 02 §4.3](guides/02-cpu-core-isolation.md#43-irqbalance-persistent).
+
+</details>
+
+<details>
+<summary><b>Do I need kernel bypass?</b></summary>
+
+Not to start. Tune the kernel path first (Guides 01–07) and measure it. Bypass (Onload, DPDK) takes one-way latency from about 5–10 µs to about 1–2 µs, but it adds a vendor stack, a spinning core per thread, and operational differences. See [Guide 08](guides/08-kernel-bypass.md).
+
+</details>
+
+<details>
+<summary><b>Does this work on AMD CPUs?</b></summary>
+
+Most of it does. The examples use Intel names, and the guides note where AMD differs (for example `amd_pstate` instead of `intel_pstate`). AMD-specific advice is marked as not proven in production.
+
+</details>
+
+<details>
+<summary><b>What does "not proven in production" mean?</b></summary>
+
+The advice follows the vendor or kernel documentation but did not run on the reference production hosts. Treat it as a direction to test on your hardware, not as a recipe. See [AGENTS.md §3](AGENTS.md#3-documentation).
+
+</details>
+
+<details>
+<summary><b>How do I undo everything?</b></summary>
+
+Every guide has a rollback checklist in its last sections, every script has `--rollback` where it applies, and every file the scripts touched is saved under `/var/lib/lowlat/factory-settings/`. Boot arguments need a reboot to go away. See [Quick start, "When something goes wrong"](QUICK_START.md#when-something-goes-wrong).
+
+</details>
+
+<details>
+<summary><b>The configuration verifies, but latency did not improve. Now what?</b></summary>
+
+A verified configuration is not a measured improvement. Find what still interrupts the thread: `rtla osnoise` on its CPU, `/proc/interrupts` deltas, context switches with `perf stat`, and SMIs with `turbostat`. Also check the application: an unpinned thread, a syscall-heavy loop on a `nohz_full` CPU, or memory on the wrong NUMA node. See [concepts/cpu-isolation §8](concepts/cpu-isolation.md#8-measuring-noise).
+
+</details>

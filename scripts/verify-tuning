@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# verify-tuning - read-only report of every tuning guide (01-08, 10) on this host.
+# verify-tuning - read-only report of every tuning guide (00-10) on this host.
 #
 #   verify-tuning [--config FILE] [--report FILE]
 #
@@ -33,7 +33,7 @@ fi
 
 # shellcheck source=lib/common
 . "${SCRIPTS_DIR}/lib/common"
-for guide in 01-grub-bootloader 02-cpu-isolation 03-huge-pages 04-network 05-cgroup-isolation 06-kernel-sysctl 07-os-hygiene 08-kernel-bypass 10-time-sync; do
+for guide in 00-bios-firmware 01-grub-bootloader 02-cpu-isolation 03-huge-pages 04-network 05-cgroup-isolation 06-kernel-sysctl 07-os-hygiene 08-kernel-bypass 09-measure-latency 10-time-sync; do
 	# shellcheck source=/dev/null
 	. "${SCRIPTS_DIR}/${guide}"
 done
@@ -107,6 +107,8 @@ printf '  date:       %s\n' "${now}"
 
 # Each verify_* function uses the shared VERIFY_FAILURES / VERIFY_WARNINGS counters and
 # returns non-zero on failures; we keep going and summarise at the end.
+section "00 BIOS and firmware"
+verify_bios_firmware || true
 section "01 Kernel command line"
 verify_grub_kernel_parameters || true
 section "02 CPU isolation"
@@ -123,6 +125,8 @@ section "07 OS hygiene"
 verify_os_hygiene || true
 section "08 Kernel bypass"
 verify_kernel_bypass || true
+section "09 Measurement"
+verify_measurement || true
 section "10 Time synchronization"
 verify_time_sync || true
 section "Host-wide"

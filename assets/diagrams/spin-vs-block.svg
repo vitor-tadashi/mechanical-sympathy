@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 290" width="760" height="290" role="img" aria-labelledby="t d">
+<title id="t">A spinning thread sees new data at once; a blocked thread must be woken</title>
+<desc id="d">A producer writes a message for a consumer thread. The blocked consumer is asleep, so the message has to go through an inter-processor interrupt, a wake-up from a C-state and the scheduler before the thread runs, which takes 2 to 50 microseconds. The spinning consumer is polling the same cache line and sees the write after one cache-line transfer, about 50 to 100 nanoseconds.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .slow { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .wire { stroke: #57606a; stroke-width: 2; }
+  .msg { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; text-anchor: middle; }
+  .spin { fill: none; stroke: #1d6b33; stroke-width: 2; stroke-dasharray: 5 4; animation: poll 0.9s linear infinite; }
+
+  .m-block { transform: translateX(516px); animation: block 7s linear infinite; }
+  .m-spin  { transform: translateX(516px); animation: spinmsg 7s linear infinite; }
+  .d-block { opacity: 1; animation: dblock 7s linear infinite; }
+  .d-spin  { opacity: 1; animation: dspin 7s linear infinite; }
+
+  @keyframes block {
+    0%, 10% { transform: translateX(0); }
+    22%     { transform: translateX(170px); }
+    40%     { transform: translateX(300px); }
+    58%     { transform: translateX(430px); }
+    76%     { transform: translateX(516px); }
+    100%    { transform: translateX(516px); }
+  }
+  @keyframes spinmsg {
+    0%, 10% { transform: translateX(0); }
+    16%     { transform: translateX(516px); }
+    100%    { transform: translateX(516px); }
+  }
+  @keyframes dblock { 0%, 75% { opacity: 0; } 77%, 100% { opacity: 1; } }
+  @keyframes dspin  { 0%, 15% { opacity: 0; } 17%, 100% { opacity: 1; } }
+  @keyframes poll { to { stroke-dashoffset: -18; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .m-block, .m-spin, .d-block, .d-spin, .spin { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="290" rx="8"/>
+
+<!-- Lane 1: blocked consumer -->
+<rect class="lane" x="10" y="10" width="740" height="125" rx="6"/>
+<text class="cap" x="24" y="34">Blocked consumer (futex or epoll wait): 2 to 50 µs</text>
+<text class="sub" x="24" y="52">The thread sleeps, so the write has to wake it through the kernel.</text>
+<line class="wire" x1="60" y1="95" x2="700" y2="95"/>
+<rect class="box" x="24" y="72" width="100" height="46" rx="5"/>
+<text class="lbl" x="74" y="100">producer</text>
+<rect class="slow" x="175" y="72" width="100" height="46" rx="5"/>
+<text class="lbl" x="225" y="100">IPI</text>
+<rect class="slow" x="305" y="72" width="100" height="46" rx="5"/>
+<text class="lbl" x="355" y="92">C-state</text>
+<text class="lbl" x="355" y="108">exit</text>
+<rect class="slow" x="435" y="72" width="100" height="46" rx="5"/>
+<text class="lbl" x="485" y="100">scheduler</text>
+<rect class="app" x="590" y="72" width="130" height="46" rx="5"/>
+<text class="lbl" x="665" y="100">consumer runs</text>
+<text class="done d-block" x="655" y="66">handled late</text>
+<circle class="msg m-block" cx="84" cy="95" r="9"/>
+
+<!-- Lane 2: spinning consumer -->
+<rect class="lane" x="10" y="150" width="740" height="125" rx="6"/>
+<text class="cap" x="24" y="174">Spinning consumer (isolated CPU): about 0.1 µs</text>
+<text class="sub" x="24" y="192">The thread polls the cache line, so it sees the write after one line transfer.</text>
+<line class="wire" x1="60" y1="235" x2="700" y2="235"/>
+<rect class="box" x="24" y="212" width="100" height="46" rx="5"/>
+<text class="lbl" x="74" y="240">producer</text>
+<rect class="app" x="590" y="212" width="130" height="46" rx="5"/>
+<rect class="spin" x="584" y="206" width="142" height="58" rx="8"/>
+<text class="lbl" x="665" y="240">consumer polls</text>
+<text class="done d-spin" x="655" y="200">handled</text>
+<circle class="msg m-spin" cx="84" cy="235" r="9"/>
+</svg>
