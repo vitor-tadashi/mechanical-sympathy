@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" width="760" height="300" role="img" aria-labelledby="t d">
+<title id="t">TLB reach with 4 KiB pages and with 2 MiB pages</title>
+<desc id="d">A thread reads random locations in a 256 MiB working set. With 4 KiB pages the TLB covers only 8 MiB, so almost every read misses and triggers a page walk of up to four memory reads. With 2 MiB pages the same TLB covers 4 GiB, the whole working set fits, and every read hits.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .ws { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .reach { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .hit { font: 700 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; }
+  .miss { font: 700 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; }
+  .ptr { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .p { transform: translateX(359.1px); animation: move 8s step-end infinite; }
+  .h { opacity: 0; animation: showhit 8s step-end infinite; }
+  .m { opacity: 1; animation: showmiss 8s step-end infinite; }
+  @keyframes move {
+    0.00%, 12.49% { transform: translateX(296.4px); }
+    12.50%, 24.99% { transform: translateX(490.2px); }
+    25.00%, 37.49% { transform: translateX(8.6px); }
+    37.50%, 49.99% { transform: translateX(250.8px); }
+    50.00%, 62.49% { transform: translateX(444.6px); }
+    62.50%, 74.99% { transform: translateX(131.1px); }
+    75.00%, 87.49% { transform: translateX(11.4px); }
+    87.50%, 99.99% { transform: translateX(359.1px); }
+  }
+  @keyframes showhit {
+    0.00%, 12.49% { opacity: 0; }
+    12.50%, 24.99% { opacity: 0; }
+    25.00%, 37.49% { opacity: 1; }
+    37.50%, 49.99% { opacity: 0; }
+    50.00%, 62.49% { opacity: 0; }
+    62.50%, 74.99% { opacity: 0; }
+    75.00%, 87.49% { opacity: 1; }
+    87.50%, 99.99% { opacity: 0; }
+  }
+  @keyframes showmiss {
+    0.00%, 12.49% { opacity: 1; }
+    12.50%, 24.99% { opacity: 1; }
+    25.00%, 37.49% { opacity: 0; }
+    37.50%, 49.99% { opacity: 1; }
+    50.00%, 62.49% { opacity: 1; }
+    62.50%, 74.99% { opacity: 1; }
+    75.00%, 87.49% { opacity: 0; }
+    87.50%, 99.99% { opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .p, .h, .m { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="300" rx="8"/>
+
+<rect class="lane" x="10" y="10" width="740" height="135" rx="6"/>
+<text class="cap" x="24" y="34">4 KiB pages: TLB reach 8 MiB (2,048 entries)</text>
+<text class="sub" x="24" y="52">Random reads in a 256 MiB order book land outside the reach almost every time.</text>
+<text class="lbl" x="24" y="94">working set</text>
+<text class="lbl" x="24" y="110">256 MiB</text>
+<rect class="ws" x="150" y="78" width="570" height="36" rx="4"/>
+<rect class="reach" x="150" y="78" width="17.8" height="36" rx="2"/>
+<text class="lbl" x="150" y="130">TLB reach</text>
+<polygon class="ptr p" points="150,72 143,62 157,62"/>
+<text class="hit h" x="560" y="134">TLB hit</text>
+<text class="miss m" x="560" y="134">miss: page walk, up to 4 reads</text>
+
+<rect class="lane" x="10" y="155" width="740" height="135" rx="6"/>
+<text class="cap" x="24" y="179">2 MiB pages: TLB reach 4 GiB (same 2,048 entries)</text>
+<text class="sub" x="24" y="197">The whole working set fits inside the reach, so every read hits.</text>
+<text class="lbl" x="24" y="239">working set</text>
+<text class="lbl" x="24" y="255">256 MiB</text>
+<rect class="reach" x="150" y="223" width="570" height="36" rx="4"/>
+<polygon class="ptr p" points="150,217 143,207 157,207"/>
+<text class="hit" x="560" y="279">TLB hit, every time</text>
+</svg>

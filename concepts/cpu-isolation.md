@@ -2,6 +2,12 @@
 
 > Used by: [Guide 01](../guides/01-grub-bootloader-tuning.md), [Guide 02](../guides/02-cpu-core-isolation.md), [Guide 05](../guides/05-cgroup-isolation.md). Related: [bootloader](bootloader.md), [cgroups](cgroups.md).
 
+## At a glance
+
+- The handler itself takes 1–10 µs. The tail comes from rare events that take the CPU away or evict its caches.
+- Isolation removes those events one by one: other tasks, the tick, interrupts, kernel work, and firmware.
+- Once the CPU is quiet, how the thread uses memory decides whether it stays fast: cache lines, false sharing, NUMA.
+
 ## 1. Why it matters
 
 A latency-critical thread does a small amount of work per event: decode a message, update a book, make a decision, encode a response. That takes 1–10 µs when everything it needs is in the CPU's caches. The distribution you care about (p99.9, max) is not set by that work. It is set by the **rare events that take the CPU away** or **evict the caches**. CPU isolation is the discipline of removing those events.
@@ -28,9 +34,34 @@ The direct cost of switching tasks is small: saving and restoring registers, swi
 | TLB | ~64 L1 + ~2 K L2 entries | flushed on page-table switch unless PCID tags survive, and many entries evicted anyway |
 | Branch predictors | — | retrained |
 
+```mermaid
+flowchart LR
+  core(["core"]) --> l1["L1<br/>~1 ns<br/>32–48 KiB"] --> l2["L2<br/>~5 ns<br/>1–2 MiB"] --> l3["L3, shared<br/>~15–20 ns<br/>30–100+ MiB"] --> dram["local DRAM<br/>~80–120 ns"] --> remote["remote DRAM<br/>(other socket)<br/>more again"]
+  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
+  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
+  class l1,l2 iso
+  class dram,remote risk
+```
+
+*Each level is several times slower than the one before it. A context switch pushes the critical thread's data out of L1 and L2, so its next events run from the slow end of this chain.*
+
 After the switch back, the critical thread runs from L3 or DRAM for its next several events. At ~5 ns per L2 hit, ~15–20 ns per L3 hit and ~80–120 ns per DRAM access (more across sockets), a few hundred misses turn a 2 µs handler into a 20–40 µs one. That is the outlier.
 
 ## 4. Sources of noise on a CPU, and what removes each
+
+```mermaid
+flowchart TD
+  q(["Who takes the CPU away?"]) --> t["Other tasks"] --> ft["isolcpus, CPUAffinity, cpusets"]
+  q --> k["The kernel's own timers<br/>tick, watchdogs, vmstat"] --> fk["nohz_full, nosoftlockup,<br/>nmi_watchdog=0, stat_interval"]
+  q --> i["Interrupts and deferred work<br/>IRQs, softirqs, kworkers, IPIs"] --> fi["IRQ affinity, rcu_nocbs,<br/>workqueue mask, fewer munmap calls"]
+  q --> h["Hardware and firmware<br/>C-states, SMT sibling, SMIs"] --> fh["idle=poll, HT off,<br/>BIOS settings"]
+```
+
+*The sources fall into four families (other tasks, kernel timers, interrupts and deferred work, hardware and firmware), and each has its own removal. The table below lists every source.*
+
+<img src="../assets/diagrams/tick-nohz.svg" alt="Animation: a busy CPU is interrupted by a timer tick many times per second; with nohz_full the same CPU runs uninterrupted except for one residual tick" width="720">
+
+*The periodic tick is the most regular source. `nohz_full` stops it when exactly one task is runnable on the CPU.*
 
 | Source | Mechanism | Removal |
 |---|---|---|
@@ -65,6 +96,10 @@ Isolation gives a thread a CPU, and **how the thread uses memory** decides wheth
 | CPU cost | 100 % of one core | ~0 when idle |
 | Requires | A dedicated (isolated) core | Nothing |
 
+<img src="../assets/diagrams/spin-vs-block.svg" alt="Animation: a message to a blocked thread passes through an IPI, a C-state exit and the scheduler; a spinning thread sees the same message almost at once" width="720">
+
+*A blocked consumer has to be woken through the kernel. A spinning consumer on its own core sees the write after a single cache-line transfer.*
+
 Spin loops should include a pause hint (`Thread.onSpinWait()` in Java, `_mm_pause()` in C). It reduces power, frees resources for an SMT sibling, and avoids a memory-order pipeline flush when the awaited write arrives. Back-off strategies (spin → yield → park) are the right choice when cores are shared, as in VMs and development machines.
 
 ## 7. Real-time scheduling classes
@@ -90,7 +125,15 @@ A good isolated CPU under `rtla osnoise` shows single-digit µs max noise over h
 
 A gateway's p99.9 was 180 µs, while p50 was 6 µs. `rtla osnoise` on the network thread's CPU showed a 150 µs `kworker` every ~2 s, and a `LOC` rate of 1000/s. Findings: `nohz_full` was missing (a new kernel entry without the arguments), and the thread wrote its audit log synchronously, which queued writeback work on its own CPU. Fixes: restore the arguments ([Guide 01](../guides/01-grub-bootloader-tuning.md)), set the workqueue cpumask ([Guide 02](../guides/02-cpu-core-isolation.md)), and hand the audit log to a non-critical thread through an SPSC queue. p99.9 went to 14 µs.
 
-## 10. References
+## 10. Key takeaways
+
+- A context switch costs little directly. The cost is the cold caches that come after it.
+- Remove noise by family: other tasks, kernel timers, interrupts and deferred work, hardware and firmware.
+- Spin only on a core the thread owns, with a pause hint. Back off on shared or virtual cores.
+- One writer per cache line. Pad hot, independently written fields, and keep threads and memory on the NIC's NUMA node.
+- Measure with `rtla osnoise`. A good isolated CPU shows single-digit µs of maximum noise over hours.
+
+## 11. References
 
 - `man 7 sched`, `man 7 cpuset`
 - <https://docs.kernel.org/scheduler/index.html>
