@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 290" width="760" height="290" role="img" aria-labelledby="t d">
+<title id="t">Interrupt coalescing delays the first packet of a burst</title>
+<desc id="d">Two receive paths side by side. With coalescing, the first packet sits in the NIC until the coalescing timer expires, and only then raises the interrupt and reaches the application. With rx-usecs 0 the same packet raises the interrupt at once and reaches the application long before the other one.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .wire { stroke: #57606a; stroke-width: 2; }
+  .pkt { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .timer { fill: #9b1c1c; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; text-anchor: middle; }
+
+  /* Base styles are the final frame; the animation replays the path. */
+  .p-slow { transform: translateX(582px); animation: slow 7s linear infinite; }
+  .p-fast { transform: translateX(582px); animation: fast 7s linear infinite; }
+  .t-bar  { transform: scaleX(1); transform-origin: 150px 0; transform-box: view-box; animation: timer 7s linear infinite; }
+  .d-slow { opacity: 1; animation: dslow 7s linear infinite; }
+  .d-fast { opacity: 1; animation: dfast 7s linear infinite; }
+
+  @keyframes slow {
+    0%   { transform: translateX(0); }
+    8%   { transform: translateX(170px); }
+    58%  { transform: translateX(170px); }
+    66%  { transform: translateX(320px); }
+    74%  { transform: translateX(480px); }
+    82%  { transform: translateX(582px); }
+    100% { transform: translateX(582px); }
+  }
+  @keyframes fast {
+    0%   { transform: translateX(0); }
+    8%   { transform: translateX(170px); }
+    16%  { transform: translateX(320px); }
+    24%  { transform: translateX(480px); }
+    32%  { transform: translateX(582px); }
+    100% { transform: translateX(582px); }
+  }
+  @keyframes timer {
+    0%, 8% { transform: scaleX(0); }
+    58%    { transform: scaleX(1); }
+    100%   { transform: scaleX(1); }
+  }
+  @keyframes dslow { 0%, 81% { opacity: 0; } 83%, 100% { opacity: 1; } }
+  @keyframes dfast { 0%, 31% { opacity: 0; } 33%, 100% { opacity: 1; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .p-slow, .p-fast, .t-bar, .d-slow, .d-fast { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="290" rx="8"/>
+
+<!-- Lane 1: adaptive coalescing -->
+<rect class="lane" x="10" y="10" width="740" height="125" rx="6"/>
+<text class="cap" x="24" y="34">Adaptive coalescing (rx-usecs up to 50 µs)</text>
+<text class="sub" x="24" y="52">The first packet of a burst waits in the NIC until the timer fires.</text>
+<line class="wire" x1="30" y1="95" x2="720" y2="95"/>
+<rect class="wait" x="150" y="72" width="110" height="46" rx="5"/>
+<text class="lbl" x="205" y="92">NIC ring</text>
+<text class="lbl" x="205" y="108">timer</text>
+<rect class="box" x="300" y="72" width="80" height="46" rx="5"/>
+<text class="lbl" x="340" y="100">IRQ</text>
+<rect class="box" x="440" y="72" width="100" height="46" rx="5"/>
+<text class="lbl" x="490" y="100">softirq</text>
+<rect class="app" x="610" y="72" width="110" height="46" rx="5"/>
+<text class="lbl" x="675" y="100">app thread</text>
+<rect class="timer t-bar" x="150" y="124" width="110" height="5" rx="2"/>
+<text class="done d-slow" x="665" y="66">delivered late</text>
+<circle class="pkt p-slow" cx="40" cy="95" r="9"/>
+
+<!-- Lane 2: rx-usecs 0 -->
+<rect class="lane" x="10" y="150" width="740" height="125" rx="6"/>
+<text class="cap" x="24" y="174">Coalescing off (adaptive-rx off, rx-usecs 0)</text>
+<text class="sub" x="24" y="192">The NIC raises the interrupt as soon as the packet lands.</text>
+<line class="wire" x1="30" y1="235" x2="720" y2="235"/>
+<rect class="box" x="150" y="212" width="110" height="46" rx="5"/>
+<text class="lbl" x="205" y="240">NIC ring</text>
+<rect class="box" x="300" y="212" width="80" height="46" rx="5"/>
+<text class="lbl" x="340" y="240">IRQ</text>
+<rect class="box" x="440" y="212" width="100" height="46" rx="5"/>
+<text class="lbl" x="490" y="240">softirq</text>
+<rect class="app" x="610" y="212" width="110" height="46" rx="5"/>
+<text class="lbl" x="675" y="240">app thread</text>
+<text class="done d-fast" x="665" y="206">delivered</text>
+<circle class="pkt p-fast" cx="40" cy="235" r="9"/>
+</svg>
