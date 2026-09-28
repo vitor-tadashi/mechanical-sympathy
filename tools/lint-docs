@@ -165,8 +165,8 @@ while IFS= read -r svg; do
 	[[ -n "${svg}" && -f "${svg}" ]] || continue
 	size="$(wc -c <"${svg}")"
 	((size <= SVG_MAX_BYTES)) || fail "${svg}: ${size} bytes, the limit is ${SVG_MAX_BYTES}"
-	grep -q '<title>' "${svg}" || fail "${svg}: no <title>"
-	grep -q '<desc>' "${svg}" || fail "${svg}: no <desc>"
+	grep -qE '<title[ >]' "${svg}" || fail "${svg}: no <title>"
+	grep -qE '<desc[ >]' "${svg}" || fail "${svg}: no <desc>"
 	if grep -qi '<script' "${svg}"; then
 		fail "${svg}: contains <script>"
 	fi
