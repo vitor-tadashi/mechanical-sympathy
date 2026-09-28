@@ -1,0 +1,27 @@
+# Re-applies the NON-persistent part of the low-latency tuning at every boot:
+#   02 workqueue cpumask, 08 DPDK port binding, 04 NIC coalescing/offloads/rings/IRQ affinity,
+#   05 pinning of housekeeping processes, 07 opt-in firewall/module removal.
+# Persistent settings (GRUB, systemd.conf, sysctl.d, huge page unit, slices, tuned)
+# are not touched here.
+#
+# Installed by `scripts/apply-all --apply`, which rewrites ExecStart with the real
+# location of the scripts. Latency-critical services should order themselves
+# After=lowlat-runtime.service.
+
+[Unit]
+Description=Low-latency runtime tuning (IRQ affinity, NIC settings, workqueues)
+Wants=network-online.target
+After=network-online.target hugetlb-reserve-pages.service tuned.service
+ConditionPathExists=/etc/lowlat/lowlat.conf
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=LOWLAT_CONFIG=/etc/lowlat/lowlat.conf
+ExecStart=/opt/lowlat/scripts/apply-all --runtime
+# Run the tuning itself on a housekeeping CPU.
+CPUAffinity=0
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target

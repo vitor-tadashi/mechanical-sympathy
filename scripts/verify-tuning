@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+#
+# verify-tuning - read-only report of every tuning guide (01-08) on this host.
+#
+#   verify-tuning [--config FILE] [--report FILE]
+#
+# Exit status: 0 = no FAIL (warnings allowed), 5 = at least one FAIL.
+# Does not need root, but some checks (IRQ affinity of other users' processes, tuned)
+# show more detail when run as root.
+
+set -Eeuo pipefail
+SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+
+REPORT_FILE=""
+ARGS=()
+while (($# > 0)); do
+	case "$1" in
+	--report)
+		shift
+		REPORT_FILE="$1"
+		;;
+	--verify) ;;
+	*) ARGS+=("$1") ;;
+	esac
+	shift
+done
+
+if [[ -n "${REPORT_FILE}" ]]; then
+	# tee only copies the report to a file; a tee failure must not hide the verification result.
+	# shellcheck disable=SC2312
+	exec > >(tee "${REPORT_FILE}") 2>&1
+fi
+
+# shellcheck source=lib/common
+. "${SCRIPTS_DIR}/lib/common"
+for guide in 01-grub-bootloader 02-cpu-isolation 03-huge-pages 04-network 05-cgroup-isolation 06-kernel-sysctl 07-os-hygiene 08-kernel-bypass; do
+	# shellcheck source=/dev/null
+	. "${SCRIPTS_DIR}/${guide}"
+done
+
+parse_mode_args --verify "${ARGS[@]}" || true
+load_config
+
+section() {
+	printf '\n%s== %s ==%s\n' "${BOLD}" "$1" "${RESET}"
+}
+
+# --- host-wide checks that do not belong to a single guide -------------------
+
+cpu_governor_is_performance() {
+	local f governor
+	for f in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+		[[ -r "${f}" ]] || return 0 # no cpufreq (VM): nothing to check
+		governor="$(read_value "${f}")"
+		[[ "${governor}" == performance ]] || return 1
+	done
+}
+
+no_deep_cstate_usage() {
+	# With idle=poll there is no cpuidle driver; otherwise states deeper than C1 must be disabled or unused.
+	local driver
+	driver="$(read_value /sys/devices/system/cpu/cpuidle/current_driver none)"
+	[[ "${driver}" == none ]]
+}
+
+swap_off_or_unused() {
+	local used
+	used="$(awk '/^SwapTotal/{t=$2} /^SwapFree/{f=$2} END{print t-f}' /proc/meminfo)"
+	((used == 0))
+}
+
+clocksource_is_tsc() {
+	grep -qx tsc /sys/devices/system/clocksource/clocksource0/current_clocksource
+}
+
+time_synchronized() {
+	timedatectl show -p NTPSynchronized --value 2>/dev/null | grep -qx yes ||
+		chronyc tracking 2>/dev/null | grep -q 'Leap status *: Normal'
+}
+
+verify_host_wide() {
+	verify_soft "CPU frequency governor is performance on every CPU" cpu_governor_is_performance
+	verify_soft "no cpuidle driver active (idle=poll)" no_deep_cstate_usage
+	verify_soft "clocksource is tsc (cheap, vDSO-accelerated clock_gettime)" clocksource_is_tsc
+	verify_soft "no swap in use" swap_off_or_unused
+	verify_soft "clock synchronized (chrony/PTP)" time_synchronized
+	local mitigations load up
+	mitigations="$({ grep -l -v -i '^not affected' /sys/devices/system/cpu/vulnerabilities/* 2>/dev/null || true; } | xargs -r -n1 basename | tr '\n' ' ')"
+	load="$(read_value /proc/loadavg)"
+	load="${load% * *}"
+	up="$(uptime -p 2>/dev/null || true)"
+	verify_info "vulnerability mitigations: ${mitigations}"
+	verify_info "load average: ${load}, uptime: ${up}"
+}
+
+# --- report --------------------------------------------------------------------
+
+printf '%sLOW-LATENCY TUNING VERIFICATION%s\n' "${BOLD}" "${RESET}"
+host="$(hostname -s 2>/dev/null || hostname)"
+kernel="$(uname -r)"
+now="$(date '+%Y-%m-%d %H:%M:%S')"
+printf '  host:       %s\n' "${host}"
+printf '  kernel:     %s\n' "${kernel}"
+printf '  host class: %s\n' "${HOST_CLASS}"
+printf '  config:     %s\n' "${LOWLAT_CONFIG}"
+printf '  date:       %s\n' "${now}"
+
+# Each verify_* function uses the shared VERIFY_FAILURES / VERIFY_WARNINGS counters and
+# returns non-zero on failures; we keep going and summarise at the end.
+section "01 Kernel command line"
+verify_grub_kernel_parameters || true
+section "02 CPU isolation"
+verify_cpu_isolation || true
+section "03 Huge pages"
+verify_huge_pages || true
+section "04 Network"
+verify_network || true
+section "05 cgroup isolation"
+verify_cgroup_isolation || true
+section "06 Kernel sysctl"
+verify_kernel_sysctl || true
+section "07 OS hygiene"
+verify_os_hygiene || true
+section "08 Kernel bypass"
+verify_kernel_bypass || true
+section "Host-wide"
+verify_host_wide
+
+section "Summary"
+if ((VERIFY_FAILURES == 0 && VERIFY_WARNINGS == 0)); then
+	printf '  %sALL CHECKS PASSED%s\n' "${GREEN}" "${RESET}"
+elif ((VERIFY_FAILURES == 0)); then
+	printf '  %sPASSED WITH %d WARNING(S)%s\n' "${YELLOW}" "${VERIFY_WARNINGS}" "${RESET}"
+else
+	printf '  %s%d FAILURE(S), %d WARNING(S)%s\n' "${RED}" "${VERIFY_FAILURES}" "${VERIFY_WARNINGS}" "${RESET}"
+fi
+cat <<'EOF'
+
+  Configuration verified is not latency verified. Next steps:
+    * noise on an isolated CPU:   rtla osnoise top -c <cpu> -d 60s
+    * per-thread context switches: perf stat -e context-switches,cpu-migrations -t <tid> -- sleep 30
+    * end-to-end:                 compare p50/p99/p99.9/max with the baseline taken before tuning
+EOF
+
+((VERIFY_FAILURES == 0)) || exit "${EXIT_VERIFY}"

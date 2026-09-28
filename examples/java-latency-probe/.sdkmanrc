@@ -1,0 +1,3 @@
+# sdk env  (SDKMAN: selects the toolchain this project is built and run with)
+java=25.0.4-tem
+gradle=9.8.0

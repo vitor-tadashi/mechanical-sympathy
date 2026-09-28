@@ -1,0 +1,10 @@
+-Xms4g
+-Xmx4g
+-XX:+UseZGC
+-XX:-ZUncommit
+-XX:+UnlockDiagnosticVMOptions
+-XX:+PrintCommandLineFlags
+-XX:-OmitStackTraceInFastThrow
+-Xlog:gc*,gc+init:file=log/gc.log:time,tags
+-Djava.net.preferIPv4Stack=true
+-Djava.security.egd=file:/dev/urandom

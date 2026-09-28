@@ -1,0 +1,9 @@
+-Xmx2g
+-XX:SoftMaxHeapSize=1g
+-XX:+UseZGC
+-XX:-ZUncommit
+-XX:+PrintCommandLineFlags
+-XX:-OmitStackTraceInFastThrow
+-Xlog:gc*,gc+init:file=log/gc.log:time,tags
+-Djava.net.preferIPv4Stack=true
+-Djava.security.egd=file:/dev/urandom

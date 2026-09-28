@@ -1,0 +1,307 @@
+#!/usr/bin/env bash
+#
+# 08-kernel-bypass - host side of a kernel-bypass stack (Guide 08).
+#
+#   detect_bypass_stack            what is installed: Onload, sfc NICs, DPDK tools, vfio-pci, IOMMU
+#   iommu_translation_enabled      true when the IOMMU translates DMA (needed by vfio-pci)
+#   write_onload_module_options    /etc/modprobe.d file for the sfc driver (kernel RSS on one CPU)
+#   reload_onload_pinned           onload_tool reload on a housekeeping CPU
+#   bind_dpdk_ports                bind DPDK_PORTS to DPDK_DRIVER (vfio-pci); remembers the old driver
+#   unbind_dpdk_ports              give DPDK_PORTS back to the driver they had before
+#   show_bypass_state              one-screen summary
+#
+# KERNEL_BYPASS_STACK in lowlat.conf selects what runs: "onload", "dpdk", or "" (nothing).
+# The kernel-queue side of an Onload NIC (one combined queue, IRQ placement) is done by
+# 04-network; apply-all runs this script before 04-network, because reloading the
+# drivers resets every setting 04-network makes on those NICs.
+
+set -Eeuo pipefail
+# shellcheck source=lib/common
+. "$(dirname "${BASH_SOURCE[0]}")/lib/common"
+
+ONLOAD_MODPROBE_FILE="${ONLOAD_MODPROBE_FILE:-/etc/modprobe.d/lowlat-sfc.conf}"
+DPDK_STATE_FILE="${DPDK_STATE_FILE:-${LOWLAT_STATE_DIR}/dpdk-original-drivers}"
+PCI_DEVICES_DIR="${PCI_DEVICES_DIR:-/sys/bus/pci/devices}"
+
+# dpdk_devbind - DPDK installs the tool as dpdk-devbind.py; some packages drop the suffix.
+dpdk_devbind() {
+	local tool
+	for tool in dpdk-devbind.py dpdk-devbind; do
+		if command -v "${tool}" >/dev/null 2>&1; then
+			printf '%s\n' "${tool}"
+			return 0
+		fi
+	done
+	printf 'dpdk-devbind.py\n'
+}
+
+module_loaded() { # module_loaded <name>
+	grep -q "^$1 " /proc/modules 2>/dev/null
+}
+
+# pci_driver <pci address> - driver currently bound to the device, or "none".
+pci_driver() {
+	local link="${PCI_DEVICES_DIR}/$1/driver"
+	if [[ -L "${link}" ]]; then
+		link="$(readlink "${link}")"
+		printf '%s\n' "${link##*/}"
+		return 0
+	fi
+	printf 'none\n'
+}
+
+# iommu_translation_enabled - vfio-pci needs an IOMMU that translates DMA addresses.
+# "iommu=pt" (passthrough for host drivers) is fine; "intel_iommu=off" or "iommu=off" is not.
+iommu_translation_enabled() {
+	local cmdline groups
+	cmdline=" $(read_value /proc/cmdline "") "
+	[[ "${cmdline}" == *" intel_iommu=off "* || "${cmdline}" == *" iommu=off "* ]] && return 1
+	groups="$(find /sys/kernel/iommu_groups -mindepth 1 -maxdepth 1 2>/dev/null | head -n 1 || true)"
+	[[ -n "${groups}" ]]
+}
+
+detect_bypass_stack() {
+	local version iface driver devbind
+	log_sub_step "Configured stack: ${KERNEL_BYPASS_STACK:-none}"
+	if command -v onload >/dev/null 2>&1; then
+		version="$(onload --version 2>/dev/null | head -n 1 || true)"
+		log_sub_step "Onload installed: ${version:-unknown version}"
+	else
+		log_sub_step "Onload not installed"
+	fi
+	for iface in /sys/class/net/*; do
+		[[ -e "${iface}/device/driver" ]] || continue
+		driver="$(readlink "${iface}/device/driver")"
+		driver="${driver##*/}"
+		[[ "${driver}" == sfc ]] && log_sub_step "Solarflare/AMD NIC: ${iface##*/}"
+	done
+	devbind="$(dpdk_devbind)"
+	if command -v "${devbind}" >/dev/null 2>&1; then
+		log_sub_step "DPDK tools installed (${devbind})"
+	else
+		log_sub_step "DPDK tools not installed"
+	fi
+	if iommu_translation_enabled; then
+		log_sub_step "IOMMU translation enabled (vfio-pci usable)"
+	else
+		log_sub_step "IOMMU translation disabled or absent (vfio-pci unusable; see Guide 08 §4)"
+	fi
+}
+
+# --- Onload ------------------------------------------------------------------
+
+write_onload_module_options() {
+	log_sub_step "Writing ${ONLOAD_MODPROBE_FILE} (options sfc ${ONLOAD_SFC_MODULE_OPTIONS})"
+	printf '%s\n' \
+		"# Managed by mechanical-sympathy 08-kernel-bypass - see guides/08-kernel-bypass.md" \
+		"# Onload owns the accelerated traffic; the kernel's RSS queues only carry the rest." \
+		"options sfc ${ONLOAD_SFC_MODULE_OPTIONS}" | write_file "${ONLOAD_MODPROBE_FILE}"
+}
+
+# The reload creates kernel threads and allocates driver memory. Doing it from a
+# housekeeping CPU keeps both off the isolated CPUs.
+reload_onload_pinned() {
+	log_sub_step "Reloading the Onload and sfc drivers on CPU ${BYPASS_HOUSEKEEPING_CPU} (links on sfc NICs go down briefly)"
+	run taskset -c "${BYPASS_HOUSEKEEPING_CPU}" onload_tool reload
+}
+
+apply_onload() {
+	require_commands onload onload_tool taskset
+	write_onload_module_options
+	reload_onload_pinned
+	log_sub_step "Kernel queues and IRQs of the sfc NICs are set by 04-network (KERNEL_BYPASS_DRIVER=${KERNEL_BYPASS_DRIVER:-unset})"
+}
+
+# --- DPDK ----------------------------------------------------------------------
+
+bind_dpdk_ports() {
+	local pci current devbind
+	((${#DPDK_PORTS[@]} > 0)) || {
+		log_warn "KERNEL_BYPASS_STACK=dpdk but DPDK_PORTS is empty"
+		return 0
+	}
+	devbind="$(dpdk_devbind)"
+	require_commands "${devbind}" modprobe
+	# On the first apply the IOMMU arguments from 01-grub-bootloader are not active yet:
+	# leave the ports alone, and let lowlat-runtime.service bind them after the reboot.
+	if [[ "${DPDK_DRIVER}" == vfio-pci ]] && ! iommu_translation_enabled && [[ "${DRY_RUN}" -ne 1 ]]; then
+		log_warn "IOMMU translation is off: ports not bound. Reboot (01-grub-bootloader sets intel_iommu=on iommu=pt); lowlat-runtime.service binds them at boot"
+		return 0
+	fi
+	run modprobe "${DPDK_DRIVER}"
+	for pci in "${DPDK_PORTS[@]}"; do
+		current="$(pci_driver "${pci}")"
+		if [[ "${current}" == "${DPDK_DRIVER}" ]]; then
+			log_sub_step "${pci}: already bound to ${DPDK_DRIVER}"
+			continue
+		fi
+		remember_original_driver "${pci}" "${current}"
+		log_sub_step "${pci}: ${current} -> ${DPDK_DRIVER} (the port disappears from ip link)"
+		run "${devbind}" --bind="${DPDK_DRIVER}" "${pci}"
+	done
+}
+
+# remember_original_driver <pci> <driver> - first binding wins, so rollback restores the kernel driver.
+remember_original_driver() {
+	[[ "$2" == none ]] && return 0
+	if [[ -r "${DPDK_STATE_FILE}" ]] && grep -q "^$1 " "${DPDK_STATE_FILE}"; then
+		return 0
+	fi
+	if [[ "${DRY_RUN}" -eq 1 ]]; then
+		printf '           [dry-run] record "%s %s" in %s\n' "$1" "$2" "${DPDK_STATE_FILE}"
+		return 0
+	fi
+	mkdir -p "${DPDK_STATE_FILE%/*}"
+	printf '%s %s\n' "$1" "$2" >>"${DPDK_STATE_FILE}"
+}
+
+unbind_dpdk_ports() {
+	local pci driver devbind
+	devbind="$(dpdk_devbind)"
+	require_commands "${devbind}"
+	if [[ ! -r "${DPDK_STATE_FILE}" ]]; then
+		log_sub_step "No DPDK binding recorded in ${DPDK_STATE_FILE}, nothing to undo"
+		return 0
+	fi
+	while read -r pci driver; do
+		[[ -n "${pci}" ]] || continue
+		log_sub_step "${pci}: back to ${driver}"
+		run "${devbind}" --bind="${driver}" "${pci}"
+	done <"${DPDK_STATE_FILE}"
+	run rm -f "${DPDK_STATE_FILE}"
+}
+
+# --- entry points --------------------------------------------------------------
+
+apply_kernel_bypass() {
+	log_step "Kernel bypass (${KERNEL_BYPASS_STACK:-none})"
+	if [[ -z "${KERNEL_BYPASS_STACK:-}" ]]; then
+		log_sub_step "KERNEL_BYPASS_STACK is empty, nothing to do"
+		return 0
+	fi
+	require_capability kernel_bypass || return 0
+	detect_bypass_stack
+	case "${KERNEL_BYPASS_STACK}" in
+	onload) apply_onload ;;
+	dpdk) bind_dpdk_ports ;;
+	*) die "KERNEL_BYPASS_STACK=${KERNEL_BYPASS_STACK}: expected onload, dpdk or empty" "${EXIT_USAGE}" ;;
+	esac
+}
+
+# Runtime part: DPDK bindings do not survive a reboot. Onload's module options do (modprobe.d).
+apply_kernel_bypass_runtime() {
+	[[ "${KERNEL_BYPASS_STACK:-}" == dpdk ]] || return 0
+	log_step "Kernel bypass: DPDK port binding"
+	require_capability kernel_bypass || return 0
+	bind_dpdk_ports
+}
+
+show_bypass_state() {
+	local pci driver devbind loaded=no
+	printf '== kernel bypass: %s\n' "${KERNEL_BYPASS_STACK:-none}"
+	if command -v onload >/dev/null 2>&1; then
+		module_loaded onload && loaded=yes
+		printf '   onload module loaded: %s\n' "${loaded}"
+		{ onload_stackdump 2>/dev/null || true; } | head -n 20 | sed 's/^/   /'
+	fi
+	[[ "${KERNEL_BYPASS_STACK:-}" == dpdk ]] || return 0
+	for pci in "${DPDK_PORTS[@]}"; do
+		driver="$(pci_driver "${pci}")"
+		printf '   %s -> %s\n' "${pci}" "${driver}"
+	done
+	devbind="$(dpdk_devbind)"
+	if command -v "${devbind}" >/dev/null 2>&1; then
+		{ "${devbind}" --status-dev net 2>/dev/null || true; } | sed 's/^/   /'
+	fi
+}
+
+# --- verification --------------------------------------------------------------
+
+hugepages_reserved() {
+	local total
+	total="$(awk '/^HugePages_Total:/ {print $2}' /proc/meminfo 2>/dev/null || true)"
+	((${total:-0} > 0))
+}
+
+pci_bound_to() { # pci_bound_to <pci> <driver>
+	local driver
+	driver="$(pci_driver "$1")"
+	[[ "${driver}" == "$2" ]]
+}
+
+verify_kernel_bypass() {
+	local pci line state
+	if [[ -z "${KERNEL_BYPASS_STACK:-}" ]]; then
+		verify_info "KERNEL_BYPASS_STACK is empty: no kernel bypass configured"
+		verify_result
+		return
+	fi
+	verify_check "huge pages reserved (bypass stacks need them for packet buffers)" hugepages_reserved
+	case "${KERNEL_BYPASS_STACK}" in
+	onload)
+		verify_check "onload installed" command -v onload
+		verify_check "onload kernel module loaded" module_loaded onload
+		verify_check "${ONLOAD_MODPROBE_FILE} present" test -f "${ONLOAD_MODPROBE_FILE}"
+		verify_check "KERNEL_BYPASS_DRIVER/COMMAND set (04-network gives those NICs one queue)" \
+			test -n "${KERNEL_BYPASS_DRIVER:-}" -a -n "${KERNEL_BYPASS_COMMAND:-}"
+		;;
+	dpdk)
+		if [[ "${DPDK_DRIVER}" == vfio-pci ]]; then
+			verify_check "IOMMU translation enabled (vfio-pci)" iommu_translation_enabled
+		fi
+		verify_check "${DPDK_DRIVER} module loaded" module_loaded "${DPDK_DRIVER//-/_}"
+		for pci in "${DPDK_PORTS[@]}"; do
+			verify_check "${pci} bound to ${DPDK_DRIVER}" pci_bound_to "${pci}" "${DPDK_DRIVER}"
+		done
+		;;
+	*) verify_check "KERNEL_BYPASS_STACK=${KERNEL_BYPASS_STACK} is onload, dpdk or empty" false ;;
+	esac
+	state="$(show_bypass_state 2>/dev/null || true)"
+	while IFS= read -r line; do
+		[[ -n "${line}" ]] && verify_info "${line#"${line%%[! ]*}"}"
+	done <<<"${state}"
+	verify_result
+}
+
+rollback_kernel_bypass() {
+	log_step "Kernel bypass rollback"
+	case "${KERNEL_BYPASS_STACK:-}" in
+	onload)
+		log_sub_step "Removing ${ONLOAD_MODPROBE_FILE}"
+		run rm -f "${ONLOAD_MODPROBE_FILE}"
+		reload_onload_pinned
+		;;
+	dpdk) unbind_dpdk_ports ;;
+	*) log_sub_step "KERNEL_BYPASS_STACK is empty, nothing to undo" ;;
+	esac
+}
+
+main() {
+	parse_mode_args "$@" || true
+	case "${MODE}" in
+	apply)
+		require_root
+		load_config
+		apply_kernel_bypass
+		;;
+	runtime)
+		require_root
+		load_config
+		apply_kernel_bypass_runtime
+		;;
+	verify)
+		load_config
+		verify_kernel_bypass
+		;;
+	rollback)
+		require_root
+		load_config
+		rollback_kernel_bypass
+		;;
+	*) print_usage ;;
+	esac
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+	main "$@"
+fi

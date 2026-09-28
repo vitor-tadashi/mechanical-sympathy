@@ -1,0 +1,223 @@
+#!/usr/bin/env bash
+#
+# 01-grub-bootloader - kernel command line for low latency (Guide 01).
+#
+#   apply_grub_kernel_parameters     bare metal: isolation + latency set; VM: latency subset
+#   verify_grub_kernel_parameters    compares /proc/cmdline with the expected set
+#   rollback_grub_kernel_parameters  removes every argument this script manages
+#
+# Changes take effect after a reboot. grubby edits every installed kernel entry
+# (BootLoaderSpec entries on RHEL 8/9), so the configuration survives kernel updates.
+
+set -Eeuo pipefail
+# shellcheck source=lib/common
+. "$(dirname "${BASH_SOURCE[0]}")/lib/common"
+
+# grub_set_arg <name> [value] - removes any previous value, then adds the new one.
+# Removing first matters: grubby --args does not replace "isolcpus=1-3" when you
+# add "isolcpus=5-7", you would end up with both.
+grub_set_arg() {
+	local name="$1" value="${2-}" arg="$1"
+	[[ -n "${value}" ]] && arg="${name}=${value}"
+	run_quiet grubby --update-kernel=ALL --remove-args="${name}"
+	run grubby --update-kernel=ALL --args="${arg}"
+}
+
+grub_remove_arg() {
+	run_quiet grubby --update-kernel=ALL --remove-args="$1"
+}
+
+# The arguments shared by bare metal and VMs: keep the CPU out of idle states and
+# never let the kernel promote memory to transparent huge pages behind our back.
+apply_latency_grub_subset() {
+	log_sub_step "Polling idle loop instead of halting (idle=poll)"
+	grub_set_arg idle poll
+
+	log_sub_step "Limiting ACPI C-states to C0/C1 (processor.max_cstate=0)"
+	grub_set_arg processor.max_cstate 0
+
+	log_sub_step "Disabling intel_idle deep C-states (intel_idle.max_cstate=0)"
+	grub_set_arg intel_idle.max_cstate 0
+
+	log_sub_step "Disabling transparent huge pages (transparent_hugepage=never)"
+	grub_set_arg transparent_hugepage never
+}
+
+# The arguments that only make sense when we own the physical cores.
+apply_isolation_grub_set() {
+	local isolated rcu
+	isolated="$(cpu_list_join "${ISOLATED_CPUS[@]}")"
+	rcu="$(cpu_list_join "${ISOLATED_CPUS[@]}")"
+
+	log_sub_step "Removing CPUs ${isolated} from the scheduler (isolcpus)"
+	grub_set_arg isolcpus "${isolated}"
+
+	log_sub_step "Stopping the scheduler tick on ${isolated} (nohz_full)"
+	grub_set_arg nohz_full "${isolated}"
+
+	log_sub_step "Disabling idle dynticks (nohz=off)"
+	grub_set_arg nohz off
+
+	log_sub_step "Offloading RCU callbacks from ${rcu} (rcu_nocbs)"
+	grub_set_arg rcu_nocbs "${rcu}"
+
+	log_sub_step "Letting rcuo kthreads poll instead of being woken by isolated CPUs (rcu_nocb_poll)"
+	grub_set_arg rcu_nocb_poll
+
+	log_sub_step "Staggering per-CPU tick timers (skew_tick=1)"
+	grub_set_arg skew_tick 1
+
+	log_sub_step "Handing frequency control to acpi-cpufreq (intel_pstate=disable)"
+	grub_set_arg intel_pstate disable
+
+	log_sub_step "Disabling soft-lockup detector (nosoftlockup)"
+	grub_set_arg nosoftlockup
+
+	log_sub_step "Disabling NMI watchdog (nmi_watchdog=0)"
+	grub_set_arg nmi_watchdog 0
+
+	log_sub_step "Ignoring corrected machine-check errors (mce=ignore_ce)"
+	grub_set_arg mce ignore_ce
+
+	log_sub_step "Setting huge page size to ${HUGEPAGE_SIZE} (default_hugepagesz, hugepagesz)"
+	grub_set_arg default_hugepagesz "${HUGEPAGE_SIZE}"
+	grub_set_arg hugepagesz "${HUGEPAGE_SIZE}"
+
+	if [[ "${KERNEL_BYPASS_STACK:-}" == dpdk && "${DPDK_DRIVER:-vfio-pci}" == vfio-pci ]]; then
+		# vfio-pci needs DMA translation. iommu=pt keeps kernel-driven devices on
+		# identity mappings, so only the devices given to DPDK pay for translation.
+		[[ "${GRUB_DISABLE_IOMMU}" == yes ]] && log_warn "GRUB_DISABLE_IOMMU=yes ignored: DPDK with vfio-pci needs the IOMMU (Guide 08 §4)"
+		log_sub_step "Enabling IOMMU translation for vfio-pci (intel_iommu=on iommu=pt)"
+		grub_set_arg intel_iommu on
+		grub_set_arg iommu pt
+	elif [[ "${GRUB_DISABLE_IOMMU}" == yes ]]; then
+		log_sub_step "Disabling IOMMU translation (intel_iommu=off iommu=off)"
+		grub_set_arg intel_iommu off
+		grub_set_arg iommu off
+	fi
+
+	if [[ "${GRUB_DISABLE_MITIGATIONS}" == yes ]]; then
+		log_sub_step "Disabling CPU vulnerability mitigations (nospectre_v1 nospectre_v2 pti=off mds=off tsx_async_abort=off)"
+		grub_set_arg nospectre_v1
+		grub_set_arg nospectre_v2
+		grub_set_arg pti off
+		grub_set_arg mds off
+		grub_set_arg tsx_async_abort off
+	fi
+
+	if [[ -n "${GRUB_BIOSDEVNAME}" ]]; then
+		log_sub_step "Setting biosdevname=${GRUB_BIOSDEVNAME} (interface names may change!)"
+		grub_set_arg biosdevname "${GRUB_BIOSDEVNAME}"
+	fi
+
+	log_sub_step "Removing graphical console (console=tty0)"
+	grub_remove_arg console=tty0
+}
+
+apply_grub_kernel_parameters() {
+	require_commands grubby
+
+	log_step "Kernel command line: latency subset (host_class=${HOST_CLASS})"
+	if require_capability latency_grub; then
+		apply_latency_grub_subset
+	fi
+
+	log_step "Kernel command line: CPU isolation set"
+	if require_capability isolation_grub; then
+		apply_isolation_grub_set
+	fi
+
+	log_step "Regenerating GRUB configuration"
+	if [[ -d /sys/firmware/efi ]] && [[ -f /boot/efi/EFI/redhat/grub.cfg ]] && ! grep -q configfile /boot/efi/EFI/redhat/grub.cfg; then
+		run grub2-mkconfig -o /boot/efi/EFI/redhat/grub.cfg
+	else
+		run grub2-mkconfig -o /boot/grub2/grub.cfg
+	fi
+	log_sub_step "Reboot required: the new command line is used on the next boot"
+}
+
+# Arguments this script manages, used by verify and rollback.
+managed_grub_args() {
+	printf '%s\n' idle processor.max_cstate intel_idle.max_cstate transparent_hugepage \
+		isolcpus nohz_full nohz rcu_nocbs rcu_nocb_poll skew_tick intel_pstate nosoftlockup \
+		nmi_watchdog mce default_hugepagesz hugepagesz intel_iommu iommu \
+		nospectre_v1 nospectre_v2 pti mds tsx_async_abort
+}
+
+# cmdline_has <arg> [value] - checks the RUNNING kernel.
+cmdline_has() {
+	local cmdline
+	cmdline=" $(cat /proc/cmdline) "
+	if [[ $# -eq 2 ]]; then
+		[[ "${cmdline}" == *" $1=$2 "* ]]
+	else
+		[[ "${cmdline}" == *" $1 "* || "${cmdline}" == *" $1="* ]]
+	fi
+}
+
+verify_grub_kernel_parameters() {
+	local isolated kernel value
+	kernel="$(uname -r)"
+	verify_info "running kernel ${kernel}"
+	verify_check "idle=poll" cmdline_has idle poll
+	verify_check "processor.max_cstate=0" cmdline_has processor.max_cstate 0
+	verify_check "intel_idle.max_cstate=0" cmdline_has intel_idle.max_cstate 0
+	verify_check "transparent_hugepage=never" cmdline_has transparent_hugepage never
+	if host_is_bare_metal; then
+		isolated="$(cpu_list_join "${ISOLATED_CPUS[@]}")"
+		verify_check "isolcpus=${isolated}" cmdline_has isolcpus "${isolated}"
+		verify_check "nohz_full=${isolated}" cmdline_has nohz_full "${isolated}"
+		verify_check "rcu_nocbs=${isolated}" cmdline_has rcu_nocbs "${isolated}"
+		verify_check "rcu_nocb_poll" cmdline_has rcu_nocb_poll
+		verify_check "skew_tick=1" cmdline_has skew_tick 1
+		verify_check "intel_pstate=disable" cmdline_has intel_pstate disable
+		verify_check "nosoftlockup" cmdline_has nosoftlockup
+		verify_check "nmi_watchdog=0" cmdline_has nmi_watchdog 0
+		verify_check "mce=ignore_ce" cmdline_has mce ignore_ce
+		verify_check "default_hugepagesz=${HUGEPAGE_SIZE}" cmdline_has default_hugepagesz "${HUGEPAGE_SIZE}"
+		value="$(read_value /sys/devices/system/cpu/isolated)"
+		verify_info "kernel isolated CPUs: ${value}"
+		value="$(read_value /sys/devices/system/cpu/nohz_full)"
+		verify_info "kernel nohz_full CPUs: ${value}"
+	fi
+	value="$(grubby --info=DEFAULT 2>/dev/null | awk -F'"' '/^args=/{print $2}' || true)"
+	verify_info "grubby default entry: ${value:-n/a}"
+	verify_result
+}
+
+rollback_grub_kernel_parameters() {
+	local arg args
+	require_commands grubby
+	args="$(managed_grub_args)"
+	log_step "Removing managed kernel arguments from every kernel entry"
+	while read -r arg; do
+		log_sub_step "Removing ${arg}"
+		grub_remove_arg "${arg}"
+	done <<<"${args}"
+	log_sub_step "Reboot required"
+}
+
+main() {
+	parse_mode_args "$@" || true
+	case "${MODE}" in
+	apply)
+		require_root
+		load_config
+		apply_grub_kernel_parameters
+		;;
+	verify)
+		load_config
+		verify_grub_kernel_parameters
+		;;
+	rollback)
+		require_root
+		load_config
+		rollback_grub_kernel_parameters
+		;;
+	*) print_usage ;;
+	esac
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+	main "$@"
+fi

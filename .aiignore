@@ -1,0 +1,30 @@
+# Files AI assistants must not index or read (same syntax as .gitignore).
+# Keep the context on the guides, scripts and Java sources; skip generated and binary noise.
+
+# Build output and caches
+build/
+.gradle/
+out/
+target/
+
+# IDE metadata
+.idea/
+.vscode/
+
+# Binaries and pinned checksums (large, never edited by hand)
+*.jar
+*.class
+*.zip
+*.tar.gz
+gradle/verification-metadata.xml
+
+# Runtime output: logs, heap dumps, flight recordings, latency histograms
+log/
+*.log
+*.hprof
+*.jfr
+*.hgrm
+
+# A real host description can carry host names and addresses
+scripts/lowlat.conf
+*.conf.local

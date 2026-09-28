@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+#
+# lint-scripts - enforce the shell script rules of this repository.
+#
+#   1. no shell script carries a file extension (.sh, .bash)
+#   2. every script with a shebang is executable; sourced files (*/lib/*, or a
+#      "# shellcheck shell=bash" first line instead of a shebang) are not
+#   3. ShellCheck is clean with the root .shellcheckrc (enable=all)
+#   4. bash -n parses every script
+#
+# Usage: tools/lint-scripts            (from anywhere inside the repository)
+
+set -Eeuo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "${ROOT}"
+
+SCAN_ROOTS=(scripts tools .githooks examples/java-latency-probe/bin)
+
+failures=0
+
+fail() {
+	printf 'lint-scripts: %s\n' "$*" >&2
+	failures=$((failures + 1))
+}
+
+is_shell_script() { # first line is a bash/sh shebang, or a "# shellcheck shell=" directive
+	local first_line=""
+	IFS= read -r first_line <"$1" || [[ -n "${first_line}" ]] || return 1
+	[[ "${first_line}" =~ ^#!.*[/[:space:]](ba)?sh([[:space:]]|$) || "${first_line}" == "# shellcheck shell="* ]]
+}
+
+is_sourced() {
+	local first_line=""
+	[[ "$1" == */lib/* ]] && return 0
+	IFS= read -r first_line <"$1" || true
+	[[ "${first_line}" != '#!'* ]]
+}
+
+if ! command -v shellcheck >/dev/null 2>&1; then
+	printf 'lint-scripts: shellcheck not found (dnf install ShellCheck / apt-get install shellcheck / brew install shellcheck)\n' >&2
+	exit 1
+fi
+
+# 1. No extensions, tracked or not yet tracked.
+extensions="$(git ls-files --cached --others --exclude-standard -- '*.sh' '*.bash')"
+while IFS= read -r file; do
+	[[ -n "${file}" ]] && fail "${file}: shell scripts have no extension, rename it to ${file%.*}"
+done <<<"${extensions}"
+
+files=()
+candidates="$(git ls-files --cached --others --exclude-standard -- "${SCAN_ROOTS[@]}")"
+while IFS= read -r file; do
+	[[ -f "${file}" ]] && is_shell_script "${file}" && files+=("${file}")
+done <<<"${candidates}"
+
+if ((${#files[@]} == 0)); then
+	printf 'lint-scripts: no shell scripts found\n' >&2
+	exit 1
+fi
+
+for file in "${files[@]}"; do
+	# 2. Executable bit.
+	if ! is_sourced "${file}" && [[ ! -x "${file}" ]]; then
+		fail "${file}: not executable (chmod +x ${file})"
+	fi
+	# 3. ShellCheck.
+	shellcheck "${file}" || fail "${file}: shellcheck findings"
+	# 4. Syntax.
+	bash -n "${file}" || fail "${file}: bash -n failed"
+done
+
+if ((failures > 0)); then
+	printf 'lint-scripts: %d problem(s) in %d script(s)\n' "${failures}" "${#files[@]}" >&2
+	exit 1
+fi
+printf 'lint-scripts: %d scripts clean\n' "${#files[@]}"

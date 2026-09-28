@@ -1,0 +1,13 @@
+# ShellCheck settings for every shell script in this repository (enforced by tools/lint-scripts).
+shell=bash
+enable=all
+severity=style
+# Resolve "source" paths relative to each script, and follow them.
+source-path=SCRIPTDIR
+source-path=SCRIPTDIR/..
+external-sources=true
+# Configuration variables (ISOLATED_CPUS, NICS, ...) come from lowlat.conf at runtime.
+disable=SC2153
+# Functions called in a condition (require_capability, nic_exists, host_is_*) are
+# predicates by contract: they return a status and never rely on errexit inside.
+disable=SC2310
