@@ -194,7 +194,7 @@ flowchart LR
 | Offset swings by µs every few seconds | The daemon's CPU is busy (agents, IRQ storms) | Keep `TIME_SYNC_CPUS` quiet; not in `housekeeping.slice` (§5) |
 | Clock steps during the day | chrony `makestep` without a limit, or a manual `date` | `makestep 1 3`; never set the clock by hand on a running host |
 | phc2sys and chronyd both running | Mixed configuration | One owner of the system clock: the script stops the other one |
-| `clock_gettime()` slow | Clocksource not `tsc` (unstable TSC reported at boot) | `dmesg | grep -i tsc`; firmware or BIOS issue (Guide 00, BIOS and firmware) |
+| `clock_gettime()` slow | Clocksource not `tsc` (unstable TSC reported at boot) | `dmesg | grep -i tsc`; firmware or BIOS issue ([Guide 00](00-bios-firmware.md)) |
 
 ## 11. Rollback
 

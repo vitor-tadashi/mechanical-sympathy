@@ -246,7 +246,7 @@ ethtool -T eno1                          # hardware-transmit / hardware-receive 
 systemctl enable --now ptp4l phc2sys
 ```
 
-Pin `ptp4l`/`phc2sys` to CPU 0 with a drop-in (`CPUAffinity=0`), not into the housekeeping slice, because their scheduling latency affects clock accuracy.
+Pin `ptp4l`/`phc2sys` to CPU 0 with a drop-in (`CPUAffinity=0`), not into the housekeeping slice, because their scheduling latency affects clock accuracy. [Guide 10](../guides/10-time-sync.md) covers the whole setup, and `scripts/10-time-sync` applies it.
 
 ## 8. Persistence
 
