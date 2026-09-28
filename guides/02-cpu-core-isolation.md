@@ -75,6 +75,10 @@ cat /sys/class/net/<nic>/device/numa_node
 4. **Hyper-Threading.** If HT is on, a sibling shares L1/L2, the TLBs, and the execution ports. Either disable HT in the BIOS (preferred), or isolate both siblings and use only one. `lscpu -e` shows siblings as two CPUs with the same `CORE`.
 5. **Leave headroom.** Plan one or two spare isolated CPUs for a new thread or a debug tool, instead of re-planning the layout under pressure.
 
+<img src="../assets/diagrams/numa-locality.svg" alt="Two sockets: a net.rx thread on node 1 reads the NIC's packet buffers locally; the same thread on node 0 crosses the interconnect on every cache miss" width="720">
+
+*Rule 1 in one picture: the thread, the NIC and the memory belong on the same node, or every cache miss pays the trip across sockets.*
+
 **Reference layout** (2 × 16 cores, HT off, even CPUs = node 0, odd = node 1, critical NICs on node 1):
 
 ```mermaid
@@ -179,6 +183,10 @@ sysctl -w kernel.sched_rt_runtime_us=-1       # persisted in /etc/sysctl.d/91-lo
 ```
 
 By default, `SCHED_FIFO`/`SCHED_RR` tasks may consume at most 950 ms of every 1 s (`sched_rt_runtime_us=950000` out of `sched_rt_period_us=1000000`). Then the kernel **forcibly deschedules them for 50 ms** so that normal tasks get a turn. A busy-spinning FIFO thread therefore stalls for 50 ms once per second, which can easily be the biggest outlier in your histogram.
+
+<img src="../assets/diagrams/rt-throttling.svg" alt="Animation: with the default RT limit, a spinning SCHED_FIFO thread is taken off the CPU for 50 ms after 950 ms, and a message arriving then waits; with -1 the thread runs the whole second" width="720">
+
+*With the default limit, the thread loses the last 50 ms of every second. A message that arrives then waits up to 50 ms. With `-1` there is no gap.*
 
 > [!WARNING]
 > `-1` removes the cap. **Risk:** a runaway FIFO thread on a *housekeeping* CPU now starves everything on it, kernel threads included, and the host may appear hung. Only run FIFO spinners on isolated CPUs.
@@ -312,7 +320,11 @@ Thread names matter here. Name your threads (`Thread.setName`, `pthread_setname_
 
 ### 6.4 Busy-spin vs back-off
 
-A pinned critical thread normally **busy-spins**: it polls its queue or socket in a tight loop and never blocks. Blocking means a futex sleep followed by a wake-up, and the wake-up costs 5–50 µs through the scheduler.
+A pinned critical thread normally **busy-spins**: it polls its queue or socket in a tight loop and never blocks. Blocking means a futex sleep followed by a wake-up, and the wake-up costs 2–50 µs through the scheduler.
+
+<img src="../assets/diagrams/spin-vs-block.svg" alt="Animation: a message to a blocked thread passes through an IPI, a C-state exit and the scheduler; a spinning thread sees the same message almost at once" width="720">
+
+*A blocked thread has to be woken through the kernel. A spinning thread on its own CPU sees the write after a single cache-line transfer.*
 
 ```mermaid
 flowchart LR

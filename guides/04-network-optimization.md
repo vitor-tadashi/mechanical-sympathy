@@ -259,6 +259,10 @@ Adaptive (DIM) coalescing re-tunes `rx-usecs` continuously from the observed pac
 
 `rx-usecs` is how long the NIC waits after the first packet before raising the interrupt, hoping to batch more. `0` means **interrupt immediately**.
 
+<img src="../assets/diagrams/rx-coalescing.svg" alt="Animation: with adaptive coalescing, the first packet waits in the NIC until the timer fires; with rx-usecs 0 the same packet reaches the application immediately" width="720">
+
+*With coalescing, the first packet of a burst sits in the NIC until the timer expires. With `rx-usecs 0`, it raises the interrupt at once.*
+
 | rx-usecs | Latency added at low rate | Interrupt rate at 1 Mpps |
 |---|---|---|
 | 0 | ~0 | up to 1 M/s (the CPU handling the IRQs must keep up) |
@@ -317,6 +321,10 @@ Where the NIC interrupt runs is where the **softirq** (protocol processing) runs
 | **A. Housekeeping IRQ CPU** (reference) | a node-local, non-isolated CPU (CPU 1) | isolated CPU, spins on the socket (non-blocking `recv` in a loop) | Isolated CPU never interrupted. Deterministic. | One cache-line transfer (same node, ~40–80 ns) from CPU 1 to the app CPU per packet |
 | **B. Busy polling** | NAPI is polled **from the app thread's syscall** (`SO_BUSY_POLL`, `net.core.busy_read`) | isolated CPU | Skips the IRQ → softirq → wake-up chain | CPU cost; the IRQ still fires unless deferred (`napi_defer_hard_irqs`) |
 | **C. Kernel bypass** (§7, [Guide 08](08-kernel-bypass.md)) | none for data (user space polls the NIC) | isolated CPU | Lowest latency, no syscalls | Vendor stack, own tuning, huge pages |
+
+<img src="../assets/diagrams/irq-placement.svg" alt="Animation: with the NIC interrupt on isolated CPU 3, every packet cuts into the spinning net.rx thread; with the interrupt on housekeeping CPU 1, the spin is never cut and each packet reaches CPU 3 as one cache-line transfer" width="720">
+
+*Model A: the interrupt work goes to housekeeping CPU 1, so the isolated CPU only ever runs its spinning thread.*
 
 > [!WARNING]
 > Never put the IRQs of a kernel-stack NIC **on an isolated CPU** that runs a spinning thread. The softirq then has to preempt your thread (or waits in `ksoftirqd` behind it, see [Guide 02 §6.5](02-cpu-core-isolation.md#65-real-time-scheduling-class-usually-unnecessary)).

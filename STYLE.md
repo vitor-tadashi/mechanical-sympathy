@@ -154,25 +154,43 @@ flowchart TD
 
 *Starting from slow SSH, check OS CPU load first, then irqbalance, then fall back to the table.*
 
-### 3.5 Animated SVG
+### 3.5 Hand-written SVG
 
-A few mechanisms are about **time**: a packet waiting for interrupt coalescing, a tick interrupting a CPU, a thread waking up. For these, an animation says what a static picture can't. Keep them few, and hold each one to these rules:
+Mermaid lays out boxes and arrows. It cannot show **time** or **physical geometry**, and some ideas need them:
 
-- Hand-written SVG in `assets/diagrams/<name>.svg`, animated with CSS `@keyframes` inside the file. No script, no external fonts or images. (GitHub serves SVGs as images, so scripts would not run anyway.)
-- `<title>` and `<desc>` as the first children of `<svg>`. `<desc>` states the point of the animation in one or two sentences.
-- An `@media (prefers-reduced-motion: reduce)` block that stops every animation and shows a meaningful static frame.
+- **Animated SVG, for time.** A packet waiting for interrupt coalescing, a tick interrupting a CPU, a thread stalled for 50 ms. The animation shows the wait itself.
+- **Static SVG, for geometry.** Two sockets and the interconnect between them, or where a CPU sits relative to the NIC and memory. The picture shows the distance.
+
+Everything else stays in Mermaid. Each SVG makes **one point that a reader gets in about 5 seconds**, usually by comparing two cases in lanes. If you cannot say the point in one sentence, split the SVG or drop it.
+
+Rules for every SVG:
+
+- Hand-written, in `assets/diagrams/<name>.svg`. No script, no external fonts or images. (GitHub serves SVGs as images, so scripts would not run anyway.)
+- `<title>` and `<desc>` as the first children of `<svg>`. `<desc>` states the point in one or two sentences.
 - Colors from §3.2, readable on a white and on a dark background. Put a background rectangle in the SVG, because GitHub does not theme images.
-- At most 30 KB, a loop of 4 to 8 seconds, and no flashing faster than 3 times per second.
-- Embed it with an `<img>` that has an `alt` text, followed by the same one-sentence summary as a Mermaid diagram:
+- Color is never the only signal. Every colored box or bar carries a text label.
+- At most 30 KB.
 
-  ```markdown
-  <img src="../assets/diagrams/rx-coalescing.svg" alt="A packet waits in the NIC for the coalescing timer before the interrupt fires" width="720">
-  ```
+Extra rules for an animated SVG:
+
+- Animate with CSS `@keyframes` inside the file.
+- **Keep the whole picture visible at all times.** Move one playhead across all lanes, and pulse each event briefly as the playhead reaches it, as in [`tick-nohz.svg`](assets/diagrams/tick-nohz.svg). Never hide parts of the picture and reveal them later: the reader must be able to compare the lanes at any moment.
+- Time a pulse with a negative `animation-delay` computed from the event's position, so it fires exactly when the playhead gets there.
+- The base styles draw the complete picture. An `@media (prefers-reduced-motion: reduce)` block stops every animation and hides the playhead, so the complete picture is what those readers see. It must make the point on its own.
+- A loop of 4 to 8 seconds, and no flashing faster than 3 times per second.
+
+Structure, as in [`tick-nohz.svg`](assets/diagrams/tick-nohz.svg): a `viewBox` about 760 wide, one lane per case (default on top, tuned below), a caption and a one-line subcaption in each lane, and the classes `.bg`, `.lane`, `.box` (housekeeping blue), `.app` (isolated green), `.wait` (risk red), `.lbl`, `.cap` and `.sub`.
+
+Embed it with an `<img>` that has an `alt` text, followed by the same one-sentence summary as a Mermaid diagram:
+
+```markdown
+<img src="../assets/diagrams/rx-coalescing.svg" alt="A packet waits in the NIC for the coalescing timer before the interrupt fires" width="720">
+```
 
 ## 4. Accessibility checklist (every PR that touches docs)
 
 - [ ] The page opens with the short answer (At a glance / TL;DR).
-- [ ] Each diagram has a one-sentence text summary. Each image has `alt` text.
+- [ ] Each diagram, Mermaid or SVG, has a one-sentence text summary. Each image has `alt` text.
 - [ ] No meaning is carried by color alone.
 - [ ] Long output and deep dives are folded. Warnings and required commands are not.
 - [ ] Headings are real headings, in order (no jump from `##` to `####`), so the GitHub outline works.
