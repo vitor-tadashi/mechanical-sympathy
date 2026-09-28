@@ -3,10 +3,11 @@
 # install-git-hooks - opt in to the repository git hooks (.githooks/).
 #
 # pre-commit runs `make lint` (ShellCheck + Checkstyle), the same gate CI enforces.
+# commit-msg runs tools/check-commit-title on the title (AGENTS.md section 8).
 # Undo with: git config --unset core.hooksPath
 
 set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 git -C "${ROOT}" config core.hooksPath .githooks
-printf 'install-git-hooks: core.hooksPath=.githooks (pre-commit runs make lint)\n'
+printf 'install-git-hooks: core.hooksPath=.githooks (pre-commit runs make lint, commit-msg checks the title)\n'

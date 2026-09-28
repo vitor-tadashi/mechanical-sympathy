@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+#
+# check-commit-title - enforce the commit title rules of AGENTS.md section 8.
+#
+# A title is one line that completes "If applied, this commit will ...":
+#   - imperative mood, starting with a capital ASCII letter (Add, Fix, Remove)
+#   - at most 72 characters, no trailing period, ASCII only
+#   - no Conventional Commits "type(scope):" or "[TICKET]" prefix
+# "fixup! " and "squash! " prefixes are accepted; autosquash removes them.
+#
+# Usage: tools/check-commit-title "<title>"
+#        tools/check-commit-title --range <base>..<head>
+
+set -Eeuo pipefail
+
+MAX_LENGTH=72
+
+# First words that are not imperative. Extend when a new offender shows up.
+NON_IMPERATIVE=(
+	Added Adding Adds Bumped Bumping Bumps Changed Changes Changing Created Creates Creating
+	Deleted Deletes Deleting Fixed Fixes Fixing Improved Improves Improving Merged Merges
+	Moved Moves Moving Refactored Refactoring Refactors Removed Removes Removing Renamed
+	Renames Renaming Updated Updates Updating Wip WIP
+)
+
+failures=0
+
+fail() {
+	printf 'check-commit-title: %s: %s\n' "$1" "$2" >&2
+	failures=$((failures + 1))
+}
+
+check_title() {
+	local title="$1" first_word word
+	title="${title#fixup! }"
+	title="${title#squash! }"
+
+	if [[ -z "${title}" || "${title}" != "${title#[[:space:]]}" || "${title}" != "${title%[[:space:]]}" ]]; then
+		fail "'${title}'" "title is empty or has leading/trailing whitespace"
+		return
+	fi
+	if ((${#title} > MAX_LENGTH)); then
+		fail "'${title}'" "${#title} characters, the limit is ${MAX_LENGTH}"
+	fi
+	if LC_ALL=C grep -q '[^ -~]' <<<"${title}"; then
+		fail "'${title}'" "non-ASCII or control character, write it in American English"
+	fi
+	if [[ "${title}" =~ ^\[[^]]+\] || "${title}" =~ ^[a-z]+(\([^\)]*\))?!?:\  ]]; then
+		fail "'${title}'" "drop the prefix, the title is plain text (Add x, not feat: add x)"
+	fi
+	if [[ "${title}" != [A-Z]* ]]; then
+		fail "'${title}'" "start with a capital letter"
+	fi
+	if [[ "${title}" == *. ]]; then
+		fail "'${title}'" "drop the trailing period"
+	fi
+	first_word="${title%% *}"
+	for word in "${NON_IMPERATIVE[@]}"; do
+		if [[ "${first_word}" == "${word}" ]]; then
+			fail "'${title}'" "use the imperative mood (Add, not Added or Adds)"
+			break
+		fi
+	done
+}
+
+if (($# == 2)) && [[ "$1" == --range ]]; then
+	titles="$(git log --format=%s "$2")"
+	while IFS= read -r title; do
+		[[ -n "${title}" ]] && check_title "${title}"
+	done <<<"${titles}"
+elif (($# == 1)); then
+	check_title "$1"
+else
+	printf 'usage: %s "<title>" | --range <base>..<head>\n' "${0##*/}" >&2
+	exit 2
+fi
+
+if ((failures > 0)); then
+	printf 'check-commit-title: %d problem(s), see AGENTS.md section 8\n' "${failures}" >&2
+	exit 1
+fi

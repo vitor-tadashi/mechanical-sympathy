@@ -9,7 +9,7 @@ help:
 	@echo "  lint               lint-scripts + lint-java (the gate CI enforces)"
 	@echo "  lint-scripts       no .sh extensions, exec bits, ShellCheck (enable=all), bash -n"
 	@echo "  lint-java          Checkstyle + compile + dependency approval for the Java probe"
-	@echo "  install-git-hooks  opt in to the pre-commit hook (runs make lint)"
+	@echo "  install-git-hooks  opt in to the pre-commit (make lint) and commit-msg (title) hooks"
 
 lint: lint-scripts lint-java
 
