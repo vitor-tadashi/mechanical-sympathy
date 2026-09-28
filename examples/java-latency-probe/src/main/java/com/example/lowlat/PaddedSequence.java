@@ -22,12 +22,12 @@ public final class PaddedSequence extends PaddedSequenceValue {
     static {
         try {
             VALUE = MethodHandles.lookup().findVarHandle(PaddedSequenceValue.class, "value", long.class);
-        } catch (ReflectiveOperationException e) {
+        } catch (final ReflectiveOperationException e) {
             throw new ExceptionInInitializerError(e);
         }
     }
 
-    public PaddedSequence(long initial) {
+    public PaddedSequence(final long initial) {
         VALUE.setRelease(this, initial);
     }
 
@@ -37,7 +37,7 @@ public final class PaddedSequence extends PaddedSequenceValue {
     }
 
     /** Release write: cheaper than a volatile store (no StoreLoad fence on x86). */
-    public void set(long v) {
+    public void set(final long v) {
         VALUE.setRelease(this, v);
     }
 }

@@ -6,3 +6,4 @@
   `approvedDependencies` in `build.gradle.kts`; `verifyApprovedDependencies` fails the build for anything else,
   and `gradle/verification-metadata.xml` pins every artifact's checksum.
 - Native calls (thread affinity, etc.) use the FFM API (`java.lang.foreign`), not third-party wrappers.
+- `./gradlew check` runs Checkstyle (`config/checkstyle/checkstyle.xml`, zero violations allowed); rules in the root `AGENTS.md` §6.

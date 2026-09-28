@@ -1,5 +1,6 @@
 plugins {
     java
+    checkstyle
 }
 
 group = "com.example.lowlat"
@@ -8,6 +9,8 @@ description = "Pinned busy-spin ping-pong probe: thread affinity + huge pages + 
 
 // Every library, including transitive ones, must be approved by the project owner.
 // Adding a dependency means adding it here in the same change, after approval.
+// Build tools on their own configurations (Checkstyle) are approved separately and never
+// reach the compile or runtime classpath; gradle/verification-metadata.xml pins them too.
 val approvedDependencies = setOf(
     "org.hdrhistogram:HdrHistogram:2.2.2", // latency distribution with no allocation on the hot path
 )
@@ -22,13 +25,20 @@ dependencies {
     implementation("org.hdrhistogram:HdrHistogram:2.2.2")
 }
 
+// config/checkstyle/checkstyle.xml; any violation fails `check`.
+checkstyle {
+    toolVersion = "14.3.0"
+    maxWarnings = 0
+    isIgnoreFailures = false
+}
+
 tasks.withType<JavaCompile>().configureEach {
     options.release = 25
     options.encoding = "UTF-8"
     options.compilerArgs.addAll(listOf("-Xlint:all", "-Werror"))
 }
 
-val verifyApprovedDependencies by tasks.registering {
+val verifyApprovedDependencies = tasks.register("verifyApprovedDependencies") {
     group = "verification"
     description = "Fails if any resolved dependency, direct or transitive, is not in approvedDependencies."
     val resolved = listOf(configurations.compileClasspath, configurations.runtimeClasspath).map { configuration ->
@@ -55,7 +65,7 @@ tasks.compileJava { dependsOn(verifyApprovedDependencies) }
 tasks.check { dependsOn(verifyApprovedDependencies) }
 
 // build/lib/*.jar so bin/launch can use a plain classpath
-val copyRuntimeLibs by tasks.registering(Sync::class) {
+val copyRuntimeLibs = tasks.register<Sync>("copyRuntimeLibs") {
     from(configurations.runtimeClasspath)
     into(layout.buildDirectory.dir("lib"))
 }

@@ -24,55 +24,55 @@ public final class LatencyProbe {
 
     private static final long HIGHEST_TRACKABLE_NS = TimeUnit.SECONDS.toNanos(10);
 
-    public static void main(String[] args) throws Exception {
-        Path configFile = Path.of(System.getProperty("probe.config", "conf/application.properties"));
-        AffinityConfig config = AffinityConfig.load(configFile);
+    public static void main(final String[] args) throws Exception {
+        final Path configFile = Path.of(System.getProperty("probe.config", "conf/application.properties"));
+        final AffinityConfig config = AffinityConfig.load(configFile);
 
-        long iterations = Long.parseLong(config.get("probe.iterations", "10000000"));
-        long warmup = Long.parseLong(config.get("probe.warmup", "1000000"));
-        int workingSetMiB = Integer.parseInt(config.get("probe.working.set.mib", "1024"));
-        int hops = Integer.parseInt(config.get("probe.hops", "4"));
-        String idleName = config.get("idle.strategy", config.enabled() ? "spin" : "backoff");
+        final long iterations = Long.parseLong(config.get("probe.iterations", "10000000"));
+        final long warmup = Long.parseLong(config.get("probe.warmup", "1000000"));
+        final int workingSetMiB = Integer.parseInt(config.get("probe.working.set.mib", "1024"));
+        final int hops = Integer.parseInt(config.get("probe.hops", "4"));
+        final String idleName = config.get("idle.strategy", config.enabled() ? "spin" : "backoff");
 
         printEnvironment(config, configFile, idleName);
 
-        PaddedSequence ping = new PaddedSequence(-1);
-        PaddedSequence pong = new PaddedSequence(-1);
-        Histogram rtt = new Histogram(HIGHEST_TRACKABLE_NS, 3);
-        Histogram walk = new Histogram(HIGHEST_TRACKABLE_NS, 3);
-        long total = warmup + iterations;
+        final PaddedSequence ping = new PaddedSequence(-1);
+        final PaddedSequence pong = new PaddedSequence(-1);
+        final Histogram rtt = new Histogram(HIGHEST_TRACKABLE_NS, 3);
+        final Histogram walk = new Histogram(HIGHEST_TRACKABLE_NS, 3);
+        final long total = warmup + iterations;
 
-        Thread pongThread = pinnedThread("pong", config.cpuFor("pong"), () -> {
-            IdleStrategy idle = IdleStrategy.of(idleName);
+        final Thread pongThread = pinnedThread("pong", config.cpuFor("pong"), () -> {
+            final IdleStrategy idle = IdleStrategy.of(idleName);
             long last = -1;
             while (last < total - 1) {
-                long seq = ping.get();
-                if (seq != last) {
-                    pong.set(seq);
-                    last = seq;
-                    idle.idle(1);
-                } else {
+                final long seq = ping.get();
+                if (seq == last) {
                     idle.idle(0);
+                    continue;
                 }
+                pong.set(seq);
+                last = seq;
+                idle.idle(1);
             }
         });
 
-        Thread pingThread = pinnedThread("ping", config.cpuFor("ping"), () -> {
+        final Thread pingThread = pinnedThread("ping", config.cpuFor("ping"), () -> {
             // Built by the pinned thread: with -XX:+UseNUMA the table lands on this thread's node.
-            long[] table = randomCycle(workingSetMiB * 1024L * 1024L / Long.BYTES);
-            IdleStrategy idle = IdleStrategy.of(idleName);
+            final long[] table = randomCycle(workingSetMiB * 1024L * 1024L / Long.BYTES);
+            final IdleStrategy idle = IdleStrategy.of(idleName);
             int index = 0;
             for (long i = 0; i < total; i++) {
-                long t0 = System.nanoTime();
+                final long t0 = System.nanoTime();
                 ping.set(i);
                 while (pong.get() != i) {
                     idle.idle(0);
                 }
-                long t1 = System.nanoTime();
+                final long t1 = System.nanoTime();
                 for (int h = 0; h < hops; h++) {
                     index = (int) table[index]; // dependent load: no prefetching, one TLB lookup each
                 }
-                long t2 = System.nanoTime();
+                final long t2 = System.nanoTime();
                 if (i >= warmup) {
                     rtt.recordValue(t1 - t0);
                     walk.recordValue(t2 - t1);
@@ -92,8 +92,8 @@ public final class LatencyProbe {
         report("walk (" + hops + " dependent random reads over " + workingSetMiB + " MiB, ns)", walk);
     }
 
-    private static Thread pinnedThread(String name, int cpu, Runnable body) {
-        Thread thread = new Thread(() -> {
+    private static Thread pinnedThread(final String name, final int cpu, final Runnable body) {
+        final Thread thread = new Thread(() -> {
             if (cpu >= 0) {
                 ThreadAffinity.pinCurrentThread(cpu); // before touching any data: first-touch on the right node
             }
@@ -106,23 +106,23 @@ public final class LatencyProbe {
     }
 
     /** Sattolo's algorithm: a random single cycle, so the walk visits the table without short loops. */
-    private static long[] randomCycle(long entries) {
-        int n = (int) Math.min(entries, Integer.MAX_VALUE - 8);
-        long[] table = new long[n];
+    private static long[] randomCycle(final long entries) {
+        final int n = (int) Math.min(entries, Integer.MAX_VALUE - 8);
+        final long[] table = new long[n];
         for (int i = 0; i < n; i++) {
             table[i] = i;
         }
-        SplittableRandom random = new SplittableRandom(42);
+        final SplittableRandom random = new SplittableRandom(42);
         for (int i = n - 1; i > 0; i--) {
-            int j = random.nextInt(i);
-            long tmp = table[i];
+            final int j = random.nextInt(i);
+            final long tmp = table[i];
             table[i] = table[j];
             table[j] = tmp;
         }
         return table;
     }
 
-    private static void report(String title, Histogram h) {
+    private static void report(final String title, final Histogram h) {
         System.out.printf("%n%s%n", title);
         System.out.printf("  count=%d  min=%d  p50=%d  p90=%d  p99=%d  p99.9=%d  p99.99=%d  max=%d%n",
                 h.getTotalCount(), h.getMinValue(),
@@ -130,20 +130,20 @@ public final class LatencyProbe {
                 h.getValueAtPercentile(99.9), h.getValueAtPercentile(99.99), h.getMaxValue());
     }
 
-    private static void printEnvironment(AffinityConfig config, Path configFile, String idleName) throws Exception {
-        HotSpotDiagnosticMXBean hotspot = ManagementFactory.getPlatformMXBean(HotSpotDiagnosticMXBean.class);
+    private static void printEnvironment(final AffinityConfig config, final Path configFile, final String idleName) throws Exception {
+        final HotSpotDiagnosticMXBean hotspot = ManagementFactory.getPlatformMXBean(HotSpotDiagnosticMXBean.class);
         System.out.printf("config=%s affinity.enable=%s idle.strategy=%s%n", configFile, config.enabled(), idleName);
-        for (String flag : new String[] {"UseLargePages", "UseTransparentHugePages", "UseNUMA", "AlwaysPreTouch",
+        for (final String flag : new String[] {"UseLargePages", "UseTransparentHugePages", "UseNUMA", "AlwaysPreTouch",
                 "UseZGC", "MaxHeapSize"}) {
             String value;
             try {
                 value = hotspot.getVMOption(flag).getValue();
-            } catch (IllegalArgumentException platformSpecific) { // e.g. Linux-only flags elsewhere
+            } catch (final IllegalArgumentException platformSpecific) { // e.g. Linux-only flags elsewhere
                 value = "n/a";
             }
             System.out.printf("  -XX:%s=%s%n", flag, value);
         }
-        Path meminfo = Path.of("/proc/meminfo");
+        final Path meminfo = Path.of("/proc/meminfo");
         if (Files.isReadable(meminfo)) {
             Files.readAllLines(meminfo).stream()
                     .filter(l -> l.startsWith("HugePages_") || l.startsWith("Hugepagesize"))

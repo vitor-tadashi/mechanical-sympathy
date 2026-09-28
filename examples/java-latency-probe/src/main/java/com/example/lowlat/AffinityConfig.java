@@ -24,13 +24,13 @@ public final class AffinityConfig {
     private final Properties properties;
     private final boolean enabled;
 
-    private AffinityConfig(Properties properties) {
+    private AffinityConfig(final Properties properties) {
         this.properties = properties;
         this.enabled = Boolean.parseBoolean(properties.getProperty("affinity.enable", "false"));
     }
 
-    public static AffinityConfig load(Path file) throws IOException {
-        Properties properties = new Properties();
+    public static AffinityConfig load(final Path file) throws IOException {
+        final Properties properties = new Properties();
         if (Files.exists(file)) {
             try (InputStream in = Files.newInputStream(file)) {
                 properties.load(in);
@@ -44,15 +44,15 @@ public final class AffinityConfig {
     }
 
     /** CPU for a role, or -1 when affinity is disabled or the role is not mapped. */
-    public int cpuFor(String role) {
+    public int cpuFor(final String role) {
         if (!enabled) {
             return -1;
         }
-        String value = properties.getProperty(role + ".cpu.affinity");
+        final String value = properties.getProperty(role + ".cpu.affinity");
         return value == null || value.isBlank() ? -1 : Integer.parseInt(value.trim());
     }
 
-    public String get(String key, String defaultValue) {
+    public String get(final String key, final String defaultValue) {
         return properties.getProperty(key, defaultValue);
     }
 }

@@ -15,7 +15,7 @@ public interface IdleStrategy {
     /** @param workCount work done in the last iteration; 0 means idle. */
     void idle(int workCount);
 
-    static IdleStrategy of(String name) {
+    static IdleStrategy of(final String name) {
         return switch (name) {
             case "spin" -> workCount -> {
                 if (workCount == 0) {
@@ -37,7 +37,7 @@ public interface IdleStrategy {
         private long parkNs = MIN_PARK_NS;
 
         @Override
-        public void idle(int workCount) {
+        public void idle(final int workCount) {
             if (workCount > 0) {
                 idleCount = 0;
                 parkNs = MIN_PARK_NS;
@@ -46,12 +46,14 @@ public interface IdleStrategy {
             idleCount++;
             if (idleCount <= SPINS) {
                 Thread.onSpinWait();
-            } else if (idleCount <= SPINS + YIELDS) {
-                Thread.yield();
-            } else {
-                LockSupport.parkNanos(parkNs);
-                parkNs = Math.min(parkNs << 1, MAX_PARK_NS);
+                return;
             }
+            if (idleCount <= SPINS + YIELDS) {
+                Thread.yield();
+                return;
+            }
+            LockSupport.parkNanos(parkNs);
+            parkNs = Math.min(parkNs << 1, MAX_PARK_NS);
         }
     }
 }

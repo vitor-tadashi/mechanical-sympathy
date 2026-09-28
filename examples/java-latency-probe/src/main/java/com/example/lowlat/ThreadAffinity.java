@@ -51,7 +51,7 @@ public final class ThreadAffinity {
     }
 
     /** Restricts the calling thread to exactly one CPU. */
-    public static void pinCurrentThread(int cpu) {
+    public static void pinCurrentThread(final int cpu) {
         if (!isSupported()) {
             throw new UnsupportedOperationException("thread affinity needs Linux (sched_setaffinity)");
         }
@@ -59,19 +59,19 @@ public final class ThreadAffinity {
             throw new IllegalArgumentException("cpu out of range: " + cpu);
         }
         try (Arena arena = Arena.ofConfined()) {
-            MemorySegment mask = arena.allocate(CPU_SET_BYTES, Long.BYTES); // zeroed
-            long word = mask.getAtIndex(ValueLayout.JAVA_LONG, cpu / Long.SIZE);
+            final MemorySegment mask = arena.allocate(CPU_SET_BYTES, Long.BYTES); // zeroed
+            final long word = mask.getAtIndex(ValueLayout.JAVA_LONG, cpu / Long.SIZE);
             mask.setAtIndex(ValueLayout.JAVA_LONG, cpu / Long.SIZE, word | 1L << (cpu % Long.SIZE));
-            MemorySegment state = arena.allocate(CALL_STATE);
-            int rc = (int) SCHED_SETAFFINITY.invokeExact(state, 0, CPU_SET_BYTES, mask);
+            final MemorySegment state = arena.allocate(CALL_STATE);
+            final int rc = (int) SCHED_SETAFFINITY.invokeExact(state, 0, CPU_SET_BYTES, mask);
             if (rc != 0) {
                 // EINVAL: the CPU is offline or outside this process's cpuset (cgroup)
                 throw new IllegalStateException("sched_setaffinity(cpu=" + cpu + ") failed: errno="
                         + (int) ERRNO.get(state, 0L));
             }
-        } catch (RuntimeException | Error e) {
+        } catch (final RuntimeException | Error e) {
             throw e;
-        } catch (Throwable t) {
+        } catch (final Throwable t) {
             throw new IllegalStateException(t);
         }
     }
@@ -83,7 +83,7 @@ public final class ThreadAffinity {
         }
         try {
             return (int) SCHED_GETCPU.invokeExact();
-        } catch (Throwable t) {
+        } catch (final Throwable t) {
             return -1;
         }
     }
@@ -94,24 +94,24 @@ public final class ThreadAffinity {
             return "n/a";
         }
         try (Arena arena = Arena.ofConfined()) {
-            MemorySegment mask = arena.allocate(CPU_SET_BYTES, Long.BYTES);
-            MemorySegment state = arena.allocate(CALL_STATE);
-            int rc = (int) SCHED_GETAFFINITY.invokeExact(state, 0, CPU_SET_BYTES, mask);
+            final MemorySegment mask = arena.allocate(CPU_SET_BYTES, Long.BYTES);
+            final MemorySegment state = arena.allocate(CALL_STATE);
+            final int rc = (int) SCHED_GETAFFINITY.invokeExact(state, 0, CPU_SET_BYTES, mask);
             return rc == 0 ? format(mask) : "n/a";
-        } catch (Throwable t) {
+        } catch (final Throwable t) {
             return "n/a";
         }
     }
 
-    private static String format(MemorySegment mask) {
-        StringBuilder sb = new StringBuilder("{");
+    private static String format(final MemorySegment mask) {
+        final StringBuilder sb = new StringBuilder("{");
         int cpu = 0;
         while (cpu < CPU_SETSIZE) {
             if (!isSet(mask, cpu)) {
                 cpu++;
                 continue;
             }
-            int first = cpu;
+            final int first = cpu;
             while (cpu + 1 < CPU_SETSIZE && isSet(mask, cpu + 1)) {
                 cpu++;
             }
@@ -124,14 +124,14 @@ public final class ThreadAffinity {
         return sb.append('}').toString();
     }
 
-    private static boolean isSet(MemorySegment mask, int cpu) {
+    private static boolean isSet(final MemorySegment mask, final int cpu) {
         return (mask.getAtIndex(ValueLayout.JAVA_LONG, cpu / Long.SIZE) & 1L << (cpu % Long.SIZE)) != 0;
     }
 
     /** Handle for a libc function, or null when the symbol does not exist (non-Linux). */
     @SuppressWarnings("restricted") // native access is enabled by the launcher (--enable-native-access)
-    private static MethodHandle downcall(String name, FunctionDescriptor descriptor, boolean captureErrno) {
-        Optional<MemorySegment> symbol = LINKER.defaultLookup().find(name);
+    private static MethodHandle downcall(final String name, final FunctionDescriptor descriptor, final boolean captureErrno) {
+        final Optional<MemorySegment> symbol = LINKER.defaultLookup().find(name);
         if (symbol.isEmpty()) {
             return null;
         }
