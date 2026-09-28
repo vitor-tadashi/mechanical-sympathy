@@ -58,6 +58,8 @@ NAPI processes up to `net.core.netdev_budget` packets (300 by default) or `netde
 | aRFS | NIC + driver | Hardware flow steering toward the consumer's CPU | Possible for kernel-stack designs with IRQs on the consumer's CPU; conflicts with isolation |
 | XPS | TX | Map sending CPUs to TX queues | Yes, when several pinned threads send on one NIC |
 
+The `ethtool` options that control queues, RSS indirection and flow rules are described one by one in [concepts/ethtool.md](ethtool.md).
+
 ## 6. Transmit path
 
 `send()` → socket → TCP/UDP → qdisc (`fq_codel` by default, length `txqueuelen`) → driver TX ring → NIC DMA → wire → TX completion interrupt (moderated by `tx-usecs`) → buffers freed.
@@ -77,7 +79,7 @@ NAPI processes up to `net.core.netdev_budget` packets (300 by default) or `netde
 
 ## 9. Kernel bypass
 
-A user-space driver maps the NIC's rings (descriptor queues and doorbells) into the process. Packets are DMA'd straight into memory the application reads, and the application polls the ring. There is no interrupt, no softirq, no syscall, no copy, and no netfilter. Socket-compatible implementations intercept the libc socket calls, so existing applications work unmodified with an `LD_PRELOAD` launcher. The costs are one spinning core per polling thread, vendor-specific tuning, huge pages for buffers, and operational differences: `tcpdump` does not see accelerated traffic without vendor tooling. See [Guide 04 §7](../guides/04-network-optimization.md#7-kernel-bypass-optional).
+A user-space driver maps the NIC's rings (descriptor queues and doorbells) into the process. Packets are DMA'd straight into memory the application reads, and the application polls the ring. There is no interrupt, no softirq, no syscall, no copy, and no netfilter. Socket-compatible implementations intercept the libc socket calls, so existing applications work unmodified with an `LD_PRELOAD` launcher. The costs are one spinning core per polling thread, vendor-specific tuning, huge pages for buffers, and operational differences: `tcpdump` does not see accelerated traffic without vendor tooling. See [Guide 08 — Kernel bypass](../guides/08-kernel-bypass.md) for the stacks, how each one interacts with the kernel queues, and how to set them up.
 
 ## 10. Measuring
 
@@ -96,6 +98,7 @@ A market-data consumer saw p50 = 7 µs and p99 = 60 µs on a quiet feed, but p99
 
 ## 12. References
 
+- [concepts/ethtool.md](ethtool.md): every `ethtool` option used in these guides
 - <https://docs.kernel.org/networking/scaling.html> (RSS/RPS/RFS/XPS)
 - <https://docs.kernel.org/networking/napi.html> (NAPI, busy polling, IRQ deferral)
 - <https://docs.kernel.org/networking/timestamping.html>

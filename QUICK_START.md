@@ -19,6 +19,7 @@ Before anything else, capture a **baseline**: latency percentiles (p50/p99/p99.9
 | 7 | [05](guides/05-cgroup-isolation.md) | housekeeping.slice for agents, pin EDR/AV | |
 | 8 | [04](guides/04-network-optimization.md) | NIC roles, coalescing, IRQ affinity. Installs `lowlat-runtime.service`. | |
 | 9 | [Example](examples/hugepages-java-example.md) | Launcher: options by host class, large-page flags when pinned, threads pinned by role | |
+| 10 | [08](guides/08-kernel-bypass.md) | *Optional.* Kernel bypass: Onload on Solarflare/AMD NICs, or DPDK on Intel NICs (enables the IOMMU in step 2) | DPDK: ✔ (same reboot) |
 
 ```bash
 scripts/apply-all --dry-run | less
@@ -91,4 +92,5 @@ rtla osnoise top -c <isolated cpus> -d 60s        # noise on the isolated CPUs
 | Application cannot pin threads | cpuset trap: [Guide 05 §4.4](guides/05-cgroup-isolation.md#44-the-cpuset-trap) |
 | JVM fails with large pages | Pool on the wrong node or too small: [Guide 03 §9](guides/03-huge-pages-configuration.md#9-troubleshooting) |
 | Network settings gone after reboot | `systemctl status lowlat-runtime` |
+| Kernel-bypass application falls back to the kernel stack | [Guide 08 §11](guides/08-kernel-bypass.md#11-troubleshooting) |
 | Undo everything | Each guide's rollback section; the original files are in `/var/lib/lowlat/factory-settings/` |

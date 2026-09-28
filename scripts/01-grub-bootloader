@@ -83,7 +83,14 @@ apply_isolation_grub_set() {
 	grub_set_arg default_hugepagesz "${HUGEPAGE_SIZE}"
 	grub_set_arg hugepagesz "${HUGEPAGE_SIZE}"
 
-	if [[ "${GRUB_DISABLE_IOMMU}" == yes ]]; then
+	if [[ "${KERNEL_BYPASS_STACK:-}" == dpdk && "${DPDK_DRIVER:-vfio-pci}" == vfio-pci ]]; then
+		# vfio-pci needs DMA translation. iommu=pt keeps kernel-driven devices on
+		# identity mappings, so only the devices given to DPDK pay for translation.
+		[[ "${GRUB_DISABLE_IOMMU}" == yes ]] && log_warn "GRUB_DISABLE_IOMMU=yes ignored: DPDK with vfio-pci needs the IOMMU (Guide 08 §4)"
+		log_sub_step "Enabling IOMMU translation for vfio-pci (intel_iommu=on iommu=pt)"
+		grub_set_arg intel_iommu on
+		grub_set_arg iommu pt
+	elif [[ "${GRUB_DISABLE_IOMMU}" == yes ]]; then
 		log_sub_step "Disabling IOMMU translation (intel_iommu=off iommu=off)"
 		grub_set_arg intel_iommu off
 		grub_set_arg iommu off

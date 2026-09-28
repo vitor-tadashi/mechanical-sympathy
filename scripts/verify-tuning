@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# verify-tuning - read-only report of every tuning guide (01-07) on this host.
+# verify-tuning - read-only report of every tuning guide (01-08) on this host.
 #
 #   verify-tuning [--config FILE] [--report FILE]
 #
@@ -33,7 +33,7 @@ fi
 
 # shellcheck source=lib/common
 . "${SCRIPTS_DIR}/lib/common"
-for guide in 01-grub-bootloader 02-cpu-isolation 03-huge-pages 04-network 05-cgroup-isolation 06-kernel-sysctl 07-os-hygiene; do
+for guide in 01-grub-bootloader 02-cpu-isolation 03-huge-pages 04-network 05-cgroup-isolation 06-kernel-sysctl 07-os-hygiene 08-kernel-bypass; do
 	# shellcheck source=/dev/null
 	. "${SCRIPTS_DIR}/${guide}"
 done
@@ -121,6 +121,8 @@ section "06 Kernel sysctl"
 verify_kernel_sysctl || true
 section "07 OS hygiene"
 verify_os_hygiene || true
+section "08 Kernel bypass"
+verify_kernel_bypass || true
 section "Host-wide"
 verify_host_wide
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# apply-all - applies Guides 01-07 in order, or re-applies their runtime part.
+# apply-all - applies Guides 01-08 in order, or re-applies their runtime part.
 #
 #   --plan      print what each capability would do on this host class, change nothing
 #   --dry-run   print every command and file, change nothing
@@ -30,6 +30,8 @@ SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 . "${SCRIPTS_DIR}/06-kernel-sysctl"
 # shellcheck source=07-os-hygiene
 . "${SCRIPTS_DIR}/07-os-hygiene"
+# shellcheck source=08-kernel-bypass
+. "${SCRIPTS_DIR}/08-kernel-bypass"
 
 RUNTIME_UNIT=/etc/systemd/system/lowlat-runtime.service
 
@@ -52,12 +54,13 @@ print_plan() {
 	local capability decision
 	printf 'host_class=%s\n' "${HOST_CLASS}"
 	for capability in latency_grub isolation_grub core_isolation irqbalance_disable rt_throttling \
-		huge_pages sysctl os_hygiene cgroup_isolation nic_tuning nic_irq_affinity; do
+		huge_pages sysctl os_hygiene cgroup_isolation nic_tuning nic_irq_affinity kernel_bypass; do
 		decision="$(capability_decision "${capability}")"
 		printf '%-20s %s\n' "${capability}" "${decision}"
 	done
 	printf '%-20s %s\n' flush_firewall "${FLUSH_FIREWALL_RULES:-no}"
 	printf '%-20s %s\n' remove_netfilter "${REMOVE_NETFILTER_MODULES:-no}"
+	printf '%-20s %s\n' bypass_stack "${KERNEL_BYPASS_STACK:-none}"
 }
 
 install_runtime_unit() {
@@ -81,6 +84,7 @@ apply_all() {
 	apply_kernel_sysctl                 # 06
 	apply_os_hygiene                    # 07 (tuned re-applies sysctl.d after its own)
 	apply_cgroup_isolation              # 05
+	apply_kernel_bypass                 # 08 (before 04: a driver reload resets the NICs)
 	apply_network                       # 04 (runtime)
 	log_step "Boot-time re-application of runtime settings"
 	install_runtime_unit
@@ -92,6 +96,7 @@ apply_all() {
 apply_all_runtime() {
 	print_header runtime
 	apply_cpu_isolation_runtime         # 02 workqueue mask
+	apply_kernel_bypass_runtime         # 08 DPDK port binding (before 04 tunes what the kernel keeps)
 	apply_network                       # 04 NIC settings + IRQ affinity
 	apply_cgroup_isolation_runtime      # 05 pin agents
 	apply_os_hygiene_runtime            # 07 opt-in firewall / modules

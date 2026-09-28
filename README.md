@@ -31,10 +31,11 @@ These settings are for **dedicated hosts running a small number of well-understo
 | 05 | [Process isolation with cgroups](guides/05-cgroup-isolation.md) | [`05-cgroup-isolation`](scripts/05-cgroup-isolation) | 3 | no | ✅ | ✅ |
 | 06 | [Kernel sysctl](guides/06-kernel-sysctl-tuning.md) | [`06-kernel-sysctl`](scripts/06-kernel-sysctl) | 2 | no | ✅ | ✅ |
 | 07 | [OS hygiene](guides/07-os-hygiene.md) | [`07-os-hygiene`](scripts/07-os-hygiene) | 2 (5 opt-in) | no | ✅ | ✅ |
+| 08 | [Kernel bypass (Onload, DPDK)](guides/08-kernel-bypass.md) | [`08-kernel-bypass`](scripts/08-kernel-bypass) | 4 (optional) | DPDK: yes (IOMMU) | ✅ | SR-IOV VF only |
 
 Plus:
 
-- **Concepts**: why it works. [Boot path](concepts/bootloader.md) · [CPU isolation](concepts/cpu-isolation.md) · [Network path](concepts/network-tuning.md) · [Huge pages & NUMA](concepts/huge-pages.md) · [cgroups](concepts/cgroups.md)
+- **Concepts**: why it works. [Boot path](concepts/bootloader.md) · [CPU isolation](concepts/cpu-isolation.md) · [Network path](concepts/network-tuning.md) · [`ethtool` reference](concepts/ethtool.md) · [Huge pages & NUMA](concepts/huge-pages.md) · [cgroups](concepts/cgroups.md)
 - **Examples**: [Java on a tuned host](examples/hugepages-java-example.md), with a [runnable probe](examples/java-latency-probe/) · [Multi-NIC segmentation](examples/network-segmentation-example.md)
 - **Tools**: [`apply-all`](scripts/apply-all) (plan / dry-run / apply / runtime) · [`verify-tuning`](scripts/verify-tuning) (PASS/WARN/FAIL report) · [`lowlat-runtime.service`](scripts/systemd/lowlat-runtime.service) (re-applies runtime state at boot)
 
@@ -63,7 +64,7 @@ sudo vi /etc/lowlat/lowlat.conf              # describe your CPUs, NICs and memo
 
 scripts/apply-all --plan                     # what applies on this host class
 scripts/apply-all --dry-run | less           # every command and file, nothing changed
-sudo scripts/apply-all --apply               # apply 01-07 + install lowlat-runtime.service
+sudo scripts/apply-all --apply               # apply 01-08 + install lowlat-runtime.service
 sudo systemctl reboot
 scripts/verify-tuning                        # PASS/WARN/FAIL for every guide
 ```
@@ -95,13 +96,13 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 ```
 .
 ├── README.md  QUICK_START.md  INDEX.md
-├── guides/          01..07 step-by-step guides
-├── concepts/        5 deep dives
+├── guides/          01..08 step-by-step guides
+├── concepts/        6 deep dives
 ├── examples/        Java on a tuned host (+ runnable probe), multi-NIC segmentation
 └── scripts/
     ├── lib/common            logging, dry-run, host class, backups, CPU list helpers
     ├── lowlat.conf.example    the host description
-    ├── 01..07-*               one script per guide (--apply / --dry-run / --verify / --rollback)
+    ├── 01..08-*               one script per guide (--apply / --dry-run / --verify / --rollback)
     ├── apply-all              sequencing + step timing
     ├── verify-tuning          read-only report
     └── systemd/lowlat-runtime.service

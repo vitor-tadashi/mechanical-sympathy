@@ -300,6 +300,10 @@ capability_decision() {
 	latency_grub | sysctl | nic_tuning | nic_irq_affinity | os_hygiene | cgroup_isolation)
 		printf 'apply\n'
 		;;
+	# Bare metal, or a VM with an SR-IOV VF / passthrough NIC (Guide 08 §10).
+	kernel_bypass)
+		printf 'apply\n'
+		;;
 	*) printf 'skip\n' ;;
 	esac
 }

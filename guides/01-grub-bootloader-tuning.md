@@ -158,6 +158,8 @@ These only set the **page size**. The **count** is deliberately *not* set on the
 
 Both groups are **opt-in** in `lowlat.conf` (`GRUB_DISABLE_IOMMU`, `GRUB_DISABLE_MITIGATIONS`).
 
+With `KERNEL_BYPASS_STACK=dpdk` and the `vfio-pci` driver, the script does the opposite: it sets `intel_iommu=on iommu=pt` whatever `GRUB_DISABLE_IOMMU` says. VFIO cannot work without DMA translation. `iommu=pt` keeps the devices that stay with kernel drivers on identity (passthrough) mappings, so only the ports handed to DPDK go through the IOMMU ([Guide 08 §4](08-kernel-bypass.md#4-prerequisites)).
+
 | Parameter | What it does | Latency gain | Security cost |
 |---|---|---|---|
 | `intel_iommu=off`, `iommu=off` | Turns DMA address translation off. Devices then DMA straight to physical addresses instead of going through the IOMMU and its IOTLB. | Removes IOTLB misses on the DMA path. | Devices can DMA anywhere in memory. **Required ON** for SR-IOV/VFIO/DPDK-with-IOMMU and for Thunderbolt/untrusted devices. |

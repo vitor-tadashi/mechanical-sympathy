@@ -1,6 +1,6 @@
 # Guide 04 — Network Optimization (NIC, Interrupts, Segmentation)
 
-> **Script:** [`scripts/04-network`](../scripts/04-network) · **Concept:** [concepts/network-tuning.md](../concepts/network-tuning.md) · **Example:** [examples/network-segmentation-example.md](../examples/network-segmentation-example.md) · **Previous:** [Guide 03](03-huge-pages-configuration.md) · **Next:** [Guide 05 — cgroups](05-cgroup-isolation.md)
+> **Script:** [`scripts/04-network`](../scripts/04-network) · **Concepts:** [network-tuning](../concepts/network-tuning.md), [ethtool reference](../concepts/ethtool.md) · **Example:** [examples/network-segmentation-example.md](../examples/network-segmentation-example.md) · **Previous:** [Guide 03](03-huge-pages-configuration.md) · **Next:** [Guide 05 — cgroups](05-cgroup-isolation.md)
 
 | | |
 |---|---|
@@ -29,7 +29,7 @@ Each stage has a setting that trades latency against throughput or CPU cost:
 | Transmit segmentation (TSO/GSO) | Build large frames and split them in the NIC or late in the stack | small, variable | `ethtool -K` |
 | IRQ / softirq placement | irqbalance picks a CPU, possibly remote or isolated | cross-node cache misses; noise on the isolated CPU | `/proc/irq/N/smp_affinity_list` |
 | Flow control | A congested peer can PAUSE our transmitter | up to ms | `ethtool -A` |
-| Queue count / RSS | Driver default | flows share queues, so head-of-line blocking | `ethtool -L` |
+| Queue count / RSS | Driver default (often one per CPU) | queues on CPUs you did not choose; flows sharing a queue block each other | `ethtool -L`, `-X`, `-N` |
 | Ring size | Driver default (often 512–1024) | drops, then retransmits (TCP: ≥ 200 ms RTO) | `ethtool -G` |
 
 The goal of this guide is that a critical packet **never waits** (coalescing 0, no batching, no PAUSE), is **never dropped** (large rings), and is **processed on a known CPU near the NIC** that is **not** one of the isolated CPUs.
@@ -42,7 +42,7 @@ The goal of this guide is that a critical packet **never waits** (coalescing 0, 
 | Bulk links (replication, logs, reports) on the same host | Yes, with the *bulk* profile (§5.9) |
 | The management interface you are logged in through | **No.** Role `mgmt` is never touched, except for moving its IRQs off isolated CPUs. |
 | VMs with virtio/ENA/vmxnet3 | Partially: see §10 |
-| Kernel-bypass NICs | Yes. The kernel side gets one queue; the bypass stack has its own tuning (§7). |
+| Kernel-bypass NICs | Yes, for what the kernel keeps: one queue with socket acceleration, nothing with DPDK (§7, [Guide 08](08-kernel-bypass.md)). |
 
 ## 3. Network segmentation: give each traffic class its own NIC
 
@@ -100,22 +100,87 @@ ethtool -g ens1f0      # ring sizes: maximum vs current
 grep ens1f0 /proc/interrupts                           # IRQ per queue and which CPUs served them
 ```
 
+What each of these options shows and changes is described in [concepts/ethtool.md](../concepts/ethtool.md).
+
 Save this output **before** tuning (`scripts/04-network` has `show_nic_state <iface>` for a compact version). It is your rollback reference.
 
 ## 5. Per-NIC settings (`tune_nic_low_latency`)
 
 ### 5.1 Queues (channels): `ethtool -L`
 
-```bash
-ethtool -L ens1f0 combined <max>     # kernel stack: all hardware queues
-ethtool -L ens1f0 combined 1         # kernel-bypass NIC: one queue for the kernel
+A modern NIC is not one pipe. It is a set of **queues** (rings of packet descriptors), and each queue has its own **MSI-X interrupt vector**. `ethtool` calls a queue together with its interrupt a **channel**:
+
+```
+$ ethtool -l ens1f0
+Channel parameters for ens1f0:
+Pre-set maximums:            ← what the hardware/driver can do
+RX:             0            ← RX-only queues with their own IRQ (0 = the driver does not use them)
+TX:             0            ← TX-only queues with their own IRQ
+Other:          1            ← link-state / management interrupt, never carries packets
+Combined:       63           ← RX queue + TX queue sharing ONE interrupt vector
+Current hardware settings:   ← what is configured now
+RX:             0
+TX:             0
+Other:          1
+Combined:       63           ← the driver default: often one per CPU, up to the maximum
 ```
 
-A "combined" channel is an RX + TX queue pair with its own MSI-X interrupt. With the kernel stack, more queues let RSS spread flows, so a burst on one flow does not delay another. Every queue then gets its IRQ placed on the housekeeping CPUs (§6).
+Most current drivers (ixgbe, i40e, ice, mlx5, sfc, bnxt) only use `Combined`. `ethtool -L ens1f0 combined N` therefore means "use N queue pairs, and N interrupts". Where a packet goes:
 
-With **kernel bypass** (§7), the user-space stack drives the data path directly and the kernel only sees control traffic (ARP, unaccelerated sockets). One queue means one IRQ to place and less memory pinned by the driver.
+```
+             RSS hash (src/dst IP + port)            one MSI-X vector per channel
+wire ─► NIC ──────────────┬─► queue 0 ─► IRQ 120 ─► smp_affinity_list ─► CPU 1 ─► NAPI poll (softirq) ─► socket
+                          ├─► queue 1 ─► IRQ 121 ─►        "          ─► CPU 1
+                          └─► queue N ─► IRQ 12N ─►        "          ─► CPU 1
+             indirection table (ethtool -x) maps hash buckets to queues
+```
 
-**Changing channels resets the NIC** on most drivers (link down for 1–3 s). Do it at boot or in a maintenance window, never during trading.
+The queue count matters in three places:
+
+- **Parallelism.** Each queue is drained by the softirq of the CPU its IRQ lands on. N queues can be serviced by N CPUs in parallel, but only if their IRQs are spread over N CPUs.
+- **Isolation between flows.** Two flows in the same queue are processed in order: a burst on one delays the other (head-of-line blocking). In different queues, on different CPUs, they do not.
+- **Cost.** Each queue pins ring memory and packet buffers, adds an IRQ vector to place, and adds a NAPI context to poll.
+
+#### Kernel stack: one queue per IRQ CPU
+
+```bash
+ethtool -L ens1f0 combined 1        # NICS entry "ens1f0|critical|1|0": one IRQ CPU → one queue
+ethtool -L ens2f0 combined 2        # NICS entry "ens2f0|bulk|28,30|..." → two queues, one per CPU
+```
+
+The script sets `combined` to the **number of CPUs in the NIC's `irq_cpus` field** in `NICS`, capped at the hardware maximum.
+
+The driver default (one queue per CPU, for example 63) makes sense when the IRQs are spread over every CPU. This guide deliberately puts all of a NIC's interrupts on one or two housekeeping CPUs (§6), because on a low-latency host they must not land on isolated CPUs. With 63 queues whose IRQs all point at CPU 1:
+
+- CPU 1 still processes every packet, one queue after the other, so there is no parallelism;
+- the flows still share one softirq loop, so there is no isolation;
+- the host pays for 63 rings, 63 vectors and 63 NAPI contexts;
+- after a driver reset, 62 more IRQs can reappear on the wrong CPUs.
+
+So on a kernel-stack host the queue count follows the CPU budget: **add IRQ CPUs first, then queues**.
+
+If one flow must never queue behind the others, put it in its own queue with its own CPU, and steer it there with an **ntuple rule**. The rule overrides RSS for matching packets:
+
+```bash
+ethtool -K ens1f0 ntuple on
+ethtool -L ens1f0 combined 2                                        # queue 0: critical flow, queue 1: everything else
+ethtool -X ens1f0 weight 0 1                                        # RSS spreads hashed traffic to queue 1 only
+ethtool -N ens1f0 flow-type udp4 dst-ip 10.10.1.10 dst-port 5000 action 0   # the critical flow → queue 0
+ethtool -n ens1f0                                                   # list the rules
+# then place queue 0's IRQ on one housekeeping CPU and queue 1's IRQ on another (§6)
+```
+
+ntuple support and the fields you can match on depend on the driver (`ethtool -k ens1f0 | grep ntuple`). The full option reference is in [concepts/ethtool.md](../concepts/ethtool.md).
+
+#### Kernel bypass: it depends on the stack
+
+`combined 1` on a kernel-bypass NIC is correct for socket-acceleration stacks such as **OpenOnload on Solarflare** (and XLIO on NVIDIA). The bypass stack creates **its own** hardware queues for the accelerated sockets, so the kernel queues carry only the traffic Onload does not accelerate (ARP, ICMP, unaccelerated sockets). One queue is enough for that; more would only add IRQs to place and memory to pin.
+
+With **DPDK on an Intel card** the question disappears: the port is unbound from the kernel driver and `ethtool` no longer sees it. [Guide 08 — Kernel bypass](08-kernel-bypass.md) covers each stack.
+
+In `lowlat.conf`, `KERNEL_BYPASS_DRIVER` and `KERNEL_BYPASS_COMMAND` mark socket-acceleration NICs. The script gives those NICs one queue, whatever their `irq_cpus` field says.
+
+**Changing channels resets the NIC** on most drivers (link down for 1–3 s), and the new queues come up with **default IRQ affinity**. Do it at boot or in a maintenance window, never during trading, and always re-run the IRQ placement (§6) afterwards. `apply-all` and `lowlat-runtime.service` already run the two steps in that order.
 
 ### 5.2 Adaptive coalescing off: `ethtool -C adaptive-rx off adaptive-tx off`
 
@@ -182,7 +247,7 @@ Where the NIC interrupt runs is where the **softirq** (protocol processing) runs
 |---|---|---|---|---|
 | **A. Housekeeping IRQ CPU** (reference) | a node-local, non-isolated CPU (CPU 1) | isolated CPU, spins on the socket (non-blocking `recv` in a loop) | Isolated CPU never interrupted. Deterministic. | One cache-line transfer (same node, ~40–80 ns) from CPU 1 to the app CPU per packet |
 | **B. Busy polling** | NAPI is polled **from the app thread's syscall** (`SO_BUSY_POLL`, `net.core.busy_read`) | isolated CPU | Skips the IRQ → softirq → wake-up chain | CPU cost; the IRQ still fires unless deferred (`napi_defer_hard_irqs`) |
-| **C. Kernel bypass** (§7) | none for data (user space polls the NIC) | isolated CPU | Lowest latency, no syscalls | Vendor stack, own tuning, huge pages |
+| **C. Kernel bypass** (§7, [Guide 08](08-kernel-bypass.md)) | none for data (user space polls the NIC) | isolated CPU | Lowest latency, no syscalls | Vendor stack, own tuning, huge pages |
 
 Never put the IRQs of a kernel-stack NIC **on an isolated CPU** that runs a spinning thread. The softirq then has to preempt your thread (or waits in `ksoftirqd` behind it, see [Guide 02 §6.5](02-cpu-core-isolation.md#65-real-time-scheduling-class-usually-unnecessary)).
 
@@ -214,23 +279,17 @@ cat /proc/irq/<irq>/effective_affinity_list        # what the interrupt controll
 
 ## 7. Kernel bypass (optional)
 
-Kernel-bypass stacks (for example OpenOnload/EF_VI, VMA/XLIO, DPDK-based stacks) map the NIC's queues into the application's address space. A socket-compatible stack intercepts socket calls through `LD_PRELOAD`, so unmodified binaries run as `<bypass-launcher> --profile=<name> java ...`. The application thread polls the NIC directly, with no interrupts, no softirq, and no syscalls. Typical one-way latency drops from ~5–10 µs (tuned kernel stack) to ~1–2 µs.
+A kernel-bypass stack takes the data path of a NIC out of the kernel. The application polls the NIC's queues from user space, with no interrupt, no softirq and no syscall. One-way latency drops from roughly 5–10 µs (tuned kernel stack) to roughly 1–2 µs. This guide still applies to what the kernel keeps, but some of its settings change:
 
-What changes compared to the kernel-stack configuration:
+| Area | Kernel stack (this guide) | Socket acceleration (Onload, XLIO) | DPDK on Intel |
+|---|---|---|---|
+| Kernel queues (`ethtool -L`) | one per IRQ CPU (§5.1) | **1**: the stack has its own queues | n/a: the port has left the kernel |
+| IRQ placement (§6) | yes | yes, for the one remaining queue | n/a |
+| Coalescing / offloads (§5) | yes | kernel queue only; the stack has its own settings | n/a: poll-mode driver |
+| Huge pages | optional | **required**, the stack must fail without them | **required** |
+| Application change | none | none (`LD_PRELOAD` launcher) | rewrite against DPDK |
 
-| Area | Kernel stack | Kernel bypass |
-|---|---|---|
-| Kernel queues (`ethtool -L`) | maximum | **1** (kernel only carries control traffic) |
-| IRQ placement | critical | still do it, for the one remaining queue |
-| Driver module options | defaults | limit kernel RSS to the local node / one CPU (vendor options such as `rss_cpus=1`, `rss_numa_local=1` in `/etc/modprobe.d/`) |
-| Huge pages | optional | **required** for packet buffers ([Guide 03](03-huge-pages-configuration.md#54-other-huge-page-consumers-in-a-java-stack)). Configure the stack to *fail* without them. |
-| Spinning | application | the stack spins inside blocking calls (profile settings like "poll forever", "spin in select/epoll") |
-| Pre-allocation | n/a | pre-allocate and pre-fault packet buffers at start-up |
-| Launch | `java ...` | `<bypass-launcher> -p <profile> java ...`. Make the launcher add the prefix only when the bypass runtime is installed. |
-
-In `lowlat.conf`, set `KERNEL_BYPASS_DRIVER` (as shown by `ethtool -i`) and `KERNEL_BYPASS_COMMAND`. The script then applies the single-queue profile to those NICs only.
-
-After loading module options, reload the stack's drivers **pinned to a housekeeping CPU** (for example `numactl --physcpubind=1 <bypass-tool> reload`), so the kernel threads it creates start on that CPU.
+Everything else (choosing a stack, drivers, profiles, IOMMU, launch, verification and rollback) is in **[Guide 08 — Kernel bypass](08-kernel-bypass.md)**.
 
 ## 8. Persistence
 
@@ -307,6 +366,9 @@ sudo systemctl reboot                                   # drivers load with thei
 sudo ethtool -C ens1f0 adaptive-rx on adaptive-tx on
 sudo ethtool -K ens1f0 tso on gso on
 sudo ethtool -A ens1f0 autoneg on rx on tx on
+sudo ethtool -L ens1f0 combined <n>                     # the "Current" value you saved in §4 (resets the link)
+sudo ethtool -X ens1f0 default                          # RSS indirection back to the driver default
+sudo ethtool -N ens1f0 delete <rule id>                 # every ntuple rule listed by ethtool -n
 sudo systemctl enable --now irqbalance
 ```
 
@@ -315,4 +377,5 @@ sudo systemctl enable --now irqbalance
 - `man 8 ethtool`; kernel networking scaling: <https://docs.kernel.org/networking/scaling.html>
 - NAPI and busy polling: <https://docs.kernel.org/networking/napi.html>
 - Red Hat — *Tuning the network performance* (RHEL 9), *nm-settings-nmcli(5)* `ethtool` section
-- Deep dive: [concepts/network-tuning.md](../concepts/network-tuning.md)
+- Deep dive: [concepts/network-tuning.md](../concepts/network-tuning.md); every `ethtool` option: [concepts/ethtool.md](../concepts/ethtool.md)
+- Kernel bypass: [Guide 08](08-kernel-bypass.md)
