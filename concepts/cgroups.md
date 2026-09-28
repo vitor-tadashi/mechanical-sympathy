@@ -2,6 +2,12 @@
 
 > Used by: [Guide 05](../guides/05-cgroup-isolation.md). Related: [cpu-isolation](cpu-isolation.md).
 
+## At a glance
+
+- Affinity, nice and I/O priority are hints a process can change. cgroups are enforced by the kernel.
+- Four controllers matter here: cpuset (where), cpu (how much time), memory (how much RAM), io (how much disk). PSI shows who is starved.
+- systemd owns the tree. Slices group units, and resource directives on a unit become cgroup files.
+
 ## 1. Why it matters
 
 Affinity (`sched_setaffinity`, systemd `CPUAffinity`) says where a process *prefers* to run, and any process can change its own. Nice values and I/O priorities are hints. **Control groups** are enforced by the kernel: a process in a cgroup cannot leave its cpuset, cannot exceed its memory cap without being reclaimed or OOM-killed, and cannot take more CPU time or I/O than its limits allow. On a latency-critical host that is what keeps third-party software from affecting the CPUs, memory, and disks the critical path depends on.
@@ -18,6 +24,19 @@ cat /sys/fs/cgroup/cgroup.controllers
 ```
 
 ## 3. The controllers that matter here
+
+```mermaid
+flowchart LR
+  cg[["a cgroup<br/>(slice or service)"]] --> cs["cpuset<br/>cpus, mems, partition<br/>AllowedCPUs="]
+  cg --> cpu["cpu<br/>weight, max (quota)<br/>CPUWeight=, CPUQuota="]
+  cg --> mem["memory<br/>max, high, low, min<br/>MemoryMax=, MemoryHigh="]
+  cg --> io["io<br/>weight, max, latency<br/>IOWeight=, IOReadBandwidthMax="]
+  cg --> psi["PSI<br/>cpu/memory/io.pressure<br/>who waited, how long"]
+  classDef muted fill:#eeeeee,stroke:#777777,color:#333333
+  class psi muted
+```
+
+*Each controller exposes a few files in the cgroup directory. systemd sets them through the resource directives shown on the second line of each box. PSI is read-only: it reports stalls instead of enforcing anything.*
 
 ### cpuset
 
@@ -75,7 +94,15 @@ Some directives are **not** cgroup-based: `CPUAffinity=`, `Nice=`, `IOScheduling
 
 After a network outage, a log shipper replayed 40 GB of backlog. It used 3 CPUs and 6 GB of page cache, pushed the application's journal out of the page cache, and delayed the journal's `fsync` calls behind its own I/O. With the shipper in `housekeeping.slice` (`CPUQuota=150%`, `MemoryMax=4G`, `IOWeight=50`), the replay takes longer, and the application does not notice it.
 
-## 7. References
+## 7. Key takeaways
+
+- A cpuset is a fence: `sched_setaffinity()` outside it fails with `EINVAL`. Use that for agents, and never against the application.
+- A CPU quota throttles every thread of the group until the next period. Never put one on the latency-critical application.
+- Page cache is charged to the cgroup that caused it, so a noisy reader pays for its own cache.
+- Protect the critical application by removing limits, confine everything else, and keep a way in for operators.
+- Watch `cpu.stat`, `memory.events` and PSI per slice. A starved agent slice is often the first sign of trouble.
+
+## 8. References
 
 - <https://docs.kernel.org/admin-guide/cgroup-v2.html>
 - `man 5 systemd.resource-control`, `man 5 systemd.slice`, `man 7 cpuset`
