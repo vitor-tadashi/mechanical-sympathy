@@ -9,6 +9,24 @@
 | **Applies to** | Bare metal and VMs (resource limits are useful everywhere; CPU fencing matters most on bare metal). |
 | **Depends on** | [Guide 02](02-cpu-core-isolation.md) (CPU layout, systemd `CPUAffinity`) |
 
+## At a glance
+
+- **What:** put agents (EDR, log shippers, exporters, backup) into a `housekeeping.slice` that fences them onto two quiet CPUs and caps their CPU, memory and I/O.
+- **Why:** affinity is advisory, and agents reset it. A hard cpuset fence plus quotas keeps a misbehaving agent away from isolated CPUs and away from the CPU that serves the critical NIC.
+- **Cost:** agents get less headroom and may report "degraded". A cpuset on the wrong slice can stop the application from pinning.
+
+**Time:** ~30 min, no reboot (restart the moved services) · **Do this if:** third-party agents run next to the application · **Skip if:** the host runs no agents at all (Guide 02 is enough).
+
+```mermaid
+flowchart LR
+  g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
+  class g05 focus
+  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+```
+
+*Guide 05 hardens what Guide 02 set up: affinity becomes a fence for the processes that do not respect it.*
+
 ---
 
 ## 1. What this guide adds on top of Guide 02
@@ -48,13 +66,34 @@ RHEL 8 can boot into v2 with the kernel argument `systemd.unified_cgroup_hierarc
 
 ## 4. Design: three slices
 
+```mermaid
+flowchart TD
+  root["-.slice (root)"] --> sys["system.slice<br/>OS services<br/>CPUAffinity = OS_CPUS (Guide 02)"]
+  root --> usr["user.slice<br/>SSH sessions<br/>CPUAffinity = OS_CPUS (Guide 02)"]
+  root --> hk["housekeeping.slice<br/>agents, shippers, EDR<br/>AllowedCPUs=4,6 · CPUQuota=150% · MemoryMax=4G · IOWeight=50"]
+  root --> lat["latency.slice (optional)<br/>the application<br/>AllowedCPUs = all · IOWeight=1000"]
+  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
+  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
+  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+  class sys,usr hk
+  class hk focus
+  class lat iso
 ```
+
+*The OS and SSH keep Guide 02's inherited affinity. Agents go into `housekeeping.slice`, a hard fence on two quiet CPUs with CPU, memory and I/O caps. The application can get its own slice that spans every CPU.*
+
+<details>
+<summary><b>The same tree as text</b></summary>
+
+```text
 -.slice (root)
 ├── system.slice          OS services               CPUAffinity = OS_CPUS (Guide 02)
 ├── user.slice            SSH sessions              CPUAffinity = OS_CPUS (Guide 02)
 ├── housekeeping.slice    agents, shippers, EDR     AllowedCPUs = 4,6   CPUQuota=150%  MemoryMax=4G  IOWeight=50
 └── latency.slice         the application           AllowedCPUs = all   IOWeight=1000 (optional)
 ```
+
+</details>
 
 ### 4.1 `housekeeping.slice` (created by the script)
 
@@ -109,7 +148,23 @@ Pin them to **one** housekeeping CPU that serves no IRQs. Letting a scanner roam
 
 ### 4.4 The cpuset trap
 
+> [!WARNING]
 > **Do not put `AllowedCPUs=` on `system.slice` or `user.slice` unless the application runs in its own slice.**
+
+```mermaid
+sequenceDiagram
+  participant T as critical thread
+  participant K as kernel
+  Note over T,K: app in user.slice with AllowedCPUs=OS_CPUS (cpuset)
+  T->>K: sched_setaffinity(CPU 9, isolated)
+  K-->>T: EINVAL, CPU 9 is outside the cpuset
+  Note over T: crashes, or runs "pinned" threads unpinned
+  Note over T,K: app in latency.slice with AllowedCPUs=0-31
+  T->>K: sched_setaffinity(CPU 9, isolated)
+  K-->>T: 0, pinned
+```
+
+*The same pinning call fails inside a slice whose cpuset excludes the isolated CPUs, and succeeds inside a slice that includes them.*
 
 `CPUAffinity` (Guide 02) is inherited but **not enforced**. That is what lets an application started from a shell (in `user.slice`) or as a service (in `system.slice`) pin its critical threads onto isolated CPUs. A **cpuset** is enforced: if `user.slice` has `AllowedCPUs=<OS_CPUS>`, every `sched_setaffinity()` to an isolated CPU from a process in that slice fails with `EINVAL`. The application then either crashes on start or, worse, logs a warning and runs its "pinned" threads unpinned.
 
@@ -127,7 +182,10 @@ AllowedCPUs=0-31          # everything: non-critical JVM threads on OS CPUs, cri
 IOWeight=1000
 ```
 
-`/etc/systemd/system/trading-app.service`:
+`/etc/systemd/system/trading-app.service` starts the launcher as `app-user` in `latency.slice`, on the OS CPUs (the critical threads re-pin themselves), with RT, memlock and file limits, a low OOM score, and no automatic restart:
+
+<details>
+<summary><b>Full unit: <code>trading-app.service</code></b></summary>
 
 ```ini
 [Unit]
@@ -154,9 +212,14 @@ TimeoutStopSec=60
 WantedBy=multi-user.target
 ```
 
+</details>
+
 ### 4.5 Advanced: cpuset partitions instead of `isolcpus` (cgroup v2)
 
 Newer kernels let a cgroup v2 cpuset become an **isolated partition** (`echo isolated > cpuset.cpus.partition`). The CPUs are removed from the scheduler's load-balancing domains **at runtime**, which is the same effect as `isolcpus=domain`, with no reboot, and reversible. Support arrived in kernel 6.x and has been backported to recent RHEL 9 minor releases. Check `cat /sys/fs/cgroup/<slice>/cpuset.cpus.partition` after writing it: if it says `isolated invalid`, your kernel or layout does not support it. It does **not** replace `nohz_full` and `rcu_nocbs`, which are still boot-time only. For now, `isolcpus` ([Guide 01](01-grub-bootloader-tuning.md)) remains the reference approach in this documentation.
+
+> [!NOTE]
+> **Not proven in production.** Cpuset partitions have not replaced `isolcpus` on a production host in this setup. Treat this section as a direction to evaluate, not a recipe.
 
 ## 5. Real-world examples
 
@@ -202,6 +265,21 @@ cat /sys/fs/cgroup/housekeeping.slice/cpu.stat
 
 ## 7. Troubleshooting
 
+```mermaid
+flowchart TD
+  s(["cgroup problem"]) --> a{"App cannot pin<br/>(EINVAL)?"}
+  a -- yes --> f1["Cpuset without isolated CPUs:<br/>run it in latency.slice (§4.4)"]
+  a -- no --> g{"Agent on the<br/>wrong CPU?"}
+  g -- "after moving it" --> f2["Restart the unit, check<br/>cat /proc/pid/cgroup"]
+  g -- "drifts back later" --> f3["Agent resets affinity: AllowedCPUs (v2)<br/>or pin_housekeeping_processes on a timer"]
+  g -- no --> o{"Agent OOM-killed<br/>or throttled?"}
+  o -- OOM --> f4["Raise MemoryMax for that unit"]
+  o -- "monitoring gaps" --> f5["cpu.stat nr_throttled: raise CPUQuota"]
+  o -- no --> f6["See the table below"]
+```
+
+*Check pinning failures first, because they hurt the application. Then check agents escaping the fence, then limits that are too tight.*
+
 | Symptom | Cause | Fix |
 |---|---|---|
 | Application logs "failed to set affinity" / `EINVAL` | Its cgroup has a cpuset without the isolated CPUs | §4.4: `latency.slice` |
@@ -213,10 +291,9 @@ cat /sys/fs/cgroup/housekeeping.slice/cpu.stat
 
 ## 8. Rollback
 
-```bash
-sudo scripts/05-cgroup-isolation --rollback
-sudo systemctl restart node_exporter fluent-bit
-```
+- [ ] Remove the slice and the drop-ins: `sudo scripts/05-cgroup-isolation --rollback`
+- [ ] Restart the units that were moved: `sudo systemctl restart node_exporter fluent-bit`
+- [ ] Confirm: `systemctl show -p Slice node_exporter` shows `system.slice`
 
 ## 9. Bare metal vs VM
 
@@ -227,7 +304,15 @@ sudo systemctl restart node_exporter fluent-bit
 | Pinning agents | ✅ | ✅ |
 | Isolated partitions (§4.5) | Optional | ❌ |
 
-## 10. References
+## 10. Key takeaways
+
+- Affinity (Guide 02) is advisory. A cpuset (`AllowedCPUs`) is a fence the process cannot leave.
+- The cpuset decides where agents run, and the quota decides how much. Use both.
+- Fence agents onto CPUs that serve no NIC interrupts and no workqueues.
+- Never put a cpuset without the isolated CPUs on the slice the application runs in, or its pinning calls fail.
+- On cgroup v1 (RHEL 8 default) there is no `AllowedCPUs`. The script falls back to per-unit `CPUAffinity`.
+
+## 11. References
 
 - `man 5 systemd.resource-control`, `man 5 systemd.slice`, `man 1 systemd-cgls`, `man 1 systemd-cgtop`
 - cgroup v2: <https://docs.kernel.org/admin-guide/cgroup-v2.html> (cpuset partitions: section "Cpuset")
