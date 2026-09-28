@@ -58,10 +58,16 @@ These rules apply to every change, whoever makes it. If a rule and a request con
 | `make lint` | everything below. CI runs it (`.github/workflows/lint.yml`) |
 | `make lint-scripts` | no `.sh`/`.bash` files, exec bits, ShellCheck `enable=all`, `bash -n` |
 | `make lint-java` | Checkstyle, `-Werror` compile, dependency approval, checksums |
-| `make install-git-hooks` | opt-in pre-commit hook that runs `make lint` |
+| `make install-git-hooks` | opt-in hooks: pre-commit runs `make lint`, commit-msg runs `tools/check-commit-title` |
+| `tools/check-commit-title` | commit and PR title rules (section 8). CI checks every PR title and commit |
 
 ## 8. Git
 
-- [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for commit messages and PR titles: `type(scope): subject`.
+- **Commit titles** follow Google's guidance for change descriptions. The title completes "If applied, this commit will ...". PR titles follow the same rules, because a squash merge turns the PR title into the commit title.
+  - Imperative mood, capitalized: `Add kernel-bypass guide`, not `Added kernel-bypass guide` or `add kernel-bypass guide`.
+  - Plain text, no prefix: no `docs:`, `feat(scope):` or `[TICKET]`.
+  - At most 72 characters, no trailing period, ASCII only.
+  - Specific: `Pin IRQs of bulk NICs to housekeeping CPUs`, not `Fix bug` or `Update files`.
+  - A body is optional. When there is one, leave a blank line after the title and explain what changed and why, wrapped at 72 columns.
 - [Conventional Branch](https://conventional-branch.github.io/) names: `<type>/<kebab-slug>` (`docs/kernel-bypass`, `fix/irq-affinity`).
 - Work lands on `main` through pull requests. Never push directly to `main`.

@@ -3,11 +3,29 @@ name: lint
 on:
   push:
   pull_request:
+    types: [opened, synchronize, reopened, edited]
 
 permissions:
   contents: read
 
 jobs:
+  commit-titles:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: PR title (becomes the squash commit title)
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: tools/check-commit-title "${PR_TITLE}"
+      - name: Commit titles
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: tools/check-commit-title --range "${BASE_SHA}..${HEAD_SHA}"
+
   scripts:
     runs-on: ubuntu-24.04
     steps:
