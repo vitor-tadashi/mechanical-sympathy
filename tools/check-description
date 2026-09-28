@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+#
+# check-description - reject emojis and tool attribution footers in a PR or commit description.
+#
+# Reads the description on stdin. Fails on:
+#   - emoji and pictographic symbols (U+1F000-1FAFF, U+2600-27BF, U+2B00-2BFF,
+#     variation selector U+FE0F)
+#   - "Generated with ..." footers added by coding tools
+#
+# Usage: tools/check-description <message-file
+#        printf '%s' "${PR_BODY}" | tools/check-description
+
+set -Eeuo pipefail
+
+text="$(cat)"
+failures=0
+
+emoji_lines="$(perl -CSD -ne 'print "$.: $_" if /[\x{1F000}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}\x{FE0F}]/' <<<"${text}")"
+if [[ -n "${emoji_lines}" ]]; then
+	printf 'check-description: remove the emojis\n%s\n' "${emoji_lines}" >&2
+	failures=$((failures + 1))
+fi
+
+footer_lines="$(grep -n -i -E 'generated (with|by) .*(claude|copilot|cursor|chatgpt)' <<<"${text}" || true)"
+if [[ -n "${footer_lines}" ]]; then
+	printf 'check-description: remove the tool attribution footer\n%s\n' "${footer_lines}" >&2
+	failures=$((failures + 1))
+fi
+
+if ((failures > 0)); then
+	printf 'check-description: see AGENTS.md section 8\n' >&2
+	exit 1
+fi

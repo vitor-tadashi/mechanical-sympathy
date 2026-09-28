@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# commit-msg - check the commit title and the blank line after it. Installed by tools/install-git-hooks.
+# commit-msg - check the commit title, the blank line after it, and the description. Installed by tools/install-git-hooks.
 # Skip once with: git commit --no-verify
 
 set -Eeuo pipefail
@@ -12,6 +12,7 @@ title="$(head -n 1 <<<"${message}")"
 second="$(sed -n 2p <<<"${message}")"
 
 "${ROOT}/tools/check-commit-title" "${title}"
+"${ROOT}/tools/check-description" <<<"${message}"
 if [[ -n "${second}" ]]; then
 	printf 'commit-msg: leave a blank line between the title and the body\n' >&2
 	exit 1
