@@ -1,7 +1,7 @@
 # Quick Start — Pick Your Scenario
 
 > [!IMPORTANT]
-> Before anything else, capture a **baseline**: latency percentiles (p50/p99/p99.9/max) of your real workload, or of the [probe](examples/hugepages-java-example.md), plus `scripts/verify-tuning --report baseline.txt`. Without a baseline you cannot tell whether tuning helped.
+> Before anything else, capture a **baseline**: latency percentiles (p50/p99/p99.9/max) of your real workload, or of the [probe](examples/hugepages-java-example.md), plus a host bundle with `sudo scripts/09-measure-latency --apply && sudo scripts/09-measure-latency --run` ([Guide 09](guides/09-measuring-latency.md)). Without a baseline you cannot tell whether tuning helped.
 
 ## Which scenario am I?
 
@@ -111,7 +111,7 @@ The scripts skip isolation, huge-page reservation, irqbalance and RT throttling 
 
 ## Pre-flight checklist
 
-- [ ] Baseline latency and `verify-tuning --report` captured
+- [ ] Baseline latency captured, plus a host bundle (`09-measure-latency --run`, [Guide 09](guides/09-measuring-latency.md))
 - [ ] Out-of-band console (iLO/iDRAC/IPMI) tested
 - [ ] CPU layout written down and reviewed (NUMA node of the NICs checked)
 - [ ] Huge page sizing = heap + code cache + off-heap/bypass buffers + 10–20 %
@@ -123,8 +123,8 @@ The scripts skip isolation, huge-page reservation, irqbalance and RT throttling 
 
 ```bash
 scripts/verify-tuning --report after.txt          # configuration
-rtla osnoise top -c <isolated cpus> -d 60s        # noise on the isolated CPUs
-# + your latency histograms vs the baseline
+sudo scripts/09-measure-latency --run             # host bundle: interrupts, SMIs, OS noise (before the app starts)
+# + your latency histograms vs the baseline (Guide 09 §7 explains how to read them)
 ```
 
 ## When something goes wrong
