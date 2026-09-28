@@ -10,7 +10,26 @@
 | **Depends on** | [Guide 02](02-cpu-core-isolation.md) (isolated CPUs for the polling threads), [Guide 03](03-huge-pages-configuration.md) (huge pages for packet buffers), [Guide 04](04-network-optimization.md) (the kernel side of the NICs) |
 | **Optional** | Yes. Everything in Guides 01–07 works without it. `apply-all` runs this guide only when `KERNEL_BYPASS_STACK` is set. |
 
-**Field status.** Onload on Solarflare/AMD NICs (§5) is the configuration the reference tuning was proven with. DPDK on Intel NICs (§6), XLIO, AF_XDP, ADQ and Onload over AF_XDP (§7) are described from vendor documentation and common practice, **not** from the reference deployment. Validate them on your hardware before relying on them.
+> [!NOTE]
+> **Field status.** Onload on Solarflare/AMD NICs (§5) is the configuration the reference tuning was proven with. DPDK on Intel NICs (§6), XLIO, AF_XDP, ADQ and Onload over AF_XDP (§7) are described from vendor documentation and common practice, **not** from the reference deployment. Validate them on your hardware before relying on them.
+
+## At a glance
+
+- **What:** let the application poll the NIC's queues from user space, either unmodified through socket acceleration (Onload, XLIO) or rewritten against a poll-mode API (DPDK).
+- **Why:** one-way latency drops from about 5–10 µs on a tuned kernel stack to about 1–2 µs, with a much tighter tail.
+- **Cost:** a spinning isolated core per polling thread, a vendor stack to operate, huge pages, and traffic that `tcpdump`, `ss` and the firewall no longer see.
+
+**Time:** half a day to a few days, depending on the stack · **Do this if:** the tuned kernel stack is measured and still too slow, and your NIC has a supported stack · **Skip if:** you have not measured Guides 01–07 yet, or the NIC is Intel and the application is an unmodified JVM (try busy polling first).
+
+```mermaid
+flowchart LR
+  g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
+  class g08 focus
+  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+```
+
+*Guide 08 is optional and builds on Guides 02, 03 and 04.*
 
 ---
 
@@ -20,10 +39,23 @@ On the kernel path, a received packet raises an interrupt and is processed in a 
 
 A **kernel-bypass stack** maps a NIC's hardware queues (descriptor rings and doorbell registers) into the application's address space. The NIC DMAs packets straight into memory the application owns, and an application thread **polls** the ring:
 
+```mermaid
+flowchart TD
+  subgraph kpath["Kernel path: about 5 to 10 µs"]
+    direction LR
+    n1["NIC"] --> i1["IRQ"] --> s1["softirq<br/>NAPI, IP, TCP/UDP"] --> b1["socket<br/>buffer"] --> w1["syscall,<br/>wake-up"] --> a1["app"]
+  end
+  subgraph bpath["Bypass path: about 1 to 2 µs"]
+    direction LR
+    n2["NIC"] --> d2["DMA into<br/>user memory"]
+    a2["app thread<br/>(isolated CPU)"] -- "polls the ring:<br/>no IRQ, no syscall" --> d2
+  end
+  kpath ~~~ bpath
+  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
+  class a2,d2 iso
 ```
-kernel path:   NIC ─► IRQ ─► softirq (NAPI, IP, TCP/UDP) ─► socket buffer ─► syscall / wake-up ─► app
-bypass path:   NIC ─► DMA into user memory ◄──────────────── app thread polls the ring (no IRQ, no syscall)
-```
+
+*On the kernel path a packet passes through an interrupt, a softirq, a socket buffer and a syscall. With bypass, the NIC writes into memory the application owns, and a pinned thread polls it directly.*
 
 That brings one-way latency down to roughly **1–2 µs**, with a much tighter tail. It costs:
 
@@ -41,6 +73,25 @@ That brings one-way latency down to roughly **1–2 µs**, with a much tighter t
 | **Kernel-assisted fast paths** | busy polling, AF_XDP, Intel ADQ | none (busy polling, ADQ) or a rewrite (AF_XDP) | stays | not full bypass, but they remove the interrupt and wake-up from the critical path |
 
 Which one fits depends on the NIC and on whether the application can change:
+
+```mermaid
+flowchart TD
+  s(["Pick a stack"]) --> c{"NIC?"}
+  c -- "Solarflare / AMD (sfc)" --> sa{"App can<br/>change?"}
+  sa -- "no" --> on["Onload<br/>(field-proven, §5)"]
+  sa -- "yes" --> ef["ef_vi or DPDK"]
+  c -- "NVIDIA ConnectX (mlx5)" --> na{"App can<br/>change?"}
+  na -- "no" --> xl["XLIO (§7)"]
+  na -- "yes" --> dm["DPDK, bifurcated"]
+  c -- "Intel (ice, i40e, ixgbe)" --> ia{"App can<br/>change?"}
+  ia -- "no" --> bp["Kernel stack + busy polling,<br/>ADQ on E810, or evaluate<br/>Onload over AF_XDP (§7)"]
+  ia -- "yes" --> dp["DPDK (§6) or AF_XDP"]
+  c -- "virtio / cloud" --> vb["Kernel stack + busy polling"]
+  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
+  class on iso
+```
+
+*Only Onload on Solarflare/AMD is field-proven here. An unmodified application on an Intel NIC has no vendor socket-acceleration stack, so start with busy polling.*
 
 | NIC | Unmodified socket application (for example a JVM) | Custom packet-processing code |
 |---|---|---|
@@ -158,6 +209,9 @@ An application that starts but shows **no stack** in `onload_stackdump` is runni
 
 ## 6. DPDK on Intel NICs (not field-proven in the reference setup)
 
+> [!NOTE]
+> **Not proven in production.** This section follows the DPDK and Intel documentation. Validate it on your hardware before relying on it.
+
 ### 6.1 How it works
 
 DPDK replaces the kernel driver with a **poll-mode driver** (PMD) inside the application. Setup takes four steps:
@@ -176,6 +230,9 @@ dnf install dpdk dpdk-tools                        # RHEL AppStream; or build fr
 dpdk-devbind.py --status-dev net                   # PCI address, current driver, "Active" = in use
 ethtool -i ens3f0 | grep bus-info                  # PCI address of an interface you want to hand over
 ```
+
+> [!WARNING]
+> Binding a port removes it from the kernel. Check the PCI address twice: on the wrong one, you unbind the port you are logged in through.
 
 `lowlat.conf`:
 
@@ -215,7 +272,8 @@ dpdk-testpmd -l 3,5 -a 0000:3b:00.0 --socket-mem 0,1024 -- \
 
 ## 7. Other stacks, briefly
 
-These are not scripted by `08-kernel-bypass`.
+> [!NOTE]
+> **Not proven in production.** These stacks are not scripted by `08-kernel-bypass`, and none of them ran in the reference deployment.
 
 - **XLIO (NVIDIA ConnectX, `mlx5`)**: the counterpart of Onload for NVIDIA NICs, loaded with `LD_PRELOAD=libxlio.so` and configured with `XLIO_*` variables. The kernel netdev stays, so apply the same reasoning as §3: keep the kernel queue count small and place its interrupts. It depends on NVIDIA's OFED/DOCA driver stack.
 - **Onload over AF_XDP (non-Solarflare NICs)**: recent Onload releases can accelerate sockets on other vendors' NICs (for example Intel `ice`/`i40e`, NVIDIA `mlx5`) through AF_XDP, with zero copy where the driver supports it. This is the closest thing to "Onload on an Intel card". Latency is typically above native Onload on `sfc`, and support depends on the Onload and kernel versions, so measure it against a tuned kernel stack before adopting it.
@@ -265,6 +323,22 @@ Then measure against your baseline: kernel-stack p50/p99/p99.9 against bypass. R
 
 ## 11. Troubleshooting
 
+```mermaid
+flowchart TD
+  s(["Bypass not working"]) --> st{"Which stack?"}
+  st -- Onload --> acc{"Stack in<br/>onload_stackdump?"}
+  acc -- no --> f1["Not accelerated: launcher skipped the prefix,<br/>check LD_PRELOAD in /proc/pid/environ"]
+  acc -- yes --> irq{"IRQs on an<br/>isolated CPU?"}
+  irq -- yes --> f2["Onload vectors created late:<br/>04-network --runtime after start-up"]
+  irq -- no --> f3["See the table below"]
+  st -- DPDK --> io{"Ports bound?"}
+  io -- "IOMMU off warning" --> f4["Reboot with intel_iommu=on iommu=pt"]
+  io -- "group not viable" --> f5["Bind the whole IOMMU group"]
+  io -- "yes, no hugepages" --> f6["--socket-mem on the NIC's node"]
+```
+
+*For Onload, first check that the process is accelerated at all, then where its interrupts land. For DPDK, check the IOMMU, then the IOMMU group, then huge pages.*
+
 | Symptom | Cause | Fix |
 |---|---|---|
 | No stack in `onload_stackdump`; latency unchanged | The process was not started through `onload`, the launcher skipped the prefix, or the sockets were created before the library loaded | Check the launcher; `cat /proc/<pid>/environ \| tr '\0' '\n' \| grep LD_PRELOAD` |
@@ -279,15 +353,20 @@ Then measure against your baseline: kernel-stack p50/p99/p99.9 against bypass. R
 
 ## 12. Rollback
 
-```bash
-sudo scripts/08-kernel-bypass --rollback       # Onload: remove modprobe.d file + pinned reload; DPDK: rebind to the recorded kernel drivers
-sudo scripts/04-network --runtime              # re-apply kernel queues and IRQ placement
-# DPDK: set KERNEL_BYPASS_STACK="" and re-run 01-grub-bootloader --apply to restore your IOMMU choice (reboot)
-```
+- [ ] Undo the stack: `sudo scripts/08-kernel-bypass --rollback`. For Onload, this removes the `modprobe.d` file and does a pinned reload. For DPDK, it rebinds the ports to their recorded kernel drivers.
+- [ ] Re-apply kernel queues and IRQ placement: `sudo scripts/04-network --runtime`
+- [ ] In `lowlat.conf`, set `KERNEL_BYPASS_STACK=""`, and for Onload clear `KERNEL_BYPASS_DRIVER` and `KERNEL_BYPASS_COMMAND`, so that the next boot does not re-apply anything
+- [ ] DPDK: put the interfaces back into `NICS`, then re-run `01-grub-bootloader --apply` to restore your IOMMU choice, and reboot
 
-Set `KERNEL_BYPASS_STACK=""` (and, for Onload, clear `KERNEL_BYPASS_DRIVER`/`KERNEL_BYPASS_COMMAND`) so that the next boot does not re-apply anything. Put the interfaces you gave to DPDK back into `NICS`.
+## 13. Key takeaways
 
-## 13. References
+- Bypass is optional. Measure the tuned kernel stack from Guides 01–07 first.
+- The NIC decides the stack: Onload on Solarflare/AMD, XLIO on NVIDIA, DPDK or busy polling on Intel.
+- Socket acceleration keeps the application unchanged. DPDK means new code that owns the port.
+- Every stack needs isolated CPUs and huge pages on the NIC's node, and must fail at start-up without them.
+- With Onload the kernel keeps one queue. With DPDK on Intel the port leaves the kernel, and Guide 04 no longer applies to it.
+
+## 14. References
 
 - Onload: <https://github.com/Xilinx-CNS/onload> and the *Onload User Guide* (AMD), for the `EF_*` variables, profiles, `onload_stackdump`, and AF_XDP support
 - DPDK: <https://doc.dpdk.org/guides/linux_gsg/> (system requirements, VFIO, huge pages), and the `ice`/`i40e`/`ixgbe` NIC guides
