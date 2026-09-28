@@ -1,0 +1,249 @@
+#!/usr/bin/env bash
+#
+# 09-measure-latency - measurement tools and a repeatable baseline bundle (Guide 09).
+#
+#   install_measurement_tools   dnf install of the tools in MEASURE_PACKAGES that are missing,
+#                               recorded so that rollback removes only what this script added
+#   capture_bundle              one timestamped directory under MEASURE_DIR: host facts,
+#                               verify-tuning report, interrupt deltas, SMI count, OS noise
+#   verify_measurement          tools present, at least one bundle captured
+#   rollback_measurement        removes the packages this script installed (bundles are kept)
+#
+# Modes: --apply | --dry-run | --run | --verify | --rollback
+#
+# --run disturbs the CPUs it measures (rtla osnoise runs a workload on each of them).
+# Run it before the application starts, or on CPUs the application does not use.
+
+set -Eeuo pipefail
+# shellcheck source=lib/common
+. "$(dirname "${BASH_SOURCE[0]}")/lib/common"
+
+MEASURE_DIR="${MEASURE_DIR:-${LOWLAT_STATE_DIR}/measurements}"
+MEASURE_INSTALLED_FILE="${LOWLAT_STATE_DIR}/measure-installed-packages"
+MEASURE_CPU_LIST=""
+
+# measurement_defaults - lowlat.conf files written before Guide 09 have no MEASURE_* keys.
+measurement_defaults() {
+	[[ -n "${MEASURE_PACKAGES+set}" ]] || MEASURE_PACKAGES=(rtla rt-tests sysstat perf kernel-tools numactl)
+	[[ -n "${MEASURE_CPUS+set}" ]] || MEASURE_CPUS=()
+	MEASURE_DURATION="${MEASURE_DURATION:-60}"
+}
+
+# tool_present <package> - predicate: the command that proves the package is installed exists.
+tool_present() {
+	local cmd
+	cmd="$(package_command "$1")"
+	command -v "${cmd}" >/dev/null 2>&1
+}
+
+# package_command <package> - the command that proves a package is installed.
+package_command() {
+	case "$1" in
+	rt-tests) printf 'cyclictest\n' ;;
+	sysstat) printf 'mpstat\n' ;;
+	kernel-tools) printf 'turbostat\n' ;;
+	numactl) printf 'numactl\n' ;;
+	*) printf '%s\n' "$1" ;;
+	esac
+}
+
+install_measurement_tools() {
+	local package missing=()
+	for package in "${MEASURE_PACKAGES[@]}"; do
+		tool_present "${package}" || missing+=("${package}")
+	done
+	if ((${#missing[@]} == 0)); then
+		log_sub_step "All measurement tools already installed: ${MEASURE_PACKAGES[*]}"
+		return 0
+	fi
+	for package in "${missing[@]}"; do
+		log_sub_step "Installing ${package}"
+		if [[ "${DRY_RUN}" -eq 1 ]]; then
+			run dnf install -y "${package}"
+			continue
+		fi
+		# Some packages come from EPEL or the Real Time repository: warn and keep going.
+		if ! dnf install -y "${package}" >/dev/null 2>&1; then
+			log_warn "dnf install ${package} failed (enable its repository, see Guide 09 §4)"
+			continue
+		fi
+		mkdir -p "${LOWLAT_STATE_DIR}"
+		printf '%s\n' "${package}" >>"${MEASURE_INSTALLED_FILE}"
+	done
+}
+
+create_measurement_dir() {
+	log_sub_step "Creating ${MEASURE_DIR}"
+	run mkdir -p "${MEASURE_DIR}"
+}
+
+apply_measurement() {
+	measurement_defaults
+	log_step "Measurement tools"
+	install_measurement_tools
+	create_measurement_dir
+}
+
+# interrupt_delta <seconds> - /proc/interrupts sampled twice; prints the rows that changed
+# on the measured CPUs, with the per-CPU increase.
+interrupt_delta() {
+	local seconds="$1" before after
+	before="$(cat /proc/interrupts)"
+	sleep "${seconds}"
+	after="$(cat /proc/interrupts)"
+	awk -v cpus="${MEASURE_CPU_LIST}" '
+		BEGIN { n = split(cpus, want, ",") }
+		FNR == 1 { for (i = 1; i <= NF; i++) col[$i] = i + 1; next }
+		NR == FNR { for (i = 2; i <= NF; i++) a[$1, i] = $i; next }
+		{
+			line = ""
+			for (k = 1; k <= n; k++) {
+				c = col["CPU" want[k]]
+				if (c == "" || $c !~ /^[0-9]+$/) continue
+				d = $c - a[$1, c]
+				if (d > 0) line = line sprintf(" cpu%s:+%d", want[k], d)
+			}
+			if (line != "") print $1 line
+		}' <(printf '%s\n' "${before}") <(printf '%s\n' "${after}")
+}
+
+capture_bundle() {
+	local stamp bundle now kernel cmdline
+	stamp="$(date +%Y%m%d-%H%M%S)"
+	bundle="${MEASURE_DIR}/${stamp}"
+	if [[ "${DRY_RUN}" -eq 1 ]]; then
+		printf '           [dry-run] capture bundle into %s\n' "${bundle}"
+		return 0
+	fi
+	mkdir -p "${bundle}"
+
+	log_sub_step "Host facts"
+	now="$(date -Is)"
+	kernel="$(uname -r)"
+	cmdline="$(</proc/cmdline)"
+	{
+		printf 'date:    %s\n' "${now}"
+		printf 'kernel:  %s\n' "${kernel}"
+		printf 'class:   %s\n' "${HOST_CLASS}"
+		printf 'cpus:    %s\n' "${MEASURE_CPU_LIST}"
+		printf 'cmdline: %s\n' "${cmdline}"
+	} >"${bundle}/host.txt"
+	lscpu >"${bundle}/lscpu.txt" 2>&1 || true
+
+	log_sub_step "verify-tuning report"
+	"${LOWLAT_SCRIPTS_DIR}/verify-tuning" --config "${LOWLAT_CONFIG}" --report "${bundle}/verify-tuning.txt" >/dev/null 2>&1 || true
+
+	log_sub_step "Interrupts on CPUs ${MEASURE_CPU_LIST} over 10 s"
+	interrupt_delta 10 >"${bundle}/interrupts-delta.txt"
+
+	if command -v turbostat >/dev/null 2>&1; then
+		log_sub_step "SMI count and C-state residency over 10 s (turbostat)"
+		turbostat --quiet --interval 10 --num_iterations 1 --show CPU,Busy%,Bzy_MHz,SMI \
+			>"${bundle}/turbostat.txt" 2>&1 || log_warn "turbostat failed, see ${bundle}/turbostat.txt"
+	else
+		log_warn "turbostat not installed (kernel-tools): no SMI count"
+	fi
+
+	if command -v rtla >/dev/null 2>&1; then
+		log_sub_step "OS noise on CPUs ${MEASURE_CPU_LIST} for ${MEASURE_DURATION} s (rtla osnoise)"
+		rtla osnoise top -c "${MEASURE_CPU_LIST}" -d "${MEASURE_DURATION}s" -q \
+			>"${bundle}/osnoise.txt" 2>&1 || log_warn "rtla osnoise failed, see ${bundle}/osnoise.txt"
+	else
+		log_warn "rtla not installed: no OS noise measurement"
+	fi
+
+	printf '%s\n' "${bundle}"
+}
+
+run_measurement() {
+	measurement_defaults
+	if ((${#MEASURE_CPUS[@]} > 0)); then
+		MEASURE_CPU_LIST="$(cpu_list_join "${MEASURE_CPUS[@]}")"
+	else
+		MEASURE_CPU_LIST="$(cpu_list_join "${ISOLATED_CPUS[@]}")"
+	fi
+	log_step "Baseline bundle"
+	capture_bundle
+}
+
+
+bundle_exists() {
+	local dir
+	for dir in "${MEASURE_DIR}"/*/; do
+		[[ -f "${dir}host.txt" ]] && return 0
+	done
+	return 1
+}
+
+verify_measurement() {
+	local package
+	measurement_defaults
+	for package in "${MEASURE_PACKAGES[@]}"; do
+		verify_soft "${package} installed" tool_present "${package}"
+	done
+	verify_soft "at least one bundle in ${MEASURE_DIR} (09-measure-latency --run)" bundle_exists
+	verify_result
+}
+
+rollback_measurement() {
+	local package packages=()
+	log_step "Measurement tools"
+	if [[ ! -s "${MEASURE_INSTALLED_FILE}" ]]; then
+		log_sub_step "Nothing was installed by this script"
+		return 0
+	fi
+	mapfile -t packages <"${MEASURE_INSTALLED_FILE}"
+	for package in "${packages[@]}"; do
+		log_sub_step "Removing ${package}"
+		run_quiet dnf remove -y "${package}"
+	done
+	run rm -f "${MEASURE_INSTALLED_FILE}"
+	log_sub_step "Bundles in ${MEASURE_DIR} are kept"
+}
+
+main() {
+	local run_mode=0 args=()
+	while (($# > 0)); do
+		if [[ "$1" == --run ]]; then
+			run_mode=1
+		else
+			args+=("$1")
+		fi
+		shift
+	done
+	if ((run_mode == 1)); then
+		parse_mode_args --apply "${args[@]}" || true
+		MODE=run
+	else
+		parse_mode_args "${args[@]}" || true
+	fi
+	case "${MODE}" in
+	apply)
+		require_root
+		load_config
+		apply_measurement
+		;;
+	run)
+		require_root
+		load_config
+		run_measurement
+		;;
+	verify)
+		load_config
+		verify_measurement
+		;;
+	rollback)
+		require_root
+		load_config
+		rollback_measurement
+		;;
+	*)
+		print_usage
+		printf '  --run        capture a measurement bundle into %s (root; disturbs the measured CPUs)\n' "${MEASURE_DIR}"
+		;;
+	esac
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+	main "$@"
+fi
