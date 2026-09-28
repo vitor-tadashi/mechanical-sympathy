@@ -9,6 +9,24 @@
 | **Applies to** | Bare metal. VMs keep 4 KiB pages unless the hypervisor backs guest memory with huge pages. |
 | **Depends on** | [Guide 01](01-grub-bootloader-tuning.md) (`transparent_hugepage=never`, `default_hugepagesz`, `hugepagesz`) and [Guide 02](02-cpu-core-isolation.md) (NUMA layout) |
 
+## At a glance
+
+- **What:** reserve a pool of explicit 2 MiB pages per NUMA node early in boot, and have the application (JVM heap, buffers) map its hot memory from it.
+- **Why:** TLB reach grows from 8 MiB to 4 GiB, page faults leave the hot path, and the kernel can never compact, swap or migrate those pages behind your back.
+- **Cost:** reserved memory is gone for everything else, and a pool that's too small makes the application fall back or fail at start-up.
+
+**Time:** ~30 min + a reboot (shared with Guides 01 and 02) · **Do this if:** bare metal with a latency-critical process that has a large, hot working set · **Skip if:** it's a VM whose hypervisor does not back guest RAM with huge pages.
+
+```mermaid
+flowchart LR
+  g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
+  class g03 focus
+  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+```
+
+*Guide 03 needs the page size from Guide 01 and the NUMA layout from Guide 02.*
+
 ---
 
 ## 1. Why huge pages
@@ -37,16 +55,33 @@ Linux has two mechanisms:
 |---|---|---|
 | Who decides | The kernel, at page-fault time or later via `khugepaged` | The application (`MAP_HUGETLB`, hugetlbfs files, JVM `-XX:+UseLargePages`) |
 | Where the memory comes from | General page allocator. Needs a contiguous 2 MiB block *now*, and may **compact memory synchronously** to get one. | A **pool reserved in advance** |
-| Latency behaviour | Unpredictable: compaction stalls (ms), `khugepaged` running on any CPU, splits on `munmap`/`mprotect` | Deterministic: no allocation work on the hot path |
+| Latency behavior | Unpredictable: compaction stalls (ms), `khugepaged` running on any CPU, splits on `munmap`/`mprotect` | Deterministic: no allocation work on the hot path |
 | Guarantee | Best effort. You may or may not get 2 MiB pages. | Hard. If the pool is empty the mapping fails, so problems show up at start-up. |
 
 This documentation turns THP **off** at boot (`transparent_hugepage=never`, [Guide 01](01-grub-bootloader-tuning.md#51-latency-subset-bare-metal-and-vms)) and uses **explicit** pages only.
 
+> [!WARNING]
 > **Correction of a common mistake.** `-XX:+UseTransparentHugePages` only makes the JVM `madvise()` its heap for THP. With `transparent_hugepage=never` the kernel ignores that advice, so the flag does nothing. With THP enabled you get the compaction stalls described above. The JVM flag for explicit pages is `-XX:+UseLargePages` (§5).
 
 ## 3. Sizing the pool
 
 Add up **everything that will map huge pages**, per NUMA node:
+
+```mermaid
+flowchart LR
+  heap["JVM heap<br/>(-Xmx)"] --> sum(("sum"))
+  cc["Code cache<br/>(rounded to 2 MiB)"] --> sum
+  bp["Bypass packet<br/>buffers"] --> sum
+  cpp["C/C++ pools,<br/>ring buffers"] --> sum
+  sum --> hr["+10 to 20 %<br/>headroom"] --> pool[["HUGEPAGES_PER_NODE<br/>for that node"]]
+  pool --> check{"Node RAM left<br/>for the OS?"}
+  check -- enough --> ok["Reserve it"]
+  check -- "too little" --> fix["Shrink the heap,<br/>or add RAM"]
+  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+  class pool focus
+```
+
+*Sum every huge-page consumer on the node, add 10–20 % headroom, and make sure the node still has enough ordinary memory for everything else that runs there.*
 
 | Consumer | How much |
 |---|---|
@@ -74,13 +109,26 @@ There are three ways to fill the pool:
 | `vm.nr_hugepages=N` (sysctl) | **evenly** (round-robin) | Depends on fragmentation at the time it runs |
 | `/sys/devices/system/node/nodeX/hugepages/hugepages-2048kB/nr_hugepages` | **per node, exactly as you ask** | High if done early in boot |
 
+```mermaid
+flowchart LR
+  k["Kernel boots<br/>(hugepagesz=2M)"] --> r[["hugetlb-reserve-pages.service<br/>writes nr_hugepages per node"]]
+  r --> m["dev-hugepages.mount"] --> svc["Other services start,<br/>memory fragments"] --> app["Application starts,<br/>maps and pre-touches the pool"]
+  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+  class r focus
+```
+
+*The reservation runs in `sysinit.target`, before other services have fragmented memory, so the contiguous 2 MiB blocks are still there to take.*
+
 We want *most* of the pages on the critical node, so the per-node sysfs interface is the one to use. Running it **as early as possible in boot**, before any service has fragmented memory, makes it nearly as reliable as the command line. This is also the approach Red Hat documents for per-node reservation.
 
 ### 4.2 The reservation unit
 
 `install_hugepage_reservation` generates two files from `HUGEPAGES_PER_NODE` in `lowlat.conf`.
 
-`/usr/lib/systemd/hugetlb-reserve-pages`:
+`/usr/lib/systemd/hugetlb-reserve-pages` writes the wanted count for each node, reads back what the kernel really reserved, and warns on a shortfall:
+
+<details>
+<summary><b>Generated script</b> (reference host: 2,048 pages on node 0, 12,288 on node 1)</summary>
 
 ```bash
 #!/bin/bash
@@ -96,6 +144,8 @@ reserve_pages() {
 reserve_pages 2048 node0
 reserve_pages 12288 node1
 ```
+
+</details>
 
 `/etc/systemd/system/hugetlb-reserve-pages.service`:
 
@@ -214,6 +264,11 @@ A complete, runnable project, with the launcher, both options files and a latenc
 
 ## 6. C and C++ applications
 
+The pattern: `mmap` with `MAP_HUGETLB`, `mbind` to the critical node **before** the first touch, then pre-fault with `memset`.
+
+<details>
+<summary><b>Full function: <code>alloc_huge_on_node</code></b> (about 30 lines)</summary>
+
 ```cpp
 #include <sys/mman.h>
 #include <numaif.h>      // mbind, link with -lnuma
@@ -244,6 +299,8 @@ void* alloc_huge_on_node(size_t bytes, int node) {
 }
 ```
 
+</details>
+
 Notes:
 
 - Use `(30 << MAP_HUGE_SHIFT)` for 1 GiB pages, which need `hugepagesz=1G hugepages=N` at boot.
@@ -260,6 +317,9 @@ grubby --update-kernel=ALL --args="default_hugepagesz=1G hugepagesz=1G hugepages
 ```
 
 Boot-time `hugepages=N` is split evenly across nodes. To skew it, over-reserve and then *free* pages on the non-critical node from the reservation script (freeing always works). Set `HUGEPAGE_SIZE=1G` in `lowlat.conf`, and the script writes to `hugepages-1048576kB` instead. The JVM uses 1 GiB pages with `-XX:+UseLargePages -XX:LargePageSizeInBytes=1g`.
+
+> [!NOTE]
+> **Not proven in production.** The reference hosts use 2 MiB pages. The 1 GiB procedure follows the kernel documentation and has not been measured on a production host.
 
 ## 8. Verification
 
@@ -290,6 +350,21 @@ grep -B11 'KernelPageSize: *2048 kB' /proc/<pid>/smaps | grep -E '^[0-9a-f]+-' |
 
 ## 9. Troubleshooting
 
+```mermaid
+flowchart TD
+  s(["JVM will not use large pages"]) --> u{"Unit ran?"}
+  u -- "condition failed" --> f1["hugepagesz=2M missing:<br/>apply Guide 01, reboot"]
+  u -- "yes" --> n{"Pool short<br/>after boot?"}
+  n -- yes --> f2["Fragmented or too little RAM on the node:<br/>journalctl -b -u hugetlb-reserve-pages"]
+  n -- no --> w{"Enough free on<br/>the JVM's node?"}
+  w -- no --> f3["numastat -p: bind with numactl --membind,<br/>or size both nodes (§5.3)"]
+  w -- yes --> fl{"Flags on the<br/>running JVM?"}
+  fl -- no --> f4["Launcher did not see affinity.enable=true:<br/>jcmd pid VM.flags"]
+  fl -- yes --> f5["See the table below"]
+```
+
+*Walk from the boot unit to the node pool to the JVM flags. Most failures are a pool on the wrong node or a launcher that did not add the flags.*
+
 | Symptom | Cause | Fix |
 |---|---|---|
 | `nr_hugepages` lower than requested after boot | Not enough free contiguous memory on that node, or the unit did not run | `journalctl -b -u hugetlb-reserve-pages`; check `ConditionKernelCommandLine` matches the command line; reduce the count or add RAM |
@@ -302,12 +377,10 @@ grep -B11 'KernelPageSize: *2048 kB' /proc/<pid>/smaps | grep -E '^[0-9a-f]+-' |
 
 ## 10. Rollback
 
-```bash
-sudo scripts/03-huge-pages --rollback        # disables the unit, removes the files, releases free pages
-sudo systemctl reboot
-```
-
-Also remove the large-page flags from the launcher, or set `affinity.enable=false`, otherwise the JVM will look for a pool that no longer exists.
+- [ ] Remove the large-page flags from the launcher, or set `affinity.enable=false`. Otherwise the JVM will look for a pool that no longer exists.
+- [ ] Disable the unit, remove the files and release free pages: `sudo scripts/03-huge-pages --rollback`
+- [ ] Reboot: `sudo systemctl reboot`
+- [ ] Confirm: `grep HugePages_Total /proc/meminfo` shows `0`
 
 ## 11. Bare metal vs VM
 
@@ -318,7 +391,15 @@ Also remove the large-page flags from the launcher, or set `affinity.enable=fals
 | JVM `-XX:+UseLargePages -XX:+UseNUMA -XX:+AlwaysPreTouch` | ✅ via launcher | ❌ Use the low-resource options file |
 | Kernel-bypass "require huge pages" | ✅ | ❌ |
 
-## 12. References
+## 12. Key takeaways
+
+- Use explicit huge pages (hugetlbfs) and keep THP off. `-XX:+UseTransparentHugePages` is not the flag you want.
+- Size the pool per node: everything that maps huge pages, plus 10–20 %, and leave the node enough ordinary memory.
+- Reserve per node from an early-boot unit. A boot-time `hugepages=N` count is split evenly across nodes.
+- Add `-XX:+UseLargePages -XX:+UseNUMA -XX:+AlwaysPreTouch` only on a tuned host with pinned threads, from the launcher.
+- Fail loudly: pre-touch at start-up, and set bypass stacks to "require huge pages".
+
+## 13. References
 
 - Kernel: <https://docs.kernel.org/admin-guide/mm/hugetlbpage.html>, <https://docs.kernel.org/admin-guide/mm/transhuge.html>
 - Red Hat — *Configuring huge pages* (RHEL 8/9 performance tuning guide), including the per-node early-boot reservation method
