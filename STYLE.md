@@ -174,10 +174,12 @@ Rules for every SVG:
 Extra rules for an animated SVG:
 
 - Animate with CSS `@keyframes` inside the file.
-- The base styles draw the final frame, and the animation replays how it got there. An `@media (prefers-reduced-motion: reduce)` block stops every animation, so that frame is what those readers see. It must make the point on its own.
+- **Keep the whole picture visible at all times.** Move one playhead across all lanes, and pulse each event briefly as the playhead reaches it, as in [`tick-nohz.svg`](assets/diagrams/tick-nohz.svg). Never hide parts of the picture and reveal them later: the reader must be able to compare the lanes at any moment.
+- Time a pulse with a negative `animation-delay` computed from the event's position, so it fires exactly when the playhead gets there.
+- The base styles draw the complete picture. An `@media (prefers-reduced-motion: reduce)` block stops every animation and hides the playhead, so the complete picture is what those readers see. It must make the point on its own.
 - A loop of 4 to 8 seconds, and no flashing faster than 3 times per second.
 
-Structure, as in [`rx-coalescing.svg`](assets/diagrams/rx-coalescing.svg): a `viewBox` about 760 wide, one lane per case (default on top, tuned below), a caption and a one-line subcaption in each lane, and the classes `.bg`, `.lane`, `.box` (housekeeping blue), `.app` (isolated green), `.wait` (risk red), `.lbl`, `.cap` and `.sub`.
+Structure, as in [`tick-nohz.svg`](assets/diagrams/tick-nohz.svg): a `viewBox` about 760 wide, one lane per case (default on top, tuned below), a caption and a one-line subcaption in each lane, and the classes `.bg`, `.lane`, `.box` (housekeeping blue), `.app` (isolated green), `.wait` (risk red), `.lbl`, `.cap` and `.sub`.
 
 Embed it with an `<img>` that has an `alt` text, followed by the same one-sentence summary as a Mermaid diagram:
 

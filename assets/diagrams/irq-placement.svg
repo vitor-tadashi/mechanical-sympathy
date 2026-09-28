@@ -17,15 +17,30 @@
   .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
   .xfer { stroke: #1d6b33; stroke-width: 2; fill: none; }
 
-  /* Base styles are the final frame; the animation replays the three packets. */
-  .cover { fill: #f6f8fa; transform: scaleX(0); transform-origin: 721px 0; transform-box: view-box; animation: reveal 6s linear infinite; }
+  /* The picture is always complete. A playhead sweeps both lanes, and each interrupt pulses as it passes. */
   .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  .wait, .irq { transform-box: fill-box; transform-origin: center; animation: 6s linear infinite; }
+  .wait { animation-name: cut; }
+  .irq { animation-name: take; }
+  .xfer { animation: hand 6s linear infinite; }
 
-  @keyframes reveal { 0% { transform: scaleX(1); } 80%, 100% { transform: scaleX(0); } }
-  @keyframes sweep { 0% { transform: translateX(0); } 80%, 100% { transform: translateX(570px); } }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  /* Each block stays lit for the 6 % of the loop the playhead spends inside it. */
+  @keyframes cut {
+    0%, 6%   { fill: #ff6b6b; transform: scaleY(1.15); }
+    7%, 100% { fill: #ffc9c9; transform: scaleY(1); }
+  }
+  @keyframes take {
+    0%, 6%   { fill: #3d7fd9; transform: scaleY(1.15); }
+    7%, 100% { fill: #1f4e8c; transform: scaleY(1); }
+  }
+  @keyframes hand {
+    0%, 4%   { stroke: #2fbf5a; stroke-width: 4; }
+    6%, 100% { stroke: #1d6b33; stroke-width: 2; }
+  }
 
   @media (prefers-reduced-motion: reduce) {
-    .cover, .head { animation: none; }
+    .head, .wait, .irq, .xfer { animation: none; }
     .head { display: none; }
   }
 </style>
@@ -39,17 +54,16 @@
 <text class="role" x="24" y="98">isolated, net.rx</text>
 <rect class="app" x="150" y="70" width="570" height="30" rx="4"/>
 <text class="in" x="190" y="89">spin</text>
-<rect class="wait" x="238" y="66" width="34" height="38" rx="3"/>
+<rect class="wait" style="animation-delay:-5.07s" x="238" y="66" width="34" height="38" rx="3"/>
 <text class="inr" x="255" y="89">IRQ</text>
-<rect class="wait" x="418" y="66" width="34" height="38" rx="3"/>
+<rect class="wait" style="animation-delay:-3.18s" x="418" y="66" width="34" height="38" rx="3"/>
 <text class="inr" x="435" y="89">IRQ</text>
-<rect class="wait" x="598" y="66" width="34" height="38" rx="3"/>
+<rect class="wait" style="animation-delay:-1.28s" x="598" y="66" width="34" height="38" rx="3"/>
 <text class="inr" x="615" y="89">IRQ</text>
 <text class="lbl" x="24" y="132">CPU 1</text>
 <text class="role" x="24" y="146">housekeeping</text>
 <rect class="box" x="150" y="118" width="570" height="30" rx="4"/>
 <text class="in" x="435" y="137">no network work</text>
-<rect class="cover" x="150" y="62" width="571" height="90"/>
 
 <!-- Lane 2: IRQ on the housekeeping CPU -->
 <rect class="lane" x="10" y="175" width="740" height="155" rx="6"/>
@@ -62,16 +76,15 @@
 <text class="lbl" x="24" y="297">CPU 1</text>
 <text class="role" x="24" y="311">housekeeping</text>
 <rect class="box" x="150" y="283" width="570" height="30" rx="4"/>
-<rect class="irq" x="238" y="283" width="34" height="30" rx="3"/>
+<rect class="irq" style="animation-delay:-5.07s" x="238" y="283" width="34" height="30" rx="3"/>
 <text class="inw" x="255" y="302">IRQ</text>
-<rect class="irq" x="418" y="283" width="34" height="30" rx="3"/>
+<rect class="irq" style="animation-delay:-3.18s" x="418" y="283" width="34" height="30" rx="3"/>
 <text class="inw" x="435" y="302">IRQ</text>
-<rect class="irq" x="598" y="283" width="34" height="30" rx="3"/>
+<rect class="irq" style="animation-delay:-1.28s" x="598" y="283" width="34" height="30" rx="3"/>
 <text class="inw" x="615" y="302">IRQ</text>
-<path class="xfer" d="M272 290 l12 -22 m-6 1 l6 -1 l1 6"/>
-<path class="xfer" d="M452 290 l12 -22 m-6 1 l6 -1 l1 6"/>
-<path class="xfer" d="M632 290 l12 -22 m-6 1 l6 -1 l1 6"/>
-<rect class="cover" x="150" y="227" width="571" height="90"/>
+<path class="xfer" style="animation-delay:-4.72s" d="M272 290 l12 -22 m-6 1 l6 -1 l1 6"/>
+<path class="xfer" style="animation-delay:-2.82s" d="M452 290 l12 -22 m-6 1 l6 -1 l1 6"/>
+<path class="xfer" style="animation-delay:-0.93s" d="M632 290 l12 -22 m-6 1 l6 -1 l1 6"/>
 
 <line class="head" x1="150" y1="60" x2="150" y2="320"/>
 </svg>
