@@ -1,0 +1,5 @@
+# Resolve "source" paths relative to each script, and treat lowlat.conf variables as defined.
+source-path=SCRIPTDIR
+external-sources=true
+# Configuration variables (ISOLATED_CPUS, NICS, ...) come from lowlat.conf at runtime.
+disable=SC2153

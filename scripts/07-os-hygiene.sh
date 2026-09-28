@@ -1,0 +1,234 @@
+#!/usr/bin/env bash
+#
+# 07-os-hygiene.sh - remove background noise from the operating system (Guide 07).
+#
+#   disable_unnecessary_services   stop + disable services from DISABLE_SERVICES
+#   ensure_rsyslog                 keep local logging on (it is cheap and you need it)
+#   set_security_limits            limits.d file for the application user/group
+#   set_noatime_mounts             noatime on local ext4/xfs filesystems (fstab + remount)
+#   install_tuned_profile          custom tuned profile including network-latency
+#   flush_firewall_rules           OPT-IN: empty iptables/nftables rule sets
+#   remove_netfilter_modules       OPT-IN: unload netfilter/conntrack modules
+#
+# The two opt-in functions remove host-level packet filtering. Read Guide 07 §6 first.
+
+set -Eeuo pipefail
+# shellcheck source=lib/common.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+
+LIMITS_FILE="${LIMITS_FILE:-/etc/security/limits.d/90-lowlat.conf}"
+TUNED_PROFILE_DIR="${TUNED_PROFILE_DIR:-/etc/tuned/low-latency}"
+FSTAB="${FSTAB:-/etc/fstab}"
+
+# Netfilter modules unloaded by remove_netfilter_modules, in dependency order.
+NETFILTER_MODULES=(
+	ipt_SYNPROXY nf_synproxy_core xt_CT
+	nf_conntrack_ftp nf_conntrack_tftp nf_conntrack_irc nf_nat_tftp
+	ipt_MASQUERADE iptable_nat xt_state xt_conntrack
+	iptable_raw iptable_filter iptable_mangle ipt_REJECT xt_CHECKSUM
+	ip_tables ip6t_REJECT ip6_tables xt_LOG xt_multiport
+)
+
+disable_unnecessary_services() {
+	local unit
+	for unit in "${DISABLE_SERVICES[@]}"; do
+		if [[ "${DRY_RUN}" -ne 1 ]] && ! systemctl cat "${unit}" >/dev/null 2>&1; then
+			continue
+		fi
+		log_sub_step "Stopping and disabling ${unit}"
+		run_quiet systemctl stop "${unit}"
+		run_quiet systemctl disable "${unit}"
+	done
+	if [[ "${DISABLE_FIREWALLD:-no}" == yes ]]; then
+		log_sub_step "Stopping and disabling firewalld (DISABLE_FIREWALLD=yes)"
+		run_quiet systemctl stop firewalld
+		run_quiet systemctl disable firewalld
+	fi
+}
+
+ensure_rsyslog() {
+	log_sub_step "Enabling rsyslog"
+	run_quiet systemctl enable --now rsyslog
+}
+
+set_security_limits() {
+	log_sub_step "Writing ${LIMITS_FILE} for @${APP_GROUP}"
+	write_file "${LIMITS_FILE}" <<EOF
+# Managed by mechanical-sympathy 07-os-hygiene.sh
+# Applies to login sessions (PAM). systemd services use LimitXXX= in the unit instead.
+@${APP_GROUP}  soft  nproc    ${NPROC_LIMIT}
+@${APP_GROUP}  hard  nproc    ${NPROC_LIMIT}
+@${APP_GROUP}  soft  nofile   ${NOFILE_LIMIT}
+@${APP_GROUP}  hard  nofile   ${NOFILE_LIMIT}
+# SCHED_FIFO/RR up to this priority without root
+@${APP_GROUP}  -     rtprio   ${REAL_TIME_PRIORITY}
+# may renice down to -20
+@${APP_GROUP}  -     nice     -20
+# mlockall() of the whole process (huge pages do not need it, the rest of the process does)
+@${APP_GROUP}  -     memlock  unlimited
+EOF
+}
+
+# Adds noatime to local ext4/xfs entries that do not have it yet. Every read of a file
+# otherwise turns into a metadata write (atime update) - journal I/O from a read path.
+set_noatime_mounts() {
+	local updated mountpoint
+	[[ -r "${FSTAB}" ]] || {
+		log_warn "${FSTAB} not readable"
+		return 0
+	}
+	updated="$(awk '
+		/^[[:space:]]*#/ || NF < 4 { print; next }
+		($3 == "xfs" || $3 == "ext4" || $3 == "ext3") && $4 !~ /(^|,)noatime(,|$)/ {
+			$4 = ($4 == "defaults") ? "defaults,noatime" : $4 ",noatime"
+			print; next
+		}
+		{ print }' "${FSTAB}")"
+	if [[ "${updated}" == "$(cat "${FSTAB}")" ]]; then
+		log_sub_step "${FSTAB}: all local ext4/xfs mounts already use noatime"
+		return 0
+	fi
+	log_sub_step "Adding noatime to local ext4/xfs mounts in ${FSTAB}"
+	printf '%s\n' "${updated}" | write_file "${FSTAB}"
+	while read -r mountpoint; do
+		log_sub_step "Remounting ${mountpoint} with noatime"
+		run_quiet mount -o remount,noatime "${mountpoint}"
+	done < <(awk '!/^[[:space:]]*#/ && ($3=="xfs"||$3=="ext4"||$3=="ext3") {print $2}' "${FSTAB}")
+}
+
+# A custom profile that inherits network-latency (-> latency-performance): performance
+# governor, C-state latency cap via PM QoS, THP off, busy polling, NUMA balancing off.
+# tuned applies its [sysctl] section and then (reapply_sysctl=1, the default) re-applies
+# /etc/sysctl.d, so the values from Guide 06 win on any conflict.
+install_tuned_profile() {
+	log_sub_step "Writing ${TUNED_PROFILE_DIR}/tuned.conf (include=${TUNED_BASE_PROFILE})"
+	write_file "${TUNED_PROFILE_DIR}/tuned.conf" <<EOF
+# Managed by mechanical-sympathy 07-os-hygiene.sh
+[main]
+summary=Low latency: ${TUNED_BASE_PROFILE} + mechanical-sympathy host settings
+include=${TUNED_BASE_PROFILE}
+
+[cpu]
+governor=performance
+energy_perf_bias=performance
+min_perf_pct=100
+EOF
+	log_sub_step "Making sure tuned re-applies /etc/sysctl.d after its own sysctls"
+	if [[ -f /etc/tuned/tuned-main.conf ]] && grep -q '^reapply_sysctl *= *0' /etc/tuned/tuned-main.conf; then
+		backup_file /etc/tuned/tuned-main.conf
+		run sed -i 's/^reapply_sysctl *= *0/reapply_sysctl = 1/' /etc/tuned/tuned-main.conf
+	fi
+	log_sub_step "Activating tuned profile low-latency"
+	run_quiet systemctl enable --now tuned
+	run tuned-adm profile low-latency
+}
+
+flush_firewall_rules() {
+	if command -v nft >/dev/null 2>&1 || [[ "${DRY_RUN}" -eq 1 ]]; then
+		log_sub_step "Flushing nftables ruleset"
+		run_quiet nft flush ruleset
+	fi
+	log_sub_step "Flushing iptables/ip6tables rules and user chains, policies ACCEPT"
+	local table
+	for table in filter nat mangle raw; do
+		run_quiet iptables -t "${table}" -F
+		run_quiet iptables -t "${table}" -X
+	done
+	run_quiet ip6tables -F
+	run_quiet ip6tables -X
+	run_quiet iptables -P INPUT ACCEPT
+	run_quiet iptables -P FORWARD ACCEPT
+	run_quiet iptables -P OUTPUT ACCEPT
+}
+
+remove_netfilter_modules() {
+	local module
+	for module in "${NETFILTER_MODULES[@]}"; do
+		if [[ "${DRY_RUN}" -ne 1 ]] && ! grep -q "^${module} " /proc/modules; then
+			continue
+		fi
+		log_sub_step "Unloading ${module}"
+		run_quiet modprobe -r "${module}"
+	done
+}
+
+apply_os_hygiene() {
+	log_step "Unnecessary services"
+	require_capability os_hygiene && disable_unnecessary_services
+	ensure_rsyslog
+
+	log_step "Resource limits for ${APP_USER}"
+	set_security_limits
+
+	log_step "noatime on local filesystems"
+	set_noatime_mounts
+
+	log_step "tuned profile"
+	if command -v tuned-adm >/dev/null 2>&1 || [[ "${DRY_RUN}" -eq 1 ]]; then
+		install_tuned_profile
+	else
+		log_warn "tuned is not installed (dnf install tuned)"
+	fi
+
+	log_step "Host packet filtering (opt-in)"
+	if [[ "${FLUSH_FIREWALL_RULES:-no}" == yes ]]; then
+		flush_firewall_rules
+	else
+		log_sub_step "FLUSH_FIREWALL_RULES=no, keeping firewall rules"
+	fi
+	if [[ "${REMOVE_NETFILTER_MODULES:-no}" == yes ]]; then
+		remove_netfilter_modules
+	else
+		log_sub_step "REMOVE_NETFILTER_MODULES=no, keeping netfilter modules"
+	fi
+}
+
+# Firewall flush and module removal are not persistent; re-done at boot when opted in.
+apply_os_hygiene_runtime() {
+	log_step "Host packet filtering (opt-in)"
+	[[ "${FLUSH_FIREWALL_RULES:-no}" == yes ]] && flush_firewall_rules
+	[[ "${REMOVE_NETFILTER_MODULES:-no}" == yes ]] && remove_netfilter_modules
+	return 0
+}
+
+service_inactive() { not systemctl is-active --quiet "$1"; }
+
+verify_os_hygiene() {
+	local unit
+	for unit in "${DISABLE_SERVICES[@]}"; do
+		systemctl cat "${unit}" >/dev/null 2>&1 || continue
+		verify_soft "${unit} not running" service_inactive "${unit}"
+	done
+	verify_check "rsyslog running" systemctl is-active --quiet rsyslog
+	verify_check "${LIMITS_FILE} exists" test -f "${LIMITS_FILE}"
+	verify_check "tuned profile low-latency active" sh -c 'tuned-adm active | grep -q "low-latency"'
+	verify_soft "local ext4/xfs mounted with noatime" sh -c \
+		"! findmnt -rn -t xfs,ext4 -o OPTIONS | grep -v noatime | grep -q ."
+	verify_info "iptables rules: $({ iptables -S 2>/dev/null || true; } | grep -vc '^-P' || true), nft tables: $({ nft list tables 2>/dev/null || true; } | wc -l | tr -d ' ')"
+	verify_result
+}
+
+main() {
+	parse_mode_args "$@" || true
+	case "${MODE}" in
+	apply)
+		require_root
+		load_config
+		apply_os_hygiene
+		;;
+	runtime)
+		require_root
+		load_config
+		apply_os_hygiene_runtime
+		;;
+	verify)
+		load_config
+		verify_os_hygiene
+		;;
+	*) print_usage ;;
+	esac
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+	main "$@"
+fi

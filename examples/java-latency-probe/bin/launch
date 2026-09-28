@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+#
+# launch - start the latency probe with JVM options that match the host.
+#
+#   bare_metal       -> conf/jvm.options              (fixed heap, ZGC, no uncommit)
+#   anything else    -> conf/jvm-low-resource.options (small, elastic heap)
+#   affinity.enable  -> + -XX:+UseNUMA -XX:+UseLargePages -XX:+AlwaysPreTouch
+#   APP_NUMA_NODE    -> numactl --membind=<node> (all memory from the critical node)
+#   BYPASS_LAUNCHER  -> "<launcher> <args>" prefix when a kernel-bypass stack is installed
+#
+# Environment: JAVA_HOME, APP_HOME (default: parent of bin/), LOWLAT_HOST_CLASS (override).
+
+set -Eeuo pipefail
+
+APP_HOME="${APP_HOME:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)}"
+CONF_DIR="${APP_HOME}/conf"
+APP_CONFIG="${CONF_DIR}/application.properties"
+JAVA="${JAVA_HOME:+${JAVA_HOME}/bin/}java"
+
+host_class_detect() {
+	if [[ -n "${LOWLAT_HOST_CLASS:-}" ]]; then
+		printf '%s\n' "${LOWLAT_HOST_CLASS}"
+	elif ! command -v systemd-detect-virt >/dev/null 2>&1; then
+		printf 'unknown\n'
+	elif systemd-detect-virt --quiet --container; then
+		printf 'container\n'
+	elif systemd-detect-virt --quiet; then
+		printf 'virtual_machine\n'
+	else
+		printf 'bare_metal\n'
+	fi
+}
+
+property() { # property <key> - last value of key in application.properties
+	awk -F= -v k="$1" '$1 == k { v = $2 } END { gsub(/[[:space:]]/, "", v); print v }' "${APP_CONFIG}"
+}
+
+if [[ "${EUID}" -eq 0 ]]; then
+	echo "refusing to run as root: start the probe as the application user" >&2
+	exit 1
+fi
+
+HOST_CLASS="$(host_class_detect)"
+if [[ "${HOST_CLASS}" == bare_metal ]]; then
+	JVM_OPTIONS_FILE="${CONF_DIR}/jvm.options"
+else
+	JVM_OPTIONS_FILE="${CONF_DIR}/jvm-low-resource.options"
+fi
+
+PARAMS=("-XX:VMOptionsFile=${JVM_OPTIONS_FILE}")
+
+# Pinned threads + NUMA-aware heap on reserved huge pages + pre-touched heap go
+# together: without isolated CPUs and a reserved pool they only produce warnings.
+if [[ "$(property affinity.enable)" == true ]]; then
+	PARAMS+=(-XX:+UseNUMA -XX:+UseLargePages -XX:+AlwaysPreTouch)
+fi
+
+PARAMS+=("-Dprobe.config=${APP_CONFIG}" -Dapp.name=latency-probe)
+
+PREFIX=()
+if [[ -n "${APP_NUMA_NODE:-}" ]] && command -v numactl >/dev/null 2>&1; then
+	PREFIX+=(numactl "--membind=${APP_NUMA_NODE}")
+fi
+if [[ -n "${BYPASS_LAUNCHER:-}" ]] && command -v "${BYPASS_LAUNCHER%% *}" >/dev/null 2>&1; then
+	read -r -a bypass <<<"${BYPASS_LAUNCHER}"
+	PREFIX+=("${bypass[@]}")
+fi
+
+mkdir -p "${APP_HOME}/log"
+cd "${APP_HOME}"
+
+printf 'host_class=%s jvm-options=%s\n' "${HOST_CLASS}" "$(basename "${JVM_OPTIONS_FILE}")"
+printf 'exec %s\n' "${PREFIX[*]:+${PREFIX[*]} }${JAVA} ${PARAMS[*]} -cp target/classes:target/lib/* com.example.lowlat.LatencyProbe"
+
+exec "${PREFIX[@]}" "${JAVA}" "${PARAMS[@]}" -cp "target/classes:target/lib/*" com.example.lowlat.LatencyProbe

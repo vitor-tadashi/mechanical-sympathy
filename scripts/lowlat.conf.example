@@ -1,0 +1,147 @@
+# shellcheck shell=bash disable=SC2034
+#
+# lowlat.conf - host layout consumed by every tuning script.
+#
+# Copy to /etc/lowlat/lowlat.conf and adapt it to YOUR hardware. Every value
+# below describes a fictional reference host:
+#
+#   * 2 sockets, 16 physical cores each, Hyper-Threading disabled -> 32 CPUs
+#   * CPU numbering interleaves sockets: even CPUs = NUMA node 0, odd CPUs = node 1
+#     (check yours with: lscpu -e=CPU,NODE,SOCKET,CORE)
+#   * the latency-critical NICs sit in PCIe slots wired to socket 1 (node 1)
+#     (check with: cat /sys/class/net/<iface>/device/numa_node)
+#
+# Because the critical NICs are local to node 1, the latency-critical threads
+# live on node 1 and node 0 carries the operating system.
+
+# -----------------------------------------------------------------------------
+# CPU layout (Guides 01, 02, 05)
+# -----------------------------------------------------------------------------
+
+# CPUs dedicated to latency-critical application threads. They are removed from
+# the scheduler (isolcpus), run tickless (nohz_full) and have their RCU callbacks
+# offloaded (rcu_nocbs). Node 1 minus CPU 1, which stays as node-1 housekeeping.
+ISOLATED_CPUS=(3 5 7 9 11 13 15 17 19 21 23 25 27 29 31)
+
+# Every CPU that is NOT isolated. systemd (PID 1) and therefore every service it
+# starts inherits this affinity. It must be the exact complement of ISOLATED_CPUS.
+OS_CPUS=(0 1 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
+
+# CPUs allowed to run unbound kernel workqueues (writeback, deferred work).
+WORKQUEUE_CPUS=(0 2)
+
+# CPUs where noisy third-party agents (EDR, security scanners, monitoring) are
+# pinned so they never share a core with IRQ handling or the application.
+HOUSEKEEPING_PIN_CPUS=(4)
+HOUSEKEEPING_PIN_PROCESSES=(edr-agentd av-scand)
+
+# -----------------------------------------------------------------------------
+# GRUB options (Guide 01)
+# -----------------------------------------------------------------------------
+
+# yes: disable CPU vulnerability mitigations (nospectre_v1/v2, pti=off, mds=off,
+# tsx_async_abort=off). Only on single-tenant hosts in a trusted network.
+GRUB_DISABLE_MITIGATIONS=yes
+
+# yes: intel_iommu=off iommu=off. Must be "no" if you use VFIO/SR-IOV/DPDK with IOMMU.
+GRUB_DISABLE_IOMMU=yes
+
+# 0 / 1 / empty. biosdevname=0 CHANGES INTERFACE NAMES (em1 -> eno1 ...).
+# Leave empty to keep whatever naming the host already uses.
+GRUB_BIOSDEVNAME=""
+
+# Page size reserved for huge pages: 2M or 1G.
+HUGEPAGE_SIZE=2M
+
+# -----------------------------------------------------------------------------
+# Real-time and limits (Guides 02, 07)
+# -----------------------------------------------------------------------------
+
+APP_USER=app-user
+APP_GROUP=app-user
+REAL_TIME_PRIORITY=99
+NICE_LIMIT=40          # rlimit 40 == nice -20
+NPROC_LIMIT=65535
+NOFILE_LIMIT=65535
+
+# -----------------------------------------------------------------------------
+# Huge pages (Guide 03)
+# -----------------------------------------------------------------------------
+
+# Pages reserved per NUMA node at early boot, as "node:count".
+# 12288 x 2 MiB = 24 GiB on node 1 (application heap + IPC buffers),
+#  2048 x 2 MiB =  4 GiB on node 0 (helpers, tooling).
+HUGEPAGES_PER_NODE=("node0:2048" "node1:12288")
+
+# Extra "surplus" pages the kernel may allocate on demand when the pool is empty.
+HUGEPAGES_OVERCOMMIT=2048
+
+# Max number of System V shared-memory segments (some IPC libraries use SysV shm).
+SHMMNI=24576
+
+# -----------------------------------------------------------------------------
+# Network interfaces (Guide 04)
+# -----------------------------------------------------------------------------
+
+# One entry per interface: "name|role|irq_cpus|txqueuelen"
+#   role       critical  - order entry / market data / critical backend (lowest latency)
+#              timing    - PTP / time synchronisation (latency-sensitive, low volume)
+#              bulk      - replication, logging, reporting (throughput, not latency)
+#              mgmt      - SSH, monitoring, configuration management (never touched)
+#   irq_cpus   CPU list for the NIC's interrupts (never an ISOLATED CPU unless you
+#              run kernel bypass and know why)
+#   txqueuelen 0 = keep the driver default
+NICS=(
+	"ens1f0|critical|1|0"
+	"ens1f1|critical|1|0"
+	"eno1|timing|0|0"
+	"ens2f0|bulk|30|300000"
+	"ens2f1|bulk|30|300000"
+	"eno2|mgmt|0|0"
+)
+
+# Kernel driver of NICs driven by a kernel-bypass stack (as shown by `ethtool -i <iface>`).
+# When set, and KERNEL_BYPASS_COMMAND is installed, those NICs get a single combined
+# queue (the bypass stack owns the data path; the kernel queue only carries control
+# traffic) instead of the maximum number of queues.
+KERNEL_BYPASS_DRIVER=""
+KERNEL_BYPASS_COMMAND=""
+
+# rx-usecs/tx-usecs for bulk NICs. 0 = interrupt per packet (the reference default).
+# Raise (e.g. 50-100) on busy bulk links to trade latency for fewer interrupts.
+NIC_BULK_COALESCE_USECS=0
+
+# yes: also disable RX/TX checksum offload (moves checksum work to the CPU). See Guide 04.
+NIC_DISABLE_CSUM_OFFLOAD=no
+
+# -----------------------------------------------------------------------------
+# cgroups (Guide 05)
+# -----------------------------------------------------------------------------
+
+# CPUs for the housekeeping slice (agents, log shippers, monitoring).
+HOUSEKEEPING_SLICE_CPUS=(4 6)
+HOUSEKEEPING_SLICE_MEMORY_MAX=4G
+HOUSEKEEPING_SLICE_CPU_QUOTA=150%
+HOUSEKEEPING_SLICE_IO_WEIGHT=50
+HOUSEKEEPING_SLICE_UNITS=(node_exporter.service fluent-bit.service)
+
+# -----------------------------------------------------------------------------
+# OS hygiene (Guide 07)
+# -----------------------------------------------------------------------------
+
+DISABLE_SERVICES=(
+	crond
+	plymouth-quit-wait plymouth-quit plymouth-read-write plymouth-start
+	auth-rpcgss-module rpcbind.service rpcbind.socket rpcbind.target rpc_pipefs.target rpc-statd-notify
+	nfs-client.target remote-fs-pre.target
+	sysstat-collect.timer sysstat-summary.timer
+	pcscd
+	cpupower cpuspeed cpufreqd powerd
+)
+
+# Opt-in, security-sensitive. Read Guide 07 before setting any of these to yes.
+DISABLE_FIREWALLD=no
+FLUSH_FIREWALL_RULES=no
+REMOVE_NETFILTER_MODULES=no
+
+TUNED_BASE_PROFILE=network-latency

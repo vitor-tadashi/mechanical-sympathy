@@ -1,0 +1,505 @@
+#!/usr/bin/env bash
+#
+# common.sh - shared helpers for the mechanical-sympathy tuning scripts.
+#
+# Sourced by every guide script (scripts/0N-*.sh). It provides:
+#   * configuration loading (lowlat.conf)
+#   * host-class detection (bare_metal / virtual_machine / container / unknown)
+#   * capability gating (which tuning is allowed on which host class)
+#   * a dry-run aware command runner and file writer
+#   * step / sub-step logging and a step-timing table
+#   * CPU list helpers (list <-> array <-> hexadecimal mask)
+#   * one-time "factory settings" backup of every file we touch
+#
+# Requires bash >= 4.2 (RHEL 8 ships 4.4, RHEL 9 ships 5.1).
+
+# shellcheck disable=SC2034  # variables are consumed by the scripts that source this file
+
+if [[ -n "${LOWLAT_COMMON_LOADED:-}" ]]; then
+	return 0
+fi
+LOWLAT_COMMON_LOADED=1
+
+LOWLAT_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+LOWLAT_CONFIG="${LOWLAT_CONFIG:-/etc/lowlat/lowlat.conf}"
+LOWLAT_STATE_DIR="${LOWLAT_STATE_DIR:-/var/lib/lowlat}"
+LOWLAT_FACTORY_DIR="${LOWLAT_STATE_DIR}/factory-settings"
+LOWLAT_BACKUP_DIR="${LOWLAT_STATE_DIR}/backup/$(date +%Y%m%d-%H%M%S)"
+
+DRY_RUN="${DRY_RUN:-0}"
+
+# Exit codes, shared by all scripts.
+EXIT_OK=0
+EXIT_ERROR=1
+EXIT_USAGE=2
+EXIT_PRECHECK=3
+EXIT_APPLY=4
+EXIT_VERIFY=5
+
+if [[ -t 1 ]]; then
+	GREEN=$'\033[32m'
+	YELLOW=$'\033[33m'
+	RED=$'\033[31m'
+	BOLD=$'\033[1m'
+	RESET=$'\033[0m'
+else
+	GREEN="" YELLOW="" RED="" BOLD="" RESET=""
+fi
+
+# -----------------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------------
+
+STEP=0
+SUB_STEP=0
+STEP_TIMING_STEPS=()
+STEP_TIMING_DESCRIPTIONS=()
+STEP_TIMING_MS=()
+STEP_TIMING_ACTIVE_MS=0
+STEP_TIMING_ACTIVE_STEP=0
+STEP_TIMING_ACTIVE_DESCRIPTION=""
+
+now_ms() {
+	# GNU date supports %N; fall back to seconds elsewhere (e.g. macOS dry-runs).
+	local ns
+	ns="$(date +%s%N 2>/dev/null)"
+	if [[ "${ns}" == *N ]]; then
+		printf '%s\n' "$(($(date +%s) * 1000))"
+	else
+		printf '%s\n' "$((ns / 1000000))"
+	fi
+}
+
+step_timing_close() {
+	[[ -n "${STEP_TIMING_ACTIVE_DESCRIPTION}" ]] || return 0
+	STEP_TIMING_STEPS+=("$(printf '%02d' "${STEP_TIMING_ACTIVE_STEP}")")
+	STEP_TIMING_DESCRIPTIONS+=("${STEP_TIMING_ACTIVE_DESCRIPTION}")
+	STEP_TIMING_MS+=("$(($(now_ms) - STEP_TIMING_ACTIVE_MS))")
+	STEP_TIMING_ACTIVE_DESCRIPTION=""
+}
+
+# log_step "<message>" - starts a numbered step (01., 02., ...) and its timer.
+log_step() {
+	step_timing_close
+	STEP=$((STEP + 1))
+	SUB_STEP=0
+	STEP_TIMING_ACTIVE_MS="$(now_ms)"
+	STEP_TIMING_ACTIVE_STEP="${STEP}"
+	STEP_TIMING_ACTIVE_DESCRIPTION="$1"
+	printf '\n%s%02d. %s%s\n' "${BOLD}" "${STEP}" "$1" "${RESET}"
+}
+
+# log_sub_step "<message>" - numbered action inside the current step (01.01, 01.02, ...).
+log_sub_step() {
+	SUB_STEP=$((SUB_STEP + 1))
+	printf '    %02d.%02d %s\n' "${STEP}" "${SUB_STEP}" "$1"
+}
+
+log_warn() {
+	printf '    %sWARN: %s%s\n' "${YELLOW}" "$1" "${RESET}" >&2
+}
+
+log_error() {
+	printf '    %sERROR: %s%s\n' "${RED}" "$1" "${RESET}" >&2
+}
+
+die() {
+	log_error "$1"
+	exit "${2:-${EXIT_ERROR}}"
+}
+
+format_duration_ms() {
+	LC_ALL=C awk -v ms="$1" 'BEGIN { printf "%8.3f s", ms / 1000 }'
+}
+
+# print_step_timing_table - prints how long each step took (useful to spot slow ethtool resets).
+print_step_timing_table() {
+	local i total=0
+	step_timing_close
+	((${#STEP_TIMING_STEPS[@]} > 0)) || return 0
+	printf '\nStep timing summary\n'
+	printf '+------+----------------------------------------------------------+------------+\n'
+	printf '| %-4s | %-56s | %10s |\n' "Step" "Description" "Duration"
+	printf '+------+----------------------------------------------------------+------------+\n'
+	for i in "${!STEP_TIMING_STEPS[@]}"; do
+		total=$((total + STEP_TIMING_MS[i]))
+		printf '| %-4s | %-56.56s | %10s |\n' "${STEP_TIMING_STEPS[i]}" \
+			"${STEP_TIMING_DESCRIPTIONS[i]}" "$(format_duration_ms "${STEP_TIMING_MS[i]}")"
+	done
+	printf '+------+----------------------------------------------------------+------------+\n'
+	printf '| %-4s | %-56s | %10s |\n' "" "TOTAL" "$(format_duration_ms "${total}")"
+	printf '+------+----------------------------------------------------------+------------+\n'
+}
+
+# -----------------------------------------------------------------------------
+# Dry-run aware execution
+# -----------------------------------------------------------------------------
+
+# run <command> [args...] - executes the command, or prints it when DRY_RUN=1.
+# Output of the command is indented so it nests under the sub-step that caused it.
+run() {
+	if [[ "${DRY_RUN}" -eq 1 ]]; then
+		printf '           [dry-run] %s\n' "$*"
+		return 0
+	fi
+	local rc=0
+	"$@" 2>&1 | sed 's/^/           /' || rc=$?
+	return "${rc}"
+}
+
+# run_quiet <command> [args...] - like run, but tolerates failure (driver does not
+# support a feature, service does not exist, module not loaded, ...).
+run_quiet() {
+	if [[ "${DRY_RUN}" -eq 1 ]]; then
+		printf '           [dry-run] %s\n' "$*"
+		return 0
+	fi
+	"$@" >/dev/null 2>&1 || return 0
+}
+
+# write_file <path> [mode] - writes stdin to <path> (backing up the old file first).
+write_file() {
+	local path="$1" mode="${2:-0644}" content
+	content="$(cat)"
+	if [[ "${DRY_RUN}" -eq 1 ]]; then
+		printf '           [dry-run] write %s (mode %s):\n' "${path}" "${mode}"
+		printf '%s\n' "${content}" | sed 's/^/             | /'
+		return 0
+	fi
+	backup_file "${path}"
+	mkdir -p "$(dirname "${path}")"
+	printf '%s\n' "${content}" >"${path}"
+	chmod "${mode}" "${path}"
+}
+
+# sysfs_write <value> <path> - writes a value to a sysfs/procfs knob.
+sysfs_write() {
+	local value="$1" path="$2"
+	if [[ "${DRY_RUN}" -eq 1 ]]; then
+		printf '           [dry-run] echo %s > %s\n' "${value}" "${path}"
+		return 0
+	fi
+	if [[ ! -e "${path}" ]]; then
+		log_warn "${path} does not exist on this kernel, skipping"
+		return 0
+	fi
+	printf '%s\n' "${value}" >"${path}"
+}
+
+# set_key_value_line <file> <key> <value> - replaces "key=..." in a key=value file
+# (e.g. /etc/systemd/system.conf), appending it if missing.
+set_key_value_line() {
+	local file="$1" key="$2" value="$3"
+	if [[ "${DRY_RUN}" -eq 1 ]]; then
+		printf '           [dry-run] set %s=%s in %s\n' "${key}" "${value}" "${file}"
+		return 0
+	fi
+	backup_file "${file}"
+	sed -i "/^${key}=/d" "${file}"
+	printf '%s=%s\n' "${key}" "${value}" >>"${file}"
+}
+
+# -----------------------------------------------------------------------------
+# Backups
+# -----------------------------------------------------------------------------
+
+# backup_file <path> - the first time a file is touched, keep a pristine copy under
+# factory-settings/ (never overwritten). Every run also keeps a timestamped copy.
+backup_file() {
+	local path="$1"
+	[[ -f "${path}" ]] || return 0
+	[[ "${DRY_RUN}" -eq 1 ]] && return 0
+	if [[ ! -e "${LOWLAT_FACTORY_DIR}${path}" ]]; then
+		mkdir -p "$(dirname "${LOWLAT_FACTORY_DIR}${path}")"
+		cp -a "${path}" "${LOWLAT_FACTORY_DIR}${path}"
+	fi
+	mkdir -p "$(dirname "${LOWLAT_BACKUP_DIR}${path}")"
+	cp -a "${path}" "${LOWLAT_BACKUP_DIR}${path}"
+}
+
+# -----------------------------------------------------------------------------
+# Host classification and capability gating
+# -----------------------------------------------------------------------------
+
+host_class_from_systemd() {
+	local virt
+	command -v systemd-detect-virt >/dev/null 2>&1 || return 1
+	if systemd-detect-virt --quiet --container >/dev/null 2>&1; then
+		printf 'container\n'
+		return 0
+	fi
+	virt="$(systemd-detect-virt 2>/dev/null || true)"
+	case "${virt}" in
+	none) printf 'bare_metal\n' ;;
+	'') return 1 ;;
+	*) printf 'virtual_machine\n' ;;
+	esac
+}
+
+host_class_from_dmi() {
+	local vendor product
+	[[ -r /sys/class/dmi/id/sys_vendor ]] || return 1
+	vendor="$(tr '[:upper:]' '[:lower:]' </sys/class/dmi/id/sys_vendor 2>/dev/null || true)"
+	product="$(tr '[:upper:]' '[:lower:]' </sys/class/dmi/id/product_name 2>/dev/null || true)"
+	case "${vendor} ${product}" in
+	*vmware* | *virtualbox* | *qemu* | *kvm* | *microsoft*corporation* | *hyper-v* | *xen* | *amazon\ ec2* | *google*compute*)
+		printf 'virtual_machine\n'
+		;;
+	*) return 1 ;;
+	esac
+}
+
+host_class_from_cpuinfo() {
+	[[ -r /proc/cpuinfo ]] || return 1
+	grep -q '^flags[[:space:]]*:.*hypervisor' /proc/cpuinfo 2>/dev/null || return 1
+	printf 'virtual_machine\n'
+}
+
+# host_class_detect - prints bare_metal | virtual_machine | container | unknown.
+# LOWLAT_HOST_CLASS overrides detection (useful for dry-runs and odd hypervisors).
+host_class_detect() {
+	local detected detector
+	if [[ -n "${LOWLAT_HOST_CLASS:-}" ]]; then
+		case "${LOWLAT_HOST_CLASS}" in
+		bare_metal | virtual_machine | container | unknown) printf '%s\n' "${LOWLAT_HOST_CLASS}" ;;
+		*) printf 'unknown\n' ;;
+		esac
+		return 0
+	fi
+	for detector in host_class_from_systemd host_class_from_dmi host_class_from_cpuinfo; do
+		detected="$("${detector}" 2>/dev/null || true)"
+		if [[ -n "${detected}" ]]; then
+			printf '%s\n' "${detected}"
+			return 0
+		fi
+	done
+	printf 'unknown\n'
+}
+
+HOST_CLASS="${HOST_CLASS:-$(host_class_detect)}"
+
+host_is_bare_metal() { [[ "${HOST_CLASS}" == bare_metal ]]; }
+host_is_vm() { [[ "${HOST_CLASS}" == virtual_machine ]]; }
+host_allows_apply() { host_is_bare_metal || host_is_vm; }
+
+# capability_decision <capability> - prints apply | skip | refuse.
+# This table is the single source of truth for "what runs where".
+capability_decision() {
+	if ! host_allows_apply; then
+		printf 'refuse\n'
+		return
+	fi
+	case "$1" in
+	# Only meaningful when the hypervisor is not scheduling our vCPUs behind our back.
+	isolation_grub | core_isolation | irqbalance_disable | huge_pages | rt_throttling)
+		if host_is_bare_metal; then printf 'apply\n'; else printf 'skip\n'; fi
+		;;
+	# Safe and useful on both.
+	latency_grub | sysctl | nic_tuning | nic_irq_affinity | os_hygiene | cgroup_isolation)
+		printf 'apply\n'
+		;;
+	*) printf 'skip\n' ;;
+	esac
+}
+
+# require_capability <capability> - returns 1 (and logs) when the capability is skipped.
+require_capability() {
+	local decision
+	decision="$(capability_decision "$1")"
+	case "${decision}" in
+	apply) return 0 ;;
+	skip)
+		log_sub_step "Skipping '$1' on host_class=${HOST_CLASS}"
+		return 1
+		;;
+	*) die "host_class=${HOST_CLASS} is not supported for tuning" "${EXIT_PRECHECK}" ;;
+	esac
+}
+
+require_root() {
+	[[ "${DRY_RUN}" -eq 1 ]] && return 0
+	[[ "${EUID}" -eq 0 ]] || die "must run as root (or use --dry-run)" "${EXIT_PRECHECK}"
+}
+
+require_commands() {
+	local cmd missing=()
+	for cmd in "$@"; do
+		command -v "${cmd}" >/dev/null 2>&1 || missing+=("${cmd}")
+	done
+	if ((${#missing[@]} > 0)); then
+		if [[ "${DRY_RUN}" -eq 1 ]]; then
+			log_warn "missing commands (ignored in dry-run): ${missing[*]}"
+			return 0
+		fi
+		die "missing commands: ${missing[*]} (dnf install ${missing[*]})" "${EXIT_PRECHECK}"
+	fi
+}
+
+# -----------------------------------------------------------------------------
+# Configuration
+# -----------------------------------------------------------------------------
+
+# load_config - sources LOWLAT_CONFIG. In dry-run mode, falls back to the example.
+load_config() {
+	if [[ -r "${LOWLAT_CONFIG}" ]]; then
+		# shellcheck source=/dev/null
+		. "${LOWLAT_CONFIG}"
+	elif [[ "${DRY_RUN}" -eq 1 ]]; then
+		log_warn "${LOWLAT_CONFIG} not found, using ${LOWLAT_SCRIPTS_DIR}/lowlat.conf.example"
+		# shellcheck source=/dev/null
+		. "${LOWLAT_SCRIPTS_DIR}/lowlat.conf.example"
+	else
+		die "configuration ${LOWLAT_CONFIG} not found (copy scripts/lowlat.conf.example)" "${EXIT_PRECHECK}"
+	fi
+}
+
+# parse_mode_args "$@" - common CLI for every guide script. Sets MODE.
+MODE=""
+parse_mode_args() {
+	while (($# > 0)); do
+		case "$1" in
+		--apply) MODE=apply ;;
+		--dry-run)
+			MODE=apply
+			DRY_RUN=1
+			;;
+		--verify) MODE=verify ;;
+		--runtime) MODE=runtime ;;
+		--rollback) MODE=rollback ;;
+		--config)
+			shift
+			LOWLAT_CONFIG="$1"
+			;;
+		-h | --help) MODE=help ;;
+		*)
+			printf 'unknown argument: %s\n' "$1" >&2
+			MODE=help
+			return "${EXIT_USAGE}"
+			;;
+		esac
+		shift
+	done
+	[[ -n "${MODE}" ]] || MODE=help
+}
+
+print_usage() {
+	cat <<EOF
+Usage: $(basename "$0") [--apply | --dry-run | --verify | --rollback] [--config FILE]
+
+  --apply      apply this guide's tuning (root)
+  --dry-run    print every command/file that --apply would run/write
+  --verify     read-only check of this guide's tuning
+  --rollback   undo this guide's tuning (when supported)
+  --runtime    re-apply only the non-persistent part (used at boot by lowlat-runtime.service)
+  --config     configuration file (default: ${LOWLAT_CONFIG})
+
+Host class: ${HOST_CLASS} (override with LOWLAT_HOST_CLASS=bare_metal|virtual_machine)
+EOF
+}
+
+# -----------------------------------------------------------------------------
+# CPU list helpers
+# -----------------------------------------------------------------------------
+
+# cpu_list_join <cpu>... - "3 5 7" -> "3,5,7"
+cpu_list_join() {
+	local IFS=,
+	printf '%s\n' "$*"
+}
+
+# cpu_list_expand <list> - "0-3,8,10-11" -> "0 1 2 3 8 10 11"
+cpu_list_expand() {
+	local part start end out=() parts=()
+	IFS=, read -r -a parts <<<"$1"
+	for part in "${parts[@]}"; do
+		part="${part// /}"
+		[[ -n "${part}" ]] || continue
+		if [[ "${part}" == *-* ]]; then
+			start="${part%-*}"
+			end="${part#*-}"
+			while ((start <= end)); do
+				out+=("${start}")
+				start=$((start + 1))
+			done
+		else
+			out+=("${part}")
+		fi
+	done
+	printf '%s\n' "${out[*]}"
+}
+
+# cpu_mask_from_list <cpu>... - builds the hexadecimal mask the kernel expects in
+# cpumask files (e.g. /sys/devices/virtual/workqueue/cpumask). Works for any CPU
+# count: the mask is emitted as comma-separated 32-bit words, most significant first.
+#   cpu_mask_from_list 0 1      -> 00000003
+#   cpu_mask_from_list 0 33     -> 00000002,00000001
+cpu_mask_from_list() {
+	local cpu max=0 words i mask=""
+	local -a word=()
+	for cpu in "$@"; do
+		((cpu > max)) && max="${cpu}"
+	done
+	words=$((max / 32 + 1))
+	for ((i = 0; i < words; i++)); do word[i]=0; done
+	for cpu in "$@"; do
+		word[cpu / 32]=$((word[cpu / 32] | (1 << (cpu % 32))))
+	done
+	for ((i = words - 1; i >= 0; i--)); do
+		mask+="$(printf '%08x' "${word[i]}")"
+		((i > 0)) && mask+=","
+	done
+	printf '%s\n' "${mask}"
+}
+
+# online_cpus - prints the online CPU list, e.g. "0-31".
+online_cpus() {
+	cat /sys/devices/system/cpu/online 2>/dev/null || printf '0-%s\n' "$(($(getconf _NPROCESSORS_ONLN) - 1))"
+}
+
+# -----------------------------------------------------------------------------
+# Verification helpers (read-only)
+# -----------------------------------------------------------------------------
+
+VERIFY_FAILURES=0
+VERIFY_WARNINGS=0
+
+# verify_check "<message>" <command> [args...] - PASS when the command succeeds.
+verify_check() {
+	local message="$1"
+	shift
+	if "$@" >/dev/null 2>&1; then
+		printf '  %sPASS%s %s\n' "${GREEN}" "${RESET}" "${message}"
+	else
+		printf '  %sFAIL%s %s\n' "${RED}" "${RESET}" "${message}"
+		VERIFY_FAILURES=$((VERIFY_FAILURES + 1))
+	fi
+}
+
+# verify_soft "<message>" <command> [args...] - like verify_check but only WARNs.
+verify_soft() {
+	local message="$1"
+	shift
+	if "$@" >/dev/null 2>&1; then
+		printf '  %sPASS%s %s\n' "${GREEN}" "${RESET}" "${message}"
+	else
+		printf '  %sWARN%s %s\n' "${YELLOW}" "${RESET}" "${message}"
+		VERIFY_WARNINGS=$((VERIFY_WARNINGS + 1))
+	fi
+}
+
+verify_info() {
+	printf '  INFO %s\n' "$1"
+}
+
+# not <command> [args...] - negates a command (for use with verify_check).
+not() {
+	! "$@"
+}
+
+# verify_result - exit status for a --verify run.
+verify_result() {
+	if ((VERIFY_FAILURES > 0)); then
+		return "${EXIT_VERIFY}"
+	fi
+	return 0
+}
