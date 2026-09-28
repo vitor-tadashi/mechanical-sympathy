@@ -6,11 +6,26 @@ A field guide, with working scripts, for turning a Red Hat Enterprise Linux 8/9 
 
 Every guide explains **what the kernel does**, **why each value is chosen**, **how to verify it**, and **how to undo it**. Every guide ships with a shell script whose functions implement exactly what the guide describes, with a `--dry-run` mode that shows every command and file before anything changes.
 
+## Start here (5 minutes)
+
+- **What it is:** eight guides, and one script per guide, that make a RHEL 8/9 host quiet and predictable for a few latency-critical threads.
+- **What you get:** a much shorter tail. p99.9 and max typically drop several-fold, and p50 improves modestly. You measure it on your own workload.
+- **What it costs:** power, throughput, flexibility, and in places security. Read [Read this first](#read-this-first) before applying anything.
+
+| I want to… | Go to |
+|---|---|
+| Tune a dedicated physical server | [Quick start, Scenario A](QUICK_START.md#scenario-a-dedicated-bare-metal-host-the-full-treatment) |
+| Tune a virtual machine | [Quick start, Scenario B](QUICK_START.md#scenario-b-virtual-machine) |
+| Understand why it works before touching a host | [Reading paths](INDEX.md#reading-paths), then the [concepts](INDEX.md#concepts) |
+| Make my application behave on a tuned host | [Java on a tuned host](examples/hugepages-java-example.md) |
+| Check a host that is already tuned | `scripts/verify-tuning`, see [the scripts](INDEX.md#scripts) |
+
 ---
 
 ## Read this first
 
-These settings are for **dedicated hosts running a small number of well-understood, latency-critical processes that pin their threads**. They trade power, throughput, flexibility, and in places **security** for predictable latency.
+> [!WARNING]
+> These settings are for **dedicated hosts running a small number of well-understood, latency-critical processes that pin their threads**. They trade power, throughput, flexibility, and in places **security** for predictable latency.
 
 - Several settings **lower throughput** or **raise CPU/power usage** (interrupt per packet, polling idle loop).
 - CPU isolation **hurts** applications with large, dynamic thread pools that do not pin threads.
@@ -33,27 +48,35 @@ These settings are for **dedicated hosts running a small number of well-understo
 | 06 | [Kernel sysctl](guides/06-kernel-sysctl-tuning.md) | [`06-kernel-sysctl`](scripts/06-kernel-sysctl) | 2 | no | ✅ | ✅ |
 | 07 | [OS hygiene](guides/07-os-hygiene.md) | [`07-os-hygiene`](scripts/07-os-hygiene) | 2 (5 opt-in) | no | ✅ | ✅ |
 | 08 | [Kernel bypass (Onload, DPDK)](guides/08-kernel-bypass.md) | [`08-kernel-bypass`](scripts/08-kernel-bypass) | 4 (optional) | DPDK: yes (IOMMU) | ✅ | SR-IOV VF only |
+| 09 | [Measuring latency](guides/09-measuring-latency.md) (first, and after every guide) | [`09-measure-latency`](scripts/09-measure-latency) | 1 | no | ✅ | ✅ (no SMI count) |
 
 Plus:
 
 - **Concepts**: why it works. [Boot path](concepts/bootloader.md) · [CPU isolation](concepts/cpu-isolation.md) · [Network path](concepts/network-tuning.md) · [`ethtool` reference](concepts/ethtool.md) · [Huge pages & NUMA](concepts/huge-pages.md) · [cgroups](concepts/cgroups.md)
 - **Examples**: [Java on a tuned host](examples/hugepages-java-example.md), with a [runnable probe](examples/java-latency-probe/) · [Multi-NIC segmentation](examples/network-segmentation-example.md)
+- **Quick help**: [Cheat sheet](CHEATSHEET.md) (every check on one page) · [FAQ](FAQ.md)
 - **Tools**: [`apply-all`](scripts/apply-all) (plan / dry-run / apply / runtime) · [`verify-tuning`](scripts/verify-tuning) (PASS/WARN/FAIL report) · [`lowlat-runtime.service`](scripts/systemd/lowlat-runtime.service) (re-applies runtime state at boot)
 
 ## How it fits together
 
+```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 480}}}%%
+flowchart TD
+  conf[("<b>/etc/lowlat/lowlat.conf</b><br/>CPU layout · NIC roles · huge pages per node")]
+  once["<b>Apply once, then reboot</b> (persistent)<br/>01 kernel command line: isolcpus, nohz_full, rcu_nocbs, idle=poll, THP off<br/>02 systemd CPUAffinity, RT limits · 03 huge pages per NUMA node<br/>05 housekeeping.slice · 06 sysctl profile · 07 services, limits, noatime, tuned"]
+  boot["<b>Every boot</b>: lowlat-runtime.service<br/>04 NIC coalescing, offloads, IRQ affinity · 02 workqueue cpumask<br/>05 pin agents · 07 opt-in firewall and modules"]
+  app["<b>Application launcher</b><br/>JVM options by host class · large pages, NUMA, pre-touch when pinned<br/>threads pinned to isolated CPUs · busy-spin idle strategy"]
+  verify{{"<b>scripts/verify-tuning</b><br/>PASS / WARN / FAIL"}}
+  conf --> once --> boot --> app --> verify
+  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
+  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
+  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+  class conf focus
+  class once,boot hk
+  class app iso
 ```
-                    ┌───────────── boot time ─────────────┐   ┌──────── every boot ────────┐   ┌─── application ───┐
- lowlat.conf ──►    01 kernel cmdline (isolcpus, nohz_full,     lowlat-runtime.service:          launcher:
- (CPU layout,          rcu_nocbs, idle=poll, THP off)           04 NIC coalescing/offloads      JVM options by host class
-  NIC roles,        02 systemd CPUAffinity, RT limits              + IRQ affinity               + UseLargePages/UseNUMA/
-  huge pages)       03 per-NUMA huge page reservation           02 workqueue cpumask              AlwaysPreTouch if pinned
-                    05 housekeeping.slice                       05 pin agents                   threads pin to isolated CPUs
-                    06 /etc/sysctl.d/90-lowlat.conf             07 opt-in firewall/modules      busy-spin idle strategy
-                    07 services, limits, noatime, tuned
-                    └─────────────────────────────────────┘   └────────────────────────────┘   └───────────────────┘
-                                                        verify-tuning  ──► PASS / WARN / FAIL
-```
+
+*One config file drives everything. Persistent settings are applied once and take effect at the next boot. Runtime settings are re-applied at every boot by `lowlat-runtime.service`. The application pins its threads last, and `verify-tuning` checks the result.*
 
 All scripts read one file, **`/etc/lowlat/lowlat.conf`** ([example](scripts/lowlat.conf.example)), which describes *your* hardware: isolated CPUs, OS CPUs, workqueue CPUs, NIC roles and their IRQ CPUs, and huge pages per NUMA node. Nothing is hard-coded. The scripts detect the host class (`bare_metal`, `virtual_machine`, `container`) and apply only what makes sense there.
 
@@ -96,14 +119,14 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 
 ```
 .
-├── README.md  QUICK_START.md  INDEX.md
-├── guides/          00..08 step-by-step guides
+├── README.md  QUICK_START.md  INDEX.md  CHEATSHEET.md  FAQ.md  STYLE.md
+├── guides/          00..09 step-by-step guides
 ├── concepts/        6 deep dives
 ├── examples/        Java on a tuned host (+ runnable probe), multi-NIC segmentation
 └── scripts/
     ├── lib/common            logging, dry-run, host class, backups, CPU list helpers
     ├── lowlat.conf.example    the host description
-    ├── 00..08-*               one script per guide (--apply / --dry-run / --verify / --rollback)
+    ├── 00..09-*               one script per guide (--apply / --dry-run / --verify / --rollback)
     ├── apply-all              sequencing + step timing
     ├── verify-tuning          read-only report
     └── systemd/lowlat-runtime.service
@@ -115,7 +138,7 @@ Copyright (c) 2026 Vitor Tadashi. Use it freely, with credit.
 
 | What | License |
 |---|---|
-| Prose: `guides/`, `concepts/`, the Markdown in `examples/`, `README.md`, `INDEX.md`, `QUICK_START.md` | [CC BY 4.0](LICENSE-docs) |
+| Prose: `guides/`, `concepts/`, the Markdown in `examples/`, `README.md`, `INDEX.md`, `QUICK_START.md`, `CHEATSHEET.md`, `FAQ.md` | [CC BY 4.0](LICENSE-docs) |
 | Code: `scripts/`, `tools/`, `.githooks/`, the Java probe, `Makefile`, CI config | [MIT](LICENSE) |
 
 To reuse the docs, credit them, for example: *"Based on mechanical-sympathy by Vitor Tadashi, CC BY 4.0"*, with a link to this repository and a note of what you changed.

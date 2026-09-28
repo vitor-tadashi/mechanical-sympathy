@@ -178,3 +178,18 @@ FLUSH_FIREWALL_RULES=no
 REMOVE_NETFILTER_MODULES=no
 
 TUNED_BASE_PROFILE=network-latency
+
+# -----------------------------------------------------------------------------
+# Measurement (Guide 09)
+# -----------------------------------------------------------------------------
+
+# Packages 09-measure-latency installs when missing. rt-tests (cyclictest) may need
+# the Real Time or EPEL repository; perf and kernel-tools (turbostat) are in BaseOS/AppStream.
+MEASURE_PACKAGES=(rtla rt-tests sysstat perf kernel-tools numactl)
+
+# CPUs measured by 09-measure-latency --run. Empty = ISOLATED_CPUS.
+# rtla osnoise runs a workload on each of them: never measure CPUs the application is using.
+MEASURE_CPUS=()
+
+# Seconds of OS-noise measurement per bundle.
+MEASURE_DURATION=60

@@ -8,6 +8,39 @@
 | **Reboot required** | No. Applied immediately, and persistent through `/etc/sysctl.d/90-lowlat.conf`. |
 | **Applies to** | Bare metal and VMs. |
 
+## At a glance
+
+- **What:** one commented file, `/etc/sysctl.d/90-lowlat.conf`, covering kernel logging, TCP behavior, socket buffers, queues, the endpoint/ARP policy, BPF and virtual memory.
+- **Why:** it removes millisecond stalls (synchronous console printing, direct reclaim, NUMA balancing faults), avoids silent packet drops (clamped buffers), and makes connections fail over fast.
+- **Cost:** a few risky values that must fit the host: `tcp_syn_retries=1`, `min_free_kbytes`, and IPv6 turned off.
+
+**Time:** ~15 min, no reboot · **Do this if:** always, on bare metal and VMs · **Skip if:** never, but scale `vm.min_free_kbytes` to the host and keep IPv6 if anything uses it.
+
+```mermaid
+flowchart LR
+  g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
+  class g06 focus
+  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+```
+
+*Guide 06 is independent of the CPU layout. It can run on any host class.*
+
+```mermaid
+flowchart TD
+  f[["90-lowlat.conf"]] --> g1["§2 logging<br/>printk,<br/>numa_balancing"]
+  f --> g2["§3 TCP<br/>SYN retries,<br/>keepalive"]
+  f --> g3["§4 buffers<br/>rmem_max,<br/>tcp_rmem"]
+  f --> g4["§5 queues<br/>backlog,<br/>qdisc"]
+  f --> g5["§6 endpoint<br/>forwarding,<br/>IPv6, ARP"]
+  f --> g6["§7 BPF<br/>JIT"]
+  f --> g7["§8 memory<br/>dirty, min_free,<br/>stat_interval"]
+  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
+  class g2,g5,g7 risk
+```
+
+*The profile has seven groups, one section each. The three groups marked in red hold the riskiest values: §3 (SYN retries), §6 (IPv6) and §8 (`min_free_kbytes`).*
+
 ---
 
 ## 1. Principles
@@ -17,7 +50,14 @@
 - **Skip what the kernel does not have.** `net.ipv4.tcp_shrink_window` (kernel ≥ 6.5) and `net.core.txrehash` (≥ 5.18) do not exist on stock RHEL 8/9 kernels. The script leaves them out and reports them, instead of silently ignoring the error.
 - **Know who else writes sysctls.** tuned profiles ([Guide 07](07-os-hygiene.md)) set some of the same keys. On a conflict, the value that is applied last wins. Guide 07 makes the tuned profile include this file's values, so both agree.
 
-Load order at boot: `systemd-sysctl.service` (all `sysctl.d` files, sorted by name) → tuned (its profile's `[sysctl]` section) → the udev rule that re-applies `net.ipv4.conf.<iface>.*` keys when an interface appears. The last point matters for per-interface keys, because the NICs do not exist yet when `systemd-sysctl` runs.
+Load order at boot:
+
+```mermaid
+flowchart LR
+  a["systemd-sysctl.service<br/>all sysctl.d files, sorted by name"] --> b["tuned<br/>its profile's [sysctl] section,<br/>then sysctl.d again (reapply_sysctl)"] --> c["udev rule<br/>per-interface keys when each NIC appears"]
+```
+
+*The last writer wins. tuned re-applies `sysctl.d` after its own values, and the per-interface keys only land once each NIC exists, because the NICs do not exist yet when `systemd-sysctl` runs.*
 
 ## 2. Kernel logging and debug
 
@@ -29,7 +69,7 @@ Load order at boot: `systemd-sysctl.service` (all `sysctl.d` files, sorted by na
 | `kernel.ftrace_enabled` | `0` | Disables the function tracer's patching hooks. Re-enable temporarily (`sysctl -w kernel.ftrace_enabled=1`) when you need `trace-cmd`/`perf ftrace`. |
 | `kernel.numa_balancing` | `0` | Automatic NUMA balancing periodically **unmaps pages to sample accesses** (hint faults) and migrates them between nodes. On a host where placement is decided on purpose (pinned threads, per-node huge pages), it only adds faults and TLB shootdowns. Also set by the tuned `network-latency` profile. |
 
-## 3. TCP behaviour
+## 3. TCP behavior
 
 | Key | Value | What it does, and why |
 |---|---|---|
@@ -74,7 +114,7 @@ Load order at boot: `systemd-sysctl.service` (all `sysctl.d` files, sorted by na
 | Key | Value | Why |
 |---|---|---|
 | `net.ipv4.ip_forward`, `net.ipv6.conf.all.forwarding` | `0` | The host is an endpoint. Forwarding enabled by accident turns it into a router between segments that are meant to be separate ([Guide 04 §3](04-network-optimization.md#3-network-segmentation-give-each-traffic-class-its-own-nic)). |
-| `net.ipv6.conf.{all,default,lo,<each NIC>}.disable_ipv6` | `1` | ⚠️ IPv4-only host. It removes router advertisements, neighbour discovery, MLD reports, and their timers. **Do not apply if anything on the host uses IPv6** (including `::1` for local services). The Java property `-Djava.net.preferIPv4Stack=true` is still recommended. |
+| `net.ipv6.conf.{all,default,lo,<each NIC>}.disable_ipv6` | `1` | ⚠️ IPv4-only host. It removes router advertisements, neighbor discovery, MLD reports, and their timers. **Do not apply if anything on the host uses IPv6** (including `::1` for local services). The Java property `-Djava.net.preferIPv4Stack=true` is still recommended. |
 | `net.ipv4.conf.{lo,<each NIC>}.arp_ignore` | `1` | Multi-homed host: answer ARP only for addresses configured **on the interface that received the request**. Without it, the host can answer ARP for its critical IP via the management NIC, and traffic flows over the wrong network. |
 | `arp_announce` / `arp_filter` / `arp_accept` | `0` | Kernel defaults, written explicitly so the file documents the complete ARP policy. For hosts with several NICs **in the same subnet**, consider `arp_announce=2` and `arp_filter=1`. |
 
@@ -133,6 +173,16 @@ tuned-adm active; grep -r rmem_max /etc/sysctl.d /usr/lib/sysctl.d /etc/tuned 2>
 
 ## 11. Troubleshooting
 
+```mermaid
+flowchart TD
+  s(["A sysctl value is wrong"]) --> w{"When?"}
+  w -- "after boot" --> f1["A later file or tuned wins:<br/>systemd-analyze cat-config sysctl.d"]
+  w -- "only per-interface keys" --> f2["NIC appeared late:<br/>check again after boot, udev re-applies"]
+  w -- "never applied" --> f3["Key missing on this kernel:<br/>sysctl --system errors, script skip list"]
+```
+
+*A value that reverts is almost always a later writer. A per-interface key that is missing at boot is usually a NIC that appeared after `systemd-sysctl` ran.*
+
 | Symptom | Cause | Fix |
 |---|---|---|
 | Value reverts after boot | A later `sysctl.d` file or the tuned profile sets it | `systemd-analyze cat-config sysctl.d`; include this file in the tuned profile ([Guide 07](07-os-hygiene.md#5-tuned-profile)) |
@@ -144,12 +194,19 @@ tuned-adm active; grep -r rmem_max /etc/sysctl.d /usr/lib/sysctl.d /etc/tuned 2>
 
 ## 12. Rollback
 
-```bash
-sudo scripts/06-kernel-sysctl --rollback      # removes the file
-sudo systemctl reboot                          # or re-apply the defaults with: sysctl --system
-```
+- [ ] Remove the file: `sudo scripts/06-kernel-sysctl --rollback`
+- [ ] Reboot to get the defaults back: `sudo systemctl reboot`. Or reload the remaining files with `sudo sysctl --system`, which does not reset keys that no file sets.
+- [ ] Confirm: `sysctl vm.stat_interval` shows `1`
 
-## 13. References
+## 13. Key takeaways
+
+- One file in `/etc/sysctl.d/`, a reason above every key, and nothing in `/etc/sysctl.conf`.
+- The last writer wins: `systemd-sysctl`, then tuned (which re-applies `sysctl.d`), then udev for per-interface keys.
+- Buffer maxima are ceilings, not allocations. Too low a ceiling silently clamps a transport's buffer and drops packets.
+- `tcp_syn_retries=1`, IPv6 off and `min_free_kbytes` are host-specific. Check each one before applying.
+- `vm.stat_interval=60` and `kernel.numa_balancing=0` remove periodic wake-ups and hint faults.
+
+## 14. References
 
 - <https://docs.kernel.org/admin-guide/sysctl/net.html>, <https://docs.kernel.org/networking/ip-sysctl.html>, <https://docs.kernel.org/admin-guide/sysctl/vm.html>
 - `man 5 sysctl.d`, `man 8 systemd-sysctl`
