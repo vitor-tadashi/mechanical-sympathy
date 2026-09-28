@@ -198,7 +198,7 @@ flowchart LR
 | `osnoise` shows IRQ time on an isolated CPU | A NIC or device IRQ landing there | [Guide 04 §6](04-network-optimization.md#6-interrupt-affinity-set_nic_irq_affinity) |
 | `osnoise` shows thread time (`kworker`, agents) | Workqueues or agents on the CPU | [Guide 02 §4.2](02-cpu-core-isolation.md#42-unbound-kernel-workqueues-runtime), [Guide 05](05-cgroup-isolation.md) |
 | Bimodal histogram | Some samples cross NUMA nodes, or share a core with an SMT sibling | [Guide 02 §3](02-cpu-core-isolation.md#3-designing-the-cpu-layout), [Guide 03 §5.3](03-huge-pages-configuration.md#53-make-sure-the-pages-come-from-the-right-node) |
-| Rare max of hundreds of µs, `osnoise` clean | SMIs (check the `turbostat` SMI column), or firmware power management | BIOS: the performance profile, and the features that generate SMIs |
+| Rare max of hundreds of µs, `osnoise` clean | SMIs (check the `turbostat` SMI column), or firmware power management | [Guide 00 §4.6](00-bios-firmware.md#46-system-management-interrupts) |
 | Random-read tail much worse than p50 | TLB misses on a large working set | [Guide 03](03-huge-pages-configuration.md) |
 | Slow first minutes | Page faults, JIT compilation, cold caches | [Guide 03 §5](03-huge-pages-configuration.md#5-java-applications) |
 

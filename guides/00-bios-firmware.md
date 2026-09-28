@@ -1,6 +1,6 @@
 # Guide 00 — BIOS and Firmware
 
-> **Script:** [`scripts/00-bios-firmware`](../scripts/00-bios-firmware) · **Concepts:** [cpu-isolation §4](../concepts/cpu-isolation.md#4-sources-of-noise-on-a-cpu-and-what-removes-each), [bootloader](../concepts/bootloader.md) · **Next:** [Guide 01 — Kernel command line](01-grub-bootloader-tuning.md) · **Measure with:** Guide 09 (measuring latency)
+> **Script:** [`scripts/00-bios-firmware`](../scripts/00-bios-firmware) · **Concepts:** [cpu-isolation §4](../concepts/cpu-isolation.md#4-sources-of-noise-on-a-cpu-and-what-removes-each), [bootloader](../concepts/bootloader.md) · **Next:** [Guide 01 — Kernel command line](01-grub-bootloader-tuning.md) · **Measure with:** [Guide 09](09-measuring-latency.md)
 
 | | |
 |---|---|
@@ -55,7 +55,7 @@ SMIs are the worst kind of noise. An SMI stops **every** CPU and runs firmware c
 - Make sure the **out-of-band console** (iLO/iDRAC/IPMI) works. Every change here needs a reboot through the setup menu.
 - Record the current settings. Most vendors can export the BIOS configuration from the BMC, and that file is your rollback.
 - Note the firmware versions (BIOS, BMC, NIC). `scripts/00-bios-firmware --verify` prints the BIOS version.
-- Take a baseline (Guide 09, measuring latency), including the SMI count: `sudo turbostat --quiet --interval 10 --num_iterations 1 --show SMI`.
+- Take a baseline ([Guide 09](09-measuring-latency.md)), including the SMI count: `sudo turbostat --quiet --interval 10 --num_iterations 1 --show SMI`.
 
 ## 4. The settings
 
@@ -84,7 +84,7 @@ Do both on dedicated hosts. The BIOS setting is the backstop if a kernel argumen
 ### 4.3 Turbo: a measured decision
 
 > [!NOTE]
-> **Not proven in production.** The trade-off below is the common reasoning. Decide it on your hardware by measuring p99.9 both ways (Guide 09, measuring latency).
+> **Not proven in production.** The trade-off below is the common reasoning. Decide it on your hardware by measuring p99.9 both ways ([Guide 09](09-measuring-latency.md)).
 
 | | Turbo on | Turbo off |
 |---|---|---|
