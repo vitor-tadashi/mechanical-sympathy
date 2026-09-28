@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+<!-- Enforced by `./gradlew check` (and `make lint` at the repository root). Any violation fails the build. -->
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <property name="severity" value="error"/>
+
+    <module name="SuppressionFilter">
+        <property name="file" value="${config_loc}/checkstyle-suppressions.xml"/>
+        <property name="optional" value="false"/>
+    </module>
+
+    <module name="FileTabCharacter"/>
+    <module name="NewlineAtEndOfFile"/>
+
+    <module name="TreeWalker">
+        <module name="UnusedImports"/>
+        <module name="RedundantImport"/>
+        <module name="AvoidStarImport"/>
+
+        <module name="WhitespaceAfter"/>
+
+        <module name="EmptyLineSeparator">
+            <property name="allowNoEmptyLineBetweenFields" value="true"/>
+            <property name="tokens"
+                      value="PACKAGE_DEF, IMPORT, CLASS_DEF, INTERFACE_DEF, ENUM_DEF, RECORD_DEF, STATIC_INIT, INSTANCE_INIT, METHOD_DEF, CTOR_DEF"/>
+        </module>
+
+        <module name="FinalParameters">
+            <property name="tokens" value="METHOD_DEF, CTOR_DEF, LITERAL_CATCH, FOR_EACH_CLAUSE"/>
+        </module>
+        <module name="FinalLocalVariable">
+            <property name="validateEnhancedForLoopVariable" value="true"/>
+        </module>
+        <module name="RedundantModifier"/>
+
+        <module name="FinalClass"/>
+        <module name="NeedBraces"/>
+        <module name="EmptyStatement"/>
+        <module name="MutableException"/>
+        <module name="MethodLength">
+            <property name="tokens" value="METHOD_DEF"/>
+            <property name="max" value="200"/>
+        </module>
+
+        <!-- Latency code waits with an idle strategy (spin / yield / park), never a sleep. -->
+        <module name="RegexpSinglelineJava">
+            <property name="format" value="Thread\.sleep\s*\("/>
+            <property name="message"
+                      value="Do not use Thread.sleep; wait with an IdleStrategy (spin, yield, park)."/>
+            <property name="ignoreComments" value="true"/>
+        </module>
+    </module>
+</module>

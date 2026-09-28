@@ -1,0 +1,3 @@
+# sdk env  (SDKMAN: selects the toolchain for this repository; examples/java-latency-probe has the same)
+java=25.0.4-tem
+gradle=9.8.0

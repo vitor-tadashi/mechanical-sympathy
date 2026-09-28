@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+#
+# pre-commit - run the lint gate before every commit. Installed by tools/install-git-hooks.
+# Skip once with: git commit --no-verify
+
+set -Eeuo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+make -C "${ROOT}" --no-print-directory lint
