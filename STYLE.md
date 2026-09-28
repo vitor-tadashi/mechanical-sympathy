@@ -32,7 +32,7 @@ Every guide follows this order. Numbered sections stay numbered, because other p
 
    ```mermaid
    flowchart LR
-     …the "you are here" strip, see §3.3…
+     here["Copy the you-are-here strip from section 3.3"]
    ```
    ~~~~
 
@@ -126,8 +126,8 @@ Every guide shows where it sits in the sequence. Copy this block, and move `:::f
 
 ```mermaid
 flowchart LR
-  g01["01 GRUB"] --> g02["02 CPUs"] --> g03["03 Huge pages"] --> g04["04 Network"]
-  g04 --> g05["05 cgroups"] --> g06["06 sysctl"] --> g07["07 Hygiene"] -.-> g08["08 Bypass"]
+  g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
   class g01 focus
   classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
 ```
