@@ -108,7 +108,7 @@ tune_nic_low_latency() {
 	run_quiet ethtool -A "${iface}" autoneg off rx off tx off
 
 	# Segmentation/aggregation offloads batch small packets into large ones (LRO/GRO
-	# on receive, TSO/GSO on transmit). Great for throughput, but a small order message
+	# on receive, TSO/GSO on transmit). Great for throughput, but a small request
 	# may wait for its batch.
 	log_sub_step "${iface}: tso off, gso off, lro off"
 	run_quiet ethtool -K "${iface}" tso off gso off lro off
@@ -118,7 +118,7 @@ tune_nic_low_latency() {
 		run_quiet ethtool -K "${iface}" rx off tx off
 	fi
 
-	# Rings at the hardware maximum: absorbs bursts (market open, reconnect storms)
+	# Rings at the hardware maximum: absorbs bursts (traffic spikes, reconnect storms)
 	# without drops. Latency is not affected when the ring is not backed up.
 	max_rx="$(ethtool_max "${iface}" -g RX)"
 	max_tx="$(ethtool_max "${iface}" -g TX)"

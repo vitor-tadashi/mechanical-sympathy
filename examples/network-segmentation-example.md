@@ -8,7 +8,7 @@
 - **Rule:** one traffic class per NIC, and the only default route on the management network.
 - **Check:** the critical round-trip p99 must not move when bulk traffic runs.
 
-This walkthrough builds the network side of the reference host from scratch: six interfaces, each with a role, its own subnet, its own IRQ CPU, and the right queueing. At the end, the order path shares nothing with the bulk traffic (no NIC, queue, IRQ, CPU, or qdisc), and every setting is re-applied at boot.
+This walkthrough builds the network side of the reference host from scratch: six interfaces, each with a role, its own subnet, its own IRQ CPU, and the right queueing. At the end, the critical path shares nothing with the bulk traffic (no NIC, queue, IRQ, CPU, or qdisc), and every setting is re-applied at boot.
 
 ## 1. The target
 
@@ -16,7 +16,7 @@ This walkthrough builds the network side of the reference host from scratch: six
 flowchart LR
   subgraph peers["Peers"]
     direction TB
-    ex["exchange, clients"]
+    ex["clients, upstream peers"]
     int["internal services"]
     gm["PTP grandmaster"]
     st["replication, storage"]
@@ -66,7 +66,7 @@ flowchart LR
 ```text
                           ┌─────────────────────────────── host (2 sockets) ───────────────────────────────────┐
                           │                                                                                    │
-  exchange / clients ─────┤ ens1f0  10.10.1.10/24  critical  gw 10.10.1.1 for 10.200.0.0/16     IRQ → CPU 1    │ node 1
+  clients / peers ────────┤ ens1f0  10.10.1.10/24  critical  gw 10.10.1.1 for 10.200.0.0/16     IRQ → CPU 1    │ node 1
   internal services ──────┤ ens1f1  10.10.2.10/24  critical  (on-link)                          IRQ → CPU 1    │ (same card)
                           │                                                                                    │
   PTP grandmaster ────────┤ eno1    10.10.9.10/24  timing    (on-link)                          IRQ → CPU 0    │ node 0
@@ -104,7 +104,7 @@ If a critical NIC reports the wrong node, move the card to a slot wired to the o
 nmcli con add type ethernet ifname eno2 con-name mgmt ipv4.method manual \
   ipv4.addresses 10.99.0.10/24 ipv4.gateway 10.99.0.1 ipv6.method disabled
 
-# Critical: exchange-facing, explicit route to the venue networks only
+# Critical: client-facing, explicit route to the peer networks only
 nmcli con add type ethernet ifname ens1f0 con-name crit-ext ipv4.method manual \
   ipv4.addresses 10.10.1.10/24 ipv4.never-default yes \
   ipv4.routes "10.200.0.0/16 10.10.1.1" ipv6.method disabled
@@ -129,7 +129,7 @@ ip route        # exactly one "default via 10.99.0.1 dev eno2"
 
 ```mermaid
 flowchart LR
-  d{"Destination?"} -- "10.200.0.0/16 venues" --> e1["ens1f0 · critical"]
+  d{"Destination?"} -- "10.200.0.0/16 peers" --> e1["ens1f0 · critical"]
   d -- "10.10.2.0/24 backend" --> e2["ens1f1 · critical"]
   d -- "10.201.0.0/16 replicas" --> e4["ens2f0 · bulk"]
   d -- "anything else" --> e6["eno2 · mgmt (default)"]
@@ -221,7 +221,7 @@ Sometimes a dedicated NIC is not available: for example, a single uplink in a cl
 # Three-band priority qdisc: band 0 (critical) is always dequeued first
 tc qdisc replace dev ens3 root handle 1: prio bands 3 priomap 1 2 2 2 1 2 0 0 1 1 1 1 1 1 1 1
 
-# Critical flows: destination port 9000 (order gateway) -> band 0
+# Critical flows: destination port 9000 (critical service) -> band 0
 tc filter add dev ens3 parent 1: protocol ip prio 1 u32 match ip dport 9000 0xffff flowid 1:1
 # Bulk: bounded, fair queue in band 2
 tc qdisc add dev ens3 parent 1:3 handle 30: fq_codel
@@ -264,7 +264,7 @@ Pin `ptp4l`/`phc2sys` to CPU 0 with a drop-in (`CPUAffinity=0`), not into the ho
 
 ```bash
 scripts/verify-tuning                                     # includes "no NIC IRQ on an isolated CPU"
-ip route get 10.200.1.5     # → dev ens1f0 (venue traffic leaves via the critical NIC)
+ip route get 10.200.1.5     # → dev ens1f0 (peer traffic leaves via the critical NIC)
 ip route get 10.201.3.7     # → dev ens2f0 (replication via bulk)
 ip route get 203.0.113.7    # → dev eno2   (everything else via management)
 
@@ -280,7 +280,7 @@ The critical p99 with and without the bulk load should be the same. If it moves,
 | Symptom | Cause | Fix |
 |---|---|---|
 | Replication traffic appears on `ens1f0` | Missing specific route; default route used | `ip route get <peer>`; add the route to the bulk connection |
-| Replies to venue arrive on `eno2` | ARP answered on the wrong NIC | `arp_ignore=1`; check `ip neigh` on the peer |
+| Replies to peers arrive on `eno2` | ARP answered on the wrong NIC | `arp_ignore=1`; check `ip neigh` on the peer |
 | Packets dropped with `rp_filter` | Asymmetric routing | Fix the routing, or `rp_filter=2` on that interface |
 | Critical RTT rises with bulk load | Shared CPU (IRQ CPUs overlap) or shared switch uplink | §5 map; check switch port utilization |
 | IRQ affinity lost after the link came back | Driver re-created its queues | Re-run `04-network --runtime`, or use a NetworkManager dispatcher script on `up` |

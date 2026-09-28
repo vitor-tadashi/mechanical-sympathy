@@ -28,7 +28,7 @@ kernel.numa_balancing|0|no automatic NUMA page migration: memory placement is de
 net.ipv4.tcp_timestamps|1|keep RFC 7323 timestamps: required by tcp_tw_reuse and PAWS, improves RTT estimation
 net.ipv4.tcp_sack|1|selective ACKs: recover several lost segments in one round trip
 net.ipv4.tcp_window_scaling|1|receive windows above 64 KiB (needed for the buffer sizes below)
-net.ipv4.tcp_slow_start_after_idle|0|do not collapse cwnd after idle: the first order after a quiet period is not throttled
+net.ipv4.tcp_slow_start_after_idle|0|do not collapse cwnd after idle: the first message after a quiet period is not throttled
 net.ipv4.tcp_fastopen|3|TFO for client and server: data in the SYN on reconnect
 net.ipv4.tcp_fin_timeout|5|FIN_WAIT_2 orphan timeout (seconds); frees half-closed sockets quickly
 net.ipv4.tcp_tw_reuse|1|reuse TIME_WAIT sockets for NEW OUTGOING connections (safe with timestamps)

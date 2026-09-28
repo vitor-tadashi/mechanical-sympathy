@@ -53,7 +53,7 @@
 
 <rect class="lane" x="10" y="10" width="740" height="135" rx="6"/>
 <text class="cap" x="24" y="34">4 KiB pages: TLB reach 8 MiB (2,048 entries)</text>
-<text class="sub" x="24" y="52">Random reads in a 256 MiB order book land outside the reach almost every time.</text>
+<text class="sub" x="24" y="52">Random reads in a 256 MiB hash table land outside the reach almost every time.</text>
 <text class="lbl" x="24" y="94">working set</text>
 <text class="lbl" x="24" y="110">256 MiB</text>
 <rect class="ws" x="150" y="78" width="570" height="36" rx="4"/>

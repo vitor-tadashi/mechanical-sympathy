@@ -31,7 +31,7 @@ flowchart LR
 
 ## 1. Why huge pages
 
-Every memory access goes through a virtual → physical translation, and the CPU caches translations in the **TLB**. A modern core has about 64 L1 DTLB entries and 1,500–2,000 L2 STLB entries. With 4 KiB pages, 2,048 entries cover **8 MiB**. A 16 GiB heap, a 1 GiB order book, or a 256 MiB ring buffer is far beyond that, so the hot path takes TLB misses. Each miss is a **page walk** of up to four dependent memory reads (five with 5-level paging), which costs tens of ns if the page tables are cached and 100+ ns if they are not.
+Every memory access goes through a virtual → physical translation, and the CPU caches translations in the **TLB**. A modern core has about 64 L1 DTLB entries and 1,500–2,000 L2 STLB entries. With 4 KiB pages, 2,048 entries cover **8 MiB**. A 16 GiB heap, a 1 GiB in-memory index, or a 256 MiB ring buffer is far beyond that, so the hot path takes TLB misses. Each miss is a **page walk** of up to four dependent memory reads (five with 5-level paging), which costs tens of ns if the page tables are cached and 100+ ns if they are not.
 
 | Page size | Reach of 2,048 TLB entries | Page-table levels walked |
 |---|---|---|
@@ -88,7 +88,7 @@ flowchart LR
 | JVM heap (`-Xmx`, with `-Xms` = `-Xmx`) | the full heap |
 | JVM code cache (`-XX:ReservedCodeCacheSize`, 240 MiB by default) | its size, rounded up to 2 MiB |
 | Kernel-bypass network stack packet buffers | per the vendor's documentation (e.g. `EF_MAX_PACKETS` × 2 KiB) |
-| C/C++ pools, ring buffers, order books mapped with `MAP_HUGETLB` | their sizes |
+| C/C++ pools, ring buffers, hash tables mapped with `MAP_HUGETLB` | their sizes |
 | Headroom | +10–20 % |
 
 Then check that the node has that much free RAM **plus** what the OS needs (`numactl --hardware`).
@@ -206,10 +206,10 @@ On a **bare-metal host whose application threads are pinned** ([Guide 02](02-cpu
 |---|---|---|
 | `-XX:+UseLargePages` | The heap (and code cache) is mapped from the explicit huge page pool (`MAP_HUGETLB` / hugetlbfs). ZGC uses a `memfd` with `MFD_HUGETLB`, so no hugetlbfs mount is needed. | TLB reach for a 16 GiB heap goes from 8 MiB to 4 GiB. |
 | `-XX:+UseNUMA` | Heap memory is placed so that each thread allocates on its own node. | Combined with pinning, a critical thread on node 1 gets node-1 memory. |
-| `-XX:+AlwaysPreTouch` | The JVM writes to every page of the committed heap during start-up. | Moves all page faults (and zeroing) out of the trading session. If the pool is too small, this fails **at start-up**, not at 10:31 when the heap grows. |
+| `-XX:+AlwaysPreTouch` | The JVM writes to every page of the committed heap during start-up. | Moves all page faults (and zeroing) out of the serving path. If the pool is too small, this fails **at start-up**, not hours later under load when the heap grows. |
 | `-Xms` = `-Xmx` | The whole heap is committed at start. | Nothing to commit later. With ZGC, uncommit never goes below `-Xms`, so `-ZUncommit` is belt and braces. |
 
-Start-up takes longer because of the pre-touch (several seconds for 16 GiB). That is the point: you pay the cost before the market opens.
+Start-up takes longer because of the pre-touch (several seconds for 16 GiB). That is the point: you pay the cost before the first request arrives, not while serving it.
 
 ### 5.2 Add the large-page flags only when the host is ready for them
 

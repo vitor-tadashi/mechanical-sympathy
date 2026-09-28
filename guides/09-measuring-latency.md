@@ -82,7 +82,7 @@ Two ways to avoid it:
 - **Open-loop load.** Send at a fixed rate, whatever the response time, and measure each message from its **intended** send time, not its actual one.
 - **Correct the histogram.** HdrHistogram's `recordValueWithExpectedInterval(value, interval)` back-fills the samples a stall would have delayed.
 
-The [Java probe](../examples/hugepages-java-example.md) is a closed-loop ping-pong on purpose. It measures one cache-line transfer at a time, so it shows host noise clearly. It is not a model of market traffic, so measure your application with open-loop load as well.
+The [Java probe](../examples/hugepages-java-example.md) is a closed-loop ping-pong on purpose. It measures one cache-line transfer at a time, so it shows host noise clearly. It is not a model of production traffic, so measure your application with open-loop load as well.
 
 ### 3.4 Record the environment
 
