@@ -5,7 +5,7 @@ The "I have two minutes" page. One command per check, with the answer you want t
 > [!TIP]
 > `scripts/verify-tuning` runs most of these for you and prints PASS/WARN/FAIL. Use this page when you want to look at one thing by hand, or on a host without the scripts.
 
-## Firmware
+## Firmware — [Guide 00](guides/00-bios-firmware.md#7-verification)
 
 | Check | Command | Want |
 |---|---|---|
@@ -84,7 +84,7 @@ The "I have two minutes" page. One command per check, with the answer you want t
 | Onload accelerating | `onload_stackdump` | one stack per accelerated process |
 | DPDK ports bound | `dpdk-devbind.py --status-dev net` | your ports under `drv=vfio-pci` |
 
-## Time and clocks
+## Time and clocks — [Guide 10](guides/10-time-sync.md#9-verification)
 
 | Check | Command | Want |
 |---|---|---|
@@ -92,7 +92,7 @@ The "I have two minutes" page. One command per check, with the answer you want t
 | chrony synced | `chronyc tracking \| grep -E 'Leap\|System time'` | `Normal`, a small offset |
 | PTP locked | `journalctl -u ptp4l -n 5` | state `s2`, small `master offset` |
 
-## Measuring
+## Measuring — [Guide 09](guides/09-measuring-latency.md)
 
 | Question | Command |
 |---|---|

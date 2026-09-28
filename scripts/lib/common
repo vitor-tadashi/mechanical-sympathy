@@ -297,7 +297,7 @@ capability_decision() {
 		if host_is_bare_metal; then printf 'apply\n'; else printf 'skip\n'; fi
 		;;
 	# Safe and useful on both.
-	latency_grub | sysctl | nic_tuning | nic_irq_affinity | os_hygiene | cgroup_isolation)
+	latency_grub | sysctl | nic_tuning | nic_irq_affinity | os_hygiene | cgroup_isolation | time_sync)
 		printf 'apply\n'
 		;;
 	# Bare metal, or a VM with an SR-IOV VF / passthrough NIC (Guide 08 §10).

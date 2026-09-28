@@ -1,0 +1,219 @@
+#!/usr/bin/env bash
+#
+# 10-time-sync - clock synchronization that stays off the critical CPUs (Guide 10).
+#
+#   pin_time_daemons           systemd drop-ins: chronyd / ptp4l / phc2sys on TIME_SYNC_CPUS
+#   configure_chrony           chrony enabled (ptp4l and phc2sys stopped)
+#   configure_ptp              linuxptp: ptp4l on the timing NIC's hardware clock, phc2sys
+#                              steering the system clock from it (chronyd stopped)
+#   check_hw_timestamping      the timing NIC can timestamp in hardware (ethtool -T)
+#   verify_time_sync           daemons running, pinned, clock synchronized
+#
+# TIME_SYNC_MODE selects chrony, ptp, or "" (leave time synchronization alone).
+# Server lists and ptp4l.conf details are site-specific: this script does not invent them.
+
+set -Eeuo pipefail
+# shellcheck source=lib/common
+. "$(dirname "${BASH_SOURCE[0]}")/lib/common"
+
+SYSTEMD_UNIT_DIR="${SYSTEMD_UNIT_DIR:-/etc/systemd/system}"
+PTP4L_SYSCONFIG="${PTP4L_SYSCONFIG:-/etc/sysconfig/ptp4l}"
+PHC2SYS_SYSCONFIG="${PHC2SYS_SYSCONFIG:-/etc/sysconfig/phc2sys}"
+PTP4L_CONF="${PTP4L_CONF:-/etc/ptp4l.conf}"
+TIME_DAEMONS=(chronyd ptp4l phc2sys)
+TIME_DROPIN_NAME=10-lowlat-time-sync.conf
+
+# time_sync_defaults - lowlat.conf files written before Guide 10 have no TIME_SYNC_* keys.
+time_sync_defaults() {
+	TIME_SYNC_MODE="${TIME_SYNC_MODE:-}"
+	PTP_INTERFACE="${PTP_INTERFACE:-$(timing_interface)}"
+	[[ -n "${TIME_SYNC_CPUS+set}" ]] || TIME_SYNC_CPUS=(0)
+}
+
+# timing_interface - the first NICS entry with role "timing", or nothing.
+timing_interface() {
+	local entry name role
+	for entry in "${NICS[@]}"; do
+		IFS='|' read -r name role _ <<<"${entry}"
+		if [[ "${role}" == timing ]]; then
+			printf '%s\n' "${name}"
+			return 0
+		fi
+	done
+	return 0
+}
+
+pin_time_daemons() {
+	local unit cpus
+	cpus="${TIME_SYNC_CPUS[*]}"
+	for unit in "${TIME_DAEMONS[@]}"; do
+		log_sub_step "Pinning ${unit}.service to CPUs ${cpus}"
+		write_file "${SYSTEMD_UNIT_DIR}/${unit}.service.d/${TIME_DROPIN_NAME}" <<EOF
+# Managed by mechanical-sympathy 10-time-sync
+# Housekeeping CPU, not housekeeping.slice: the daemon's scheduling latency is part
+# of the clock error, so it must not share a CPU quota with agents.
+[Service]
+CPUAffinity=${cpus}
+EOF
+	done
+	run systemctl daemon-reload
+}
+
+configure_chrony() {
+	require_commands chronyc
+	log_sub_step "Stopping ptp4l and phc2sys (they would fight chronyd over the system clock)"
+	run_quiet systemctl disable --now phc2sys
+	run_quiet systemctl disable --now ptp4l
+	log_sub_step "Enabling chronyd"
+	run systemctl enable chronyd
+	run systemctl restart chronyd
+}
+
+# check_hw_timestamping <iface> - predicate: hardware TX and RX timestamps are supported.
+check_hw_timestamping() {
+	local caps
+	caps="$(ethtool -T "$1" 2>/dev/null || true)"
+	grep -q 'hardware-transmit' <<<"${caps}" && grep -q 'hardware-receive' <<<"${caps}"
+}
+
+configure_ptp() {
+	[[ -n "${PTP_INTERFACE}" ]] || die "TIME_SYNC_MODE=ptp needs PTP_INTERFACE, or a NICS entry with role timing" "${EXIT_PRECHECK}"
+	require_commands ptp4l phc2sys ethtool
+	if [[ "${DRY_RUN}" -ne 1 ]] && ! check_hw_timestamping "${PTP_INTERFACE}"; then
+		die "${PTP_INTERFACE} has no hardware timestamping (ethtool -T): use TIME_SYNC_MODE=chrony" "${EXIT_PRECHECK}"
+	fi
+	if [[ "${DRY_RUN}" -ne 1 && ! -f "${PTP4L_CONF}" ]]; then
+		die "${PTP4L_CONF} not found (dnf install linuxptp ships a default)" "${EXIT_PRECHECK}"
+	fi
+	log_sub_step "ptp4l on ${PTP_INTERFACE} with ${PTP4L_CONF}"
+	write_file "${PTP4L_SYSCONFIG}" <<EOF
+# Managed by mechanical-sympathy 10-time-sync
+OPTIONS="-f ${PTP4L_CONF} -i ${PTP_INTERFACE}"
+EOF
+	log_sub_step "phc2sys: system clock follows the NIC hardware clock, automatic configuration"
+	write_file "${PHC2SYS_SYSCONFIG}" <<EOF
+# Managed by mechanical-sympathy 10-time-sync
+OPTIONS="-a -r"
+EOF
+	log_sub_step "Stopping chronyd (phc2sys now owns the system clock)"
+	run_quiet systemctl disable --now chronyd
+	log_sub_step "Enabling ptp4l and phc2sys"
+	run systemctl enable ptp4l phc2sys
+	run systemctl restart ptp4l phc2sys
+}
+
+apply_time_sync() {
+	time_sync_defaults
+	log_step "Time synchronization (TIME_SYNC_MODE=${TIME_SYNC_MODE:-none})"
+	case "${TIME_SYNC_MODE}" in
+	"")
+		log_sub_step "TIME_SYNC_MODE is empty, leaving time synchronization alone"
+		return 0
+		;;
+	chrony | ptp) ;;
+	*) die "TIME_SYNC_MODE=${TIME_SYNC_MODE}: use chrony, ptp or empty" "${EXIT_PRECHECK}" ;;
+	esac
+	require_capability time_sync || return 0
+	pin_time_daemons
+	if [[ "${TIME_SYNC_MODE}" == ptp ]]; then
+		configure_ptp
+	else
+		configure_chrony
+	fi
+}
+
+# --- verification (read-only) ------------------------------------------------
+
+# daemon_pinned <process> - predicate: every instance of the process runs on TIME_SYNC_CPUS.
+daemon_pinned() {
+	local want pid allowed found=1
+	want="$(cpu_list_join "${TIME_SYNC_CPUS[@]}")"
+	for pid in $(pgrep -x "$1" || true); do
+		found=0
+		allowed="$(awk '/^Cpus_allowed_list/{print $2}' "/proc/${pid}/status" 2>/dev/null || true)"
+		[[ "${allowed}" == "${want}" ]] || return 1
+	done
+	return "${found}"
+}
+
+chrony_synchronized() {
+	local out
+	out="$(chronyc tracking 2>/dev/null || true)"
+	grep -q 'Leap status *: Normal' <<<"${out}"
+}
+
+verify_time_sync() {
+	local offset
+	time_sync_defaults
+	case "${TIME_SYNC_MODE}" in
+	chrony)
+		verify_check "chronyd running" systemctl is-active --quiet chronyd
+		verify_soft "chronyd pinned to CPUs ${TIME_SYNC_CPUS[*]}" daemon_pinned chronyd
+		verify_check "chrony synchronized (Leap status Normal)" chrony_synchronized
+		verify_soft "ptp4l not running" not systemctl is-active --quiet ptp4l
+		offset="$(chronyc tracking 2>/dev/null | awk -F': *' '/^System time/{print $2}' || true)"
+		verify_info "chrony system time offset: ${offset:-n/a}"
+		;;
+	ptp)
+		verify_check "ptp4l running" systemctl is-active --quiet ptp4l
+		verify_check "phc2sys running" systemctl is-active --quiet phc2sys
+		verify_soft "ptp4l pinned to CPUs ${TIME_SYNC_CPUS[*]}" daemon_pinned ptp4l
+		verify_soft "phc2sys pinned to CPUs ${TIME_SYNC_CPUS[*]}" daemon_pinned phc2sys
+		verify_check "${PTP_INTERFACE:-timing NIC} supports hardware timestamping" check_hw_timestamping "${PTP_INTERFACE:-none}"
+		verify_soft "chronyd not running" not systemctl is-active --quiet chronyd
+		offset="$(journalctl -u phc2sys -n 1 -o cat 2>/dev/null || true)"
+		verify_info "last phc2sys line: ${offset:-n/a}"
+		;;
+	*) verify_info "TIME_SYNC_MODE is empty: not managed by this script" ;;
+	esac
+	verify_result
+}
+
+rollback_time_sync() {
+	local unit
+	time_sync_defaults
+	log_step "Time synchronization"
+	for unit in "${TIME_DAEMONS[@]}"; do
+		log_sub_step "Removing ${unit}.service drop-in"
+		run rm -f "${SYSTEMD_UNIT_DIR}/${unit}.service.d/${TIME_DROPIN_NAME}"
+	done
+	if [[ "${TIME_SYNC_MODE}" == ptp ]]; then
+		log_sub_step "Stopping ptp4l and phc2sys"
+		run_quiet systemctl disable --now phc2sys
+		run_quiet systemctl disable --now ptp4l
+		for unit in "${PTP4L_SYSCONFIG}" "${PHC2SYS_SYSCONFIG}"; do
+			if [[ -f "${LOWLAT_FACTORY_DIR}${unit}" ]]; then
+				log_sub_step "Restoring ${unit}"
+				run cp -a "${LOWLAT_FACTORY_DIR}${unit}" "${unit}"
+			fi
+		done
+	fi
+	log_sub_step "Enabling chronyd (the RHEL default)"
+	run systemctl daemon-reload
+	run_quiet systemctl enable --now chronyd
+}
+
+main() {
+	parse_mode_args "$@" || true
+	case "${MODE}" in
+	apply)
+		require_root
+		load_config
+		apply_time_sync
+		;;
+	verify)
+		load_config
+		verify_time_sync
+		;;
+	rollback)
+		require_root
+		load_config
+		rollback_time_sync
+		;;
+	*) print_usage ;;
+	esac
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+	main "$@"
+fi
