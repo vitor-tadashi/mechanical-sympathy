@@ -1,0 +1,182 @@
+#!/usr/bin/env bash
+#
+# lint-docs - enforce the documentation rules of this repository (STYLE.md).
+#
+#   1. every relative link and image in Markdown points to a file that exists,
+#      and every #anchor matches a heading (GitHub slug rules) or an id= in the target
+#   2. every ```mermaid block parses (needs mermaid-cli: `mmdc`; required when CI=true,
+#      skipped with a warning on a workstation without it)
+#   3. every SVG in assets/diagrams/ has <title> and <desc>, no <script>, is at most
+#      30 KiB, and honors prefers-reduced-motion when it animates
+#
+# Usage: tools/lint-docs            (from anywhere inside the repository)
+# Env:   MMDC=<command>             mermaid-cli to use (default: mmdc)
+
+set -Eeuo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "${ROOT}"
+
+SVG_MAX_BYTES=30720
+MMDC="${MMDC:-mmdc}"
+
+failures=0
+
+fail() {
+	printf 'lint-docs: %s\n' "$*" >&2
+	failures=$((failures + 1))
+}
+
+docs=()
+listed="$(git ls-files --cached --others --exclude-standard -- '*.md')"
+while IFS= read -r file; do
+	[[ -n "${file}" && -f "${file}" ]] && docs+=("${file}")
+done <<<"${listed}"
+
+if ((${#docs[@]} == 0)); then
+	printf 'lint-docs: no Markdown files found\n' >&2
+	exit 1
+fi
+
+# 1. Links and anchors. One awk pass collects the anchors of every file, then checks
+#    every link. LC_ALL=C makes the slug rules byte-wise and identical on BSD and GNU awk.
+link_errors="$(LC_ALL=C awk '
+function slug(text,    t, inner, rb) {
+	t = text
+	sub(/[ \t]+#+[ \t]*$/, "", t)                       # closing hashes
+	while (match(t, /\[[^]]*\]\([^)]*\)/)) {            # [text](url) -> text
+		rb = index(substr(t, RSTART), "]")
+		inner = substr(t, RSTART + 1, rb - 2)
+		t = substr(t, 1, RSTART - 1) inner substr(t, RSTART + RLENGTH)
+	}
+	gsub(/<[^>]*>/, "", t)                              # inline HTML tags
+	t = tolower(t)
+	gsub(/[^a-z0-9 _-]/, "", t)                         # GitHub drops punctuation
+	gsub(/ /, "-", t)
+	return t
+}
+function dirname(p,    i) {
+	i = match(p, /\/[^\/]*$/)
+	return i ? substr(p, 1, i - 1) : "."
+}
+function normalize(p,    n, parts, out, i, k) {
+	n = split(p, parts, "/")
+	k = 0
+	for (i = 1; i <= n; i++) {
+		if (parts[i] == "" || parts[i] == ".") continue
+		if (parts[i] == "..") { if (k > 0) k--; continue }
+		out[++k] = parts[i]
+	}
+	p = ""
+	for (i = 1; i <= k; i++) p = p (i > 1 ? "/" : "") out[i]
+	return p
+}
+function add_link(target) {
+	nlinks++
+	link_file[nlinks] = FILENAME
+	link_line[nlinks] = FNR
+	link_target[nlinks] = target
+}
+FNR == 1 { fence = "" }
+{
+	line = $0
+	if (fence == "" && match(line, /^[ \t]*(```+|~~~+)/)) {
+		fence = substr(line, RSTART, RLENGTH); gsub(/[ \t]/, "", fence); fence = substr(fence, 1, 3)
+		next
+	}
+	if (fence != "") {
+		if (match(line, /^[ \t]*(```+|~~~+)[ \t]*$/) && index(line, fence) > 0) fence = ""
+		next
+	}
+	if (match(line, /^#+ /)) {
+		s = slug(substr(line, RLENGTH + 1))
+		key = FILENAME "#" s
+		if (key in seen) { seen[key]++; s = s "-" seen[key] - 1 } else seen[key] = 1
+		anchor[FILENAME "#" s] = 1
+	}
+	rest = line
+	while (match(rest, /(id|name)="[^"]+"/)) {
+		v = substr(rest, RSTART, RLENGTH); sub(/^[a-z]+="/, "", v); sub(/"$/, "", v)
+		anchor[FILENAME "#" v] = 1
+		rest = substr(rest, RSTART + RLENGTH)
+	}
+	gsub(/`[^`]*`/, "", line)                           # links inside inline code are text
+	rest = line
+	while (match(rest, /\]\([^) ]+( "[^"]*")?\)/)) {
+		t = substr(rest, RSTART + 2, RLENGTH - 3); sub(/ ".*$/, "", t); sub(/^</, "", t); sub(/>$/, "", t)
+		add_link(t)
+		rest = substr(rest, RSTART + RLENGTH)
+	}
+	rest = line
+	while (match(rest, /(src|href)="[^"]+"/)) {
+		t = substr(rest, RSTART, RLENGTH); sub(/^[a-z]+="/, "", t); sub(/"$/, "", t)
+		add_link(t)
+		rest = substr(rest, RSTART + RLENGTH)
+	}
+}
+END {
+	for (i = 1; i <= nlinks; i++) {
+		t = link_target[i]
+		if (t ~ /^(https?|mailto|ftp):/) continue
+		where = link_file[i] ":" link_line[i]
+		frag = ""
+		if (index(t, "#") > 0) { frag = substr(t, index(t, "#") + 1); t = substr(t, 1, index(t, "#") - 1) }
+		if (t == "") path = link_file[i]
+		else path = normalize(dirname(link_file[i]) "/" t)
+		if (path == "") path = "."
+		if (t != "" && system("test -e \"" path "\"") != 0) { print where ": missing target " link_target[i]; continue }
+		if (frag == "" || path !~ /\.md$/) continue
+		if (!((path "#" frag) in anchor)) print where ": no heading or id for #" frag " in " path
+	}
+}
+' "${docs[@]}")"
+while IFS= read -r error; do
+	[[ -n "${error}" ]] && fail "${error}"
+done <<<"${link_errors}"
+
+# 2. Mermaid. mmdc renders every block of a Markdown file in one browser session and
+#    exits non-zero on the first diagram that does not parse.
+mermaid_docs=()
+for file in "${docs[@]}"; do
+	grep -q '^[[:space:]]*```mermaid' "${file}" && mermaid_docs+=("${file}")
+done
+if ((${#mermaid_docs[@]} > 0)); then
+	if command -v "${MMDC}" >/dev/null 2>&1; then
+		work="$(mktemp -d)"
+		trap 'rm -rf "${work}"' EXIT
+		printf '{"args":["--no-sandbox"]}\n' >"${work}/puppeteer.json"
+		for file in "${mermaid_docs[@]}"; do
+			out="${work}/${file//\//_}"
+			if ! "${MMDC}" --quiet --puppeteerConfigFile "${work}/puppeteer.json" --input "${file}" --output "${out}" >"${work}/log" 2>&1; then
+				fail "${file}: a mermaid block does not parse"
+				sed 's/^/    /' "${work}/log" >&2
+			fi
+		done
+	elif [[ "${CI:-}" == "true" ]]; then
+		fail "mermaid-cli (${MMDC}) not found; CI must check ${#mermaid_docs[@]} file(s) with Mermaid"
+	else
+		printf 'lint-docs: warning: %s not found, Mermaid not checked in %d file(s) (npm install -g @mermaid-js/mermaid-cli); CI checks it\n' "${MMDC}" "${#mermaid_docs[@]}" >&2
+	fi
+fi
+
+# 3. Animated diagrams.
+svgs="$(git ls-files --cached --others --exclude-standard -- 'assets/diagrams/*.svg')"
+while IFS= read -r svg; do
+	[[ -n "${svg}" && -f "${svg}" ]] || continue
+	size="$(wc -c <"${svg}")"
+	((size <= SVG_MAX_BYTES)) || fail "${svg}: ${size} bytes, the limit is ${SVG_MAX_BYTES}"
+	grep -q '<title>' "${svg}" || fail "${svg}: no <title>"
+	grep -q '<desc>' "${svg}" || fail "${svg}: no <desc>"
+	if grep -qi '<script' "${svg}"; then
+		fail "${svg}: contains <script>"
+	fi
+	if grep -q '@keyframes' "${svg}" && ! grep -q 'prefers-reduced-motion' "${svg}"; then
+		fail "${svg}: animates without a prefers-reduced-motion rule"
+	fi
+done <<<"${svgs}"
+
+if ((failures > 0)); then
+	printf 'lint-docs: %d problem(s) in %d Markdown file(s)\n' "${failures}" "${#docs[@]}" >&2
+	exit 1
+fi
+printf 'lint-docs: %d Markdown files clean\n' "${#docs[@]}"

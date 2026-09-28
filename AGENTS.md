@@ -57,6 +57,7 @@ These rules apply to every change, whoever makes it. If a rule and a request con
 |---|---|
 | `make lint` | everything below. CI runs it (`.github/workflows/lint.yml`) |
 | `make lint-scripts` | no `.sh`/`.bash` files, exec bits, ShellCheck `enable=all`, `bash -n` |
+| `make lint-docs` | relative links and `#anchors` resolve, every Mermaid block parses (mermaid-cli, required in CI), animated SVG rules from `STYLE.md` |
 | `make lint-java` | Checkstyle, `-Werror` compile, dependency approval, checksums |
 | `make install-git-hooks` | opt-in hooks: pre-commit runs `make lint`, commit-msg runs `tools/check-commit-title` and `tools/check-description` |
 | `tools/check-commit-title` | Conventional Commits titles with a Google-style subject (section 8). CI checks every PR title and commit |
