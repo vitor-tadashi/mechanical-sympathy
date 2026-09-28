@@ -2,6 +2,12 @@
 
 > Code: [`examples/java-latency-probe/`](java-latency-probe/) · Guides: [02 CPU isolation](../guides/02-cpu-core-isolation.md), [03 Huge pages](../guides/03-huge-pages-configuration.md) · Concept: [huge-pages](../concepts/huge-pages.md)
 
+## At a glance
+
+- **What:** a runnable Java 25 probe and launcher showing how a latency-critical JVM is wired on a tuned host.
+- **How:** each critical thread pins itself before touching its data, and the launcher adds the large-page and NUMA flags only when pinning is enabled.
+- **Measures:** a core-to-core round trip (isolation and interrupts) and dependent random reads (TLB and huge pages).
+
 This example is a small, complete Java program. It shows how a latency-critical JVM application is **launched and wired** on a host tuned with Guides 01–07, and it gives you a probe to measure what the tuning bought you.
 
 - Thread roles are mapped to isolated CPUs in a properties file. Each thread pins **itself** before touching its data.
@@ -78,6 +84,28 @@ fi
 exec "${PREFIX[@]}" java "${PARAMS[@]}" -cp "build/classes/java/main:build/lib/*" com.example.lowlat.LatencyProbe
 ```
 
+```mermaid
+flowchart TD
+  s(["bin/launch"]) --> hc{"Host class?"}
+  hc -- bare_metal --> big["jvm.options<br/>-Xms=-Xmx, ZGC, -ZUncommit"]
+  hc -- "VM or other" --> small["jvm-low-resource.options<br/>small, elastic heap"]
+  big --> aff{"affinity.enable<br/>= true?"}
+  small --> aff
+  aff -- yes --> lp["+ -XX:+UseNUMA<br/>-XX:+UseLargePages<br/>-XX:+AlwaysPreTouch"]
+  aff -- no --> nb
+  lp --> nb{"APP_NUMA_NODE<br/>set?"}
+  nb -- yes --> nm["prefix: numactl --membind"]
+  nb -- no --> by
+  nm --> by{"bypass launcher<br/>installed?"}
+  by -- yes --> bp["prefix: bypass command"]
+  by -- no --> run(["exec java"])
+  bp --> run
+  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
+  class lp iso
+```
+
+*The host class picks the options file. Pinning turns on the large-page, NUMA and pre-touch flags. An optional node binding and an optional bypass launcher wrap the final `java` command.*
+
 Design decisions:
 
 | Decision | Reason |
@@ -132,6 +160,26 @@ private static Thread pinnedThread(String name, int cpu, Runnable body) {
     }, name);
 }
 ```
+
+```mermaid
+flowchart TD
+  subgraph os1["OS CPUs (inherited launch mask)"]
+    direction LR
+    gc["GC workers, JIT compiler"]
+    other["logging, admin, main"]
+  end
+  subgraph iso1["Isolated CPUs, NUMA node 1"]
+    direction LR
+    ping["CPU 9 · ping thread"]
+    pong["CPU 11 · pong thread"]
+  end
+  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
+  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
+  class ping,pong iso
+  class gc,other hk
+```
+
+*Only the two measuring threads are pinned, one isolated CPU each, on the NIC's node. Every other JVM thread keeps the OS CPU mask it inherited from systemd.*
 
 The two threads exchange a sequence number through two `PaddedSequence` objects. Each has one writer and sits on its own cache line, so the round trip measures exactly one cache-line transfer in each direction:
 
@@ -209,7 +257,15 @@ Record results before and after each guide. The combination of this probe and `r
 | Great p50, terrible max | Noise on the isolated CPUs | `rtla osnoise top -c 9,11`; check `/proc/interrupts` on 9 and 11 |
 | Numbers identical with/without large pages | Pages not actually huge (THP flag used, or pool empty), or the table fits in the TLB anyway | Check `smaps` `KernelPageSize`; raise `probe.working.set.mib` |
 
-## 9. Customisation points
+## 9. Key takeaways
+
+- Pin inside the thread, before it touches its data, so first-touch places that data on the right node.
+- Tie `UseLargePages`, `UseNUMA` and `AlwaysPreTouch` to the pinning switch. They only make sense together.
+- One artifact runs everywhere. The launcher chooses the options file by host class.
+- Check that `HugePages_Free` dropped at start-up and that each thread runs on its requested CPU.
+- Read the shape of the histograms, not the absolute numbers, and compare with and without each setting.
+
+## 10. Customization points
 
 | Where | What |
 |---|---|

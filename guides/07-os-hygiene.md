@@ -8,6 +8,24 @@
 | **Reboot required** | No |
 | **Applies to** | Bare metal and VMs |
 
+## At a glance
+
+- **What:** stop periodic and idle-time services, set per-application resource limits, mount local filesystems `noatime`, and install a `tuned` profile that fixes frequency and C-states.
+- **Why:** none of these is large on its own, but together they are the background noise behind unexplained p99.9 spikes on the housekeeping CPUs, where your NIC interrupts are served.
+- **Cost:** fewer conveniences (cron, `sar` history). The opt-in firewall section removes a security control.
+
+**Time:** ~30 min, no reboot · **Do this if:** always, on bare metal and VMs · **Skip if:** never. Skip §6 unless security has signed off in writing.
+
+```mermaid
+flowchart LR
+  g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
+  class g07 focus
+  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+```
+
+*Guide 07 is the last step of the standard sequence. Guide 08 applies only with a kernel-bypass stack.*
+
 ---
 
 ## 1. Why
@@ -16,7 +34,25 @@ After Guides 01–06, the isolated CPUs are quiet. This guide reduces what happe
 
 ## 2. Services
 
-`disable_unnecessary_services` stops and disables everything in `DISABLE_SERVICES` (in `lowlat.conf`). The reference list, and why each entry is there:
+`disable_unnecessary_services` stops and disables everything in `DISABLE_SERVICES` (in `lowlat.conf`). Before adding a service to that list, ask:
+
+```mermaid
+flowchart TD
+  s(["Service found running"]) --> sec{"Security<br/>agent?"}
+  sec -- yes --> conf["Keep it. Confine it in housekeeping.slice<br/>and pin it (Guide 05), with the security team"]
+  sec -- no --> need{"Needed on<br/>this host?"}
+  need -- "yes, periodic job" --> tmr["Keep the work: a systemd timer<br/>in housekeeping.slice"]
+  need -- "yes, always on" --> keep["Keep it (sshd, rsyslog, chronyd)"]
+  need -- no --> dis["Add it to DISABLE_SERVICES"]
+  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
+  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
+  class conf risk
+  class dis iso
+```
+
+*Security agents are confined, never silently disabled. Periodic jobs move to timers in the housekeeping slice. Only what the host really doesn't need is disabled.*
+
+The reference list, and why each entry is there:
 
 | Service(s) | What it does | Why disable it |
 |---|---|---|
@@ -99,7 +135,8 @@ tuned-adm verify                  # checks that the profile's settings are in ef
 
 ## 6. Opt-in: removing host packet filtering
 
-⚠️ **This section removes a security control. It is disabled by default.**
+> [!CAUTION]
+> **This section removes a security control. It is disabled by default.**
 
 Every packet traverses the netfilter hooks. With connection tracking loaded, each packet also does a conntrack table lookup/insert (hashing, locking, per-flow state, timers), even if the rule set is empty. On a gateway handling millions of small messages, removing that per-packet work, and the conntrack table's garbage-collection work, is measurable, typically a few hundred ns to a few µs per packet in the tail.
 
@@ -111,12 +148,13 @@ Reference implementations do three things, which map to three switches:
 | `FLUSH_FIREWALL_RULES=yes` | Flushes nftables and iptables/ip6tables in all tables, deletes user chains, and sets policies to ACCEPT |
 | `REMOVE_NETFILTER_MODULES=yes` | Unloads NAT, conntrack helpers, `xt_*` matches, `ip_tables`/`ip6_tables` (21 modules, in dependency order) |
 
-**Preconditions. All of them must be true:**
+**Sign-off checklist. Every box must be ticked before any switch is set to `yes`:**
 
-- The host sits behind a **network firewall/ACL** that enforces the same policy (only the exchange, the internal peers, and the management network can reach it).
-- The management network is separate ([Guide 04 §3](04-network-optimization.md#3-network-segmentation-give-each-traffic-class-its-own-nic)) and access-controlled.
-- Your security team has approved it in writing, as an exception for this host class.
-- No local service depends on NAT, masquerading, or port forwarding (containers, libvirt).
+- [ ] The host sits behind a **network firewall/ACL** that enforces the same policy (only the exchange, the internal peers, and the management network can reach it).
+- [ ] The management network is separate ([Guide 04 §3](04-network-optimization.md#3-network-segmentation-give-each-traffic-class-its-own-nic)) and access-controlled.
+- [ ] Your security team has approved it in writing, as an exception for this host class.
+- [ ] No local service depends on NAT, masquerading, or port forwarding (containers, libvirt).
+- [ ] The out-of-band console works, in case remote access is lost.
 
 Alternatives with most of the benefit and less risk:
 
@@ -129,7 +167,7 @@ Module unloading and rule flushing are **not persistent**. When opted in, `lowla
 
 | Seen in the wild | Why not here |
 |---|---|
-| `rm /dev/random && ln -s /dev/urandom /dev/random` | Since kernel 5.6, and in the RHEL 8 backport, `/dev/random` only blocks until the CRNG is initialised at early boot, so it no longer blocks in normal operation. The symlink is also lost at every boot (devtmpfs). For Java, use `-Djava.security.egd=file:/dev/urandom` (the `file:/dev/./urandom` spelling is a workaround for very old JDKs). |
+| `rm /dev/random && ln -s /dev/urandom /dev/random` | Since kernel 5.6, and in the RHEL 8 backport, `/dev/random` only blocks until the CRNG is initialized at early boot, so it no longer blocks in normal operation. The symlink is also lost at every boot (devtmpfs). For Java, use `-Djava.security.egd=file:/dev/urandom` (the `file:/dev/./urandom` spelling is a workaround for very old JDKs). |
 | Killing all application processes before tuning | Tuning must be applied **before** the application starts, at boot, by `lowlat-runtime.service`. A tuning script that kills production processes is a hazard. Apply changes in a maintenance window instead. |
 | Re-running the whole tuning script from `rc.local` | No ordering, no status, and it re-does persistent steps (GRUB, file edits) on every boot. Only runtime state is re-applied at boot, by a systemd unit ([`scripts/systemd/lowlat-runtime.service`](../scripts/systemd/lowlat-runtime.service)). |
 
@@ -155,6 +193,19 @@ nft list ruleset | head; iptables -S | head; lsmod | grep -E 'nf_conntrack|ip_ta
 
 ## 10. Troubleshooting
 
+```mermaid
+flowchart TD
+  s(["Something broke after 07"]) --> q{"What?"}
+  q -- "logs not rotated" --> f1["RHEL 8: logrotate ran from cron.<br/>Enable logrotate.timer"]
+  q -- "ulimit still 1024<br/>in a service" --> f2["Services ignore limits.d:<br/>LimitNOFILE= in the unit"]
+  q -- "tuned-adm verify fails" --> f3["Another profile or a manual change:<br/>tuned-adm profile low-latency"]
+  q -- "remote access lost" --> f4["Firewall flush: out-of-band console,<br/>systemctl start firewalld"]
+  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
+  class f4 risk
+```
+
+*The common breakages map one-to-one to a section: cron and logrotate (§2), limits (§3), tuned (§5) and the opt-in firewall (§6).*
+
 | Symptom | Cause | Fix |
 |---|---|---|
 | Logs no longer rotated (RHEL 8) | `crond` disabled | `systemctl enable --now logrotate.timer` (or keep a cron replacement timer) |
@@ -165,15 +216,20 @@ nft list ruleset | head; iptables -S | head; lsmod | grep -E 'nf_conntrack|ip_ta
 
 ## 11. Rollback
 
-```bash
-sudo systemctl enable --now crond sysstat-collect.timer sysstat-summary.timer   # as needed
-sudo rm -f /etc/security/limits.d/90-lowlat.conf
-sudo tuned-adm profile throughput-performance        # the RHEL server default
-sudo cp /var/lib/lowlat/factory-settings/etc/fstab /etc/fstab
-sudo systemctl enable --now firewalld                 # if it was disabled
-```
+- [ ] Services, as needed: `sudo systemctl enable --now crond sysstat-collect.timer sysstat-summary.timer`
+- [ ] Limits: `sudo rm -f /etc/security/limits.d/90-lowlat.conf`
+- [ ] tuned back to the RHEL server default: `sudo tuned-adm profile throughput-performance`
+- [ ] fstab: `sudo cp /var/lib/lowlat/factory-settings/etc/fstab /etc/fstab`, then `sudo mount -o remount` each filesystem, or reboot
+- [ ] Firewall, if it was disabled: `sudo systemctl enable --now firewalld`
 
-## 12. References
+## 12. Key takeaways
+
+- Disable what the host does not need, move periodic work to timers in `housekeeping.slice`, and never silently disable security agents.
+- Limits go to the application's group only, in `limits.d`. Services take `Limit*=` in their unit.
+- tuned holds frequency and C-states steady at every boot, and `sysctl.d` still wins on conflicts.
+- Removing host packet filtering is opt-in, needs written sign-off, and has lower-risk alternatives (`notrack`, bypass).
+
+## 13. References
 
 - `man 7 tuned-profiles`, `man 5 tuned-main.conf`, `man 5 limits.conf`, `man 8 mount` (`noatime`)
 - Red Hat — *Monitoring and managing system status and performance*: "Getting started with TuneD"
