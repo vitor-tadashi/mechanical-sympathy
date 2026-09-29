@@ -35,7 +35,7 @@ ethtool -S $IF | grep -E 'rx_missed_errors|rx_no_buffer_count' > /tmp/before
 nstat -n                                      # reset nstat's delta base
 # ... replay one upstream batch ...
 ethtool -S $IF | grep -E 'rx_missed_errors|rx_no_buffer_count' > /tmp/after
-diff /tmp/before /tmp/after
+paste -d' ' /tmp/before /tmp/after | awk '{ print $1, "+" ($4 - $2) }'   # after minus before, so old counts do not matter
 # rx_missed_errors: +3238            <- the ring dropped 3,238 packets in this one batch
 nstat | grep -E 'UdpRcvbufErrors'
 # (no output)                        <- the socket did not overflow, because the ring was upstream of it
@@ -49,10 +49,13 @@ The number is the diagnosis. The ring holds 512 packets, the burst brings 6,000 
 
 ```bash
 scripts/04-network --dry-run | less
-sudo scripts/04-network --apply                     # runtime-only: lowlat-runtime.service re-applies it at boot
+sudo scripts/04-network --apply                     # runtime-only, see the note below
 ethtool -g ens1f0
 # Current hardware settings:   RX: 8160
 ```
+
+> [!IMPORTANT]
+> `04-network` and `06-kernel-sysctl` change runtime state only. `sudo scripts/apply-all --apply` is what installs and enables `lowlat-runtime.service`, which re-applies it at every boot. If you ran only this script, check `systemctl is-enabled lowlat-runtime.service` before you rely on the result ([Guide 04 §8](../../guides/04-network-optimization.md#8-persistence)).
 
 > [!WARNING]
 > Changing a ring resets the NIC on most drivers, with the link down for 1 to 3 seconds. Do it in a maintenance window, and never on the interface that carries your SSH session ([Guide 04 §5.10](../../guides/04-network-optimization.md#510-do-not-bounce-the-link)).

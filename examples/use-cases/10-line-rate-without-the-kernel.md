@@ -26,8 +26,10 @@ A burst is a queue problem: capacity divided by (arrival minus drain) says how l
 The signature of an overload is that every counter grows **continuously**, and not once per burst:
 
 ```bash
-sar -n DEV 1 3 | grep ens1f0
-# rxpck/s  about 6,000,000               <- the real arrival rate
+snap() { ethtool -S ens1f0 | awk '/rx_packets:|rx_missed_errors:/ { s += $2 } END { print s }'; }   # counter names vary by driver
+a=$(snap); sleep 10; b=$(snap); echo $(( (b - a) / 10 )) packets per second
+# about 6,000,000                       <- the offered rate: packets received plus packets missed
+# `sar -n DEV` would show only the packets that were received, about the drain rate, and hide the loss
 
 top -H -b -n1 | grep -E 'ksoftirqd|ens1f0' | head -3
 # ksoftirqd/1   99.9 %CPU                <- the IRQ CPU does nothing but protocol work
@@ -58,7 +60,22 @@ ethtool -l ens1f0
 # Combined: 5
 ```
 
-This is the cheapest fix, and it keeps `tcpdump`, netfilter and every tool you know. It costs five housekeeping CPUs at full load. It also needs at least five flows, because one flow always lands on one queue.
+> [!IMPORTANT]
+> `04-network` and `06-kernel-sysctl` change runtime state only. `sudo scripts/apply-all --apply` is what installs and enables `lowlat-runtime.service`, which re-applies it at every boot. If you ran only this script, check `systemctl is-enabled lowlat-runtime.service` before you rely on the result ([Guide 04 §8](../../guides/04-network-optimization.md#8-persistence)).
+
+This is the cheapest fix, and it keeps `tcpdump`, netfilter and every tool you know. It costs five housekeeping CPUs at full load. It also needs at least five flows, and the NIC must spread them: RSS hashes flows to queues, so two flows can share one, and many drivers hash UDP on the source and destination IP only, which puts every flow between the same two hosts on one queue.
+
+Check the hash fields, and the load per queue, before you trust the queue count ([Concept: ethtool §9 and §10](../../concepts/ethtool.md#9--x---x-rss-indirection-table-and-hash-key)):
+
+```bash
+ethtool -n ens1f0 rx-flow-hash udp4
+# expect: IP SA, IP DA, L4 bytes 0 & 1, L4 bytes 2 & 3   (ports included)
+sudo ethtool -N ens1f0 rx-flow-hash udp4 sdfn        # add the ports if they are missing
+ethtool -S ens1f0 | grep -E 'rx[-_]?queue|rx-[0-9]+|rx_[0-9]+' | head -12
+# read it twice: every queue's packet counter must grow, not one
+```
+
+The `rx-flow-hash` change is runtime-only and is not managed by `04-network`, so put it in your own oneshot unit after `lowlat-runtime.service` ([Guide 04 §8](../../guides/04-network-optimization.md#8-persistence)).
 
 > [!IMPORTANT]
 > Busy polling ([Concept: network tuning §8](../../concepts/network-tuning.md#8-busy-polling)) does not help here. It removes the interrupt and the wake-up, and it does not remove the per-packet stack work that the budget above is made of.
@@ -78,7 +95,7 @@ sudo scripts/08-kernel-bypass --apply               # modprobe.d + pinned reload
 sudo scripts/04-network --runtime                   # after the reload: queue count and IRQs
 ```
 
-Then start the application through `onload -p latency`, and size the stack for the rate. The buffer arithmetic is the same as before, per stack ([Concept: network buffers §7.2](../../concepts/network-buffers.md#72-solarflare-ef_vi-and-onload)):
+Before you start the application, reserve the huge pages that the stack needs. `EF_USE_HUGE_PAGES=2` makes Onload fail at start-up when it cannot get them, and `EF_MAX_PACKETS` below alone needs 128 MiB per stack, on top of your application's own pages. Reserve them on the NIC's NUMA node, with headroom, as in [Guide 03 §3 and §4](../../guides/03-huge-pages-configuration.md#3-sizing-the-pool). Then start the application through `onload -p latency`, and size the stack for the rate. The buffer arithmetic is the same as before, per stack ([Concept: network buffers §7.2](../../concepts/network-buffers.md#72-solarflare-ef_vi-and-onload)):
 
 ```bash
 # in the Onload profile file or the environment (Guide 08 §5.3)
