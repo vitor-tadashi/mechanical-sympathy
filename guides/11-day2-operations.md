@@ -124,10 +124,10 @@ The unit's own state is the alert. The "last run did not fail" line of `--verify
 ```bash
 grubby --default-kernel                          # the entry the next boot uses
 grubby --info=ALL | grep -E '^(kernel|args)='    # every entry and its arguments
-# expect: every kernel line (the rescue entry aside) has args with isolcpus=, nohz_full=, rcu_nocbs=
+# expect: every kernel line (the rescue entry aside) has args with isolcpus=, nohz_full= and rcu_nocbs=
 ```
 
-The script's `all_kernel_entries_isolated` check does exactly this (it skips the rescue entry), and `--verify` reports it as a WARN, so a host that has installed a kernel but not rebooted yet already shows it. If a new entry lacks the arguments:
+The script's `all_kernel_entries_isolated` check does exactly this (it skips the rescue entry, and wants all three arguments), and `--verify` reports it as a WARN, so a host that has installed a kernel but not rebooted yet already shows it. If a new entry lacks the arguments:
 
 ```bash
 sudo scripts/01-grub-bootloader --apply          # grubby --update-kernel=ALL: adds them to every entry
