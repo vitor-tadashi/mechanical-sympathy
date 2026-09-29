@@ -1,0 +1,1 @@
+--stack dpdk --burst-mpps 10 --burst-us 3000 --pre-us 200 --ring 1024 --drain-mpps 14 --app-mpps 6 --buffer-packets 2048 --truesize 2304

@@ -1,0 +1,16 @@
+size-buffers: fluid model in 10 us steps. Illustrative, not a measurement.
+stack             onload
+arrival           idle 0.000 Mpps, burst 6.000 Mpps for 20000 us from 0 us
+stage 1           VI RX ring (EF_RXQ_SIZE): 4096 packets, drained at 7.000 Mpps
+stage 2           stack packet buffers (EF_MAX_RX_PACKETS): 24576 packets, read at 7.000 Mpps
+reader pause      none
+
+dropped, stage 1  0 packets (see onload_stackdump)
+dropped, stage 2  0 packets (memory_pressure, oflow_drop)
+first drop        none
+peak fill         stage 1: 0 of 4096, stage 2: 0 of 24576
+
+To lose nothing in this scenario:
+ring              0 packets, 0 KiB per queue at 2048 B
+stage 2           0 packets
+ring memory now   8192 KiB per queue, 8192 KiB for 1 queue(s)

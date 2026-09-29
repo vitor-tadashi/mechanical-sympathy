@@ -1,0 +1,67 @@
+#!/usr/bin/env node
+'use strict';
+
+/*
+ * check-buffers - hold site/buffers.js to the fixtures that scripts/size-buffers is tested with.
+ *
+ * For every NAME.args in scripts/fixtures/buffers:
+ *   - the arguments parse
+ *   - Buffers.report() prints exactly NAME.golden
+ * The golden files are the ones tools/check-size-buffers compares the shell script against,
+ * so the simulator and the script cannot drift apart. Every fixture must also have a preset
+ * in site/buffers.js, and every preset a fixture. Needs Node 18 or later, and no packages.
+ *
+ * Usage: tools/check-buffers
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+const root = path.resolve(__dirname, '..');
+const Buffers = require(path.join(root, 'site', 'buffers.js'));
+const fixtures = path.join(root, 'scripts', 'fixtures', 'buffers');
+
+let failures = 0;
+const fail = (message) => {
+	console.error('check-buffers: ' + message);
+	failures += 1;
+};
+
+const names = fs.readdirSync(fixtures).filter((f) => f.endsWith('.args')).map((f) => f.replace(/\.args$/, ''));
+
+names.forEach((name) => {
+	let options;
+	try {
+		options = Buffers.parseArgs(fs.readFileSync(path.join(fixtures, name + '.args'), 'utf8'));
+	} catch (e) {
+		fail(name + ': ' + e.message);
+		return;
+	}
+	const golden = fs.readFileSync(path.join(fixtures, name + '.golden'), 'utf8').replace(/\n$/, '');
+	const text = Buffers.report(options);
+	if (text !== golden) {
+		fail(name + ': output differs from ' + name + '.golden');
+		console.error(text);
+	}
+	const preset = Buffers.presets[name];
+	if (!preset) {
+		fail(name + ' has no preset in site/buffers.js');
+		return;
+	}
+	const args = fs.readFileSync(path.join(fixtures, name + '.args'), 'utf8').trim();
+	if (preset.args !== args) {
+		fail(name + ': the preset arguments differ from ' + name + '.args');
+	}
+});
+
+Object.keys(Buffers.presets).forEach((key) => {
+	if (!names.includes(key)) {
+		fail('the preset ' + key + ' has no fixture in scripts/fixtures/buffers');
+	}
+});
+
+if (failures > 0) {
+	console.error('check-buffers: ' + failures + ' problem(s)');
+	process.exit(1);
+}
+console.log('check-buffers: ' + names.length + ' fixture(s) match the simulator model');

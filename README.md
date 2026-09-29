@@ -99,7 +99,7 @@ Plus:
 - **Use cases**: stories from symptom to result. [The quiet core](examples/use-cases/01-the-quiet-core.md) · [Critical and non-critical threads](examples/use-cases/02-critical-and-non-critical.md) · [The noisy neighbor](examples/use-cases/03-the-noisy-neighbor.md) · [One NIC, one queue, one CPU](examples/use-cases/04-one-nic-one-queue-one-cpu.md) · [Page faults](examples/use-cases/05-page-faults-on-the-hot-path.md) · [Two sockets, one mistake](examples/use-cases/06-two-sockets-one-mistake.md) · [The freeze nobody logs](examples/use-cases/07-the-freeze-nobody-logs.md) · [Capstone: stock to tuned in one afternoon](examples/use-cases/08-stock-to-tuned-in-one-afternoon.md) · [The two-millisecond burst](examples/use-cases/09-the-two-millisecond-burst.md) · [Line rate without the kernel](examples/use-cases/10-line-rate-without-the-kernel.md) ([all ten](examples/use-cases/README.md))
 - **Examples**: [Java on a tuned host](examples/hugepages-java-example.md), with a [runnable probe](examples/java-latency-probe/) · [Multi-NIC segmentation](examples/network-segmentation-example.md)
 - **Quick help**: [Cheat sheet](CHEATSHEET.md) (every check on one page) · [FAQ](FAQ.md) · [Glossary](GLOSSARY.md) (every abbreviation and unusual word, in plain English)
-- **Tools**: [`plan-layout`](scripts/plan-layout) (propose or check the CPU layout, also as a [browser explorer](https://vitor-tadashi.github.io/mechanical-sympathy/explorer.html)) · [`apply-all`](scripts/apply-all) (plan / dry-run / apply / runtime) · [`verify-tuning`](scripts/verify-tuning) (PASS/WARN/FAIL report) · [`lowlat-runtime.service`](scripts/systemd/lowlat-runtime.service) (re-applies runtime state at boot)
+- **Tools**: [`plan-layout`](scripts/plan-layout) (propose or check the CPU layout, also as a [browser explorer](https://vitor-tadashi.github.io/mechanical-sympathy/explorer.html)) · [`size-buffers`](scripts/size-buffers) (how long a burst lasts, and how big the queues must be, also as a [browser simulator](https://vitor-tadashi.github.io/mechanical-sympathy/buffers.html)) · [`apply-all`](scripts/apply-all) (plan / dry-run / apply / runtime) · [`verify-tuning`](scripts/verify-tuning) (PASS/WARN/FAIL report) · [`lowlat-runtime.service`](scripts/systemd/lowlat-runtime.service) (re-applies runtime state at boot)
 
 ## How it fits together
 
@@ -171,7 +171,7 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 ├── concepts/        7 deep dives
 ├── examples/        use-cases/ (10 stories), Java on a tuned host (+ runnable probe), multi-NIC segmentation
 ├── assets/          diagrams/ (29 hand-written SVGs), social-preview.svg (source of the repository card)
-├── site/            the GitHub Pages site and the CPU layout explorer (no dependencies)
+├── site/            the GitHub Pages site, the CPU layout explorer and the buffer simulator (no dependencies)
 ├── tools/           lint, fixture tests, site build
 └── scripts/
     ├── lib/common            logging, dry-run, host class, backups, CPU list helpers

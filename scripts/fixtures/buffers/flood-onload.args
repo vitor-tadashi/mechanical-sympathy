@@ -1,0 +1,1 @@
+--stack onload --burst-mpps 6 --burst-us 20000 --pre-us 0 --ring 4096 --drain-mpps 7 --app-mpps 7 --buffer-packets 24576 --truesize 2048

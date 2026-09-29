@@ -1,0 +1,16 @@
+size-buffers: fluid model in 10 us steps. Illustrative, not a measurement.
+stack             kernel
+arrival           idle 1.000 Mpps, burst 1.000 Mpps for 3000 us from 0 us
+stage 1           RX ring: 4096 packets, drained at 3.000 Mpps
+stage 2           socket buffer: 92 packets (212992 B at 2304 B each), read at 2.000 Mpps
+reader pause      1000 us from 500 us
+
+dropped, stage 1  0 packets (rx_missed_errors)
+dropped, stage 2  908 packets (UdpRcvbufErrors)
+first drop        stage 2 at 590 us
+peak fill         stage 1: 0 of 4096, stage 2: 92 of 92
+
+To lose nothing in this scenario:
+ring              0 packets, 0 KiB per queue at 2048 B
+socket buffer     1000 packets, 2304000 B, SO_RCVBUF request 1125 KiB
+ring memory now   8192 KiB per queue, 8192 KiB for 1 queue(s)

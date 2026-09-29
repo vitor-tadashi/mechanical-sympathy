@@ -276,6 +276,16 @@ The failure mode is the same as with a ring: if your program does not put empty 
 
 When bypass is not worth it: your traffic fits the kernel's limits (§5, first and last rows), your p99.9 target is above tens of microseconds, or you cannot spare a core that spins at 100%. [Guide 08 §1](../guides/08-kernel-bypass.md#1-what-kernel-bypass-is-and-what-it-costs) has the full decision.
 
+## 9. Try your own numbers
+
+The [`size-buffers`](../scripts/size-buffers) script and the [buffer simulator](https://vitor-tadashi.github.io/mechanical-sympathy/buffers.html) apply the formula of §3 to your rates and sizes. They run the same model, and `tools/check-size-buffers` keeps the burst numbers of §3 equal to what the script prints.
+
+```bash
+scripts/size-buffers --ring 512 --burst-mpps 4 --burst-us 1500 --drain-mpps 1.5
+# dropped, stage 1  3238 packets (rx_missed_errors)
+# ring              3750 packets, 7500 KiB per queue at 2048 B   <- the ring that holds this burst
+```
+
 ## Key takeaways
 
 - **Size the queue to the burst, not to the average.** Capacity divided by (arrival minus drain) is the time you have, and the ring is the only queue that can hold a microburst.
