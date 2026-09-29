@@ -16,8 +16,8 @@
 #   3. CPU 0 is never isolated;
 #   4. Hyper-Threading siblings always share a role: a core is isolated as a whole;
 #   5. --threads plus --spares (default 2) isolated cores must exist, or the script refuses.
-# The first two OS CPUs outside the housekeeping core take workqueues, and the next two
-# take the agents slice.
+# The first two OS cores outside the housekeeping core take workqueues, and the next two
+# take the agents slice, each with all its Hyper-Threading siblings.
 #
 # Check mode sources CONF, and reports PASS or FAIL for the four rules above plus NUMA
 # locality. It exits 5 (EXIT_VERIFY) when a rule fails.
@@ -112,13 +112,24 @@ function propose(    n, i, j, c, cores, nc, hk, hkcore, isol, niso, os, nos, wq,
 	nhk = 0
 	for (i = 1; i <= ncpu; i++) if (cpuCore[all[i]] == hkcore) hkcpus[++nhk] = all[i]
 	irq = hkcpus[1]
-	# OS CPUs outside the housekeeping core, in order
-	ncand = 0
-	for (i = 1; i <= nos; i++) if (cpuCore[os[i]] != hkcore) cand[++ncand] = os[i]
-	if (ncand < 3) { printf "only %d OS CPU(s) outside the housekeeping core, at least 3 are needed for workqueues and agents\n", ncand > "/dev/stderr"; exit 1 }
+	# OS cores outside the housekeeping core, ordered by their lowest CPU. Roles go to whole
+	# cores, so that Hyper-Threading siblings never split between two of them.
+	ncc = 0
+	for (i = 1; i <= nos; i++) {
+		c = os[i]
+		if (cpuCore[c] == hkcore || (cpuCore[c] in seenCC)) continue
+		seenCC[cpuCore[c]] = 1
+		ccore[++ncc] = cpuCore[c]
+	}
+	if (ncc < 3) { printf "only %d OS core(s) outside the housekeeping core, at least 3 are needed for workqueues and agents\n", ncc > "/dev/stderr"; exit 1 }
+	for (i = 1; i <= ncc && i <= 4; i++) roleCore[ccore[i]] = (i <= 2) ? "wq" : "ag"
 	nwq = 0; nag = 0
-	for (i = 1; i <= 2; i++) wq[++nwq] = cand[i]
-	for (i = 3; i <= 4 && i <= ncand; i++) ag[++nag] = cand[i]
+	for (i = 1; i <= nos; i++) {
+		c = os[i]
+		if (!(cpuCore[c] in roleCore)) continue
+		if (roleCore[cpuCore[c]] == "wq") wq[++nwq] = c
+		else ag[++nag] = c
+	}
 	spare = chosen - threads
 	printf "# plan-layout: proposed CPU layout\n"
 	printf "# host: %d socket(s), %d NUMA node(s), %d CPUs, %d cores, Hyper-Threading %s\n", nsockets, nnodes, ncpu, ncores, htname

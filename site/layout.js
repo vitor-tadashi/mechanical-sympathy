@@ -127,17 +127,29 @@
 		const hkCpus = cpus.filter((c) => c.core === hkCore).map((c) => c.cpu);
 		const irq = hkCpus[0];
 
-		// OS CPUs outside the housekeeping core, in order
-		const cand = os.filter((cpu) => cpuOf.get(cpu).core !== hkCore);
-		if (cand.length < 3) {
+		// OS cores outside the housekeeping core, ordered by their lowest CPU. Roles go to whole
+		// cores, so that Hyper-Threading siblings never split between two of them.
+		const seenCore = new Set();
+		const osCores = [];
+		os.forEach((cpu) => {
+			const core = cpuOf.get(cpu).core;
+			if (core === hkCore || seenCore.has(core)) {
+				return;
+			}
+			seenCore.add(core);
+			osCores.push(core);
+		});
+		if (osCores.length < 3) {
 			return {
 				ok: false,
-				error: 'only ' + cand.length + ' OS CPU(s) outside the housekeeping core, ' +
+				error: 'only ' + osCores.length + ' OS core(s) outside the housekeeping core, ' +
 					'at least 3 are needed for workqueues and agents',
 			};
 		}
-		const wq = cand.slice(0, 2);
-		const agents = cand.slice(2, 4);
+		const wqCores = new Set(osCores.slice(0, 2));
+		const agentCores = new Set(osCores.slice(2, 4));
+		const wq = os.filter((cpu) => wqCores.has(cpuOf.get(cpu).core));
+		const agents = os.filter((cpu) => agentCores.has(cpuOf.get(cpu).core));
 		const spare = chosen - threads;
 
 		const list = (a, sep) => a.join(sep);

@@ -4,8 +4,8 @@
 # node 0: housekeeping core 0 (CPUs 0,8), isolated cores: 4 (needed 3, spare 1)
 ISOLATED_CPUS=(1 2 3 4 9 10 11 12)
 OS_CPUS=(0 5 6 7 8 13 14 15)
-WORKQUEUE_CPUS=(5 6)
+WORKQUEUE_CPUS=(5 6 13 14)
 HOUSEKEEPING_PIN_CPUS=(7)
-HOUSEKEEPING_SLICE_CPUS=(7 13)
+HOUSEKEEPING_SLICE_CPUS=(7 15)
 # critical NIC irq_cpus (third field of its NICS entry): 0
 # kernel arguments (Guide 01): isolcpus=1,2,3,4,9,10,11,12 nohz_full=1,2,3,4,9,10,11,12 rcu_nocbs=1,2,3,4,9,10,11,12
