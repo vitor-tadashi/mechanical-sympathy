@@ -27,6 +27,16 @@ day2_defaults() {
 	return 0
 }
 
+# unit_quote <text> - quote text for a systemd Environment= or Exec value: backslash, double
+# quote and % (a specifier) are escaped, so a path with spaces survives.
+unit_quote() {
+	local value="$1"
+	value="${value//\\/\\\\}"
+	value="${value//\"/\\\"}"
+	value="${value//%/%%}"
+	printf '"%s"\n' "${value}"
+}
+
 # remove_verify_timer - stop the timer and remove the units, whether or not an earlier run installed them.
 remove_verify_timer() {
 	run_quiet systemctl disable --now "${VERIFY_UNIT}.timer"
@@ -37,7 +47,7 @@ remove_verify_timer() {
 }
 
 install_verify_timer() {
-	local cpus config config_dir dir=.
+	local cpus config config_dir dir=. condition_path env_line exec_bin exec_report exec_line
 	day2_defaults
 	log_step "Verification timer (DAY2_VERIFY_TIMER=${DAY2_VERIFY_TIMER})"
 	if [[ "${DAY2_VERIFY_TIMER}" != yes ]]; then
@@ -53,12 +63,17 @@ install_verify_timer() {
 	if config_dir="$(cd "${dir}" 2>/dev/null && pwd -P)"; then
 		config="${config_dir}/${config##*/}"
 	fi
+	condition_path="${config//%/%%}"
+	env_line="$(unit_quote "LOWLAT_CONFIG=${config}")"
+	exec_bin="$(unit_quote "${LOWLAT_SCRIPTS_DIR}/verify-tuning")"
+	exec_report="$(unit_quote "${REPORT_DIR}/verify-latest.txt")"
+	exec_line="${exec_bin} --report ${exec_report}"
 	log_sub_step "Writing ${VERIFY_UNIT}.service (ExecStart=${LOWLAT_SCRIPTS_DIR}/verify-tuning, CPUs: ${cpus:-any})"
 	write_file "${SYSTEMD_UNIT_DIR}/${VERIFY_UNIT}.service" <<EOF
 # Managed by mechanical-sympathy 11-day2-operations
 [Unit]
 Description=Verify the low-latency tuning (read-only report)
-ConditionPathExists=${config}
+ConditionPathExists=${condition_path}
 # A missed run that Persistent=true triggers at activation must not inspect runtime state before
 # lowlat-runtime.service has re-applied it. Ordering only: no Wants=, so verification never starts
 # runtime tuning that the operator disabled.
@@ -66,10 +81,10 @@ After=lowlat-runtime.service
 
 [Service]
 Type=oneshot
-Environment=LOWLAT_CONFIG=${config}
+Environment=${env_line}
 ExecStartPre=/usr/bin/mkdir -p ${REPORT_DIR}
 # verify-tuning exits 5 when a check FAILs, which marks this unit as failed.
-ExecStart=${LOWLAT_SCRIPTS_DIR}/verify-tuning --report ${REPORT_DIR}/verify-latest.txt
+ExecStart=${exec_line}
 SyslogIdentifier=${VERIFY_UNIT}
 Nice=19
 IOSchedulingClass=idle
