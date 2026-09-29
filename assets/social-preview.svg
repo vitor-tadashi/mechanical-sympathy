@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-labelledby="t d">
+<title id="t">Mechanical Sympathy: low-latency tuning for RHEL</title>
+<desc id="d">Repository card. The title Mechanical Sympathy, the line low-latency tuning for RHEL, a summary of eleven guides, eleven scripts, eight use cases and a CPU layout explorer, and a small map of a two-node host with isolated CPUs on the node that holds the critical network cards.</desc>
+<style>
+  .bg { fill: #0d1117; }
+  .t1 { font: 700 76px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #ffffff; }
+  .t2 { font: 400 38px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #c9d1d9; }
+  .t3 { font: 400 26px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9da7b3; }
+  .q { font: italic 24px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9da7b3; }
+  .lab { font: 600 20px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #c9d1d9; }
+  .num { font: 600 15px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #14202b; text-anchor: middle; }
+  .hk { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 2; }
+  .os { fill: #e8f1ff; stroke: #1f4e8c; stroke-width: 2; stroke-dasharray: 3 3; }
+  .ag { fill: #eeeeee; stroke: #777777; stroke-width: 2; }
+  .iso { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 2; }
+  .nic { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .rule { stroke: #30363d; stroke-width: 2; }
+</style>
+<rect class="bg" x="0" y="0" width="1280" height="640"/>
+<text class="t1" x="72" y="230">Mechanical</text>
+<text class="t1" x="72" y="314">Sympathy</text>
+<text class="t2" x="72" y="384">Low-latency tuning for RHEL</text>
+<line class="rule" x1="72" y1="420" x2="560" y2="420"/>
+<text class="t3" x="72" y="466">11 guides · 11 scripts · 8 use cases</text>
+<text class="t3" x="72" y="504">and a CPU layout explorer</text>
+<text class="q" x="72" y="580">The tail is the sum of rare events.</text>
+
+<text class="lab" x="700" y="130">NUMA node 0: the operating system</text>
+<g>
+  <rect class="hk" x="700" y="150" width="56" height="56" rx="6"/><text class="num" x="728" y="184">0</text>
+  <rect class="hk" x="766" y="150" width="56" height="56" rx="6"/><text class="num" x="794" y="184">2</text>
+  <rect class="ag" x="832" y="150" width="56" height="56" rx="6"/><text class="num" x="860" y="184">4</text>
+  <rect class="ag" x="898" y="150" width="56" height="56" rx="6"/><text class="num" x="926" y="184">6</text>
+  <rect class="os" x="964" y="150" width="56" height="56" rx="6"/><text class="num" x="992" y="184">8</text>
+  <rect class="os" x="1030" y="150" width="56" height="56" rx="6"/><text class="num" x="1058" y="184">10</text>
+  <rect class="os" x="1096" y="150" width="56" height="56" rx="6"/><text class="num" x="1124" y="184">12</text>
+  <rect class="os" x="1162" y="150" width="56" height="56" rx="6"/><text class="num" x="1190" y="184">14</text>
+</g>
+<text class="lab" x="700" y="270">NUMA node 1: critical NICs and threads</text>
+<g>
+  <rect class="nic" x="700" y="286" width="230" height="30" rx="6"/>
+  <rect class="hk" x="700" y="330" width="56" height="56" rx="6"/><text class="num" x="728" y="364">1</text>
+  <rect class="iso" x="766" y="330" width="56" height="56" rx="6"/><text class="num" x="794" y="364">3</text>
+  <rect class="iso" x="832" y="330" width="56" height="56" rx="6"/><text class="num" x="860" y="364">5</text>
+  <rect class="iso" x="898" y="330" width="56" height="56" rx="6"/><text class="num" x="926" y="364">7</text>
+  <rect class="iso" x="964" y="330" width="56" height="56" rx="6"/><text class="num" x="992" y="364">9</text>
+  <rect class="iso" x="1030" y="330" width="56" height="56" rx="6"/><text class="num" x="1058" y="364">11</text>
+  <rect class="iso" x="1096" y="330" width="56" height="56" rx="6"/><text class="num" x="1124" y="364">13</text>
+  <rect class="iso" x="1162" y="330" width="56" height="56" rx="6"/><text class="num" x="1190" y="364">15</text>
+</g>
+<text class="t3" x="948" y="309" style="font-size:20px">2 critical NICs</text>
+<text class="t3" x="700" y="432" style="font-size:20px">CPU 1 takes the interrupts.</text>
+<text class="t3" x="700" y="462" style="font-size:20px">CPUs 3 and up run one pinned thread each.</text>
+</svg>
