@@ -49,6 +49,10 @@ Huge pages also:
 - **cannot be swapped or migrated**: no NUMA balancing moves them behind your back, and no swap-in stalls;
 - **reduce TLB-shootdown IPIs**, because there are fewer mappings to invalidate.
 
+<img src="../assets/diagrams/page-fault-hotpath.svg" alt="Animation: with default first-touch memory six page faults stall an event-loop thread while it serves; with pre-touched huge pages all the faults happen at start-up and serving has none" width="720">
+
+*The same event loop with and without pre-touch: the faults do not disappear, they move to start-up, before the first request.*
+
 The full mechanics are in [concepts/huge-pages.md](../concepts/huge-pages.md).
 
 ## 2. Transparent vs explicit huge pages: why THP is off

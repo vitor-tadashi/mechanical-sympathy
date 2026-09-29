@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 372" width="760" height="372" role="img" aria-labelledby="t d">
+<title id="t">A closed-loop benchmark records one slow sample where an open-loop one records the queue</title>
+<desc id="d">Two timelines with the same stall. A closed-loop sender waits for each answer, so during the stall it sends nothing and records a single slow sample. An open-loop sender keeps a fixed schedule, so every request that was due during the stall is timed from its intended send time and shows up as a slow sample, six in this schematic. The closed loop hides the tail that users would see. This is coordinated omission.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .spare { fill: #e6f7ea; stroke: #1d6b33; stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .off { fill: #ffffff; stroke: #d0d7de; stroke-width: 1; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .role { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .mid { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .midr { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #2b0a0a; text-anchor: middle; }
+  .midw { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0b1f33; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+
+  .pw, .pb, .pg { transform-box: fill-box; transform-origin: center; animation: 6s linear infinite; }
+  .pw { animation-name: cut; }
+  .pb { animation-name: take; }
+  .pg { animation-name: ok; }
+  @keyframes cut {
+    0%, 6%   { fill: #ff6b6b; transform: scaleY(1.15); }
+    7%, 100% { fill: #ffc9c9; transform: scaleY(1); }
+  }
+  @keyframes take {
+    0%, 6%   { fill: #3d7fd9; transform: scaleY(1.15); }
+    7%, 100% { fill: #1f4e8c; transform: scaleY(1); }
+  }
+  @keyframes ok {
+    0%, 6%   { fill: #7fe39a; transform: scaleY(1.15); }
+    7%, 100% { fill: #c8f0d0; transform: scaleY(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .head, .pw, .pb, .pg { animation: none; }
+    .head { display: none; }
+  }
+
+  .fast { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1; }
+  .stall { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .cnt { font: 700 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: end; }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="372" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="140" rx="6"/>
+<text class="cap" x="24" y="34">Closed loop: send, wait, send</text>
+<text class="sub" x="24" y="52">The sender waits for each answer, so during a stall it sends nothing and records one slow sample.</text>
+<text class="cnt" x="740" y="34">slow samples recorded: 1</text>
+<text class="lbl" x="24" y="104" style="font-weight:500">each bar =</text><text class="role" x="24" y="118">one request</text>
+<rect class="fast" x="156" y="92" width="8" height="18" rx="2"/>
+<rect class="fast" x="186" y="92" width="8" height="18" rx="2"/>
+<rect class="fast" x="216" y="92" width="8" height="18" rx="2"/>
+<rect class="fast" x="246" y="92" width="8" height="18" rx="2"/>
+<rect class="fast" x="276" y="92" width="8" height="18" rx="2"/>
+<rect class="fast" x="306" y="92" width="8" height="18" rx="2"/>
+<rect class="wait pw" style="animation-delay:-3.16s" x="330" y="90" width="180" height="22" rx="3"/>
+<text class="midr" x="420.0" y="106">1 request, very slow</text>
+<rect class="fast" x="522" y="92" width="8" height="18" rx="2"/>
+<rect class="fast" x="552" y="92" width="8" height="18" rx="2"/>
+<rect class="fast" x="582" y="92" width="8" height="18" rx="2"/>
+<rect class="fast" x="612" y="92" width="8" height="18" rx="2"/>
+<rect class="fast" x="642" y="92" width="8" height="18" rx="2"/>
+<rect class="fast" x="672" y="92" width="8" height="18" rx="2"/>
+<rect class="fast" x="702" y="92" width="8" height="18" rx="2"/>
+<text class="axis" x="435" y="140">schematic, not to scale</text>
+<rect class="lane" x="10" y="160" width="740" height="200" rx="6"/>
+<text class="cap" x="24" y="184">Open loop: send on a fixed schedule</text>
+<text class="sub" x="24" y="202">The sender keeps its schedule, and every request due during the stall is timed from when it was due.</text>
+<text class="cnt" x="740" y="184">slow samples recorded: 6</text>
+<text class="lbl" x="24" y="254" style="font-weight:500">each bar =</text><text class="role" x="24" y="268">one request</text>
+<rect class="fast" x="156" y="242" width="8" height="10" rx="2"/>
+<rect class="fast" x="186" y="242" width="8" height="10" rx="2"/>
+<rect class="fast" x="216" y="242" width="8" height="10" rx="2"/>
+<rect class="fast" x="246" y="242" width="8" height="10" rx="2"/>
+<rect class="fast" x="276" y="242" width="8" height="10" rx="2"/>
+<rect class="fast" x="306" y="242" width="8" height="10" rx="2"/>
+<rect class="wait pw" style="animation-delay:-3.16s" x="330" y="242" width="180" height="10" rx="2"/>
+<rect class="wait pw" style="animation-delay:-3.00s" x="360" y="254" width="150" height="10" rx="2"/>
+<rect class="wait pw" style="animation-delay:-2.84s" x="390" y="266" width="120" height="10" rx="2"/>
+<rect class="wait pw" style="animation-delay:-2.68s" x="420" y="278" width="90" height="10" rx="2"/>
+<rect class="wait pw" style="animation-delay:-2.53s" x="450" y="290" width="60" height="10" rx="2"/>
+<rect class="wait pw" style="animation-delay:-2.37s" x="480" y="302" width="30" height="10" rx="2"/>
+<text class="midr" x="450.0" y="328" style="fill:#9b1c1c">6 requests, each late by the time left in the stall</text>
+<rect class="fast" x="522" y="242" width="8" height="10" rx="2"/>
+<rect class="fast" x="552" y="242" width="8" height="10" rx="2"/>
+<rect class="fast" x="582" y="242" width="8" height="10" rx="2"/>
+<rect class="fast" x="612" y="242" width="8" height="10" rx="2"/>
+<rect class="fast" x="642" y="242" width="8" height="10" rx="2"/>
+<rect class="fast" x="672" y="242" width="8" height="10" rx="2"/>
+<rect class="fast" x="702" y="242" width="8" height="10" rx="2"/>
+<text class="axis" x="435" y="346">schematic, not to scale</text>
+<line class="head" x1="150" y1="78" x2="150" y2="336"/>
+</svg>

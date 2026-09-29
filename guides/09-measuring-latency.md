@@ -77,6 +77,10 @@ A percentile is only as good as the number of samples behind it. To see p99.99 a
 
 A **closed-loop** benchmark sends a request, waits for the response, and only then sends the next one. When the system stalls for 10 ms, the benchmark also stalls, so it records **one** slow sample instead of the hundreds of requests that would have arrived and waited during those 10 ms in real life. The tail looks far better than users would experience. That is **coordinated omission**.
 
+<img src="../assets/diagrams/coordinated-omission.svg" alt="Animation: a closed-loop sender records one slow sample for a stall, an open-loop sender records six because every request due during the stall is timed from its intended send time" width="720">
+
+*One stall, two senders: the closed loop hides the queue behind the stall, and the open loop records every request that was due.*
+
 Two ways to avoid it:
 
 - **Open-loop load.** Send at a fixed rate, whatever the response time, and measure each message from its **intended** send time, not its actual one.
@@ -116,6 +120,10 @@ flowchart LR
 | `mpstat -P ALL 1` | `sysstat` | Per-CPU `%irq`, `%soft`, `%steal` | Steal time is the VM signal |
 | `sockperf` | EPEL | Network round trip between two hosts | Pin both ends with `taskset` |
 | HdrHistogram | a library in your application | The application's own latency, with coordinated-omission correction | The measurement that matters most |
+
+<img src="../assets/diagrams/smi-freeze.svg" alt="Animation: an SMI stops four isolated CPUs at the same instant; /proc/interrupts shows nothing, rtla osnoise shows an unattributed gap, and only the turbostat SMI counter goes from N to N plus 1" width="720">
+
+*Why `turbostat` is on the list: the SMI counter is the only tool that notices a stall the operating system cannot see.*
 
 > [!NOTE]
 > **Not proven in production.** The reference measurements used `rtla osnoise`, `/proc/interrupts` deltas, `perf stat` and the application's own histograms. `rtla hwnoise`, `rtla timerlat` and `cyclictest` are listed from their documentation.
