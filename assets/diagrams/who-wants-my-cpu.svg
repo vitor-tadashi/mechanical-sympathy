@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" width="760" height="420" role="img" aria-labelledby="t d">
+<title id="t">Seven things take a CPU away from a critical thread, and each one has a knob</title>
+<desc id="d">Seven sources of interference, each with its typical cost, and the setting that removes it: other tasks (isolcpus and CPUAffinity), the scheduler tick (nohz_full), RCU callbacks (rcu_nocbs), kernel workers (workqueue cpumask), device interrupts (IRQ affinity), third-party agents (housekeeping.slice) and migration (one pinned thread per CPU). With all seven removed, the isolated CPU runs its one pinned thread uninterrupted.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .spare { fill: #e6f7ea; stroke: #1d6b33; stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .off { fill: #ffffff; stroke: #d0d7de; stroke-width: 1; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .role { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .mid { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .midr { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #2b0a0a; text-anchor: middle; }
+  .midw { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0b1f33; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+
+  .hdr { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-transform: uppercase; letter-spacing: 0.04em; }
+  .arr { stroke: #57606a; stroke-width: 1.5; fill: none; }
+  .ok { stroke: #1d6b33; stroke-width: 2; fill: none; }
+  .big { font: 700 16px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0b2613; text-anchor: middle; }
+  .bigs { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0b2613; text-anchor: middle; }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="420" rx="8"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#57606a"/></marker><marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1d6b33"/></marker></defs>
+<text class="hdr" x="20" y="32">What takes the CPU away</text>
+<text class="hdr" x="300" y="32">The knob that removes it</text>
+<text class="hdr" x="596" y="32">Result</text>
+<rect class="wait" x="20" y="46" width="236" height="40" rx="5"/>
+<text class="lbl" x="32" y="63">Other runnable tasks</text>
+<text class="role" x="32" y="78">a whole time slice, ms</text>
+<line class="arr" x1="258" y1="66" x2="296" y2="66" marker-end="url(#a)"/>
+<rect class="box" x="300" y="46" width="246" height="40" rx="5"/>
+<text class="lbl" x="312" y="63">isolcpus + CPUAffinity</text>
+<text class="role" x="312" y="78">Guides 01, 02</text>
+<line class="ok" x1="548" y1="66" x2="590" y2="66" marker-end="url(#g)"/>
+<rect class="wait" x="20" y="96" width="236" height="40" rx="5"/>
+<text class="lbl" x="32" y="113">Scheduler tick</text>
+<text class="role" x="32" y="128">1-5 µs, 250-1000 times a second</text>
+<line class="arr" x1="258" y1="116" x2="296" y2="116" marker-end="url(#a)"/>
+<rect class="box" x="300" y="96" width="246" height="40" rx="5"/>
+<text class="lbl" x="312" y="113">nohz_full</text>
+<text class="role" x="312" y="128">Guide 01</text>
+<line class="ok" x1="548" y1="116" x2="590" y2="116" marker-end="url(#g)"/>
+<rect class="wait" x="20" y="146" width="236" height="40" rx="5"/>
+<text class="lbl" x="32" y="163">RCU callbacks</text>
+<text class="role" x="32" y="178">µs to 100s of µs</text>
+<line class="arr" x1="258" y1="166" x2="296" y2="166" marker-end="url(#a)"/>
+<rect class="box" x="300" y="146" width="246" height="40" rx="5"/>
+<text class="lbl" x="312" y="163">rcu_nocbs</text>
+<text class="role" x="312" y="178">Guide 01</text>
+<line class="ok" x1="548" y1="166" x2="590" y2="166" marker-end="url(#g)"/>
+<rect class="wait" x="20" y="196" width="236" height="40" rx="5"/>
+<text class="lbl" x="32" y="213">Kernel workers (kworker)</text>
+<text class="role" x="32" y="228">µs to ms</text>
+<line class="arr" x1="258" y1="216" x2="296" y2="216" marker-end="url(#a)"/>
+<rect class="box" x="300" y="196" width="246" height="40" rx="5"/>
+<text class="lbl" x="312" y="213">workqueue cpumask</text>
+<text class="role" x="312" y="228">Guide 02</text>
+<line class="ok" x1="548" y1="216" x2="590" y2="216" marker-end="url(#g)"/>
+<rect class="wait" x="20" y="246" width="236" height="40" rx="5"/>
+<text class="lbl" x="32" y="263">Device IRQs and softirq</text>
+<text class="role" x="32" y="278">1-50 µs each</text>
+<line class="arr" x1="258" y1="266" x2="296" y2="266" marker-end="url(#a)"/>
+<rect class="box" x="300" y="246" width="246" height="40" rx="5"/>
+<text class="lbl" x="312" y="263">IRQ affinity, irqbalance off</text>
+<text class="role" x="312" y="278">Guides 02, 04</text>
+<line class="ok" x1="548" y1="266" x2="590" y2="266" marker-end="url(#g)"/>
+<rect class="wait" x="20" y="296" width="236" height="40" rx="5"/>
+<text class="lbl" x="32" y="313">Third-party agents</text>
+<text class="role" x="32" y="328">bursts, on any CPU they like</text>
+<line class="arr" x1="258" y1="316" x2="296" y2="316" marker-end="url(#a)"/>
+<rect class="box" x="300" y="296" width="246" height="40" rx="5"/>
+<text class="lbl" x="312" y="313">housekeeping.slice</text>
+<text class="role" x="312" y="328">Guide 05</text>
+<line class="ok" x1="548" y1="316" x2="590" y2="316" marker-end="url(#g)"/>
+<rect class="wait" x="20" y="346" width="236" height="40" rx="5"/>
+<text class="lbl" x="32" y="363">Migration, cold caches</text>
+<text class="role" x="32" y="378">µs to 10s of µs</text>
+<line class="arr" x1="258" y1="366" x2="296" y2="366" marker-end="url(#a)"/>
+<rect class="box" x="300" y="346" width="246" height="40" rx="5"/>
+<text class="lbl" x="312" y="363">one pinned thread per CPU</text>
+<text class="role" x="312" y="378">Guide 02 section 6</text>
+<line class="ok" x1="548" y1="366" x2="590" y2="366" marker-end="url(#g)"/>
+<rect class="app" x="594" y="46" width="146" height="340" rx="8"/>
+<text class="big" x="667" y="186">CPU 5</text>
+<text class="bigs" x="667" y="208">isolated</text>
+<text class="bigs" x="667" y="236">one pinned thread</text>
+<text class="bigs" x="667" y="254">runs uninterrupted</text>
+<text class="sub" x="20" y="410">Costs from the table in Guide 02 section 1. Each source has one removal, and every removal is a setting in this repository.</text>
+</svg>

@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 484" width="760" height="484" role="img" aria-labelledby="t d">
+<title id="t">The reference host: which CPU does what</title>
+<desc id="d">A 32-CPU host with two NUMA nodes. Node 1 (odd CPUs) holds the critical NICs. CPU 1 is the only housekeeping CPU there and takes the critical NIC interrupts, while CPUs 3 to 13 each run one pinned thread role and CPUs 15 to 31 are isolated spares. Node 0 (even CPUs) runs the operating system: workqueues on CPUs 0 and 2, agents on CPUs 4 and 6, other threads on CPUs 8 to 28 and bulk NIC interrupts on CPU 30.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .spare { fill: #e6f7ea; stroke: #1d6b33; stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .off { fill: #ffffff; stroke: #d0d7de; stroke-width: 1; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .role { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .mid { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .midr { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #2b0a0a; text-anchor: middle; }
+  .midw { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0b1f33; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+
+  .num { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .rl { font: 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #333333; text-anchor: middle; }
+  .arr { stroke: #1f4e8c; stroke-width: 2.5; fill: none; }
+  .pcie { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="484" rx="8"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#1f4e8c"/></marker></defs>
+<rect class="pcie" x="26" y="10" width="300" height="30" rx="4"/>
+<text class="lbl" x="40" y="30">2 critical NICs, PCIe slots on node 1</text>
+<text class="role" x="340" y="30">their interrupts land on CPU 1 only</text>
+<rect class="lane" x="10" y="50" width="740" height="170" rx="6"/>
+<text class="cap" x="24" y="74">NUMA node 1 (odd CPUs): critical NICs, memory and threads</text>
+<text class="sub" x="24" y="92">One housekeeping CPU for interrupts, everything else isolated. Each pinned role owns its CPU.</text>
+<rect class="box" x="26" y="106" width="82" height="46" rx="4"/>
+<text class="num" x="67" y="125">CPU 1</text>
+<text class="rl" x="67" y="141">critical IRQs</text>
+<rect class="app" x="114" y="106" width="82" height="46" rx="4"/>
+<text class="num" x="155" y="125">CPU 3</text>
+<text class="rl" x="155" y="141">net.rx</text>
+<rect class="app" x="202" y="106" width="82" height="46" rx="4"/>
+<text class="num" x="243" y="125">CPU 5</text>
+<text class="rl" x="243" y="141">net.tx</text>
+<rect class="app" x="290" y="106" width="82" height="46" rx="4"/>
+<text class="num" x="331" y="125">CPU 7</text>
+<text class="rl" x="331" y="141">event.loop</text>
+<rect class="app" x="378" y="106" width="82" height="46" rx="4"/>
+<text class="num" x="419" y="125">CPU 9</text>
+<text class="rl" x="419" y="141">worker.0</text>
+<rect class="app" x="466" y="106" width="82" height="46" rx="4"/>
+<text class="num" x="507" y="125">CPU 11</text>
+<text class="rl" x="507" y="141">worker.1</text>
+<rect class="app" x="554" y="106" width="82" height="46" rx="4"/>
+<text class="num" x="595" y="125">CPU 13</text>
+<text class="rl" x="595" y="141">timer</text>
+<rect class="spare" x="642" y="106" width="82" height="46" rx="4"/>
+<text class="num" x="683" y="125">CPU 15</text>
+<text class="rl" x="683" y="141">isolated, spare</text>
+<rect class="spare" x="26" y="158" width="82" height="46" rx="4"/>
+<text class="num" x="67" y="177">CPU 17</text>
+<text class="rl" x="67" y="193">isolated, spare</text>
+<rect class="spare" x="114" y="158" width="82" height="46" rx="4"/>
+<text class="num" x="155" y="177">CPU 19</text>
+<text class="rl" x="155" y="193">isolated, spare</text>
+<rect class="spare" x="202" y="158" width="82" height="46" rx="4"/>
+<text class="num" x="243" y="177">CPU 21</text>
+<text class="rl" x="243" y="193">isolated, spare</text>
+<rect class="spare" x="290" y="158" width="82" height="46" rx="4"/>
+<text class="num" x="331" y="177">CPU 23</text>
+<text class="rl" x="331" y="193">isolated, spare</text>
+<rect class="spare" x="378" y="158" width="82" height="46" rx="4"/>
+<text class="num" x="419" y="177">CPU 25</text>
+<text class="rl" x="419" y="193">isolated, spare</text>
+<rect class="spare" x="466" y="158" width="82" height="46" rx="4"/>
+<text class="num" x="507" y="177">CPU 27</text>
+<text class="rl" x="507" y="193">isolated, spare</text>
+<rect class="spare" x="554" y="158" width="82" height="46" rx="4"/>
+<text class="num" x="595" y="177">CPU 29</text>
+<text class="rl" x="595" y="193">isolated, spare</text>
+<rect class="spare" x="642" y="158" width="82" height="46" rx="4"/>
+<text class="num" x="683" y="177">CPU 31</text>
+<text class="rl" x="683" y="193">isolated, spare</text>
+<rect class="lane" x="10" y="230" width="740" height="170" rx="6"/>
+<text class="cap" x="24" y="254">NUMA node 0 (even CPUs): the operating system</text>
+<text class="sub" x="24" y="272">Workqueues, agents, bulk and management interrupts and non-critical threads. Nothing here is isolated.</text>
+<rect class="box" x="26" y="286" width="82" height="46" rx="4"/>
+<text class="num" x="67" y="305">CPU 0</text>
+<text class="rl" x="67" y="321">wq, mgmt IRQ</text>
+<rect class="box" x="114" y="286" width="82" height="46" rx="4"/>
+<text class="num" x="155" y="305">CPU 2</text>
+<text class="rl" x="155" y="321">workqueues</text>
+<rect class="mut" x="202" y="286" width="82" height="46" rx="4"/>
+<text class="num" x="243" y="305">CPU 4</text>
+<text class="rl" x="243" y="321">agents</text>
+<rect class="mut" x="290" y="286" width="82" height="46" rx="4"/>
+<text class="num" x="331" y="305">CPU 6</text>
+<text class="rl" x="331" y="321">agents</text>
+<rect class="box" x="378" y="286" width="82" height="46" rx="4"/>
+<text class="num" x="419" y="305">CPU 8</text>
+<text class="rl" x="419" y="321">OS, non-crit</text>
+<rect class="box" x="466" y="286" width="82" height="46" rx="4"/>
+<text class="num" x="507" y="305">CPU 10</text>
+<text class="rl" x="507" y="321">OS, non-crit</text>
+<rect class="box" x="554" y="286" width="82" height="46" rx="4"/>
+<text class="num" x="595" y="305">CPU 12</text>
+<text class="rl" x="595" y="321">OS, non-crit</text>
+<rect class="box" x="642" y="286" width="82" height="46" rx="4"/>
+<text class="num" x="683" y="305">CPU 14</text>
+<text class="rl" x="683" y="321">OS, non-crit</text>
+<rect class="box" x="26" y="338" width="82" height="46" rx="4"/>
+<text class="num" x="67" y="357">CPU 16</text>
+<text class="rl" x="67" y="373">OS, non-crit</text>
+<rect class="box" x="114" y="338" width="82" height="46" rx="4"/>
+<text class="num" x="155" y="357">CPU 18</text>
+<text class="rl" x="155" y="373">OS, non-crit</text>
+<rect class="box" x="202" y="338" width="82" height="46" rx="4"/>
+<text class="num" x="243" y="357">CPU 20</text>
+<text class="rl" x="243" y="373">OS, non-crit</text>
+<rect class="box" x="290" y="338" width="82" height="46" rx="4"/>
+<text class="num" x="331" y="357">CPU 22</text>
+<text class="rl" x="331" y="373">OS, non-crit</text>
+<rect class="box" x="378" y="338" width="82" height="46" rx="4"/>
+<text class="num" x="419" y="357">CPU 24</text>
+<text class="rl" x="419" y="373">OS, non-crit</text>
+<rect class="box" x="466" y="338" width="82" height="46" rx="4"/>
+<text class="num" x="507" y="357">CPU 26</text>
+<text class="rl" x="507" y="373">OS, non-crit</text>
+<rect class="box" x="554" y="338" width="82" height="46" rx="4"/>
+<text class="num" x="595" y="357">CPU 28</text>
+<text class="rl" x="595" y="373">OS, non-crit</text>
+<rect class="box" x="642" y="338" width="82" height="46" rx="4"/>
+<text class="num" x="683" y="357">CPU 30</text>
+<text class="rl" x="683" y="373">bulk IRQs</text>
+<path class="arr" d="M26 25 H17 V129 H24" marker-end="url(#a)"/>
+<rect class="app" x="20" y="414" width="16" height="16" rx="3"/>
+<text class="role" x="42" y="426">isolated, one pinned thread</text>
+<rect class="spare" x="218" y="414" width="16" height="16" rx="3"/>
+<text class="role" x="240" y="426">isolated, spare headroom</text>
+<rect class="box" x="410" y="414" width="16" height="16" rx="3"/>
+<text class="role" x="432" y="426">housekeeping: OS and IRQs</text>
+<rect class="mut" x="588" y="414" width="16" height="16" rx="3"/>
+<text class="role" x="610" y="426">agents, cpuset fence</text>
+<text class="sub" x="20" y="454">The reference host of scripts/lowlat.conf.example: 2 sockets x 16 cores, Hyper-Threading off.</text>
+<text class="sub" x="20" y="472">ISOLATED_CPUS are the odd CPUs from 3 to 31. OS_CPUS is every other CPU.</text>
+</svg>

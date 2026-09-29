@@ -45,6 +45,10 @@ flowchart LR
 
 *Each level is several times slower than the one before it. A context switch pushes the critical thread's data out of L1 and L2, so its next events run from the slow end of this chain.*
 
+<img src="../assets/diagrams/thread-migration.svg" alt="Animation: an unpinned thread hops across four CPUs and starts with a cold cache after every hop, while a pinned thread on one isolated CPU starts cold once and then keeps its caches warm" width="720">
+
+*A migration is a context switch onto a CPU that holds someone else's data. Pinning removes it.*
+
 After the switch back, the critical thread runs from L3 or DRAM for its next several events. At ~5 ns per L2 hit, ~15–20 ns per L3 hit and ~80–120 ns per DRAM access (more across sockets), a few hundred misses turn a 2 µs handler into a 20–40 µs one. That is the outlier.
 
 ## 4. Sources of noise on a CPU, and what removes each
@@ -58,6 +62,10 @@ flowchart TD
 ```
 
 *The sources fall into four families (other tasks, kernel timers, interrupts and deferred work, hardware and firmware), and each has its own removal. The table below lists every source.*
+
+<img src="../assets/diagrams/who-wants-my-cpu.svg" alt="Seven sources of interference on a CPU, each paired with the setting that removes it, leading to an isolated CPU that runs one pinned thread uninterrupted" width="720">
+
+*The seven sources that matter on a Linux server, each with its typical cost and the one setting that removes it.*
 
 <img src="../assets/diagrams/tick-nohz.svg" alt="Animation: a busy CPU is interrupted by a timer tick many times per second; with nohz_full the same CPU runs uninterrupted except for one residual tick" width="720">
 

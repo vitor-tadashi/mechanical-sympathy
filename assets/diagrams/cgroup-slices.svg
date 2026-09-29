@@ -1,0 +1,250 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 408" width="760" height="408" role="img" aria-labelledby="t d">
+<title id="t">Three slices, three CPU sets: which CPUs each may touch</title>
+<desc id="d">A row of 32 CPUs, colored isolated or OS, and below it the slices of the cgroup tree. system.slice and user.slice may use the OS CPUs by inherited affinity, which a process can change. housekeeping.slice is a cpuset fence on CPUs 4 and 6 that the kernel enforces. The optional latency.slice may use every CPU, and its threads pin themselves to isolated CPUs.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .spare { fill: #e6f7ea; stroke: #1d6b33; stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .off { fill: #ffffff; stroke: #d0d7de; stroke-width: 1; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .role { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .mid { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .midr { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #2b0a0a; text-anchor: middle; }
+  .midw { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0b1f33; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+
+  .num { font: 600 9px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .tree { stroke: #57606a; stroke-width: 1.5; fill: none; }
+  .adv { stroke-dasharray: 3 2; }
+  .fence { stroke-width: 2.5; }
+  .dir { font: 11px ui-monospace, "SF Mono", Menlo, Consolas, monospace; fill: #1a1a1a; }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="408" rx="8"/>
+<text class="role" x="20" y="34">CPU number, 0 to 31: green = isolated, blue = OS CPUs</text>
+<rect class="box" x="300" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="307.0" y="59">0</text>
+<rect class="box" x="314" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="321.0" y="59">1</text>
+<rect class="box" x="328" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="335.0" y="59">2</text>
+<rect class="app" x="342" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="349.0" y="59">3</text>
+<rect class="box" x="356" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="363.0" y="59">4</text>
+<rect class="app" x="370" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="377.0" y="59">5</text>
+<rect class="box" x="384" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="391.0" y="59">6</text>
+<rect class="app" x="398" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="405.0" y="59">7</text>
+<rect class="box" x="412" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="419.0" y="59">8</text>
+<rect class="app" x="426" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="433.0" y="59">9</text>
+<rect class="box" x="440" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="447.0" y="59">10</text>
+<rect class="app" x="454" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="461.0" y="59">11</text>
+<rect class="box" x="468" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="475.0" y="59">12</text>
+<rect class="app" x="482" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="489.0" y="59">13</text>
+<rect class="box" x="496" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="503.0" y="59">14</text>
+<rect class="app" x="510" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="517.0" y="59">15</text>
+<rect class="box" x="524" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="531.0" y="59">16</text>
+<rect class="app" x="538" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="545.0" y="59">17</text>
+<rect class="box" x="552" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="559.0" y="59">18</text>
+<rect class="app" x="566" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="573.0" y="59">19</text>
+<rect class="box" x="580" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="587.0" y="59">20</text>
+<rect class="app" x="594" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="601.0" y="59">21</text>
+<rect class="box" x="608" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="615.0" y="59">22</text>
+<rect class="app" x="622" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="629.0" y="59">23</text>
+<rect class="box" x="636" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="643.0" y="59">24</text>
+<rect class="app" x="650" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="657.0" y="59">25</text>
+<rect class="box" x="664" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="671.0" y="59">26</text>
+<rect class="app" x="678" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="685.0" y="59">27</text>
+<rect class="box" x="692" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="699.0" y="59">28</text>
+<rect class="app" x="706" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="713.0" y="59">29</text>
+<rect class="box" x="720" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="727.0" y="59">30</text>
+<rect class="app" x="734" y="44" width="14" height="22" style="stroke-width:1"/>
+<text class="num" x="741.0" y="59">31</text>
+<text class="lbl" x="24" y="98">-.slice (root)</text>
+<line class="tree" x1="30" y1="104" x2="30" y2="328"/>
+<line class="tree" x1="30" y1="136" x2="44" y2="136"/>
+<rect class="box" x="44" y="110" width="244" height="52" rx="5" style="fill:#ffffff"/>
+<text class="lbl" x="54" y="127">system.slice</text>
+<text class="role" x="54" y="141">OS services</text>
+<text class="dir" x="54" y="155">CPUAffinity = OS_CPUS</text>
+<rect class="box adv" x="300" y="120" width="14" height="32"/>
+<rect class="box adv" x="314" y="120" width="14" height="32"/>
+<rect class="box adv" x="328" y="120" width="14" height="32"/>
+<rect class="off" x="342" y="120" width="14" height="32"/>
+<rect class="box adv" x="356" y="120" width="14" height="32"/>
+<rect class="off" x="370" y="120" width="14" height="32"/>
+<rect class="box adv" x="384" y="120" width="14" height="32"/>
+<rect class="off" x="398" y="120" width="14" height="32"/>
+<rect class="box adv" x="412" y="120" width="14" height="32"/>
+<rect class="off" x="426" y="120" width="14" height="32"/>
+<rect class="box adv" x="440" y="120" width="14" height="32"/>
+<rect class="off" x="454" y="120" width="14" height="32"/>
+<rect class="box adv" x="468" y="120" width="14" height="32"/>
+<rect class="off" x="482" y="120" width="14" height="32"/>
+<rect class="box adv" x="496" y="120" width="14" height="32"/>
+<rect class="off" x="510" y="120" width="14" height="32"/>
+<rect class="box adv" x="524" y="120" width="14" height="32"/>
+<rect class="off" x="538" y="120" width="14" height="32"/>
+<rect class="box adv" x="552" y="120" width="14" height="32"/>
+<rect class="off" x="566" y="120" width="14" height="32"/>
+<rect class="box adv" x="580" y="120" width="14" height="32"/>
+<rect class="off" x="594" y="120" width="14" height="32"/>
+<rect class="box adv" x="608" y="120" width="14" height="32"/>
+<rect class="off" x="622" y="120" width="14" height="32"/>
+<rect class="box adv" x="636" y="120" width="14" height="32"/>
+<rect class="off" x="650" y="120" width="14" height="32"/>
+<rect class="box adv" x="664" y="120" width="14" height="32"/>
+<rect class="off" x="678" y="120" width="14" height="32"/>
+<rect class="box adv" x="692" y="120" width="14" height="32"/>
+<rect class="off" x="706" y="120" width="14" height="32"/>
+<rect class="box adv" x="720" y="120" width="14" height="32"/>
+<rect class="off" x="734" y="120" width="14" height="32"/>
+<text class="role" x="744" y="166" style="text-anchor:end">advisory: a process can change it</text>
+<line class="tree" x1="30" y1="200" x2="44" y2="200"/>
+<rect class="box" x="44" y="174" width="244" height="52" rx="5" style="fill:#ffffff"/>
+<text class="lbl" x="54" y="191">user.slice</text>
+<text class="role" x="54" y="205">SSH sessions</text>
+<text class="dir" x="54" y="219">CPUAffinity = OS_CPUS</text>
+<rect class="box adv" x="300" y="184" width="14" height="32"/>
+<rect class="box adv" x="314" y="184" width="14" height="32"/>
+<rect class="box adv" x="328" y="184" width="14" height="32"/>
+<rect class="off" x="342" y="184" width="14" height="32"/>
+<rect class="box adv" x="356" y="184" width="14" height="32"/>
+<rect class="off" x="370" y="184" width="14" height="32"/>
+<rect class="box adv" x="384" y="184" width="14" height="32"/>
+<rect class="off" x="398" y="184" width="14" height="32"/>
+<rect class="box adv" x="412" y="184" width="14" height="32"/>
+<rect class="off" x="426" y="184" width="14" height="32"/>
+<rect class="box adv" x="440" y="184" width="14" height="32"/>
+<rect class="off" x="454" y="184" width="14" height="32"/>
+<rect class="box adv" x="468" y="184" width="14" height="32"/>
+<rect class="off" x="482" y="184" width="14" height="32"/>
+<rect class="box adv" x="496" y="184" width="14" height="32"/>
+<rect class="off" x="510" y="184" width="14" height="32"/>
+<rect class="box adv" x="524" y="184" width="14" height="32"/>
+<rect class="off" x="538" y="184" width="14" height="32"/>
+<rect class="box adv" x="552" y="184" width="14" height="32"/>
+<rect class="off" x="566" y="184" width="14" height="32"/>
+<rect class="box adv" x="580" y="184" width="14" height="32"/>
+<rect class="off" x="594" y="184" width="14" height="32"/>
+<rect class="box adv" x="608" y="184" width="14" height="32"/>
+<rect class="off" x="622" y="184" width="14" height="32"/>
+<rect class="box adv" x="636" y="184" width="14" height="32"/>
+<rect class="off" x="650" y="184" width="14" height="32"/>
+<rect class="box adv" x="664" y="184" width="14" height="32"/>
+<rect class="off" x="678" y="184" width="14" height="32"/>
+<rect class="box adv" x="692" y="184" width="14" height="32"/>
+<rect class="off" x="706" y="184" width="14" height="32"/>
+<rect class="box adv" x="720" y="184" width="14" height="32"/>
+<rect class="off" x="734" y="184" width="14" height="32"/>
+<text class="role" x="744" y="230" style="text-anchor:end">advisory: a process can change it</text>
+<line class="tree" x1="30" y1="264" x2="44" y2="264"/>
+<rect class="box" x="44" y="238" width="244" height="52" rx="5" style="fill:#ffffff"/>
+<text class="lbl" x="54" y="255">housekeeping.slice</text>
+<text class="role" x="54" y="269">agents, shippers, EDR</text>
+<text class="dir" x="54" y="283">AllowedCPUs=4 6</text>
+<rect class="off" x="300" y="248" width="14" height="32"/>
+<rect class="off" x="314" y="248" width="14" height="32"/>
+<rect class="off" x="328" y="248" width="14" height="32"/>
+<rect class="off" x="342" y="248" width="14" height="32"/>
+<rect class="foc fence" x="356" y="248" width="14" height="32"/>
+<rect class="off" x="370" y="248" width="14" height="32"/>
+<rect class="foc fence" x="384" y="248" width="14" height="32"/>
+<rect class="off" x="398" y="248" width="14" height="32"/>
+<rect class="off" x="412" y="248" width="14" height="32"/>
+<rect class="off" x="426" y="248" width="14" height="32"/>
+<rect class="off" x="440" y="248" width="14" height="32"/>
+<rect class="off" x="454" y="248" width="14" height="32"/>
+<rect class="off" x="468" y="248" width="14" height="32"/>
+<rect class="off" x="482" y="248" width="14" height="32"/>
+<rect class="off" x="496" y="248" width="14" height="32"/>
+<rect class="off" x="510" y="248" width="14" height="32"/>
+<rect class="off" x="524" y="248" width="14" height="32"/>
+<rect class="off" x="538" y="248" width="14" height="32"/>
+<rect class="off" x="552" y="248" width="14" height="32"/>
+<rect class="off" x="566" y="248" width="14" height="32"/>
+<rect class="off" x="580" y="248" width="14" height="32"/>
+<rect class="off" x="594" y="248" width="14" height="32"/>
+<rect class="off" x="608" y="248" width="14" height="32"/>
+<rect class="off" x="622" y="248" width="14" height="32"/>
+<rect class="off" x="636" y="248" width="14" height="32"/>
+<rect class="off" x="650" y="248" width="14" height="32"/>
+<rect class="off" x="664" y="248" width="14" height="32"/>
+<rect class="off" x="678" y="248" width="14" height="32"/>
+<rect class="off" x="692" y="248" width="14" height="32"/>
+<rect class="off" x="706" y="248" width="14" height="32"/>
+<rect class="off" x="720" y="248" width="14" height="32"/>
+<rect class="off" x="734" y="248" width="14" height="32"/>
+<text class="role" x="744" y="294" style="text-anchor:end">hard fence: the kernel enforces it</text>
+<line class="tree" x1="30" y1="328" x2="44" y2="328"/>
+<rect class="box" x="44" y="302" width="244" height="52" rx="5" style="fill:#ffffff"/>
+<text class="lbl" x="54" y="319">latency.slice (optional)</text>
+<text class="role" x="54" y="333">the application</text>
+<text class="dir" x="54" y="347">AllowedCPUs = all, threads pin</text>
+<rect class="app fence" x="300" y="312" width="14" height="32"/>
+<rect class="app fence" x="314" y="312" width="14" height="32"/>
+<rect class="app fence" x="328" y="312" width="14" height="32"/>
+<rect class="app fence" x="342" y="312" width="14" height="32"/>
+<rect class="app fence" x="356" y="312" width="14" height="32"/>
+<rect class="app fence" x="370" y="312" width="14" height="32"/>
+<rect class="app fence" x="384" y="312" width="14" height="32"/>
+<rect class="app fence" x="398" y="312" width="14" height="32"/>
+<rect class="app fence" x="412" y="312" width="14" height="32"/>
+<rect class="app fence" x="426" y="312" width="14" height="32"/>
+<rect class="app fence" x="440" y="312" width="14" height="32"/>
+<rect class="app fence" x="454" y="312" width="14" height="32"/>
+<rect class="app fence" x="468" y="312" width="14" height="32"/>
+<rect class="app fence" x="482" y="312" width="14" height="32"/>
+<rect class="app fence" x="496" y="312" width="14" height="32"/>
+<rect class="app fence" x="510" y="312" width="14" height="32"/>
+<rect class="app fence" x="524" y="312" width="14" height="32"/>
+<rect class="app fence" x="538" y="312" width="14" height="32"/>
+<rect class="app fence" x="552" y="312" width="14" height="32"/>
+<rect class="app fence" x="566" y="312" width="14" height="32"/>
+<rect class="app fence" x="580" y="312" width="14" height="32"/>
+<rect class="app fence" x="594" y="312" width="14" height="32"/>
+<rect class="app fence" x="608" y="312" width="14" height="32"/>
+<rect class="app fence" x="622" y="312" width="14" height="32"/>
+<rect class="app fence" x="636" y="312" width="14" height="32"/>
+<rect class="app fence" x="650" y="312" width="14" height="32"/>
+<rect class="app fence" x="664" y="312" width="14" height="32"/>
+<rect class="app fence" x="678" y="312" width="14" height="32"/>
+<rect class="app fence" x="692" y="312" width="14" height="32"/>
+<rect class="app fence" x="706" y="312" width="14" height="32"/>
+<rect class="app fence" x="720" y="312" width="14" height="32"/>
+<rect class="app fence" x="734" y="312" width="14" height="32"/>
+<text class="role" x="744" y="358" style="text-anchor:end">hard fence: the kernel enforces it</text>
+<text class="sub" x="20" y="396">Colored cells are the CPUs a slice may use. Dashed outline = affinity (advisory), solid outline = cpuset (hard fence).</text>
+</svg>
