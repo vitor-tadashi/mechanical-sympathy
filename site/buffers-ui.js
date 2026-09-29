@@ -118,8 +118,8 @@
 
 	/** Nice tick step for a time axis in microseconds. */
 	function niceStep(max) {
-		const steps = [100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000];
-		return steps.find((s) => max / s <= 8) || 50000;
+		const steps = [100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 200000, 500000];
+		return steps.find((s) => max / s <= 8) || 500000;
 	}
 
 	function panel(svg, y0, h, title, series, key, dropKey, cap, tMax) {
@@ -185,6 +185,11 @@
 		const a = sim.actual;
 		const d1 = Math.round(a.drop1), d2 = Math.round(a.drop2);
 		const box = $('verdict');
+		if (sim.unbounded) {
+			box.className = 'verdict bad';
+			box.textContent = 'The queues never empty within 2 s of simulated time, so no finite size is enough. The arrival outside the burst is not below what the drain and the reader can take, or the reader has stopped.';
+			return;
+		}
 		box.className = 'verdict ' + (d1 + d2 === 0 ? 'good' : 'bad');
 		if (d1 + d2 === 0) {
 			box.textContent = 'Nothing is lost. The ring peaks at ' + fmt(a.peak1) + ' of ' + fmt(sim.cap1) + ' slots, and the second buffer at ' + fmt(a.peak2) + ' of ' + fmt(sim.cap2) + '.';

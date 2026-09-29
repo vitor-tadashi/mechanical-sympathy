@@ -39,7 +39,8 @@ function min(a, b) { return (a < b) ? a : b }
 function run(cap1, cap2,    t, endBurst, pauseEnd, horizon, q1, q2, d1, d2, p1, p2, f1, f2, a, r2, out1, out2) {
 	endBurst = pre + burst
 	pauseEnd = (pause > 0) ? pauseAt + pause : 0
-	horizon = ((endBurst > pauseEnd) ? endBurst : pauseEnd) + 50000
+	horizon = MAXT
+	capped = 0
 	q1 = 0; q2 = 0; d1 = 0; d2 = 0; p1 = 0; p2 = 0; f1 = -1; f2 = -1
 	for (t = 0; ; t += DT) {
 		a = (t >= pre && t < endBurst) ? rate : idle
@@ -63,12 +64,13 @@ function run(cap1, cap2,    t, endBurst, pauseEnd, horizon, q1, q2, d1, d2, p1, 
 		if (q1 > p1) p1 = q1
 		if (q2 > p2) p2 = q2
 		if (t >= endBurst && t >= pauseEnd && q1 < 1e-6 && q2 < 1e-6) break
-		if (t >= horizon) break
+		if (t >= horizon) { capped = 1; break }
 	}
-	R_drop1 = d1; R_drop2 = d2; R_peak1 = p1; R_peak2 = p2; R_first1 = f1; R_first2 = f2
+	R_drop1 = d1; R_drop2 = d2; R_peak1 = p1; R_peak2 = p2; R_first1 = f1; R_first2 = f2; R_capped = capped
 }
 BEGIN {
 	DT = 10
+	MAXT = 2000000
 	idle += 0; pre += 0; rate += 0; burst += 0; ring += 0; drain += 0; app += 0
 	rcvbuf += 0; truesize += 0; packets += 0; pause += 0; pauseAt += 0; buf += 0; queues += 0
 	if (pauseAt < 0) pauseAt = pre
@@ -85,17 +87,21 @@ BEGIN {
 	}
 	cap1 = ring
 	cap2 = (packets > 0) ? packets : int(rcvbuf / truesize)
+	pool = cap2
+	if (stack == "dpdk") { cap2 -= ring; if (cap2 < 0) cap2 = 0 }
 
 	run(cap1, cap2)
-	drop1 = R_drop1; drop2 = R_drop2; peak1 = R_peak1; peak2 = R_peak2; first1 = R_first1; first2 = R_first2
+	drop1 = R_drop1; cappedRun = R_capped; drop2 = R_drop2; peak1 = R_peak1; peak2 = R_peak2; first1 = R_first1; first2 = R_first2
 	run(-1, -1)
-	need1 = ceilp(R_peak1); need2 = ceilp(R_peak2)
+	need1 = ceilp(R_peak1); need2 = ceilp(R_peak2); unbounded = R_capped
 
 	print "size-buffers: fluid model in " DT " us steps. Illustrative, not a measurement."
 	print pad("stack") stack
 	print pad("arrival") "idle " mpps(idle) " Mpps, burst " mpps(rate) " Mpps for " burst " us from " pre " us"
 	print pad("stage 1") one ": " ring " packets, drained at " mpps(drain) " Mpps"
-	if (packets > 0)
+	if (stack == "dpdk")
+		print pad("stage 2") two ": " cap2 " packets (" pool " in the pool, minus " ring " posted to the RX ring), read at " mpps(app) " Mpps"
+	else if (packets > 0)
 		print pad("stage 2") two ": " cap2 " packets, read at " mpps(app) " Mpps"
 	else
 		print pad("stage 2") two ": " cap2 " packets (" rcvbuf " B at " truesize " B each), read at " mpps(app) " Mpps"
@@ -110,13 +116,19 @@ BEGIN {
 	print pad("peak fill") "stage 1: " rnd(peak1) " of " cap1 ", stage 2: " rnd(peak2) " of " cap2
 	print ""
 	print "To lose nothing in this scenario:"
-	print pad("ring") need1 " packets, " ceilp(need1 * buf / 1024) " KiB per queue at " buf " B"
-	if (packets > 0)
-		print pad("stage 2") need2 " packets"
-	else if (stack != "onload" && stack != "dpdk")
-		print pad("socket buffer") need2 " packets, " need2 * truesize " B, SO_RCVBUF request " ceilp(need2 * truesize / 2 / 1024) " KiB"
-	else
-		print pad("stage 2") need2 " packets, " need2 * truesize " B"
+	if (unbounded) {
+		print pad("unbounded") "the queues do not empty within " MAXT / 1000000 " s of simulated time, so no finite size is enough"
+	} else {
+		print pad("ring") need1 " packets, " ceilp(need1 * buf / 1024) " KiB per queue at " buf " B"
+		if (packets > 0)
+			print pad("stage 2") need2 " packets"
+		else if (stack != "onload" && stack != "dpdk")
+			print pad("socket buffer") need2 " packets, " need2 * truesize " B, SO_RCVBUF request " ceilp(need2 * truesize / 2 / 1024) " KiB"
+		else
+			print pad("stage 2") need2 " packets, " need2 * truesize " B"
+		if (stack == "dpdk")
+			print pad("mempool, total") need2 + ring " packets: stage 2 plus the ring"
+	}
 	ringKiB = ceilp(ring * buf / 1024)
 	print pad("ring memory now") ringKiB " KiB per queue, " ringKiB * queues " KiB for " queues " queue(s)"
 }

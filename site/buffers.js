@@ -20,6 +20,7 @@
 	'use strict';
 
 	var DT = 10; // microseconds per step
+	var MAXT = 2000000; // simulated microseconds before a run is called unbounded
 
 	var defaults = {
 		stack: 'kernel', idle: 0, pre: 500, rate: 4, burst: 1500,
@@ -58,9 +59,10 @@
 	function run(o, cap1, cap2, keep) {
 		var endBurst = o.pre + o.burst;
 		var pauseEnd = o.pause > 0 ? o.pauseAt + o.pause : 0;
-		var horizon = (endBurst > pauseEnd ? endBurst : pauseEnd) + 50000;
+		var horizon = MAXT;
 		var q1 = 0, q2 = 0, d1 = 0, d2 = 0, p1 = 0, p2 = 0, f1 = -1, f2 = -1;
 		var series = keep ? [] : null;
+		var capped = false;
 		for (var t = 0; ; t += DT) {
 			var a = (t >= o.pre && t < endBurst) ? o.rate : o.idle;
 			var r2 = (o.pause > 0 && t >= o.pauseAt && t < o.pauseAt + o.pause) ? 0 : o.app;
@@ -84,9 +86,9 @@
 			if (q2 > p2) { p2 = q2; }
 			if (keep) { series.push({ t: t, q1: q1, q2: q2, d1: d1, d2: d2 }); }
 			if (t >= endBurst && t >= pauseEnd && q1 < 1e-6 && q2 < 1e-6) { break; }
-			if (t >= horizon) { break; }
+			if (t >= horizon) { capped = true; break; }
 		}
-		return { drop1: d1, drop2: d2, peak1: p1, peak2: p2, first1: f1, first2: f2, series: series };
+		return { drop1: d1, drop2: d2, peak1: p1, peak2: p2, first1: f1, first2: f2, capped: capped, series: series };
 	}
 
 	function ceilPackets(x) {
@@ -103,13 +105,14 @@
 		var o = withDefaults(options);
 		var st = stacks[o.stack] || stacks.kernel;
 		var cap1 = o.ring;
-		var cap2 = capacity2(o);
+		var pool = capacity2(o);
+		var cap2 = o.stack === 'dpdk' ? Math.max(0, pool - o.ring) : pool;
 		var actual = run(o, cap1, cap2, keep);
 		var free = run(o, -1, -1, false);
 		var need1 = ceilPackets(free.peak1);
 		var need2 = ceilPackets(free.peak2);
 		return {
-			o: o, st: st, cap1: cap1, cap2: cap2, actual: actual,
+			o: o, st: st, cap1: cap1, cap2: cap2, pool: pool, unbounded: free.capped, actual: actual,
 			need1: need1, need2: need2,
 			needRingKiB: ceilPackets(need1 * o.buf / 1024),
 			needBytes: need2 * o.truesize,
@@ -127,7 +130,9 @@
 		L.push(pad('stack') + o.stack);
 		L.push(pad('arrival') + 'idle ' + mpps(o.idle) + ' Mpps, burst ' + mpps(o.rate) + ' Mpps for ' + o.burst + ' us from ' + o.pre + ' us');
 		L.push(pad('stage 1') + st.one + ': ' + o.ring + ' packets, drained at ' + mpps(o.drain) + ' Mpps');
-		if (o.packets > 0) {
+		if (o.stack === 'dpdk') {
+			L.push(pad('stage 2') + st.two + ': ' + s.cap2 + ' packets (' + s.pool + ' in the pool, minus ' + o.ring + ' posted to the RX ring), read at ' + mpps(o.app) + ' Mpps');
+		} else if (o.packets > 0) {
 			L.push(pad('stage 2') + st.two + ': ' + s.cap2 + ' packets, read at ' + mpps(o.app) + ' Mpps');
 		} else {
 			L.push(pad('stage 2') + st.two + ': ' + s.cap2 + ' packets (' + o.rcvbuf + ' B at ' + o.truesize + ' B each), read at ' + mpps(o.app) + ' Mpps');
@@ -146,13 +151,20 @@
 		L.push(pad('peak fill') + 'stage 1: ' + round(a.peak1) + ' of ' + s.cap1 + ', stage 2: ' + round(a.peak2) + ' of ' + s.cap2);
 		L.push('');
 		L.push('To lose nothing in this scenario:');
-		L.push(pad('ring') + s.need1 + ' packets, ' + s.needRingKiB + ' KiB per queue at ' + o.buf + ' B');
-		if (o.packets > 0) {
-			L.push(pad('stage 2') + s.need2 + ' packets');
-		} else if (o.stack === 'kernel') {
-			L.push(pad('socket buffer') + s.need2 + ' packets, ' + s.needBytes + ' B, SO_RCVBUF request ' + s.needRcvbufKiB + ' KiB');
+		if (s.unbounded) {
+			L.push(pad('unbounded') + 'the queues do not empty within ' + (MAXT / 1000000) + ' s of simulated time, so no finite size is enough');
 		} else {
-			L.push(pad('stage 2') + s.need2 + ' packets, ' + s.needBytes + ' B');
+			L.push(pad('ring') + s.need1 + ' packets, ' + s.needRingKiB + ' KiB per queue at ' + o.buf + ' B');
+			if (o.packets > 0) {
+				L.push(pad('stage 2') + s.need2 + ' packets');
+			} else if (o.stack === 'kernel') {
+				L.push(pad('socket buffer') + s.need2 + ' packets, ' + s.needBytes + ' B, SO_RCVBUF request ' + s.needRcvbufKiB + ' KiB');
+			} else {
+				L.push(pad('stage 2') + s.need2 + ' packets, ' + s.needBytes + ' B');
+			}
+			if (o.stack === 'dpdk') {
+				L.push(pad('mempool, total') + (s.need2 + o.ring) + ' packets: stage 2 plus the ring');
+			}
 		}
 		L.push(pad('ring memory now') + s.ringKiB + ' KiB per queue, ' + (s.ringKiB * o.queues) + ' KiB for ' + o.queues + ' queue(s)');
 		return L.join('\n');
@@ -215,6 +227,11 @@
 			label: 'Small-packet flood, Onload',
 			text: '6 Mpps for 20 ms drained by a polling thread at 7 Mpps',
 			args: '--stack onload --burst-mpps 6 --burst-us 20000 --pre-us 0 --ring 4096 --drain-mpps 7 --app-mpps 7 --buffer-packets 24576 --truesize 2048'
+		},
+		'unbounded-arrival': {
+			label: 'Reader stopped for good',
+			text: 'a 100 ms burst into a reader that never reads: the queues never empty, so no finite size is enough',
+			args: '--stack kernel --burst-mpps 10 --burst-us 100000 --pre-us 0 --ring 1000000 --drain-mpps 1 --app-mpps 0 --rcvbuf-bytes 212992 --truesize 2304'
 		},
 		'starved-dpdk': {
 			label: 'Starved mempool, DPDK',
