@@ -1,0 +1,88 @@
+#!/usr/bin/env node
+'use strict';
+
+/*
+ * check-explorer - hold site/layout.js to the fixtures that scripts/plan-layout is tested with.
+ *
+ * For every preset in site/layout.js (its key is a fixture name in scripts/fixtures):
+ *   - the topology it generates equals NAME.lscpu
+ *   - its nic, threads and spares equal the arguments in NAME.args
+ *   - proposing a layout from NAME.lscpu prints exactly NAME.golden
+ * The golden files are the ones tools/check-plan-layout compares the shell script against,
+ * so the explorer and the script cannot drift apart. It also checks that a host with too
+ * few cores is refused. Needs Node 18 or later, and no packages.
+ *
+ * Usage: tools/check-explorer
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+const root = path.resolve(__dirname, '..');
+const Layout = require(path.join(root, 'site', 'layout.js'));
+const fixtures = path.join(root, 'scripts', 'fixtures');
+
+let failures = 0;
+const fail = (message) => {
+	console.error('check-explorer: ' + message);
+	failures += 1;
+};
+
+const read = (name) => fs.readFileSync(path.join(fixtures, name), 'utf8');
+
+/** Parse "--nic-node 1 --threads 6 [--spares 2]" the way plan-layout does. */
+function parseArgs(line) {
+	const words = line.trim().split(/\s+/);
+	const opts = { nic: undefined, threads: undefined, spares: 2 };
+	for (let i = 0; i < words.length; i += 2) {
+		const value = Number(words[i + 1]);
+		if (words[i] === '--nic-node') { opts.nic = value; }
+		else if (words[i] === '--threads') { opts.threads = value; }
+		else if (words[i] === '--spares') { opts.spares = value; }
+		else { fail('unknown argument ' + words[i]); }
+	}
+	return opts;
+}
+
+const names = Object.keys(Layout.presets);
+names.forEach((name) => {
+	const preset = Layout.presets[name];
+	const lscpu = read(name + '.lscpu');
+	const topology = Layout.parseTopology(lscpu);
+
+	const generated = Layout.parseTopology(Layout.generateTopology(preset));
+	if (JSON.stringify(generated) !== JSON.stringify(topology)) {
+		fail(name + ': the preset generates a different topology than ' + name + '.lscpu');
+	}
+
+	const args = parseArgs(read(name + '.args'));
+	if (args.nic !== preset.nic || args.threads !== preset.threads || args.spares !== preset.spares) {
+		fail(name + ': the preset arguments differ from ' + name + '.args');
+	}
+
+	const result = Layout.propose(topology, args);
+	if (!result.ok) {
+		fail(name + ': propose refused: ' + result.error);
+		return;
+	}
+	const golden = read(name + '.golden').replace(/\n$/, '');
+	if (result.text !== golden) {
+		fail(name + ': output differs from ' + name + '.golden');
+		console.error(result.text);
+	}
+});
+
+fs.readdirSync(fixtures)
+	.filter((f) => f.endsWith('.lscpu') && !names.includes(f.replace(/\.lscpu$/, '')))
+	.forEach((f) => fail(f + ' has no preset in site/layout.js'));
+
+const tooSmall = Layout.propose(Layout.parseTopology(read('desktop-1x8-ht-on.lscpu')), { nic: 0, threads: 9, spares: 2 });
+if (tooSmall.ok) {
+	fail('a host with too few cores was not refused');
+}
+
+if (failures > 0) {
+	console.error('check-explorer: ' + failures + ' problem(s)');
+	process.exit(1);
+}
+console.log('check-explorer: ' + names.length + ' preset(s) match their fixtures and goldens');

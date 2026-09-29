@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+#
+# lint-site - enforce the rules of the GitHub Pages site (site/).
+#
+#   1. nothing is loaded from another origin: no external src, and no external href except
+#      links out to this repository on GitHub
+#   2. every relative link and image exists (diagrams are looked up in assets/diagrams),
+#      every #anchor matches an id, and every link into the repository points at a file that exists
+#   3. every image has a non-empty alt text, and every page has a title, a language and a viewport
+#   4. site/layout.js and scripts/plan-layout agree (tools/check-explorer, needs Node 18 or later;
+#      skipped with a warning on a workstation without it, required when CI=true)
+#
+# Usage: tools/lint-site            (from anywhere inside the repository)
+
+set -Eeuo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "${ROOT}"
+
+REPO_URL="https://github.com/vitor-tadashi/mechanical-sympathy"
+failures=0
+
+fail() {
+	printf 'lint-site: %s\n' "$*" >&2
+	failures=$((failures + 1))
+}
+
+pages=()
+listed="$(git ls-files --cached --others --exclude-standard -- 'site/*.html')"
+while IFS= read -r page; do
+	[[ -n "${page}" && -f "${page}" ]] && pages+=("${page}")
+done <<<"${listed}"
+
+if ((${#pages[@]} == 0)); then
+	printf 'lint-site: no pages found in site/\n' >&2
+	exit 1
+fi
+
+for page in "${pages[@]}"; do
+	refs="$(perl -ne 'while (/\b(src|href)="([^"]*)"/g) { print "$.\t$1\t$2\n" }' "${page}")"
+	while IFS=$'\t' read -r line attr value; do
+		[[ -n "${value}" ]] || continue
+		case "${value}" in
+		"${REPO_URL}"*)
+			[[ "${attr}" == href ]] || fail "${page}:${line}: ${attr} loads ${value} from GitHub"
+			blob="${value#"${REPO_URL}"/blob/main/}"
+			if [[ "${blob}" != "${value}" ]]; then
+				path="${blob%%#*}"
+				[[ -e "${path}" ]] || fail "${page}:${line}: ${value} points at ${path}, which does not exist"
+			fi
+			continue
+			;;
+		http://* | https://* | //*)
+			fail "${page}:${line}: ${attr} points at another origin: ${value}"
+			continue
+			;;
+		mailto:*) continue ;;
+		*) ;;
+		esac
+		target="${value%%#*}"
+		frag=""
+		[[ "${value}" == *"#"* ]] && frag="${value#*#}"
+		if [[ -z "${target}" ]]; then
+			dest="${page}"
+		elif [[ "${target}" == assets/diagrams/* ]]; then
+			dest="${target}"
+		else
+			dest="site/${target}"
+		fi
+		if [[ ! -e "${dest}" ]]; then
+			fail "${page}:${line}: missing target ${value}"
+			continue
+		fi
+		if [[ -n "${frag}" ]] && ! grep -qF "id=\"${frag}\"" "${dest}"; then
+			fail "${page}:${line}: no id=\"${frag}\" in ${dest}"
+		fi
+	done <<<"${refs}"
+
+	missing="$(perl -0777 -ne 'while (/<img\b[^>]*>/gs) { my $t = $&; next if $t =~ /\balt="[^"]*\S[^"]*"/; print 1 + (substr($_, 0, $-[0]) =~ tr/\n//), "\n" }' "${page}")"
+	while IFS= read -r line; do
+		[[ -n "${line}" ]] && fail "${page}:${line}: image without alt text"
+	done <<<"${missing}"
+
+	grep -q '<title>[^<]' "${page}" || fail "${page}: no <title>"
+	grep -q '<html lang="' "${page}" || fail "${page}: no lang on <html>"
+	grep -q 'name="viewport"' "${page}" || fail "${page}: no viewport meta"
+done
+
+if command -v node >/dev/null 2>&1; then
+	node tools/check-explorer || failures=$((failures + 1))
+elif [[ "${CI:-}" == "true" ]]; then
+	fail "node not found; CI must run tools/check-explorer"
+else
+	printf 'lint-site: warning: node not found, site/layout.js not compared with the goldens; CI checks it\n' >&2
+fi
+
+if ((failures > 0)); then
+	printf 'lint-site: %d problem(s) in %d page(s)\n' "${failures}" "${#pages[@]}" >&2
+	exit 1
+fi
+printf 'lint-site: %d pages clean\n' "${#pages[@]}"
