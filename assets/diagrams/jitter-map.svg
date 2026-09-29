@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 490" width="760" height="490" role="img" aria-labelledby="t d">
+<title id="t">Where the tail comes from: six layers, each with its own rare events and its own guide</title>
+<desc id="d">A stack of six layers from the application down to the hardware. Application and runtime add GC pauses, JIT and unpinned threads (Guides 02, 03). Memory adds page faults, TLB misses and remote NUMA access (Guides 02, 03). The network path adds coalescing, interrupts, softirq and PAUSE frames (Guides 04, 08). The operating system adds the tick, other tasks, kernel workers, RCU and agents (Guides 01, 02, 05, 06, 07). Time adds clock offset and steps (Guide 10). Firmware and hardware add SMIs, deep C-states and turbo (Guide 00). Guide 09 measures every layer. The figures are typical orders of magnitude, not measurements.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .row { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .cap { font: 700 16px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .hdr { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-transform: uppercase; letter-spacing: 0.04em; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .role { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #333333; }
+  .chip { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .side { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="490" rx="8"/>
+<text class="cap" x="20" y="28">Where the tail comes from</text>
+<text class="sub" x="20" y="47">Every layer adds its own rare events. The tail is their sum, and each layer has a guide that removes them.</text>
+
+<text class="hdr" x="20" y="76">Layer</text>
+<text class="hdr" x="204" y="76">What interrupts the critical thread</text>
+<text class="hdr" x="558" y="76">Removed by</text>
+
+<!-- Row 1: application and runtime -->
+<rect class="row" x="10" y="84" width="736" height="56" rx="6"/>
+<rect class="app" x="20" y="88" width="176" height="48" rx="5"/>
+<text class="lbl" x="30" y="108">Application and runtime</text>
+<text class="role" x="30" y="125">the code you wrote</text>
+<text class="lbl" x="206" y="108">GC pauses, JIT, unpinned threads</text>
+<text class="role" x="206" y="125">cold caches after each migration: µs to 10s of µs</text>
+<rect class="foc" x="558" y="94" width="138" height="36" rx="5"/>
+<text class="chip" x="627" y="117">Guides 02, 03</text>
+
+<!-- Row 2: memory -->
+<rect class="row" x="10" y="146" width="736" height="56" rx="6"/>
+<rect class="app" x="20" y="150" width="176" height="48" rx="5"/>
+<text class="lbl" x="30" y="170">Memory</text>
+<text class="role" x="30" y="187">the working set</text>
+<text class="lbl" x="206" y="170">Page faults, TLB misses, remote NUMA</text>
+<text class="role" x="206" y="187">fault 0.5-2 µs · huge page zeroing 50-100 µs</text>
+<rect class="foc" x="558" y="156" width="138" height="36" rx="5"/>
+<text class="chip" x="627" y="179">Guides 02, 03</text>
+
+<!-- Row 3: network path -->
+<rect class="row" x="10" y="208" width="736" height="56" rx="6"/>
+<rect class="box" x="20" y="212" width="176" height="48" rx="5"/>
+<text class="lbl" x="30" y="232">Network path</text>
+<text class="role" x="30" y="249">wire to recv()</text>
+<text class="lbl" x="206" y="232">Coalescing, interrupts, softirq, PAUSE</text>
+<text class="role" x="206" y="249">first packet 30-50 µs · IRQ 1-50 µs · PAUSE up to ms</text>
+<rect class="foc" x="558" y="218" width="138" height="36" rx="5"/>
+<text class="chip" x="627" y="241">Guides 04, 08</text>
+
+<!-- Row 4: operating system -->
+<rect class="row" x="10" y="270" width="736" height="56" rx="6"/>
+<rect class="box" x="20" y="274" width="176" height="48" rx="5"/>
+<text class="lbl" x="30" y="294">Operating system</text>
+<text class="role" x="30" y="311">scheduler, kernel, services</text>
+<text class="lbl" x="206" y="294">Tick, tasks, kworkers, RCU, agents</text>
+<text class="role" x="206" y="311">tick 1-5 µs · RT throttling 50 ms every second</text>
+<rect class="foc" x="558" y="280" width="138" height="36" rx="5"/>
+<text class="chip" x="627" y="303">Guides 01, 02, 05-07</text>
+
+<!-- Row 5: time -->
+<rect class="row" x="10" y="332" width="736" height="56" rx="6"/>
+<rect class="mut" x="20" y="336" width="176" height="48" rx="5"/>
+<text class="lbl" x="30" y="356">Time</text>
+<text class="role" x="30" y="373">clocks and timestamps</text>
+<text class="lbl" x="206" y="356">Clock offset and steps</text>
+<text class="role" x="206" y="373">latency numbers you cannot compare across hosts</text>
+<rect class="foc" x="558" y="342" width="138" height="36" rx="5"/>
+<text class="chip" x="627" y="365">Guide 10</text>
+
+<!-- Row 6: firmware and hardware -->
+<rect class="row" x="10" y="394" width="736" height="56" rx="6"/>
+<rect class="wait" x="20" y="398" width="176" height="48" rx="5"/>
+<text class="lbl" x="30" y="418">Firmware and hardware</text>
+<text class="role" x="30" y="435">BIOS, SMM, the CPU</text>
+<text class="lbl" x="206" y="418">SMIs, deep C-states, turbo, HT sibling</text>
+<text class="role" x="206" y="435">SMI or deep C-state exit: tens to hundreds of µs</text>
+<rect class="foc" x="558" y="404" width="138" height="36" rx="5"/>
+<text class="chip" x="627" y="427">Guide 00</text>
+
+<!-- Measure bar -->
+<rect class="mut" x="706" y="84" width="40" height="366" rx="6"/>
+<text class="side" transform="translate(731 267) rotate(-90)">Guide 09 measures every layer</text>
+
+<text class="sub" x="20" y="472">Typical orders of magnitude from the guides, not measurements.</text>
+</svg>

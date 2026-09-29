@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 430" width="760" height="430" role="img" aria-labelledby="t d">
+<title id="t">Illustrative percentile ladder: the tuned host moves the tail far more than the median</title>
+<desc id="d">A logarithmic percentile ladder from p50 to max for the same workload on a default host and on a tuned host, with fictional numbers that only show the shape. The median improves a little, from 12 to 9 microseconds. Each higher percentile improves more: p99 from 35 to 12, p99.9 from 150 to 20, p99.99 from 600 to 50, and the maximum from 3 milliseconds to 150 microseconds. The numbers are illustrative and are not a measurement of any host.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .grid { stroke: #d0d7de; stroke-width: 1; }
+  .def { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .tun { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .tag { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .cap { font: 700 16px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .pct { font: 700 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .why { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .val { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+  .tagt { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="430" rx="8"/>
+<text class="cap" x="20" y="28">Same workload, before and after: the tail moves, the median barely does</text>
+<text class="sub" x="20" y="47">Each row is one percentile, on a log scale. Each pair of bars is the default host and the tuned host.</text>
+<rect class="tag" x="510" y="58" width="240" height="22" rx="4"/>
+<text class="tagt" x="630" y="73">ILLUSTRATIVE, NOT A MEASUREMENT</text>
+
+<!-- grid: 1 us to 10 ms, 107.5 px per decade -->
+<line class="grid" x1="190" y1="92" x2="190" y2="388"/>
+<line class="grid" x1="297.5" y1="92" x2="297.5" y2="388"/>
+<line class="grid" x1="405" y1="92" x2="405" y2="388"/>
+<line class="grid" x1="512.5" y1="92" x2="512.5" y2="388"/>
+<line class="grid" x1="620" y1="92" x2="620" y2="388"/>
+<text class="axis" x="190" y="405">1 µs</text>
+<text class="axis" x="297.5" y="405">10 µs</text>
+<text class="axis" x="405" y="405">100 µs</text>
+<text class="axis" x="512.5" y="405">1 ms</text>
+<text class="axis" x="620" y="405">10 ms</text>
+
+<!-- p50 -->
+<text class="pct" x="20" y="112">p50</text>
+<text class="why" x="20" y="128">the code path itself</text>
+<rect class="def" x="190" y="98" width="116.0" height="20" rx="3"/>
+<text class="val" x="314" y="113">default 12 µs</text>
+<rect class="tun" x="190" y="122" width="102.6" height="20" rx="3"/>
+<text class="val" x="300.6" y="137">tuned 9 µs</text>
+
+<!-- p99 -->
+<text class="pct" x="20" y="170">p99</text>
+<text class="why" x="20" y="186">IRQs, NUMA, coalescing</text>
+<rect class="def" x="190" y="156" width="166.0" height="20" rx="3"/>
+<text class="val" x="364" y="171">default 35 µs</text>
+<rect class="tun" x="190" y="180" width="116.0" height="20" rx="3"/>
+<text class="val" x="314" y="195">tuned 12 µs</text>
+
+<!-- p99.9 -->
+<text class="pct" x="20" y="228">p99.9</text>
+<text class="why" x="20" y="244">ticks, kworkers, faults</text>
+<rect class="def" x="190" y="214" width="233.9" height="20" rx="3"/>
+<text class="val" x="432" y="229">default 150 µs</text>
+<rect class="tun" x="190" y="238" width="139.9" height="20" rx="3"/>
+<text class="val" x="338" y="253">tuned 20 µs</text>
+
+<!-- p99.99 -->
+<text class="pct" x="20" y="286">p99.99</text>
+<text class="why" x="20" y="302">RCU batches, C-state exits</text>
+<rect class="def" x="190" y="272" width="298.6" height="20" rx="3"/>
+<text class="val" x="496" y="287">default 600 µs</text>
+<rect class="tun" x="190" y="296" width="182.6" height="20" rx="3"/>
+<text class="val" x="380.6" y="311">tuned 50 µs</text>
+
+<!-- max -->
+<text class="pct" x="20" y="344">max</text>
+<text class="why" x="20" y="360">SMIs, reclaim, throttling</text>
+<rect class="def" x="190" y="330" width="373.8" height="20" rx="3"/>
+<text class="val" x="572" y="345">default 3 ms</text>
+<rect class="tun" x="190" y="354" width="233.9" height="20" rx="3"/>
+<text class="val" x="432" y="369">tuned 150 µs</text>
+
+<text class="sub" x="20" y="424">The shape follows Guide 09 section 3.1: p50 is the code path, and each higher percentile is a rarer kind of interference.</text>
+</svg>
