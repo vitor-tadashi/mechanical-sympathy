@@ -1,6 +1,6 @@
 # Concept — The Linux Receive/Transmit Path and Where Latency Hides
 
-> Used by: [Guide 04](../guides/04-network-optimization.md), [Guide 06](../guides/06-kernel-sysctl-tuning.md). Related: [cpu-isolation](cpu-isolation.md), [huge-pages](huge-pages.md). Terms: [Glossary](../GLOSSARY.md).
+> Used by: [Guide 04](../guides/04-network-optimization.md), [Guide 06](../guides/06-kernel-sysctl-tuning.md). Related: [network-buffers](network-buffers.md), [cpu-isolation](cpu-isolation.md), [huge-pages](huge-pages.md). Terms: [Glossary](../GLOSSARY.md).
 
 ## At a glance
 
@@ -80,7 +80,7 @@ For a latency-critical flow (requests, RPCs or event messages: a few thousand to
 
 ## 4. NAPI, softirq budget and `ksoftirqd`
 
-NAPI processes up to `net.core.netdev_budget` packets (300 by default) or `netdev_budget_usecs` (2 ms) per softirq round. Anything left over is deferred to the next round. If softirqs keep re-raising, processing moves to `ksoftirqd/<cpu>`, a normal-priority thread that competes with user tasks. Symptoms: `/proc/net/softnet_stat` column 3 (`time_squeeze`) increasing, and latency spikes under bursts. Remedies: a CPU dedicated to the NIC's IRQs, more queues spread over more housekeeping CPUs, or busy polling so the application does the work.
+NAPI processes up to `net.core.netdev_budget` packets (300 by default) or `netdev_budget_usecs` (2 ms) per softirq round. Anything left over is deferred to the next round. If softirqs keep re-raising, processing moves to `ksoftirqd/<cpu>`, a normal-priority thread that competes with user tasks. Symptoms: `/proc/net/softnet_stat` column 3 (`time_squeeze`) increasing, and latency spikes under bursts. Remedies: a CPU dedicated to the NIC's IRQs, more queues spread over more housekeeping CPUs, or busy polling so the application does the work. While NAPI is behind, the RX ring holds the packets. The per-CPU backlog queue (`netdev_max_backlog`) is only in the path with RPS/RFS, loopback, veth and some tunnels. [Concept: network buffers](network-buffers.md) covers every queue on the path.
 
 ## 5. Steering: RSS, RPS, RFS, XPS
 

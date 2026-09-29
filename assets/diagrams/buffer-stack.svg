@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 340" width="760" height="340" role="img" aria-labelledby="t d">
+<title id="t">Three queues hold a packet on the kernel path, and a fourth only with RPS</title>
+<desc id="d">The receive path drawn as six boxes from left to right: the NIC FIFO, the RX ring, the NAPI poll that drains the ring, the per-CPU backlog queue that only exists with RPS or on loopback and veth, the socket receive buffer, and the application. Under each box are the knob that makes it bigger or faster and what happens when it is full. The RX ring and the socket buffer are the two queues that a tuned host must size. The sizes are typical defaults.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .dash { fill: #ffffff; stroke: #777777; stroke-width: 1.5; stroke-dasharray: 5 3; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .sm { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .smb { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .tiny { font: 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .mono { font: 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #1a1a1a; }
+  .monob { font: 600 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #1a1a1a; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .redt { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; }
+  .grnt { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; }
+  .tick { stroke: #8c959f; stroke-width: 1; }
+  .arrow { stroke: #57606a; stroke-width: 1.5; fill: none; marker-end: url(#ah); }
+  .arrowr { stroke: #9b1c1c; stroke-width: 1.5; fill: none; marker-end: url(#ahr); }
+</style>
+<defs>
+<marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#57606a"/></marker>
+<marker id="ahr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#9b1c1c"/></marker>
+</defs>
+<rect class="bg" x="0" y="0" width="760" height="340" rx="8"/>
+<text class="cap" x="24" y="30">Where a packet waits on the kernel path, and which knob resizes each place</text>
+<text class="sub" x="24" y="48">The two highlighted queues are the ones you size. Dashed means the stage is not always in the path.</text>
+<text class="tiny" x="77" y="62" text-anchor="middle">hardware</text>
+<rect class="box" x="25" y="68" width="104" height="62" rx="5"/>
+<text class="lbl" x="77" y="94" text-anchor="middle">NIC FIFO</text>
+<text class="sm" x="77" y="113" text-anchor="middle">on-chip, fixed</text>
+<path class="arrow" d="M130 99.0 L145 99.0"/>
+<text class="tiny" x="198" y="62" text-anchor="middle">queue</text>
+<rect class="foc" x="146" y="68" width="104" height="62" rx="5"/>
+<text class="lbl" x="198" y="94" text-anchor="middle">RX ring</text>
+<text class="sm" x="198" y="113" text-anchor="middle">512-2048 typical</text>
+<path class="arrow" d="M251 99.0 L266 99.0"/>
+<text class="tiny" x="319" y="62" text-anchor="middle">drains the ring</text>
+<rect class="box" x="267" y="68" width="104" height="62" rx="5"/>
+<text class="lbl" x="319" y="94" text-anchor="middle">NAPI poll</text>
+<text class="sm" x="319" y="113" text-anchor="middle">300 packets/run</text>
+<path class="arrow" d="M372 99.0 L387 99.0"/>
+<text class="tiny" x="440" y="62" text-anchor="middle">conditional queue</text>
+<rect class="dash" x="388" y="68" width="104" height="62" rx="5"/>
+<text class="lbl" x="440" y="94" text-anchor="middle">backlog</text>
+<text class="sm" x="440" y="113" text-anchor="middle">1000 (RPS only)</text>
+<path class="arrow" d="M493 99.0 L508 99.0"/>
+<text class="tiny" x="561" y="62" text-anchor="middle">queue</text>
+<rect class="foc" x="509" y="68" width="104" height="62" rx="5"/>
+<text class="lbl" x="561" y="94" text-anchor="middle">socket buffer</text>
+<text class="sm" x="561" y="113" text-anchor="middle">208 KiB default</text>
+<path class="arrow" d="M614 99.0 L629 99.0"/>
+<text class="tiny" x="682" y="62" text-anchor="middle">your code</text>
+<rect class="app" x="630" y="68" width="104" height="62" rx="5"/>
+<text class="lbl" x="682" y="94" text-anchor="middle">application</text>
+<text class="sm" x="682" y="113" text-anchor="middle">recv() or poll</text>
+<line class="tick" x1="25" y1="148" x2="250" y2="148"/>
+<line class="tick" x1="25" y1="144" x2="25" y2="152"/>
+<line class="tick" x1="250" y1="144" x2="250" y2="152"/>
+<text class="sm" x="137.5" y="165" text-anchor="middle">NIC hardware, DMA</text>
+<line class="tick" x1="267" y1="148" x2="492" y2="148"/>
+<line class="tick" x1="267" y1="144" x2="267" y2="152"/>
+<line class="tick" x1="492" y1="144" x2="492" y2="152"/>
+<text class="sm" x="379.5" y="165" text-anchor="middle">softirq on the IRQ CPU</text>
+<line class="tick" x1="509" y1="148" x2="734" y2="148"/>
+<line class="tick" x1="509" y1="144" x2="509" y2="152"/>
+<line class="tick" x1="734" y1="144" x2="734" y2="152"/>
+<text class="sm" x="621.5" y="165" text-anchor="middle">socket and your thread</text>
+<rect class="lane" x="10" y="170" width="740" height="66" rx="6"/>
+<text class="smb" x="24" y="186">Knob that makes it bigger or faster</text>
+<text class="mono" x="77" y="204" text-anchor="middle">none: the NIC</text>
+<text class="mono" x="77" y="217" text-anchor="middle">decides</text>
+<text class="mono" x="198" y="204" text-anchor="middle">ethtool -G rx N</text>
+<text class="mono" x="319" y="204" text-anchor="middle">netdev_budget</text>
+<text class="mono" x="319" y="217" text-anchor="middle">busy polling</text>
+<text class="mono" x="440" y="204" text-anchor="middle">netdev_max_</text>
+<text class="mono" x="440" y="217" text-anchor="middle">backlog</text>
+<text class="mono" x="561" y="204" text-anchor="middle">SO_RCVBUF</text>
+<text class="mono" x="561" y="217" text-anchor="middle">rmem_max</text>
+<text class="mono" x="682" y="204" text-anchor="middle">faster thread,</text>
+<text class="mono" x="682" y="217" text-anchor="middle">pinned CPU</text>
+<rect class="lane" x="10" y="230" width="740" height="66" rx="6"/>
+<text class="smb" x="24" y="246">What happens when it is full</text>
+<text class="tiny" x="77" y="264" text-anchor="middle">NIC drops</text>
+<text class="tiny" x="77" y="277" text-anchor="middle">the frame</text>
+<text class="tiny" x="198" y="264" text-anchor="middle">NIC drops</text>
+<text class="tiny" x="198" y="277" text-anchor="middle">the frame</text>
+<text class="tiny" x="319" y="264" text-anchor="middle">ring drains</text>
+<text class="tiny" x="319" y="277" text-anchor="middle">slower</text>
+<text class="tiny" x="440" y="264" text-anchor="middle">kernel drops</text>
+<text class="tiny" x="440" y="277" text-anchor="middle">the packet</text>
+<text class="tiny" x="561" y="264" text-anchor="middle">UDP: drops</text>
+<text class="tiny" x="561" y="277" text-anchor="middle">TCP: slows sender</text>
+<text class="tiny" x="682" y="264" text-anchor="middle">your own</text>
+<text class="tiny" x="682" y="277" text-anchor="middle">queue grows</text>
+<text class="sub" x="380" y="314" text-anchor="middle">Sizes are typical defaults, not measurements: check ethtool -g and sysctl on your host.</text>
+</svg>

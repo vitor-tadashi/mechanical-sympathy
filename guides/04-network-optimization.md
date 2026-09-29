@@ -51,7 +51,7 @@ Each stage has a setting that trades latency against throughput or CPU cost:
 | IRQ / softirq placement | irqbalance picks a CPU, possibly remote or isolated | cross-node cache misses; noise on the isolated CPU | `/proc/irq/N/smp_affinity_list` |
 | Flow control | A congested peer can PAUSE our transmitter | up to ms | `ethtool -A` |
 | Queue count / RSS | Driver default (often one per CPU) | queues on CPUs you did not choose; flows sharing a queue block each other | `ethtool -L`, `-X`, `-N` |
-| Ring size | Driver default (often 512–1024) | drops, then retransmits (TCP: ≥ 200 ms RTO) | `ethtool -G` |
+| Ring size | Driver default (typically 512 to 2048) | drops, then retransmits (TCP: ≥ 200 ms RTO) | `ethtool -G` |
 
 The goal of this guide is that a critical packet **never waits** (coalescing 0, no batching, no PAUSE), is **never dropped** (large rings), and is **processed on a known CPU near the NIC** that is **not** one of the isolated CPUs.
 
@@ -295,6 +295,16 @@ This is **flow control** (IEEE 802.3x PAUSE), not an offload. With RX pause on, 
 ### 5.7 Ring sizes at maximum: `ethtool -G rx <max> tx <max>`
 
 The RX ring is where the NIC DMAs packets before software picks them up. If a burst (a traffic spike, a reconnect storm, a GC-less but busy consumer) arrives faster than NAPI drains it, packets are **dropped in hardware**, and a dropped TCP segment costs a retransmit timeout of ≥ 200 ms. A larger ring does not add latency while it is empty. It only absorbs bursts. Watch `ethtool -S <iface> | grep -iE 'drop|miss|fifo|no_buf'`.
+
+<img src="../assets/diagrams/ring-anatomy.svg" alt="A ring of sixteen slots drawn as a circle, with filled, ready and refilling slots, a write pointer for the NIC and a read pointer for the driver, and the rule that a drop happens when the head meets a slot that is not ready" width="720">
+
+*The NIC fills slots at the head and the driver empties them at the tail. A drop is the head meeting a slot that is not ready.*
+
+<img src="../assets/diagrams/burst-absorb.svg" alt="Animation: two charts of ring fill over time for the same burst; a ring of 512 descriptors is full after 0.2 ms and about 3,240 packets are dropped, a ring of 4096 peaks at 3,750 and drops nothing" width="720">
+
+*The same illustrative burst hits a default ring and a maximum ring. The small ring overflows in 0.2 ms, and the large one holds the whole burst.*
+
+The time a ring buys you is its size divided by (arrival rate minus drain rate). [Concept: network buffers](../concepts/network-buffers.md) works this out with numbers, and shows how to tell a full ring from a full socket buffer.
 
 ### 5.8 `txqueuelen` (bulk NICs)
 

@@ -132,6 +132,10 @@ TX:        8160        TX:        2048
 
 A ring is a circular array of **descriptors**, each pointing at one packet buffer. The NIC writes received packets into the buffers named by the RX descriptors (DMA) and advances; the driver refills them. When the NIC reaches a descriptor the driver has not refilled yet, the packet is **dropped in hardware**: the `rx_missed`/`rx_no_buffer`/`fifo` counters rise in `ethtool -S`.
 
+<img src="../assets/diagrams/ring-anatomy.svg" alt="A ring of sixteen slots drawn as a circle, with filled, ready and refilling slots, a write pointer for the NIC and a read pointer for the driver, and the rule that a drop happens when the head meets a slot that is not ready" width="720">
+
+*The NIC fills slots at the head and the driver empties them at the tail. A drop is the head meeting a slot that is not ready.*
+
 - `rx N` / `tx N`: descriptors per queue. Larger rings absorb longer bursts, and cost N × buffer size of memory per queue. A larger ring **does not add latency** while it is not backed up, because packets are processed as soon as they arrive. It only lets the backlog grow instead of dropping.
 - `rx-mini` and `rx-jumbo`: separate rings for small or jumbo frames on a few older drivers.
 - Newer `ethtool` versions also show `rx-buf-len`, `cqe-size`, `tx-push` and `rx-push`. These are driver-specific: leave them at their defaults unless the vendor's low-latency guide says otherwise.

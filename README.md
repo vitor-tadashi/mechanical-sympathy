@@ -94,7 +94,7 @@ If that sounds like your application, fix the application first. These guides wi
 
 Plus:
 
-- **Concepts**: why it works. [Boot path](concepts/bootloader.md) · [CPU isolation](concepts/cpu-isolation.md) · [Network path](concepts/network-tuning.md) · [`ethtool` reference](concepts/ethtool.md) · [Huge pages & NUMA](concepts/huge-pages.md) · [cgroups](concepts/cgroups.md)
+- **Concepts**: why it works. [Boot path](concepts/bootloader.md) · [CPU isolation](concepts/cpu-isolation.md) · [Network path](concepts/network-tuning.md) · [Network buffers](concepts/network-buffers.md) · [`ethtool` reference](concepts/ethtool.md) · [Huge pages & NUMA](concepts/huge-pages.md) · [cgroups](concepts/cgroups.md)
 - **Use cases**: stories from symptom to result. [The quiet core](examples/use-cases/01-the-quiet-core.md) · [Critical and non-critical threads](examples/use-cases/02-critical-and-non-critical.md) · [The noisy neighbor](examples/use-cases/03-the-noisy-neighbor.md) · [One NIC, one queue, one CPU](examples/use-cases/04-one-nic-one-queue-one-cpu.md) · [Page faults](examples/use-cases/05-page-faults-on-the-hot-path.md) · [Two sockets, one mistake](examples/use-cases/06-two-sockets-one-mistake.md) · [The freeze nobody logs](examples/use-cases/07-the-freeze-nobody-logs.md) · [Capstone: stock to tuned in one afternoon](examples/use-cases/08-stock-to-tuned-in-one-afternoon.md) ([all eight](examples/use-cases/README.md))
 - **Examples**: [Java on a tuned host](examples/hugepages-java-example.md), with a [runnable probe](examples/java-latency-probe/) · [Multi-NIC segmentation](examples/network-segmentation-example.md)
 - **Quick help**: [Cheat sheet](CHEATSHEET.md) (every check on one page) · [FAQ](FAQ.md) · [Glossary](GLOSSARY.md) (every abbreviation and unusual word, in plain English)
@@ -167,9 +167,9 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 ├── README.md  QUICK_START.md  INDEX.md  CHEATSHEET.md  FAQ.md  STYLE.md
 ├── CONTRIBUTING.md  SECURITY.md  CITATION.cff  AGENTS.md
 ├── guides/          00..11 step-by-step guides
-├── concepts/        6 deep dives
+├── concepts/        7 deep dives
 ├── examples/        use-cases/ (8 stories), Java on a tuned host (+ runnable probe), multi-NIC segmentation
-├── assets/          diagrams/ (20 hand-written SVGs), social-preview.svg (source of the repository card)
+├── assets/          diagrams/ (29 hand-written SVGs), social-preview.svg (source of the repository card)
 ├── site/            the GitHub Pages site and the CPU layout explorer (no dependencies)
 ├── tools/           lint, fixture tests, site build
 └── scripts/

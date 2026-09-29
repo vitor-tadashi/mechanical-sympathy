@@ -38,6 +38,7 @@
 | Term | Means | Why you meet it here |
 |---|---|---|
 | <a id="baseline"></a>**baseline** | Latency percentiles and a `verify-tuning` report that you capture **before** any change. Every result is compared with it. | Without a baseline you cannot tell whether a change helped. [Guide 09 §5](guides/09-measuring-latency.md#5-a-measurement-protocol) |
+| <a id="bdp"></a>**BDP** | **Bandwidth-delay product.** The link speed times the round-trip time. It is the amount of data that is "in flight" on the path at one moment. | A TCP receive buffer must be at least this big to keep the link full. [Concept: network buffers §4](concepts/network-buffers.md#4-socket-buffers) |
 | <a id="bios"></a>**BIOS / UEFI** | **Basic Input/Output System** and **Unified Extensible Firmware Interface.** The first program that runs when a server starts. It sets up the hardware before Linux loads. UEFI is the modern replacement of the BIOS, and people often say "BIOS" for both. | Power, turbo and memory settings live here, and they change every CPU at once. [Guide 00](guides/00-bios-firmware.md) |
 | <a id="bls"></a>**BLS** | **Boot Loader Specification.** A standard for boot entries, stored as small files in `/boot/loader/entries`. | On RHEL 8 and 9, the kernel command line lives in these files. [Guide 01 §4](guides/01-grub-bootloader-tuning.md#4-how-the-arguments-are-applied-rhel-8--9) |
 | <a id="bmc"></a>**BMC** | **Baseboard Management Controller.** A small separate computer inside the server, used for remote power, console and hardware alerts. | It can collect hardware errors so that the CPUs do not have to. [Guide 00 §4.6](guides/00-bios-firmware.md#46-system-management-interrupts) |
@@ -86,6 +87,7 @@
 | <a id="epel"></a>**EPEL** | **Extra Packages for Enterprise Linux.** An extra software repository for RHEL. | Some measurement tools (for example `sockperf`) come from it. [Guide 09 §4](guides/09-measuring-latency.md#4-the-tools-by-question) |
 | <a id="epyc"></a>**EPYC** | The name of AMD's server CPU family. | AMD BIOS settings such as [NPS](#snc) apply to it. [Guide 00 §4.5](guides/00-bios-firmware.md#45-memory-and-numa) |
 | <a id="ethtool"></a>**ethtool** | The Linux command that talks to the NIC driver: queues, rings, coalescing, offloads, counters. | [Concept: ethtool](concepts/ethtool.md) |
+| <a id="evq"></a>**EVQ / RXQ / TXQ** | The three queues of a Solarflare [VI](#vi): the receive queue (RXQ), the transmit queue (TXQ) and the **event queue** (EVQ), which reports that packets arrived or were sent. | A polling thread reads the EVQ. [Concept: network buffers §7.2](concepts/network-buffers.md#72-solarflare-ef_vi-and-onload) |
 
 ### F
 
@@ -128,6 +130,8 @@
 | <a id="idle-sibling"></a>**idle sibling** | The [Hyper-Threading](#smt) partner of an isolated core. It is isolated together with its core, and it runs no thread. | [Guide 02 §3](guides/02-cpu-core-isolation.md#3-designing-the-cpu-layout) |
 | <a id="ieee"></a>**IEEE** | **Institute of Electrical and Electronics Engineers.** The organization that writes standards such as Ethernet (802.3) and [PTP](#ptp) (1588). | Flow control ([PAUSE](#pause-frame)) is IEEE 802.3x. [Concept: ethtool §8](concepts/ethtool.md#8--a---a-flow-control-pause-frames) |
 | <a id="illustrative"></a>**illustrative** | Marks a number that shows a shape and is not a measurement. Every figure in the use cases and diagrams is either illustrative or a typical order of magnitude. | Read such numbers for the idea, and measure your own host. [Use cases](examples/use-cases/README.md) |
+| <a id="imissed"></a>**imissed** | A [DPDK](#dpdk) counter: packets that the NIC dropped because the receive ring was full. | It means your polling loop is too slow. [Concept: network buffers §7.1](concepts/network-buffers.md#71-dpdk) |
+| <a id="incast"></a>**incast** | Many senders answer one receiver at the same moment, for example after a reconnect. Their packets arrive together on one port. | It creates a large [burst](#burst). [Concept: network buffers §5](concepts/network-buffers.md#5-traffic-shapes-which-queue-saves-you) |
 | <a id="iommu"></a>**IOMMU** | **Input/Output Memory Management Unit.** Hardware that translates and checks the addresses that devices use for [DMA](#dma). | [DPDK](#dpdk) needs it (through [VFIO](#vfio)) to use a NIC safely. [Guide 08 §4](guides/08-kernel-bypass.md#4-prerequisites) |
 | <a id="iotlb"></a>**IOTLB** | The cache of the [IOMMU](#iommu), like a [TLB](#tlb) for devices. A miss makes a DMA slower. | Turning the IOMMU off removes these misses, and it removes protection too. [Guide 01 §5](guides/01-grub-bootloader-tuning.md#5-the-parameters-one-by-one) |
 | <a id="ipc"></a>**IPC** | **Inter-Process Communication.** How programs on one host exchange data, for example through shared memory, pipes or sockets. | It is a traffic class that can get its own NIC. [Guide 04 §3](guides/04-network-optimization.md#3-network-segmentation-give-each-traffic-class-its-own-nic) |
@@ -242,12 +246,15 @@
 | <a id="rt-throttling"></a>**RT throttling** | A kernel limit (`sched_rt_runtime_us`). It takes the CPU away from [real-time](#rt) tasks for a part of every second. | It stops a spinning real-time thread for 50 ms every second unless it is turned off. [Guide 02 §4.4](guides/02-cpu-core-isolation.md#44-real-time-throttling) |
 | <a id="rto"></a>**RTO** | **Retransmission Timeout.** How long TCP waits for an [ACK](#ack) before it sends the data again. On Linux it is at least 200 ms. | One dropped segment costs at least one RTO. [Guide 04 §1](guides/04-network-optimization.md#1-where-network-latency-hides) |
 | <a id="rtt"></a>**round-trip time (RTT)** | The time for a request to go to the peer and the answer to come back. | TCP builds its retransmission timer from it, and Linux never lets that timer go below 200 ms. [Concept: network tuning](concepts/network-tuning.md) |
+| <a id="rx-missed-errors"></a>**rx_missed_errors** | A NIC counter in `ethtool -S`: the NIC had no free [descriptor](#descriptor) or no room in its [FIFO](#fifo) and dropped the frame. The exact name differs by driver. | The first counter to read when packets are missing. [Concept: network buffers §6](concepts/network-buffers.md#6-where-did-the-packet-die) |
+| <a id="rx-nombuf"></a>**rx_nombuf** | A [DPDK](#dpdk) counter: the driver wanted an [mbuf](#mbuf) and the [mempool](#mempool) was empty. | The pool is too small, or the application holds buffers too long. [Concept: network buffers §7.1](concepts/network-buffers.md#71-dpdk) |
 | <a id="rx-tx"></a>**RX / TX** | Receive and transmit. | Used in every network setting. [Guide 04](guides/04-network-optimization.md) |
 
 ### S
 
 | Term | Means | Why you meet it here |
 |---|---|---|
+| <a id="skmem"></a>**skmem** | The memory line that `ss -m` prints for a socket: `r` bytes queued for the reader, `rb` the limit, `t` and `tb` the same for sending, `d` the datagrams this socket dropped. | The quickest way to see a full receive buffer. [Concept: network buffers §4](concepts/network-buffers.md#4-socket-buffers) |
 | <a id="slice"></a>**slice** | A systemd unit that is a node in the [cgroup](#cgroup) tree. Services are placed in slices. | [Guide 05 §4](guides/05-cgroup-isolation.md#4-design-three-slices) |
 | <a id="smi"></a>**SMI** | **System Management Interrupt.** *S-M-I.* The firmware ([BIOS](#bios)) stops every CPU for a short time to do its own work, for example to check power or to emulate a USB keyboard. The operating system cannot see it and cannot stop it. | It shows up as a latency spike of about 50 µs to several ms, and no log explains it. Count it with `turbostat`. [Guide 00 §4.6](guides/00-bios-firmware.md#46-system-management-interrupts) |
 | <a id="smt"></a>**SMT / Hyper-Threading** | **Simultaneous Multithreading.** One physical core shows up as two CPUs. Both share the caches and the execution units. | The sibling can slow the critical thread, so it is off or left idle. [Guide 00 §4.4](guides/00-bios-firmware.md#44-hyper-threading) |
