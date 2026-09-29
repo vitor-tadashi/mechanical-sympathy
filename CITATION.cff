@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use these guides, please cite them as below."
+title: "Mechanical Sympathy: Low-Latency Tuning for RHEL"
+type: software
+authors:
+  - family-names: Tadashi
+    given-names: Vitor
+repository-code: "https://github.com/vitor-tadashi/mechanical-sympathy"
+license: MIT
+license-url: "https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/LICENSE"
+abstract: "Guides and scripts that turn a RHEL 8/9 host into a deterministic, low-jitter machine for latency-critical applications."
+keywords:
+  - low latency
+  - RHEL
+  - Linux
+  - CPU isolation
+  - jitter
+  - mechanical sympathy
