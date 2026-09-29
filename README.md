@@ -1,5 +1,7 @@
 # Mechanical Sympathy — Low-Latency Tuning for RHEL
 
+[![lint](https://github.com/vitor-tadashi/mechanical-sympathy/actions/workflows/lint.yml/badge.svg)](https://github.com/vitor-tadashi/mechanical-sympathy/actions/workflows/lint.yml) [![Docs: CC BY 4.0](https://img.shields.io/badge/docs-CC%20BY%204.0-blue)](LICENSE-docs) [![Code: MIT](https://img.shields.io/badge/code-MIT-green)](LICENSE)
+
 > *"You don't have to be an engineer to be a racing driver, but you do have to have mechanical sympathy."* — Jackie Stewart
 
 A field guide, with working scripts, for turning a Red Hat Enterprise Linux 8/9 server into a **deterministic, low-jitter host** for applications that must answer within microseconds, every time: request/response and RPC services, messaging and IPC layers, stream and event processors, real-time analytics, telemetry and control loops, and packet-processing pipelines. If your problem is the tail (p99.9 and beyond) rather than the average, and a stray interrupt or page fault costs more than it saves, these guides apply.
@@ -8,7 +10,7 @@ Every guide explains **what the kernel does**, **why each value is chosen**, **h
 
 ## Start here (5 minutes)
 
-- **What it is:** eight guides, and one script per guide, that make a RHEL 8/9 host quiet and predictable for a few latency-critical threads.
+- **What it is:** eleven guides, and one script per guide, that make a RHEL 8/9 host quiet and predictable for a few latency-critical threads.
 - **What you get:** a much shorter tail. p99.9 and max typically drop several-fold, and p50 improves modestly. You measure it on your own workload.
 - **What it costs:** power, throughput, flexibility, and in places security. Read [Read this first](#read-this-first) before applying anything.
 
@@ -89,7 +91,7 @@ sudo vi /etc/lowlat/lowlat.conf              # describe your CPUs, NICs and memo
 
 scripts/apply-all --plan                     # what applies on this host class
 scripts/apply-all --dry-run | less           # every command and file, nothing changed
-sudo scripts/apply-all --apply               # apply 00-08 + install lowlat-runtime.service
+sudo scripts/apply-all --apply               # apply 00-08 and 10 + install lowlat-runtime.service
 sudo systemctl reboot
 scripts/verify-tuning                        # PASS/WARN/FAIL for every guide
 ```
