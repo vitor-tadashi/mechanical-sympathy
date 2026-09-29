@@ -43,7 +43,7 @@
 | <a id="bmc"></a>**BMC** | **Baseboard Management Controller.** A small separate computer inside the server, used for remote power, console and hardware alerts. | It can collect hardware errors so that the CPUs do not have to. [Guide 00 §4.6](guides/00-bios-firmware.md#46-system-management-interrupts) |
 | <a id="bpf"></a>**BPF** | **Berkeley Packet Filter.** A way to run small, checked programs inside the kernel. | Guide 06 restricts who may load them. [Guide 06 §7](guides/06-kernel-sysctl-tuning.md#7-bpf) |
 | <a id="burst"></a>**burst** | Many packets or requests that arrive in a very short time, after a quiet time. | A burst is what fills a buffer. The buffer must hold it until software catches up. [Concept: network tuning](concepts/network-tuning.md) |
-| <a id="busy-polling"></a>**busy polling** | The program (or the kernel for it) keeps asking the NIC "is there a packet?" in a loop, instead of sleeping until an [interrupt](#irq) arrives. | It removes the wake-up delay, and it costs one CPU that is always busy. [Concept: network tuning §8](concepts/network-tuning.md#8-busy-polling) |
+| <a id="busy-polling"></a>**busy polling** | The program (or the kernel for it) keeps asking the NIC "is there a packet?" in a loop, instead of sleeping until an [interrupt](#irq) arrives. | It removes the wake-up delay. Kernel busy polling (`SO_BUSY_POLL`) spins only for a set number of microseconds and then sleeps, and a spin loop in your own code keeps one CPU 100% busy. [Concept: network tuning §8](concepts/network-tuning.md#8-busy-polling) |
 
 ### C
 
@@ -144,7 +144,7 @@
 |---|---|---|
 | <a id="jdk"></a>**JDK** | **Java Development Kit.** The [JVM](#jvm) and the tools to build and run Java programs. | [Guide 03 §5](guides/03-huge-pages-configuration.md#5-java-applications) |
 | <a id="jep"></a>**JEP** | **JDK Enhancement Proposal.** A numbered document that describes one change to Java. JEP 454 describes the [FFM](#ffm) API. | [Java probe](examples/java-latency-probe) |
-| <a id="jit"></a>**JIT** | **Just-In-Time compiler.** The [JVM](#jvm) turns hot code into machine code while the program runs. | The first calls are slow. Warm-up and [pre-touch](#pre-touch) hide this. [Guide 09](guides/09-measuring-latency.md) |
+| <a id="jit"></a>**JIT** | **Just-In-Time compiler.** The [JVM](#jvm) turns hot code into machine code while the program runs. | The first calls are slow, until the code is compiled. Running warm-up traffic before real traffic hides this. [Pre-touch](#pre-touch) does not: it only removes page faults. [Guide 09](guides/09-measuring-latency.md) |
 | <a id="jitter"></a>**jitter** | How much the time of an operation changes from one run to the next. Low jitter means a narrow histogram. | This is what the tuning reduces. [Guide 09](guides/09-measuring-latency.md) |
 | <a id="jvm"></a>**JVM** | **Java Virtual Machine.** The program that runs Java code. | The reference application is a Java program, so the guides give JVM flags. [Guide 03 §5](guides/03-huge-pages-configuration.md#5-java-applications) |
 
