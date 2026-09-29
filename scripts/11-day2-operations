@@ -57,6 +57,10 @@ install_verify_timer() {
 [Unit]
 Description=Verify the low-latency tuning (read-only report)
 ConditionPathExists=${config}
+# A missed run that Persistent=true triggers at activation must not inspect runtime state before
+# lowlat-runtime.service has re-applied it.
+Wants=lowlat-runtime.service
+After=lowlat-runtime.service
 
 [Service]
 Type=oneshot
@@ -90,16 +94,49 @@ EOF
 
 # --- verification (read-only) ------------------------------------------------
 
-# all_kernel_entries_isolated - predicate: every installed kernel entry (the rescue entry
-# aside) has isolcpus, nohz_full and rcu_nocbs on its command line. False when grubby is
-# missing, fails or lists no entry: an entry that cannot be inspected is not known to be tuned.
+# all_kernel_entries_isolated <cpu>... - predicate: every installed kernel entry (the rescue
+# entry aside) sets isolcpus, nohz_full and rcu_nocbs to exactly the given CPUs, whether the
+# entry writes them as a list or as ranges. False when grubby is missing, fails or lists no
+# entry: an entry that cannot be inspected is not known to be tuned.
 all_kernel_entries_isolated() {
-	local entries
+	local entries want
+	want="$(cpu_list_join "$@")"
 	command -v grubby >/dev/null 2>&1 || return 1
-	entries="$(grubby --info=ALL 2>/dev/null || true)"
+	entries="$(grubby --info=ALL 2>/dev/null)" || return 1
 	[[ -n "${entries}" ]] || return 1
-	awk '/^kernel=/ { rescue = ($0 ~ /rescue/) }
-		/^args=/ && !rescue { n++; if ($0 !~ /isolcpus=/ || $0 !~ /nohz_full=/ || $0 !~ /rcu_nocbs=/) bad++ }
+	awk -v want="${want}" '
+		function norm(v,    parts, n, i, ab, k, cnt, list, j, t, out) {
+			n = split(v, parts, ",")
+			cnt = 0
+			for (i = 1; i <= n; i++) {
+				if (parts[i] ~ /^[0-9]+$/) list[++cnt] = parts[i] + 0
+				else if (parts[i] ~ /^[0-9]+-[0-9]+$/) {
+					split(parts[i], ab, "-")
+					for (k = ab[1] + 0; k <= ab[2] + 0; k++) list[++cnt] = k
+				}
+			}
+			for (i = 2; i <= cnt; i++) {
+				t = list[i]
+				for (j = i - 1; j >= 1 && list[j] > t; j--) list[j + 1] = list[j]
+				list[j + 1] = t
+			}
+			out = ""
+			for (i = 1; i <= cnt; i++) if (i == 1 || list[i] != list[i - 1]) out = out (out == "" ? "" : ",") list[i]
+			return out
+		}
+		function argval(line, name,    m) {
+			if (!match(line, "(^|[ \"])" name "=[^ \"]*")) return ""
+			m = substr(line, RSTART, RLENGTH)
+			sub("^[ \"]", "", m)
+			sub("^" name "=", "", m)
+			return m
+		}
+		BEGIN { target = norm(want) }
+		/^kernel=/ { rescue = ($0 ~ /rescue/) }
+		/^args=/ && !rescue {
+			n++
+			if (norm(argval($0, "isolcpus")) != target || norm(argval($0, "nohz_full")) != target || norm(argval($0, "rcu_nocbs")) != target) bad++
+		}
 		END { exit !(n > 0 && bad == 0) }' <<<"${entries}"
 }
 
@@ -121,7 +158,7 @@ verify_day2_operations() {
 		verify_info "verification timer not managed here (DAY2_VERIFY_TIMER=${DAY2_VERIFY_TIMER}, host_class=${HOST_CLASS})"
 	fi
 	if host_is_bare_metal && ((${#ISOLATED_CPUS[@]} > 0)); then
-		verify_soft "every installed kernel entry carries isolcpus, nohz_full and rcu_nocbs (WARN also when grubby cannot list them)" all_kernel_entries_isolated
+		verify_soft "every installed kernel entry sets isolcpus, nohz_full and rcu_nocbs to ISOLATED_CPUS (WARN also when grubby cannot list them)" all_kernel_entries_isolated "${ISOLATED_CPUS[@]}"
 	fi
 	verify_result
 }
