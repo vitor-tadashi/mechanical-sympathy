@@ -21,8 +21,11 @@ fi
 LOWLAT_COMMON_LOADED=1
 
 LOWLAT_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-LOWLAT_CONFIG="${LOWLAT_CONFIG:-/etc/lowlat/lowlat.conf}"
-LOWLAT_STATE_DIR="${LOWLAT_STATE_DIR:-/var/lib/lowlat}"
+# Prefix of every host path the scripts read or write (/sys, /proc, /etc, /boot, ...).
+# Empty on a real host. tools/check-scripts points it at a fake host tree.
+LOWLAT_ROOT="${LOWLAT_ROOT:-}"
+LOWLAT_CONFIG="${LOWLAT_CONFIG:-${LOWLAT_ROOT}/etc/lowlat/lowlat.conf}"
+LOWLAT_STATE_DIR="${LOWLAT_STATE_DIR:-${LOWLAT_ROOT}/var/lib/lowlat}"
 LOWLAT_FACTORY_DIR="${LOWLAT_STATE_DIR}/factory-settings"
 LOWLAT_BACKUP_DIR="${LOWLAT_STATE_DIR}/backup/$(date +%Y%m%d-%H%M%S)"
 
@@ -205,18 +208,25 @@ set_key_value_line() {
 # Backups
 # -----------------------------------------------------------------------------
 
+# factory_copy <path> - where backup_file keeps the pristine copy of <path>.
+factory_copy() {
+	printf '%s%s\n' "${LOWLAT_FACTORY_DIR}" "${1#"${LOWLAT_ROOT}"}"
+}
+
 # backup_file <path> - the first time a file is touched, keep a pristine copy under
 # factory-settings/ (never overwritten). Every run also keeps a timestamped copy.
 backup_file() {
-	local path="$1"
+	local path="$1" factory backup
 	[[ -f "${path}" ]] || return 0
 	[[ "${DRY_RUN}" -eq 1 ]] && return 0
-	if [[ ! -e "${LOWLAT_FACTORY_DIR}${path}" ]]; then
-		mkdir -p "$(dirname "${LOWLAT_FACTORY_DIR}${path}")"
-		cp -a "${path}" "${LOWLAT_FACTORY_DIR}${path}"
+	factory="$(factory_copy "${path}")"
+	backup="${LOWLAT_BACKUP_DIR}${path#"${LOWLAT_ROOT}"}"
+	if [[ ! -e "${factory}" ]]; then
+		mkdir -p "$(dirname "${factory}")"
+		cp -a "${path}" "${factory}"
 	fi
-	mkdir -p "$(dirname "${LOWLAT_BACKUP_DIR}${path}")"
-	cp -a "${path}" "${LOWLAT_BACKUP_DIR}${path}"
+	mkdir -p "$(dirname "${backup}")"
+	cp -a "${path}" "${backup}"
 }
 
 # -----------------------------------------------------------------------------
@@ -240,9 +250,9 @@ host_class_from_systemd() {
 
 host_class_from_dmi() {
 	local vendor product
-	[[ -r /sys/class/dmi/id/sys_vendor ]] || return 1
-	vendor="$(tr '[:upper:]' '[:lower:]' </sys/class/dmi/id/sys_vendor 2>/dev/null || true)"
-	product="$(tr '[:upper:]' '[:lower:]' </sys/class/dmi/id/product_name 2>/dev/null || true)"
+	[[ -r "${LOWLAT_ROOT}"/sys/class/dmi/id/sys_vendor ]] || return 1
+	vendor="$(tr '[:upper:]' '[:lower:]' <"${LOWLAT_ROOT}"/sys/class/dmi/id/sys_vendor 2>/dev/null || true)"
+	product="$(tr '[:upper:]' '[:lower:]' <"${LOWLAT_ROOT}"/sys/class/dmi/id/product_name 2>/dev/null || true)"
 	case "${vendor} ${product}" in
 	*vmware* | *virtualbox* | *qemu* | *kvm* | *microsoft*corporation* | *hyper-v* | *xen* | *amazon\ ec2* | *google*compute*)
 		printf 'virtual_machine\n'
@@ -252,8 +262,8 @@ host_class_from_dmi() {
 }
 
 host_class_from_cpuinfo() {
-	[[ -r /proc/cpuinfo ]] || return 1
-	grep -q '^flags[[:space:]]*:.*hypervisor' /proc/cpuinfo 2>/dev/null || return 1
+	[[ -r "${LOWLAT_ROOT}"/proc/cpuinfo ]] || return 1
+	grep -q '^flags[[:space:]]*:.*hypervisor' "${LOWLAT_ROOT}"/proc/cpuinfo 2>/dev/null || return 1
 	printf 'virtual_machine\n'
 }
 
@@ -324,6 +334,8 @@ require_capability() {
 
 require_root() {
 	[[ "${DRY_RUN}" -eq 1 ]] && return 0
+	# A fake host tree belongs to whoever runs the check.
+	[[ -n "${LOWLAT_ROOT}" ]] && return 0
 	[[ "${EUID}" -eq 0 ]] || die "must run as root (or use --dry-run)" "${EXIT_PRECHECK}"
 }
 
@@ -461,7 +473,7 @@ cpu_mask_from_list() {
 # online_cpus - prints the online CPU list, e.g. "0-31".
 online_cpus() {
 	local count
-	cat /sys/devices/system/cpu/online 2>/dev/null && return 0
+	cat "${LOWLAT_ROOT}"/sys/devices/system/cpu/online 2>/dev/null && return 0
 	count="$(getconf _NPROCESSORS_ONLN)"
 	printf '0-%s\n' "$((count - 1))"
 }

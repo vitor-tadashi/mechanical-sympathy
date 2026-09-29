@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#
+# pgrep (fake) - "pgrep -x NAME": pids of the fake processes whose comm is NAME.
+
+# shellcheck source=tools/stubs/lib/fake
+. "$(dirname "${BASH_SOURCE[0]}")/lib/fake"
+
+[[ "${1:-}" == -x && -n "${2:-}" ]] || fake_fail 2 "only 'pgrep -x NAME' is supported"
+found=1
+for comm in "${LOWLAT_ROOT}"/proc/[0-9]*/comm; do
+	[[ -f "${comm}" && "$(<"${comm}")" == "$2" ]] || continue
+	pid="${comm%/comm}"
+	printf '%s\n' "${pid##*/}"
+	found=0
+done
+exit "${found}"

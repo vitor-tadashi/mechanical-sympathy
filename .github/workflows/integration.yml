@@ -1,0 +1,26 @@
+name: integration
+
+# Runs the tuning scripts end to end on fake hosts (tools/check-scripts), inside the
+# RHEL user space of each supported major release.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  fake-hosts:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        rhel: ["8", "9", "10"]
+    container: registry.access.redhat.com/ubi${{ matrix.rhel }}/ubi
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install diffutils (not in the UBI image)
+        run: dnf -y -q install diffutils
+      - run: tools/check-scripts

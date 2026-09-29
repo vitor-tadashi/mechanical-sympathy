@@ -13,7 +13,7 @@ set -Eeuo pipefail
 # shellcheck source=lib/common
 . "$(dirname "${BASH_SOURCE[0]}")/lib/common"
 
-SYSCTL_PROFILE="${SYSCTL_PROFILE:-/etc/sysctl.d/90-lowlat.conf}"
+SYSCTL_PROFILE="${SYSCTL_PROFILE:-${LOWLAT_ROOT}/etc/sysctl.d/90-lowlat.conf}"
 
 # key|value|why - one line per parameter; "#" lines become section headers.
 sysctl_table() {
@@ -73,10 +73,10 @@ EOF
 }
 
 sysctl_key_exists() {
-	local path="/proc/sys/${1//./\/}"
+	local path="${LOWLAT_ROOT}/proc/sys/${1//./\/}"
 	[[ -e "${path}" ]] && return 0
 	# dry-run on a non-Linux machine: keep everything in the preview
-	[[ "${DRY_RUN}" -eq 1 && ! -d /proc/sys ]]
+	[[ "${DRY_RUN}" -eq 1 && ! -d "${LOWLAT_ROOT}"/proc/sys ]]
 }
 
 # Per-interface keys generated from NICS (IPv6 off, strict ARP on multi-homed hosts).
@@ -151,7 +151,7 @@ verify_kernel_sysctl() {
 	while IFS= read -r line; do
 		[[ "${line}" == \#* ]] && continue
 		IFS='|' read -r key value why <<<"${line}"
-		if [[ -e "/proc/sys/${key//./\/}" ]]; then
+		if [[ -e "${LOWLAT_ROOT}/proc/sys/${key//./\/}" ]]; then
 			verify_check "${key} = ${value}" sysctl_is "${key}" "${value}"
 		fi
 	done <<<"${table}"

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#
+# ps (fake) - "ps -eLo psr=,pid=,comm=": one line per fake task. A task is reported
+# on the first CPU it is allowed to run on.
+
+# shellcheck source=tools/stubs/lib/fake
+. "$(dirname "${BASH_SOURCE[0]}")/lib/fake"
+
+[[ "$*" == "-eLo psr=,pid=,comm=" ]] || fake_fail 1 "unsupported arguments: $*"
+for dir in "${LOWLAT_ROOT}"/proc/[0-9]*; do
+	[[ -f "${dir}/status" ]] || continue
+	allowed="$(awk -F'\t' '/^Cpus_allowed_list/ {print $2}' "${dir}/status")"
+	allowed="${allowed%%[,-]*}"
+	comm="$(<"${dir}/comm")"
+	printf '%3s %7s %s\n' "${allowed}" "${dir##*/}" "${comm}"
+done

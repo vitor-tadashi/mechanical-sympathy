@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+#
+# taskset (fake)
+#   taskset [-a] -cp LIST PID   rewrites Cpus_allowed_list of proc/PID (and its tasks)
+#   taskset -c LIST COMMAND...  runs COMMAND
+
+# shellcheck source=tools/stubs/lib/fake
+. "$(dirname "${BASH_SOURCE[0]}")/lib/fake"
+
+fake_record "$@"
+[[ "${1:-}" == -a ]] && shift
+case "${1:-}" in
+-cp | -pc)
+	[[ -f "${LOWLAT_ROOT}/proc/$3/status" ]] || fake_fail 1 "failed to get pid $3's affinity: No such process"
+	old="$(cpus_allowed "$3")"
+	set_cpus_allowed "$3" "$2"
+	printf "pid %s's current affinity list: %s\npid %s's new affinity list: %s\n" "$3" "${old}" "$3" "$2"
+	;;
+-c)
+	shift 2
+	exec "$@"
+	;;
+*) fake_fail 1 "unsupported arguments: $*" ;;
+esac

@@ -17,12 +17,12 @@ set -Eeuo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/lib/common"
 
 HOUSEKEEPING_SLICE="${HOUSEKEEPING_SLICE:-housekeeping.slice}"
-SYSTEMD_UNIT_DIR="${SYSTEMD_UNIT_DIR:-/etc/systemd/system}"
+SYSTEMD_UNIT_DIR="${SYSTEMD_UNIT_DIR:-${LOWLAT_ROOT}/etc/systemd/system}"
 
+# cgroup_version - 2 when the unified hierarchy is mounted at /sys/fs/cgroup (its root
+# has cgroup.controllers), 1 for the legacy and hybrid layouts.
 cgroup_version() {
-	local fs_type
-	fs_type="$(stat -fc %T /sys/fs/cgroup 2>/dev/null || true)"
-	if [[ "${fs_type}" == cgroup2fs ]]; then
+	if [[ -e "${LOWLAT_ROOT}/sys/fs/cgroup/cgroup.controllers" ]]; then
 		printf '2\n'
 	else
 		printf '1\n'
@@ -149,7 +149,7 @@ unit_in_slice() { # unit_in_slice <unit>
 pid_on_cpus() { # pid_on_cpus <pid> <cpu>...
 	local pid="$1" actual
 	shift
-	actual="$(awk -F'\t' '/^Cpus_allowed_list/{print $2}' "/proc/${pid}/status" 2>/dev/null)"
+	actual="$(awk -F'\t' '/^Cpus_allowed_list/{print $2}' "${LOWLAT_ROOT}/proc/${pid}/status" 2>/dev/null)"
 	actual="$(cpu_list_expand "${actual}")"
 	[[ "${actual}" == "$*" ]]
 }
@@ -172,8 +172,8 @@ verify_cgroup_isolation() {
 			verify_check "${proc} (${pid}) pinned to ${HOUSEKEEPING_PIN_CPUS[*]}" pid_on_cpus "${pid}" "${HOUSEKEEPING_PIN_CPUS[@]}"
 		done < <(pgrep -x "${proc}" 2>/dev/null || true)
 	done
-	if [[ "${version}" -eq 2 && -r "/sys/fs/cgroup/${HOUSEKEEPING_SLICE}/cpuset.cpus.effective" ]]; then
-		effective="$(read_value "/sys/fs/cgroup/${HOUSEKEEPING_SLICE}/cpuset.cpus.effective")"
+	if [[ "${version}" -eq 2 && -r "${LOWLAT_ROOT}/sys/fs/cgroup/${HOUSEKEEPING_SLICE}/cpuset.cpus.effective" ]]; then
+		effective="$(read_value "${LOWLAT_ROOT}/sys/fs/cgroup/${HOUSEKEEPING_SLICE}/cpuset.cpus.effective")"
 		verify_info "${HOUSEKEEPING_SLICE} cpuset.cpus.effective = ${effective}"
 	fi
 	verify_result

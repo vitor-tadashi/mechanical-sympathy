@@ -1,0 +1,344 @@
+# shellcheck shell=bash
+#
+# host - builds a fake RHEL-like host tree from a host description, and simulates what
+# the kernel and systemd do with that tree at boot. Sourced by tools/check-scripts.
+#
+#   host_build <root> <host file> <lowlat.conf>   create the tree (kernel defaults, not booted)
+#   host_boot <root> <pristine tree>              reboot: volatile state back to the pristine
+#                                                 tree, then kernel command line, PID 1,
+#                                                 systemd-sysctl, enabled units, tuned
+#   host_kernel_sync <root>                       what the kernel derives on its own: effective
+#                                                 IRQ affinity, the huge page totals
+#
+# The host file sets OS_PRETTY_NAME, KERNEL, VIRTUAL (yes|no), SOCKETS, CPUS, CGROUP
+# (1|2), ABSENT_SYSCTLS, FAKE_NICS ("name|driver|numa node|combined max|ring max|ptp"),
+# SERVICES (installed, enabled and running) and PROCESSES (running, not systemd units).
+# Everything is a model: only what the guide scripts read or write is there.
+
+# The host file sets the upper-case variables above; ShellCheck cannot see them.
+# shellcheck disable=SC2154
+
+HOST_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../scripts" && pwd -P)"
+HOST_FAKE_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)/fake"
+
+# host_write <root> <path> <content> - one file, parent directories included.
+host_write() {
+	mkdir -p "$(dirname "$1$2")"
+	printf '%s\n' "$3" >"$1$2"
+}
+
+# host_all_mask <cpus> - the cpumask with every CPU set, in 32-bit words.
+host_all_mask() {
+	local cpus="$1" words i mask="" bits
+	words=$(((cpus + 31) / 32))
+	for ((i = words - 1; i >= 0; i--)); do
+		bits=$((cpus - i * 32))
+		((bits > 32)) && bits=32
+		mask+="$(printf '%08x' $(((1 << bits) - 1)))"
+		((i > 0)) && mask+=","
+	done
+	printf '%s\n' "${mask}"
+}
+
+# host_sysctl_keys - the keys that guide 06 manages, read from its table.
+host_sysctl_keys() {
+	awk -F'|' '/^sysctl_table\(\)/ { t = 1; next } t && /^EOF/ { exit } t && NF == 3 { print $1 }' \
+		"${HOST_SCRIPTS_DIR}/06-kernel-sysctl"
+}
+
+host_build_cpus() {
+	local root="$1" cpu flags="fpu tsc msr pae sse sse2 ht constant_tsc nonstop_tsc"
+	local all="0-$((CPUS - 1))" mask idle=intel_idle clock=tsc
+	mask="$(host_all_mask "${CPUS}")"
+	if [[ "${VIRTUAL}" == yes ]]; then
+		flags+=" hypervisor"
+		idle=haltpoll
+		clock=kvm-clock
+	fi
+	: >"${root}/proc/cpuinfo"
+	for ((cpu = 0; cpu < CPUS; cpu++)); do
+		printf 'processor\t: %s\nvendor_id\t: GenuineIntel\nflags\t\t: %s\n\n' "${cpu}" "${flags}" >>"${root}/proc/cpuinfo"
+		host_write "${root}" "/sys/devices/system/cpu/cpu${cpu}/topology/physical_package_id" "$((cpu % SOCKETS))"
+		[[ "${VIRTUAL}" == yes ]] && continue
+		host_write "${root}" "/sys/devices/system/cpu/cpu${cpu}/cpufreq/scaling_governor" powersave
+		host_write "${root}" "/sys/devices/system/cpu/cpu${cpu}/power/energy_perf_bias" 6
+	done
+	host_write "${root}" /sys/devices/system/cpu/online "${all}"
+	host_write "${root}" /sys/devices/system/cpu/isolated ""
+	host_write "${root}" /sys/devices/system/cpu/nohz_full "(null)"
+	host_write "${root}" /sys/devices/system/cpu/smt/active 0
+	host_write "${root}" /sys/devices/system/cpu/cpuidle/current_driver "${idle}"
+	host_write "${root}" /sys/devices/system/cpu/cpu0/cpuidle/state0/name POLL
+	host_write "${root}" /sys/devices/system/cpu/cpu0/cpuidle/state1/name C1
+	host_write "${root}" /sys/devices/system/cpu/vulnerabilities/meltdown "Not affected"
+	host_write "${root}" /sys/devices/system/cpu/vulnerabilities/spectre_v2 "Mitigation: Enhanced / Automatic IBRS"
+	host_write "${root}" /sys/devices/system/clocksource/clocksource0/current_clocksource "${clock}"
+	host_write "${root}" /sys/devices/virtual/workqueue/cpumask "${mask}"
+	host_write "${root}" /sys/bus/workqueue/devices/writeback/cpumask "${mask}"
+	if [[ "${VIRTUAL}" != yes ]]; then
+		host_write "${root}" /sys/devices/system/cpu/intel_pstate/no_turbo 0
+		host_write "${root}" /sys/module/pcie_aspm/parameters/policy "[default] performance powersave powersupersave"
+	fi
+	host_write "${root}" /sys/devices/system/cpu/possible "${all}"
+}
+
+host_build_memory() {
+	local root="$1" node size
+	for ((node = 0; node < SOCKETS; node++)); do
+		for size in 2048 1048576; do
+			host_write "${root}" "/sys/devices/system/node/node${node}/hugepages/hugepages-${size}kB/nr_hugepages" 0
+			host_write "${root}" "/sys/devices/system/node/node${node}/hugepages/hugepages-${size}kB/free_hugepages" 0
+			host_write "${root}" "/sys/devices/system/node/node${node}/hugepages/hugepages-${size}kB/surplus_hugepages" 0
+		done
+	done
+	host_write "${root}" /sys/kernel/mm/transparent_hugepage/enabled "[always] madvise never"
+	host_write "${root}" /proc/meminfo "$(printf 'MemTotal:       263921000 kB\nSwapTotal:        4194300 kB\nSwapFree:         4194300 kB\nAnonHugePages:          0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB')"
+}
+
+host_build_sysctls() {
+	local root="$1" key keys iface ifaces=(all default lo) spec
+	keys="$(host_sysctl_keys)"
+	while read -r key; do
+		host_write "${root}" "/proc/sys/${key//./\/}" 0
+	done <<<"${keys}"
+	for spec in "${FAKE_NICS[@]}"; do
+		ifaces+=("${spec%%|*}")
+	done
+	for iface in "${ifaces[@]}"; do
+		host_write "${root}" "/proc/sys/net/ipv6/conf/${iface}/disable_ipv6" 0
+		for key in arp_ignore arp_announce arp_filter arp_accept; do
+			host_write "${root}" "/proc/sys/net/ipv4/conf/${iface}/${key}" 0
+		done
+	done
+	for key in "${ABSENT_SYSCTLS[@]}"; do
+		rm -f "${root}/proc/sys/${key//./\/}"
+	done
+	host_write "${root}" /proc/sys/kernel/sched_rt_runtime_us 950000
+	host_write "${root}" /proc/sys/kernel/shmmni 4096
+	host_write "${root}" /proc/sys/vm/nr_hugepages 0
+	host_write "${root}" /proc/sys/vm/nr_overcommit_hugepages 0
+	host_write "${root}" /proc/sys/vm/hugetlb_shm_group 0
+	host_write "${root}" /proc/sys/kernel/osrelease "${KERNEL}"
+	host_write "${root}" /proc/sys/kernel/hostname lowlat-fixture
+}
+
+# One MSI-X vector per default queue. A virtio NIC's vectors belong to its PCI parent
+# and are named virtioN-input.M in /proc/interrupts, not after the interface.
+host_build_nics() {
+	local root="$1" spec name driver node max ring ptp irq=100 queue queues index=0 dev
+	: >"${root}/proc/interrupts"
+	for spec in "${FAKE_NICS[@]}"; do
+		IFS='|' read -r name driver node max ring ptp <<<"${spec}"
+		queues=$((max < 8 ? max : 8))
+		dev="${root}/sys/class/net/${name}"
+		host_write "${root}" "/sys/class/net/${name}/tx_queue_len" 1000
+		host_write "${root}" "/sys/class/net/${name}/device/numa_node" "${node}"
+		for ((queue = 0; queue < queues; queue++)); do
+			if [[ "${driver}" == virtio_net ]]; then
+				printf ' %s:          0   PCI-MSIX-0000:00:0%s.0 %s-edge      virtio%s-input.%s\n' "${irq}" "${index}" "${queue}" "${index}" "${queue}" >>"${root}/proc/interrupts"
+			else
+				printf ' %s:          0   IR-PCI-MSI-edge      %s-TxRx-%s\n' "${irq}" "${name}" "${queue}" >>"${root}/proc/interrupts"
+				mkdir -p "${dev}/device/msi_irqs"
+				: >"${dev}/device/msi_irqs/${irq}"
+			fi
+			host_write "${root}" "/proc/irq/${irq}/smp_affinity_list" "0-$((CPUS - 1))"
+			host_write "${root}" "/proc/irq/${irq}/effective_affinity_list" "$((irq % CPUS))"
+			irq=$((irq + 1))
+		done
+		host_write "${root}" "/run/fake-ethtool/${name}" "$(
+			printf 'adaptive_rx=on\nadaptive_tx=on\nbus_info=0000:%02x:00.0\ncombined=%s\ncombined_max=%s\n' "$((index + 1))" "${queues}" "${max}"
+			printf 'driver=%s\ngro=on\ngso=on\nhw_timestamping=%s\nlro=off\npause_autoneg=on\npause_rx=on\npause_tx=on\n' "${driver}" "${ptp}"
+			printf 'rx_csum=on\nrx_ring=512\nrx_ring_max=%s\nrx_usecs=50\ntso=on\ntx_csum=on\ntx_ring=512\ntx_ring_max=%s\ntx_usecs=50' "${ring}" "${ring}"
+		)"
+		index=$((index + 1))
+	done
+}
+
+host_build_systemd() {
+	local root="$1" service
+	host_write "${root}" /etc/systemd/system.conf "$(printf '[Manager]\n#CPUAffinity=\n#DefaultLimitRTPRIO=\n#DefaultLimitNICE=')"
+	for service in "${SERVICES[@]}"; do
+		host_write "${root}" "/usr/lib/systemd/system/${service}.service" "$(printf '[Unit]\nDescription=%s\n\n[Service]\nExecStart=/usr/sbin/%s\n\n[Install]\nWantedBy=multi-user.target' "${service}" "${service}")"
+		mkdir -p "${root}/var/lib/fake-systemd/enabled"
+		: >"${root}/var/lib/fake-systemd/enabled/${service}.service"
+	done
+	host_write "${root}" /usr/lib/tuned/network-latency/tuned.conf "$(printf '[main]\nsummary=Optimize for deterministic performance at the cost of increased power consumption\ninclude=latency-performance')"
+	host_write "${root}" /etc/tuned/tuned-main.conf "reapply_sysctl = 1"
+	host_write "${root}" /etc/tuned/active_profile throughput-performance
+}
+
+host_build_boot() {
+	local root="$1" machine=0f1e2d3c4b5a69788796a5b4c3d2e1f0 options
+	options="root=/dev/mapper/rhel-root ro crashkernel=auto resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet console=tty0"
+	host_write "${root}" "/boot/loader/entries/${machine}-${KERNEL}.conf" "$(printf 'title %s (%s)\nversion %s\nlinux /vmlinuz-%s\ninitrd /initramfs-%s.img\noptions %s' "${OS_PRETTY_NAME}" "${KERNEL}" "${KERNEL}" "${KERNEL}" "${KERNEL}" "${options}")"
+	host_write "${root}" "/boot/loader/entries/${machine}-0-rescue.conf" "$(printf 'title %s (0-rescue)\nversion 0-rescue\nlinux /vmlinuz-0-rescue\ninitrd /initramfs-0-rescue.img\noptions %s' "${OS_PRETTY_NAME}" "${options}")"
+	mkdir -p "${root}/boot/grub2"
+}
+
+host_build() {
+	local root="$1" host_file="$2" config="$3" vendor="Example Systems" product="Reference Server 2S"
+	# shellcheck source=/dev/null
+	. "${host_file}"
+	if [[ "${VIRTUAL}" == yes ]]; then
+		vendor=QEMU
+		product="Standard PC (Q35 + ICH9, 2009)"
+	fi
+	mkdir -p "${root}"/{proc,run,var/lib}
+	host_write "${root}" /etc/os-release "$(printf 'NAME="%s"\nVERSION_ID="%s"\nPRETTY_NAME="%s %s"' "${OS_PRETTY_NAME}" "${OS_VERSION}" "${OS_PRETTY_NAME}" "${OS_VERSION}")"
+	host_write "${root}" /etc/fstab "$(printf '/dev/mapper/rhel-root  /      xfs   defaults  0 0\nUUID=0000-boot         /boot  xfs   defaults  0 0\n/dev/mapper/rhel-swap  none   swap  defaults  0 0')"
+	host_write "${root}" /etc/group "$(printf 'root:x:0:\napp-user:x:1001:')"
+	host_write "${root}" /etc/sysctl.conf "# System default settings live in /usr/lib/sysctl.d/00-system.conf."
+	host_write "${root}" /etc/lowlat/lowlat.conf "$(<"${config}")"
+	host_write "${root}" /proc/modules "$(printf 'ip_tables 32768 0 - Live 0x0\nnf_conntrack 180224 0 - Live 0x0')"
+	host_write "${root}" /proc/loadavg "0.00 0.01 0.05 1/300 1000"
+	host_write "${root}" /sys/class/dmi/id/sys_vendor "${vendor}"
+	host_write "${root}" /sys/class/dmi/id/product_name "${product}"
+	host_write "${root}" /sys/class/dmi/id/bios_vendor "Example BIOS"
+	host_write "${root}" /sys/class/dmi/id/bios_version 1.0.0
+	host_write "${root}" /sys/class/dmi/id/bios_date 01/01/2026
+	[[ "${CGROUP}" == 2 ]] && host_write "${root}" /sys/fs/cgroup/cgroup.controllers "cpuset cpu io memory pids"
+	host_build_cpus "${root}"
+	host_build_memory "${root}"
+	host_build_sysctls "${root}"
+	host_build_nics "${root}"
+	host_build_systemd "${root}"
+	host_build_boot "${root}"
+	host_write "${root}" /proc/1/comm systemd
+	host_write "${root}" /proc/1/status "$(printf 'Name:\tsystemd\nPid:\t1\nCpus_allowed_list:\t0-%s' "$((CPUS - 1))")"
+	host_write "${root}" /run/fake-processes "$(printf '%s\n' "${PROCESSES[@]}")"
+}
+
+# host_cmdline_value <cmdline> <name> - the value of name= on a command line.
+host_cmdline_value() {
+	local token
+	for token in $1; do
+		[[ "${token}" == "$2="* ]] && printf '%s\n' "${token#*=}"
+	done
+	return 0
+}
+
+# host_kernel_boot <root> - what the kernel makes of its command line.
+host_kernel_boot() {
+	local root="$1" cmdline value entry kernel
+	kernel="$(<"${root}/proc/sys/kernel/osrelease")"
+	entry="$(LOWLAT_ROOT="${root}" grubby --info=DEFAULT)"
+	entry="$(awk -F'"' '/^args=/ {print $2}' <<<"${entry}")"
+	cmdline="BOOT_IMAGE=(hd0,gpt2)/vmlinuz-${kernel} ${entry}"
+	printf '%s\n' "${cmdline}" >"${root}/proc/cmdline"
+	value="$(host_cmdline_value "${cmdline}" isolcpus)"
+	[[ -n "${value}" ]] && printf '%s\n' "${value}" >"${root}/sys/devices/system/cpu/isolated"
+	value="$(host_cmdline_value "${cmdline}" nohz_full)"
+	[[ -n "${value}" ]] && printf '%s\n' "${value}" >"${root}/sys/devices/system/cpu/nohz_full"
+	value="$(host_cmdline_value "${cmdline}" transparent_hugepage)"
+	[[ "${value}" == never ]] && printf 'always madvise [never]\n' >"${root}/sys/kernel/mm/transparent_hugepage/enabled"
+	value="$(host_cmdline_value "${cmdline}" idle)"
+	[[ "${value}" == poll ]] && printf 'none\n' >"${root}/sys/devices/system/cpu/cpuidle/current_driver"
+	value="$(host_cmdline_value "${cmdline}" nmi_watchdog)"
+	[[ -n "${value}" && -f "${root}/proc/sys/kernel/nmi_watchdog" ]] && printf '%s\n' "${value}" >"${root}/proc/sys/kernel/nmi_watchdog"
+	value="$(host_cmdline_value "${cmdline}" intel_pstate)"
+	[[ "${value}" == disable ]] && rm -rf "${root}/sys/devices/system/cpu/intel_pstate"
+	return 0
+}
+
+# host_pid1_affinity <root> - PID 1 reads CPUAffinity= from system.conf at boot.
+host_pid1_affinity() {
+	local root="$1" value
+	value="$(awk -F= '$1 == "CPUAffinity" { v = $2 } END { print v }' "${root}/etc/systemd/system.conf")"
+	[[ -n "${value}" ]] || return 0
+	value="$(tr -s ' ' ',' <<<"${value}")"
+	LOWLAT_ROOT="${root}" bash -c '. "$1"; set_cpus_allowed 1 "$2"' _ "${HOST_FAKE_LIB}" "${value}"
+}
+
+# host_unit_value <unit file> <key> - the last key= of a unit file.
+host_unit_value() {
+	awk -F= -v k="$2" '$1 == k { v = substr($0, length(k) + 2) } END { print v }' "$1"
+}
+
+# host_run_hugetlb_unit <root> - hugetlb-reserve-pages.service, when enabled and its
+# ConditionKernelCommandLine holds. Its script is run against the fake /sys.
+host_run_hugetlb_unit() {
+	local root="$1" unit="$1/etc/systemd/system/hugetlb-reserve-pages.service" condition exec
+	[[ -f "${root}/var/lib/fake-systemd/enabled/hugetlb-reserve-pages.service" && -f "${unit}" ]] || return 0
+	condition="$(host_unit_value "${unit}" ConditionKernelCommandLine)"
+	if [[ " $(<"${root}/proc/cmdline") " != *" ${condition} "* ]]; then
+		printf 'hugetlb-reserve-pages.service: skipped, ConditionKernelCommandLine=%s not met\n' "${condition}"
+		return 0
+	fi
+	exec="$(host_unit_value "${unit}" ExecStart)"
+	printf 'hugetlb-reserve-pages.service:\n'
+	# The unit's own script, pointed at the fake /sys; its output and failures are the result.
+	# shellcheck disable=SC2312
+	sed "s|/sys/|${root}/sys/|g" "${exec}" | bash 2>&1 | sed "s|${root}||g; s/^/  /"
+}
+
+# host_run_runtime_unit <root> - lowlat-runtime.service, when enabled.
+host_run_runtime_unit() {
+	local root="$1" unit="$1/etc/systemd/system/lowlat-runtime.service" exec env
+	[[ -f "${root}/var/lib/fake-systemd/enabled/lowlat-runtime.service" && -f "${unit}" ]] || return 0
+	exec="$(host_unit_value "${unit}" ExecStart)"
+	env="$(host_unit_value "${unit}" Environment)"
+	printf 'lowlat-runtime.service: %s\n' "${exec}"
+	# ExecStart is a command line: split it like systemd does. Its output is the result.
+	# shellcheck disable=SC2086,SC2312
+	env "${env}" ${exec} 2>&1 | sed 's/^/  /'
+}
+
+host_start_units() {
+	local root="$1" unit process
+	for unit in "${root}"/var/lib/fake-systemd/enabled/*; do
+		[[ -e "${unit}" ]] || continue
+		LOWLAT_ROOT="${root}" systemctl start "${unit##*/}"
+	done
+	while read -r process; do
+		[[ -n "${process}" ]] || continue
+		LOWLAT_ROOT="${root}" bash -c '. "$1"; spawn_process "$2" "$(cpus_allowed 1)" >/dev/null' _ "${HOST_FAKE_LIB}" "${process}"
+	done <"${root}/run/fake-processes"
+}
+
+# host_tuned <root> - an active latency profile sets the performance governor and
+# energy_perf_bias, then tuned re-applies sysctl.d (reapply_sysctl = 1).
+host_tuned() {
+	local root="$1" profile file
+	[[ -e "${root}/run/fake-systemd/active/tuned.service" ]] || return 0
+	profile="$(cat "${root}/etc/tuned/active_profile" 2>/dev/null || true)"
+	[[ "${profile}" == throughput-performance ]] && return 0
+	for file in "${root}"/sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+		[[ -f "${file}" ]] && printf 'performance\n' >"${file}"
+	done
+	for file in "${root}"/sys/devices/system/cpu/cpu*/power/energy_perf_bias; do
+		[[ -f "${file}" ]] && printf '0\n' >"${file}"
+	done
+	LOWLAT_ROOT="${root}" sysctl --system >/dev/null 2>&1 || true
+}
+
+host_kernel_sync() {
+	local root="$1" irq list total=0 file
+	for irq in "${root}"/proc/irq/*; do
+		list="$(<"${irq}/smp_affinity_list")"
+		list="${list%%[,-]*}"
+		printf '%s\n' "${list}" >"${irq}/effective_affinity_list"
+	done
+	for file in "${root}"/sys/devices/system/node/node*/hugepages/hugepages-2048kB/nr_hugepages; do
+		total=$((total + $(<"${file}")))
+		cp "${file}" "${file%/*}/free_hugepages"
+	done
+	sed -i "s/^HugePages_Total:.*/HugePages_Total:   ${total}/; s/^HugePages_Free:.*/HugePages_Free:    ${total}/" "${root}/proc/meminfo"
+}
+
+host_boot() {
+	local root="$1" pristine="$2" dir
+	for dir in proc sys run; do
+		rm -rf "${root:?}/${dir}"
+		cp -a "${pristine}/${dir}" "${root}/${dir}"
+	done
+	host_kernel_boot "${root}"
+	host_pid1_affinity "${root}"
+	LOWLAT_ROOT="${root}" sysctl --system >/dev/null 2>&1 || printf 'systemd-sysctl: some keys failed\n'
+	host_run_hugetlb_unit "${root}"
+	host_start_units "${root}"
+	host_tuned "${root}"
+	host_kernel_sync "${root}"
+	host_run_runtime_unit "${root}"
+	host_kernel_sync "${root}"
+	rm -f "${root}/run/fake-calls"
+}

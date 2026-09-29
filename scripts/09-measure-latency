@@ -88,9 +88,9 @@ apply_measurement() {
 # on the measured CPUs, with the per-CPU increase.
 interrupt_delta() {
 	local seconds="$1" before after
-	before="$(cat /proc/interrupts)"
+	before="$(cat "${LOWLAT_ROOT}"/proc/interrupts)"
 	sleep "${seconds}"
-	after="$(cat /proc/interrupts)"
+	after="$(cat "${LOWLAT_ROOT}"/proc/interrupts)"
 	awk -v cpus="${MEASURE_CPU_LIST}" '
 		BEGIN { n = split(cpus, want, ",") }
 		FNR == 1 { for (i = 1; i <= NF; i++) col[$i] = i + 1; next }
@@ -120,7 +120,7 @@ capture_bundle() {
 	log_sub_step "Host facts"
 	now="$(date -Is)"
 	kernel="$(uname -r)"
-	cmdline="$(</proc/cmdline)"
+	cmdline="$(<"${LOWLAT_ROOT}"/proc/cmdline)"
 	{
 		printf 'date:    %s\n' "${now}"
 		printf 'kernel:  %s\n' "${kernel}"

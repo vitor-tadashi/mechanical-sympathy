@@ -15,7 +15,7 @@ set -Eeuo pipefail
 # shellcheck source=lib/common
 . "$(dirname "${BASH_SOURCE[0]}")/lib/common"
 
-SYSTEMD_UNIT_DIR="${SYSTEMD_UNIT_DIR:-/etc/systemd/system}"
+SYSTEMD_UNIT_DIR="${SYSTEMD_UNIT_DIR:-${LOWLAT_ROOT}/etc/systemd/system}"
 VERIFY_UNIT=lowlat-verify
 REPORT_DIR="${LOWLAT_STATE_DIR}/reports"
 

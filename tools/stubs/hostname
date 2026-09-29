@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#
+# hostname (fake) - the fake host's name, from proc/sys/kernel/hostname.
+
+# shellcheck source=tools/stubs/lib/fake
+. "$(dirname "${BASH_SOURCE[0]}")/lib/fake"
+
+cat "${LOWLAT_ROOT}/proc/sys/kernel/hostname"

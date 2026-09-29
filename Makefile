@@ -1,6 +1,6 @@
 # Quality gates for this repository. CI (.github/workflows/lint.yml) runs `make lint`.
 
-.PHONY: help lint lint-scripts lint-docs lint-site lint-java install-git-hooks site
+.PHONY: help lint lint-scripts lint-docs lint-site lint-java check-scripts install-git-hooks site
 
 PROBE := examples/java-latency-probe
 
@@ -12,6 +12,7 @@ help:
 	@echo "  lint-site          site/ pages: no external loads, links, alt text, layout.js versus plan-layout, buffers.js versus size-buffers"
 	@echo "  site               assemble _site/ for a local preview"
 	@echo "  lint-java          Checkstyle + compile + dependency approval for the Java probe"
+	@echo "  check-scripts      every guide script end to end on fake hosts (Linux only; see tools/check-scripts)"
 	@echo "  install-git-hooks  opt in to the pre-commit (make lint) and commit-msg (title) hooks"
 
 lint: lint-scripts lint-docs lint-site lint-java
@@ -33,6 +34,9 @@ site:
 
 lint-java:
 	cd $(PROBE) && ./gradlew --quiet check
+
+check-scripts:
+	./tools/check-scripts
 
 install-git-hooks:
 	./tools/install-git-hooks

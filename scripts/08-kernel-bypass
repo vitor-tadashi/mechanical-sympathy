@@ -19,9 +19,9 @@ set -Eeuo pipefail
 # shellcheck source=lib/common
 . "$(dirname "${BASH_SOURCE[0]}")/lib/common"
 
-ONLOAD_MODPROBE_FILE="${ONLOAD_MODPROBE_FILE:-/etc/modprobe.d/lowlat-sfc.conf}"
+ONLOAD_MODPROBE_FILE="${ONLOAD_MODPROBE_FILE:-${LOWLAT_ROOT}/etc/modprobe.d/lowlat-sfc.conf}"
 DPDK_STATE_FILE="${DPDK_STATE_FILE:-${LOWLAT_STATE_DIR}/dpdk-original-drivers}"
-PCI_DEVICES_DIR="${PCI_DEVICES_DIR:-/sys/bus/pci/devices}"
+PCI_DEVICES_DIR="${PCI_DEVICES_DIR:-${LOWLAT_ROOT}/sys/bus/pci/devices}"
 
 # dpdk_devbind - DPDK installs the tool as dpdk-devbind.py; some packages drop the suffix.
 dpdk_devbind() {
@@ -36,7 +36,7 @@ dpdk_devbind() {
 }
 
 module_loaded() { # module_loaded <name>
-	grep -q "^$1 " /proc/modules 2>/dev/null
+	grep -q "^$1 " "${LOWLAT_ROOT}"/proc/modules 2>/dev/null
 }
 
 # pci_driver <pci address> - driver currently bound to the device, or "none".
@@ -54,9 +54,9 @@ pci_driver() {
 # "iommu=pt" (passthrough for host drivers) is fine; "intel_iommu=off" or "iommu=off" is not.
 iommu_translation_enabled() {
 	local cmdline groups
-	cmdline=" $(read_value /proc/cmdline "") "
+	cmdline=" $(read_value "${LOWLAT_ROOT}"/proc/cmdline "") "
 	[[ "${cmdline}" == *" intel_iommu=off "* || "${cmdline}" == *" iommu=off "* ]] && return 1
-	groups="$(find /sys/kernel/iommu_groups -mindepth 1 -maxdepth 1 2>/dev/null | head -n 1 || true)"
+	groups="$(find "${LOWLAT_ROOT}"/sys/kernel/iommu_groups -mindepth 1 -maxdepth 1 2>/dev/null | head -n 1 || true)"
 	[[ -n "${groups}" ]]
 }
 
@@ -69,7 +69,7 @@ detect_bypass_stack() {
 	else
 		log_sub_step "Onload not installed"
 	fi
-	for iface in /sys/class/net/*; do
+	for iface in "${LOWLAT_ROOT}"/sys/class/net/*; do
 		[[ -e "${iface}/device/driver" ]] || continue
 		driver="$(readlink "${iface}/device/driver")"
 		driver="${driver##*/}"
@@ -219,7 +219,7 @@ show_bypass_state() {
 
 hugepages_reserved() {
 	local total
-	total="$(awk '/^HugePages_Total:/ {print $2}' /proc/meminfo 2>/dev/null || true)"
+	total="$(awk '/^HugePages_Total:/ {print $2}' "${LOWLAT_ROOT}"/proc/meminfo 2>/dev/null || true)"
 	((${total:-0} > 0))
 }
 

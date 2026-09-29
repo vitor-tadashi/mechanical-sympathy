@@ -15,8 +15,8 @@ set -Eeuo pipefail
 # shellcheck source=lib/common
 . "$(dirname "${BASH_SOURCE[0]}")/lib/common"
 
-HUGETLB_RESERVE_SCRIPT="${HUGETLB_RESERVE_SCRIPT:-/usr/lib/systemd/hugetlb-reserve-pages}"
-HUGETLB_RESERVE_UNIT="${HUGETLB_RESERVE_UNIT:-/etc/systemd/system/hugetlb-reserve-pages.service}"
+HUGETLB_RESERVE_SCRIPT="${HUGETLB_RESERVE_SCRIPT:-${LOWLAT_ROOT}/usr/lib/systemd/hugetlb-reserve-pages}"
+HUGETLB_RESERVE_UNIT="${HUGETLB_RESERVE_UNIT:-${LOWLAT_ROOT}/etc/systemd/system/hugetlb-reserve-pages.service}"
 
 # hugepage_size_kb - "2M" -> 2048, "1G" -> 1048576
 hugepage_size_kb() {
@@ -106,7 +106,7 @@ reserve_hugepages_now() {
 	for spec in "${HUGEPAGES_PER_NODE[@]}"; do
 		node="${spec%%:*}"
 		count="${spec##*:}"
-		file="/sys/devices/system/node/${node}/hugepages/hugepages-${size_kb}kB/nr_hugepages"
+		file="${LOWLAT_ROOT}/sys/devices/system/node/${node}/hugepages/hugepages-${size_kb}kB/nr_hugepages"
 		log_sub_step "Reserving ${count} x ${HUGEPAGE_SIZE} on ${node} now"
 		sysfs_write "${count}" "${file}"
 		if [[ "${DRY_RUN}" -ne 1 && -r "${file}" ]]; then
@@ -119,8 +119,8 @@ reserve_hugepages_now() {
 set_hugepage_sysctls() {
 	local gid=""
 	gid="$(getent group "${APP_GROUP}" 2>/dev/null | cut -d: -f3 || true)"
-	log_sub_step "Writing /etc/sysctl.d/92-lowlat-hugepages.conf"
-	write_file /etc/sysctl.d/92-lowlat-hugepages.conf <<EOF
+	log_sub_step "Writing ${LOWLAT_ROOT}/etc/sysctl.d/92-lowlat-hugepages.conf"
+	write_file "${LOWLAT_ROOT}"/etc/sysctl.d/92-lowlat-hugepages.conf <<EOF
 # Managed by mechanical-sympathy 03-huge-pages
 # Surplus pages the kernel may allocate on demand once the reserved pool is exhausted.
 # Surplus allocation happens at fault time and can fail under fragmentation, so size
@@ -131,15 +131,15 @@ kernel.shmmni = ${SHMMNI}
 ${gid:+# Group allowed to create SHM_HUGETLB segments without CAP_IPC_LOCK.
 vm.hugetlb_shm_group = ${gid}}
 EOF
-	run_quiet sysctl -p /etc/sysctl.d/92-lowlat-hugepages.conf
+	run_quiet sysctl -p "${LOWLAT_ROOT}"/etc/sysctl.d/92-lowlat-hugepages.conf
 }
 
 show_hugepages() {
 	local dir node total free surplus
-	grep -E '^(HugePages_|Hugepagesize|Hugetlb|AnonHugePages)' /proc/meminfo
-	for dir in /sys/devices/system/node/node*/hugepages/hugepages-*; do
+	grep -E '^(HugePages_|Hugepagesize|Hugetlb|AnonHugePages)' "${LOWLAT_ROOT}"/proc/meminfo
+	for dir in "${LOWLAT_ROOT}"/sys/devices/system/node/node*/hugepages/hugepages-*; do
 		[[ -d "${dir}" ]] || continue
-		node="${dir#/sys/devices/system/node/}"
+		node="${dir#"${LOWLAT_ROOT}"/sys/devices/system/node/}"
 		node="${node%%/*}"
 		total="$(read_value "${dir}/nr_hugepages")"
 		free="$(read_value "${dir}/free_hugepages")"
@@ -151,12 +151,12 @@ show_hugepages() {
 node_has_pages() { # node_has_pages <node> <count>
 	local size_kb reserved
 	size_kb="$(hugepage_size_kb)"
-	reserved="$(read_value "/sys/devices/system/node/$1/hugepages/hugepages-${size_kb}kB/nr_hugepages" 0)"
+	reserved="$(read_value "${LOWLAT_ROOT}/sys/devices/system/node/$1/hugepages/hugepages-${size_kb}kB/nr_hugepages" 0)"
 	((reserved >= $2))
 }
 
 thp_is_never() {
-	grep -q '\[never\]' /sys/kernel/mm/transparent_hugepage/enabled
+	grep -q '\[never\]' "${LOWLAT_ROOT}"/sys/kernel/mm/transparent_hugepage/enabled
 }
 
 apply_huge_pages() {
@@ -187,7 +187,7 @@ verify_huge_pages() {
 		verify_check "${node} has >= ${count} x ${HUGEPAGE_SIZE} pages reserved" node_has_pages "${node}" "${count}"
 	done
 	verify_check "vm.nr_overcommit_hugepages = ${HUGEPAGES_OVERCOMMIT}" \
-		grep -qx "${HUGEPAGES_OVERCOMMIT}" /proc/sys/vm/nr_overcommit_hugepages
+		grep -qx "${HUGEPAGES_OVERCOMMIT}" "${LOWLAT_ROOT}"/proc/sys/vm/nr_overcommit_hugepages
 	state="$(show_hugepages)"
 	while read -r line; do
 		[[ -n "${line}" ]] && verify_info "${line}"
@@ -198,10 +198,10 @@ verify_huge_pages() {
 rollback_huge_pages() {
 	log_step "Removing huge page reservation"
 	run_quiet systemctl disable hugetlb-reserve-pages.service
-	run rm -f "${HUGETLB_RESERVE_UNIT}" "${HUGETLB_RESERVE_SCRIPT}" /etc/sysctl.d/92-lowlat-hugepages.conf
+	run rm -f "${HUGETLB_RESERVE_UNIT}" "${HUGETLB_RESERVE_SCRIPT}" "${LOWLAT_ROOT}"/etc/sysctl.d/92-lowlat-hugepages.conf
 	run systemctl daemon-reload
 	log_sub_step "Releasing reserved pages (pages in use are released when their owner exits)"
-	sysfs_write 0 /proc/sys/vm/nr_hugepages
+	sysfs_write 0 "${LOWLAT_ROOT}"/proc/sys/vm/nr_hugepages
 }
 
 main() {

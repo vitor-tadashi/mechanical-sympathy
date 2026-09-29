@@ -24,9 +24,11 @@ Thank you for reading closely enough to want to fix something. This repository i
 make install-git-hooks        # optional: pre-commit runs make lint, commit-msg checks titles
 git switch -c docs/short-slug # Conventional Branch: <type>/<kebab-slug>
 make lint                     # links, anchors, Mermaid, SVG rules, ShellCheck, site, Checkstyle
+make check-scripts            # script changes: every script end to end on fake hosts (Linux only)
 make site                     # optional: assemble _site/ to preview the site locally
 ```
 
+- `make check-scripts` needs Linux. On macOS or Windows, run it in a UBI container: `podman run --rm -v "$PWD:/repo:Z" -w /repo registry.access.redhat.com/ubi9/ubi bash -c 'dnf -y -q install diffutils && tools/check-scripts'`. If a script change alters its behavior, `tools/check-scripts --update` rewrites the transcripts in `scripts/fixtures/hosts/*/expected`. Review that diff: it shows exactly what the change does on a host.
 - Work lands on `main` through pull requests. Never push directly to `main`.
 - One change per pull request.
 - Both squash and rebase merges are enabled. A squash merge turns the PR title into the commit title, and a rebase merge keeps every commit, so every commit title and the PR title follow the same rule. Use `type(scope): subject`, imperative and lowercase, at most 72 ASCII characters. `tools/check-commit-title` enforces it, and the full rules are in [AGENTS.md section 8](AGENTS.md#8-git).

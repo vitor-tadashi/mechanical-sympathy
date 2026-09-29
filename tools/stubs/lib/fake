@@ -1,0 +1,83 @@
+# shellcheck shell=bash
+#
+# fake - shared helpers for the fake host commands in tools/stubs.
+#
+# Every fake keeps its state inside the fake host tree LOWLAT_ROOT, the way the real
+# command keeps it in the kernel or on disk:
+#   run/fake-calls                   every call, one line each (volatile: lost on reboot)
+#   run/fake-systemd/active/<unit>   started units (volatile)
+#   run/fake-systemd/pid/<unit>      the pid of a started service (volatile)
+#   run/fake-ethtool/<iface>         key=value NIC state (volatile)
+#   var/lib/fake-systemd/enabled/<unit>  enabled units (persistent)
+#
+# tools/check-scripts builds the tree, puts tools/stubs first in PATH and simulates reboots.
+
+set -Eeuo pipefail
+
+[[ -n "${LOWLAT_ROOT:-}" && -d "${LOWLAT_ROOT}" ]] || {
+	printf '%s: LOWLAT_ROOT is not a fake host tree, refusing to run\n' "${0##*/}" >&2
+	exit 99
+}
+
+FAKE_NAME="${0##*/}"
+
+# fake_record - appends this call to run/fake-calls.
+fake_record() {
+	mkdir -p "${LOWLAT_ROOT}/run"
+	printf '%s %s\n' "${FAKE_NAME}" "$*" >>"${LOWLAT_ROOT}/run/fake-calls"
+}
+
+# fake_fail <status> <message> - prints the error the real command would print.
+fake_fail() {
+	printf '%s: %s\n' "${FAKE_NAME}" "$2" >&2
+	exit "$1"
+}
+
+# cpu_list_to_words <list> - "0-2,5" -> "0 1 2 5"
+cpu_list_to_words() {
+	local part start end out=() parts=()
+	IFS=, read -r -a parts <<<"$1"
+	for part in "${parts[@]}"; do
+		[[ -n "${part}" ]] || continue
+		if [[ "${part}" == *-* ]]; then
+			start="${part%-*}"
+			end="${part#*-}"
+			while ((start <= end)); do
+				out+=("${start}")
+				start=$((start + 1))
+			done
+		else
+			out+=("${part}")
+		fi
+	done
+	printf '%s\n' "${out[*]}"
+}
+
+# set_cpus_allowed <pid> <cpu list> - rewrites Cpus_allowed_list of a fake process.
+set_cpus_allowed() {
+	local status="${LOWLAT_ROOT}/proc/$1/status" task
+	[[ -f "${status}" ]] || return 1
+	sed -i "s/^Cpus_allowed_list:.*/Cpus_allowed_list:\t$2/" "${status}"
+	for task in "${LOWLAT_ROOT}/proc/$1/task"/*/status; do
+		[[ -f "${task}" ]] || continue
+		sed -i "s/^Cpus_allowed_list:.*/Cpus_allowed_list:\t$2/" "${task}"
+	done
+}
+
+# cpus_allowed <pid> - Cpus_allowed_list of a fake process.
+cpus_allowed() {
+	awk -F'\t' '/^Cpus_allowed_list/ {print $2}' "${LOWLAT_ROOT}/proc/$1/status"
+}
+
+# spawn_process <comm> <cpu list> - creates a fake /proc/<pid> and prints the pid.
+spawn_process() {
+	local counter="${LOWLAT_ROOT}/run/fake-next-pid" pid dir
+	pid="$(cat "${counter}" 2>/dev/null || printf '1000')"
+	printf '%s\n' "$((pid + 1))" >"${counter}"
+	dir="${LOWLAT_ROOT}/proc/${pid}"
+	mkdir -p "${dir}/task/${pid}"
+	printf '%s\n' "$1" >"${dir}/comm"
+	printf 'Name:\t%s\nPid:\t%s\nCpus_allowed_list:\t%s\n' "$1" "${pid}" "$2" >"${dir}/status"
+	cp "${dir}/comm" "${dir}/status" "${dir}/task/${pid}/"
+	printf '%s\n' "${pid}"
+}

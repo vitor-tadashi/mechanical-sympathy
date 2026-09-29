@@ -93,6 +93,7 @@
 
 | Term | Means | Why you meet it here |
 |---|---|---|
+| <a id="fake-host"></a>**fake host** | A directory that looks like the `/sys`, `/proc`, `/etc` and `/boot` of a RHEL server, plus fake versions of commands such as `systemctl`, `grubby` and `ethtool` that change only that directory. | `tools/check-scripts` runs every tuning script against fake hosts, so each code path is tested without a real server. It cannot prove what a real kernel does. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
 | <a id="false-sharing"></a>**false sharing** | Two threads use two different variables that sit in the same [cache line](#cache-line). Each write by one thread throws the line out of the other thread's cache. | It slows both threads with no visible reason. [Concept: CPU isolation §5](concepts/cpu-isolation.md#5-caches-and-coherence-the-mechanical-sympathy-part) |
 | <a id="fec"></a>**FEC** | **Forward Error Correction.** Extra data on a fast Ethernet link that lets the receiver repair bit errors. | It adds about 100 ns per hop. The mode must match the switch. [Concept: ethtool §14](concepts/ethtool.md#14-physical-layer--s-fec-eee--m) |
 | <a id="ffm"></a>**FFM** | **Foreign Function and Memory API.** The standard way for Java code to call native functions (JEP 454). | The Java probe uses it to pin threads, and no third-party library is needed. [Java probe](examples/java-latency-probe) |
@@ -287,6 +288,7 @@
 
 | Term | Means | Why you meet it here |
 |---|---|---|
+| <a id="ubi"></a>**UBI** | **Universal Base Image.** A container image of RHEL user space (bash, coreutils, dnf) that Red Hat lets anyone download and share, with no subscription. | CI runs `tools/check-scripts` inside UBI 8, 9 and 10, so the scripts meet the real RHEL shell and tools. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
 | <a id="udp"></a>**UDP** | **User Datagram Protocol.** Sends single packets with no connection and no resending. | A lost datagram is gone, so the receive buffer must hold a whole [burst](#burst). [Guide 06 §4](guides/06-kernel-sysctl-tuning.md#4-socket-buffers) |
 | <a id="umem"></a>**UMEM** | **User Memory.** In [AF_XDP](#af-xdp), the block of memory that the program registers, from which the packet buffers are taken. | [Guide 08 §7](guides/08-kernel-bypass.md#7-other-stacks-briefly) |
 | <a id="usb-emulation"></a>**USB emulation** | The firmware makes a USB keyboard look like an old PS/2 device, and it uses [SMIs](#smi) to do it. | Turn it off on servers without a local keyboard. [Guide 00 §4.6](guides/00-bios-firmware.md#46-system-management-interrupts) |

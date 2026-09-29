@@ -40,6 +40,7 @@ These rules apply to every change, whoever makes it. If a rule and a request con
 ## 5. Shell scripts
 
 - **No file extension.** Name the file after its purpose (`04-network`, `verify-tuning`), start it with `#!/usr/bin/env bash`, `set -Eeuo pipefail`, and `chmod +x`. Sourced files (`scripts/lib/*`, `lowlat.conf*`) are not executable.
+- Prefix every host path (`/sys`, `/proc`, `/etc`, `/boot`, `/usr/lib/systemd`, `/var/lib`) with `${LOWLAT_ROOT}`. It is empty on a real host, and `tools/check-scripts` points it at a fake host. The commands a script runs must have a fake in `tools/stubs`. When behavior changes, review the diff of `scripts/fixtures/hosts/*/expected` and commit it with the change.
 - Reuse `scripts/lib/common`: logging, dry-run aware `run`/`write_file`, `read_value`, CPU-list helpers and verify helpers.
 - **ShellCheck `enable=all` is clean** (root `.shellcheckrc`). A per-line `# shellcheck disable=SCxxxx` needs a one-line reason above it.
 - Functions called in a condition are predicates. They return a status and never rely on errexit inside them.
@@ -66,6 +67,7 @@ These rules apply to every change, whoever makes it. If a rule and a request con
 | `make lint-site` | `site/` pages load nothing from another origin, links and images exist, alt text, `tools/check-explorer` and `tools/check-buffers` (Node, required in CI) hold `site/layout.js` and `site/buffers.js` to the same golden files as `plan-layout` and `size-buffers` |
 | `make site` | assembles `_site/` for a local preview (`python3 -m http.server --directory _site`) |
 | `make lint-java` | Checkstyle, `-Werror` compile, dependency approval, checksums |
+| `make check-scripts` | every guide script end to end on the fake hosts in `scripts/fixtures/hosts`: plan, dry-run, apply, simulated reboot, verify, every rollback, and what the rollback left behind. The transcript must equal `expected` (`tools/check-scripts --update` rewrites it). Linux only, so it is not part of `make lint`. CI runs it in UBI 8, 9 and 10 containers (`.github/workflows/integration.yml`) |
 | `make install-git-hooks` | opt-in hooks: pre-commit runs `make lint`, commit-msg runs `tools/check-commit-title` and `tools/check-description` |
 | `tools/check-commit-title` | Conventional Commits titles with a Google-style subject (section 8). CI checks every PR title and commit |
 | `tools/check-description` | no emojis, tool footers or tool co-author trailers in PR and commit descriptions (section 8). CI checks the PR body and every commit |

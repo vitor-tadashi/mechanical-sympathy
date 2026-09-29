@@ -21,9 +21,9 @@ nic_field() {
 }
 
 nic_exists() {
-	[[ -d "/sys/class/net/$1" ]] && return 0
+	[[ -d "${LOWLAT_ROOT}/sys/class/net/$1" ]] && return 0
 	# Dry-run on a machine without sysfs (e.g. a laptop): pretend, to show the plan.
-	[[ "${DRY_RUN}" -eq 1 && ! -d /sys/class/net ]]
+	[[ "${DRY_RUN}" -eq 1 && ! -d "${LOWLAT_ROOT}"/sys/class/net ]]
 }
 
 # A NIC is "bypass" when a kernel-bypass runtime is installed and the NIC uses its driver.
@@ -140,7 +140,7 @@ tune_nic_low_latency() {
 # nic_irqs <iface> - IRQ numbers of the NIC. MSI-X vectors of the PCI function first
 # (exact, no name matching); /proc/interrupts names as a fallback (virtio, bonds, ...).
 nic_irqs() {
-	local iface="$1" dir="/sys/class/net/$1/device/msi_irqs"
+	local iface="$1" dir="${LOWLAT_ROOT}/sys/class/net/$1/device/msi_irqs"
 	local vector found=0
 	if [[ -d "${dir}" ]]; then
 		for vector in "${dir}"/*; do
@@ -151,9 +151,9 @@ nic_irqs() {
 		[[ "${found}" -eq 1 ]] && return 0
 	fi
 	# Match "<iface>" or "<iface>-<suffix>" as a whole word (em1 must not match em10).
-	[[ -r /proc/interrupts ]] || return 0
+	[[ -r "${LOWLAT_ROOT}"/proc/interrupts ]] || return 0
 	awk -v n="${iface}" '{ for (i = NF; i > 1; i--) if ($i == n || index($i, n "-") == 1) { sub(":", "", $1); print $1; break } }' \
-		/proc/interrupts
+		"${LOWLAT_ROOT}"/proc/interrupts
 }
 
 # set_nic_irq_affinity <iface> <cpu list> - e.g. set_nic_irq_affinity ens1f0 1
@@ -170,10 +170,10 @@ set_nic_irq_affinity() {
 	log_sub_step "${iface}: routing interrupts to CPUs ${cpus}"
 	irqs="$(nic_irqs "${iface}")"
 	while read -r irq; do
-		[[ -n "${irq}" && -e "/proc/irq/${irq}/smp_affinity_list" ]] || continue
+		[[ -n "${irq}" && -e "${LOWLAT_ROOT}/proc/irq/${irq}/smp_affinity_list" ]] || continue
 		if [[ "${DRY_RUN}" -eq 1 ]]; then
 			printf '           [dry-run] echo %s > /proc/irq/%s/smp_affinity_list\n' "${cpus}" "${irq}"
-		elif ! printf '%s\n' "${cpus}" >"/proc/irq/${irq}/smp_affinity_list" 2>/dev/null; then
+		elif ! printf '%s\n' "${cpus}" >"${LOWLAT_ROOT}/proc/irq/${irq}/smp_affinity_list" 2>/dev/null; then
 			# Kernel-managed IRQs (some drivers on RHEL 9) refuse user placement.
 			log_warn "${iface}: IRQ ${irq} is kernel-managed, affinity not changed"
 			continue
@@ -186,19 +186,19 @@ set_nic_irq_affinity() {
 show_nic_state() {
 	local iface="$1" irq irqs driver numa_node value
 	driver="$({ ethtool -i "${iface}" 2>/dev/null || true; } | awk -F': ' '/^driver:/{print $2}')"
-	numa_node="$(read_value "/sys/class/net/${iface}/device/numa_node")"
+	numa_node="$(read_value "${LOWLAT_ROOT}/sys/class/net/${iface}/device/numa_node")"
 	printf '== %s (%s) numa_node=%s\n' "${iface}" "${driver:-n/a}" "${numa_node}"
 	ethtool -l "${iface}" 2>/dev/null | awk '/Current/{c=1} c && /Combined/{print "   queues:   " $2; exit}' || true
 	ethtool -c "${iface}" 2>/dev/null | awk '/^Adaptive|^rx-usecs:|^tx-usecs:/{printf "   %s", $0; print ""}' || true
 	ethtool -a "${iface}" 2>/dev/null | awk '/^(Autonegotiate|RX|TX):/{printf "   pause %s\n", $0}' || true
 	ethtool -k "${iface}" 2>/dev/null | awk '/^(tcp-segmentation-offload|generic-segmentation-offload|large-receive-offload|generic-receive-offload|rx-checksumming|tx-checksumming):/{printf "   %s\n", $0}' || true
 	ethtool -g "${iface}" 2>/dev/null | awk '/Current/{c=1} c && /^(RX|TX):/{printf "   ring %s\n", $0}' || true
-	value="$(read_value "/sys/class/net/${iface}/tx_queue_len")"
+	value="$(read_value "${LOWLAT_ROOT}/sys/class/net/${iface}/tx_queue_len")"
 	printf '   txqueuelen: %s\n' "${value}"
 	irqs="$(nic_irqs "${iface}")"
 	while read -r irq; do
 		[[ -n "${irq}" ]] || continue
-		value="$(read_value "/proc/irq/${irq}/smp_affinity_list")"
+		value="$(read_value "${LOWLAT_ROOT}/proc/irq/${irq}/smp_affinity_list")"
 		printf '   irq %-5s -> %s\n' "${irq}" "${value}"
 	done <<<"${irqs}"
 }
@@ -256,7 +256,7 @@ irqs_on_cpus() { # irqs_on_cpus <iface> <cpu list>
 	irqs="$(nic_irqs "$1")"
 	while read -r irq; do
 		[[ -n "${irq}" ]] || continue
-		actual="$(read_value "/proc/irq/${irq}/smp_affinity_list" "")"
+		actual="$(read_value "${LOWLAT_ROOT}/proc/irq/${irq}/smp_affinity_list" "")"
 		[[ -n "${actual}" ]] || continue
 		actual="$(cpu_list_expand "${actual}")"
 		[[ "${actual}" == "${want}" ]] || return 1
@@ -271,7 +271,7 @@ no_nic_irq_on_isolated_cpus() {
 		irqs="$(nic_irqs "${iface}")"
 		while read -r irq; do
 			[[ -n "${irq}" ]] || continue
-			effective="$(read_value "/proc/irq/${irq}/effective_affinity_list" "")"
+			effective="$(read_value "${LOWLAT_ROOT}/proc/irq/${irq}/effective_affinity_list" "")"
 			effective="$(cpu_list_expand "${effective}")"
 			for cpu in ${effective}; do
 				[[ " ${ISOLATED_CPUS[*]} " == *" ${cpu} "* ]] && return 1

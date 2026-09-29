@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+#
+# sysctl (fake) - reads and writes proc/sys of the fake host tree.
+#
+#   sysctl -n KEY | sysctl -w KEY=VALUE | sysctl -p [FILE] | sysctl --system
+#
+# A key that the fake kernel does not have fails as it does on a real one.
+
+# shellcheck source=tools/stubs/lib/fake
+. "$(dirname "${BASH_SOURCE[0]}")/lib/fake"
+
+key_path() {
+	printf '%s/proc/sys/%s\n' "${LOWLAT_ROOT}" "${1//./\/}"
+}
+
+write_key() { # write_key <key> <value>
+	local path
+	path="$(key_path "$1")"
+	if [[ ! -f "${path}" ]]; then
+		printf 'sysctl: cannot stat /proc/sys/%s: No such file or directory\n' "${1//./\/}" >&2
+		return 1
+	fi
+	printf '%s\n' "$2" >"${path}"
+}
+
+# load_file <file> - "key = value" lines; a failing key does not stop the others.
+load_file() {
+	local line key value status=0
+	[[ -r "$1" ]] || fake_fail 1 "cannot open \"${1#"${LOWLAT_ROOT}"}\": No such file or directory"
+	while IFS= read -r line || [[ -n "${line}" ]]; do
+		line="${line%%#*}"
+		[[ "${line}" == *=* ]] || continue
+		key="${line%%=*}"
+		value="${line#*=}"
+		key="$(tr -d '[:space:]' <<<"${key}")"
+		value="$(sed 's/^[[:space:]]*//; s/[[:space:]]*$//' <<<"${value}")"
+		write_key "${key}" "${value}" || status=1
+	done <"$1"
+	return "${status}"
+}
+
+# load_system - what systemd-sysctl does at boot: sysctl.d files by name, /etc wins.
+load_system() {
+	local dir file name status=0 names
+	names="$(for dir in usr/lib/sysctl.d run/sysctl.d etc/sysctl.d; do
+		for file in "${LOWLAT_ROOT}/${dir}"/*.conf; do
+			[[ -f "${file}" ]] && printf '%s\n' "${file##*/}"
+		done
+	done | sort -u)"
+	while read -r name; do
+		[[ -n "${name}" ]] || continue
+		for dir in etc/sysctl.d run/sysctl.d usr/lib/sysctl.d; do
+			file="${LOWLAT_ROOT}/${dir}/${name}"
+			if [[ -f "${file}" ]]; then
+				load_file "${file}" || status=1
+				break
+			fi
+		done
+	done <<<"${names}"
+	if [[ -f "${LOWLAT_ROOT}/etc/sysctl.conf" ]]; then
+		load_file "${LOWLAT_ROOT}/etc/sysctl.conf" || status=1
+	fi
+	return "${status}"
+}
+
+main() {
+	local path
+	[[ "${1:-}" == -n ]] || fake_record "$@"
+	[[ "${1:-}" == -q ]] && shift
+	case "${1:-}" in
+	-n)
+		path="$(key_path "$2")"
+		[[ -f "${path}" ]] || fake_fail 255 "cannot stat /proc/sys/${2//./\/}: No such file or directory"
+		cat "${path}"
+		;;
+	-w)
+		write_key "${2%%=*}" "${2#*=}" || exit 255
+		printf '%s = %s\n' "${2%%=*}" "${2#*=}"
+		;;
+	-p)
+		load_file "${2:-${LOWLAT_ROOT}/etc/sysctl.conf}" || exit 255
+		;;
+	--system)
+		load_system || exit 255
+		;;
+	*) fake_fail 1 "unsupported arguments: $*" ;;
+	esac
+}
+
+main "$@"

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+#
+# tuned-adm (fake) - "profile NAME" and "active". A profile exists when its
+# tuned.conf is in etc/tuned/NAME or usr/lib/tuned/NAME.
+
+# shellcheck source=tools/stubs/lib/fake
+. "$(dirname "${BASH_SOURCE[0]}")/lib/fake"
+
+ACTIVE="${LOWLAT_ROOT}/etc/tuned/active_profile"
+
+[[ "${1:-}" == active ]] || fake_record "$@"
+case "${1:-}" in
+profile)
+	[[ -f "${LOWLAT_ROOT}/etc/tuned/$2/tuned.conf" || -f "${LOWLAT_ROOT}/usr/lib/tuned/$2/tuned.conf" ]] ||
+		fake_fail 1 "Requested profile '$2' doesn't exist."
+	printf '%s\n' "$2" >"${ACTIVE}"
+	;;
+active)
+	profile="$(cat "${ACTIVE}" 2>/dev/null || true)"
+	[[ -n "${profile}" ]] || fake_fail 2 "No current active profile."
+	printf 'Current active profile: %s\n' "${profile}"
+	;;
+*) fake_fail 1 "unsupported arguments: $*" ;;
+esac

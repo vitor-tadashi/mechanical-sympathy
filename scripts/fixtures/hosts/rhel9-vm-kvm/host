@@ -1,0 +1,20 @@
+# shellcheck shell=bash disable=SC2034
+#
+# rhel9-vm-kvm - a small KVM guest on RHEL 9: 4 vCPUs on one virtual socket, two
+# virtio-net NICs. Read by tools/stubs/lib/host. Illustrative, not measured.
+
+OS_PRETTY_NAME="Red Hat Enterprise Linux"
+OS_VERSION=9.6
+KERNEL=5.14.0-570.12.1.el9_6.x86_64
+VIRTUAL=yes
+SOCKETS=1
+CPUS=4
+CGROUP=2
+ABSENT_SYSCTLS=(net.ipv4.tcp_shrink_window)
+# name|driver|numa node|combined queue maximum|ring maximum|hardware timestamping
+FAKE_NICS=(
+	"eth0|virtio_net|0|4|1024|no"
+	"eth1|virtio_net|0|4|1024|no"
+)
+SERVICES=(chronyd crond irqbalance rsyslog sshd tuned)
+PROCESSES=()
