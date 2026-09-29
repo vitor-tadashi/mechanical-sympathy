@@ -31,6 +31,13 @@ No, it hurts. Nothing is ever scheduled onto an isolated CPU unless it is pinned
 </details>
 
 <details>
+<summary><b>Will this help an application with hundreds of threads?</b></summary>
+
+Not much. Tuning removes noise that comes from outside the application, and a pool of hundreds of threads that the application does not control makes its own. There is no one-thread-per-CPU layout to protect, so isolation only leaves CPUs idle. Bring the count down to a few threads with known roles first, then tune. See [What tuning cannot do for you](README.md#what-tuning-cannot-do-for-you) and [Guide 02 §2](guides/02-cpu-core-isolation.md#2-when-to-apply).
+
+</details>
+
+<details>
 <summary><b>Why is transparent huge pages (THP) off, if huge pages are good?</b></summary>
 
 THP gets huge pages on a best-effort basis, at fault time or in the background, and may compact memory **synchronously** while your thread waits. Explicit huge pages come from a pool reserved at boot: no allocation work on the hot path, and a missing pool fails at start-up instead of silently. See [Guide 03 §2](guides/03-huge-pages-configuration.md#2-transparent-vs-explicit-huge-pages-why-thp-is-off).
