@@ -1,6 +1,6 @@
 # Guide 08 — Kernel Bypass (Onload, DPDK, and the Alternatives)
 
-> **Script:** [`scripts/08-kernel-bypass`](../scripts/08-kernel-bypass) · **Concepts:** [network-tuning §8–9](../concepts/network-tuning.md#9-kernel-bypass), [ethtool reference](../concepts/ethtool.md) · **Previous:** [Guide 07](07-os-hygiene.md) · **Builds on:** [Guide 04 — Network](04-network-optimization.md)
+> **Script:** [`scripts/08-kernel-bypass`](../scripts/08-kernel-bypass) · **Concepts:** [network-tuning §8–9](../concepts/network-tuning.md#9-kernel-bypass), [ethtool reference](../concepts/ethtool.md) · **Previous:** [Guide 07](07-os-hygiene.md) · **Builds on:** [Guide 04 — Network](04-network-optimization.md) · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|
@@ -60,6 +60,10 @@ flowchart TD
 <img src="../assets/diagrams/packet-path.svg" alt="Animation: on the kernel path a packet passes through a DMA, an interrupt, softirq processing, a socket buffer, a wake-up and recv, and the interrupt and wake-up steps are highlighted; with kernel bypass a pinned thread polls the ring and about 6 microseconds are not spent" width="720">
 
 *The same packet on both paths, on one time scale: bypass removes the interrupt, the softirq, the socket and the wake-up, which are the steps that shape the kernel path's tail.*
+
+<img src="../assets/diagrams/kernel-vs-bypass-buffers.svg" alt="Three lanes for the same packet: on the kernel stack it crosses three queues, or four with RPS, and is copied once; with Onload sockets it crosses three queues in user space and is copied once; with DPDK or ef_vi it crosses two queues and is read in place; each lane says where to read a drop" width="720">
+
+*The same packet counted in queues and copies. Bypass also moves the drop counters to the stack's own tools ([Concept: network buffers §7](../concepts/network-buffers.md#7-buffers-under-kernel-bypass)).*
 
 That brings one-way latency down to roughly **1–2 µs**, with a much tighter tail. It costs:
 
@@ -150,6 +154,10 @@ Onload is a user-space TCP/UDP stack. The `onload` launcher sets `LD_PRELOAD`, s
 - installs **hardware filters** that steer the socket's traffic into those queues (you can see them with `onload_stackdump filters`, and on some NICs with `ethtool -n`);
 - **spins** inside blocking calls for up to `EF_POLL_USEC` µs, polling its queues directly, before falling back to an interrupt-driven sleep.
 
+<img src="../assets/diagrams/onload-ef-vi.svg" alt="A Solarflare NIC with hardware filters steering flows to virtual interfaces, each made of an RX queue, a TX queue and an event queue; packets are written by DMA into 2 KiB packet buffers in huge pages; the Onload library and the application thread read them in place; the kernel path keeps ARP, ICMP and unaccelerated sockets" width="720">
+
+*A hardware filter picks the VI, the NIC writes into packet buffers that your process owns, and a spinning thread reads the event queue. The defaults for each limit are in [Concept: network buffers §7.2](../concepts/network-buffers.md#72-solarflare-ef_vi-and-onload).*
+
 Traffic Onload does not accelerate still goes through the kernel `sfc` driver and its channels: ARP, ICMP, loopback by default, and sockets the application creates before Onload is loaded. Hence the single kernel queue of §3.
 
 ### 5.2 Driver options, and the reload
@@ -226,6 +234,10 @@ DPDK replaces the kernel driver with a **poll-mode driver** (PMD) inside the app
 4. Pin its lcores (DPDK's polling threads) to isolated CPUs.
 
 From then on the port belongs to that application. The kernel cannot see it, and `ethtool`, `ip`, IRQ affinity and everything in Guide 04 no longer apply.
+
+<img src="../assets/diagrams/dpdk-pmd-loop.svg" alt="Animation: two timelines of a DPDK poll-mode core; in the healthy one the mempool stays nearly full, in the starved one the mempool reaches zero so rx_burst returns nothing and rx_nombuf grows, then the RX ring fills and imissed grows" width="720">
+
+*A poll-mode core never sleeps, so the mempool and the ring are what run out. `rx_nombuf` warns before `imissed`. Sizing rules are in [Concept: network buffers §7.1](../concepts/network-buffers.md#71-dpdk).*
 
 ### 6.2 Binding ports
 

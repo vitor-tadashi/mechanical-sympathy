@@ -73,6 +73,7 @@ flowchart TD
 | [Boot path](concepts/bootloader.md) | ~7 min | How do arguments reach the kernel? What is the housekeeping mask? Why can't these be changed at runtime? |
 | [CPU isolation](concepts/cpu-isolation.md) | ~7 min | What interrupts a CPU? What does a context switch really cost? Spin or block? |
 | [Network path](concepts/network-tuning.md) | ~8 min | Where does a packet wait between the wire and `recv()`? What do coalescing, NAPI, RSS, and bypass change? |
+| [Network buffers](concepts/network-buffers.md) | ~10 min | How big is each queue on the way to `recv()`? How long does a ring hold a burst? Where did the packet die, and which counter shows it? What do DPDK and Onload change? |
 | [`ethtool` reference](concepts/ethtool.md) | ~16 min | What is a channel, and what does `combined` mean? Which options reset the link? How do I steer one flow to one queue? How do I persist each setting? |
 | [Huge pages & NUMA](concepts/huge-pages.md) | ~7 min | What is TLB reach? Why pre-touch? Why is THP unpredictable? Why reserve per node? |
 | [cgroups](concepts/cgroups.md) | ~5 min | Affinity vs cpuset? What do quota, memory.max, io.weight do? How does systemd map onto cgroups? |
@@ -98,41 +99,4 @@ flowchart TD
 
 ## Glossary
 
-| Term | Meaning |
-|---|---|
-| Isolated CPU | Removed from scheduler load balancing (`isolcpus`), tickless (`nohz_full`), and RCU-offloaded (`rcu_nocbs`). Runs only explicitly pinned threads. |
-| Housekeeping CPU | Non-isolated CPU that runs the OS, kernel threads, and interrupts |
-| OS CPUs | All non-isolated CPUs. systemd's `CPUAffinity`. |
-| Tick | Periodic scheduler timer interrupt (`CONFIG_HZ`) |
-| Coalescing | NIC delaying interrupts to batch packets |
-| NAPI | Linux's interrupt-then-poll receive mechanism |
-| THP | Transparent Huge Pages (kernel-managed, disabled here) |
-| hugetlbfs | Explicit, pre-reserved huge pages |
-| TLB reach | Memory covered by the TLB: entries × page size |
-| First touch | Default NUMA policy: a page is allocated on the node of the CPU that first writes it |
-| Slice | systemd unit that is a node in the cgroup tree |
-| Kernel bypass | User-space NIC access that avoids interrupts, syscalls, and the kernel stack |
-| Channel | A NIC queue (RX, TX, or a combined RX+TX pair) together with its interrupt vector (`ethtool -l`) |
-| RSS | Receive-side scaling: the NIC hashes each packet's headers to pick an RX queue |
-| ntuple rule | A NIC filter that sends matching packets to a chosen queue, overriding RSS (`ethtool -N`) |
-| VFIO | Kernel framework that hands a PCI device to user space safely, through the IOMMU (used by DPDK) |
-| Baseline | Latency percentiles and a `verify-tuning` report captured **before** any change, the reference every result is compared against |
-| Percentile (p50, p99, p99.9) | The latency below which that share of samples falls. p99.9 is the 1-in-1000 slow case, which is where tuning shows |
-| Tail latency | The slow end of the distribution (p99 and above, and max), usually caused by interruptions rather than by slow code |
-| Jitter | Variation in latency from one operation to the next. Low jitter means a narrow histogram |
-| Host class | What the scripts detect the host to be: `bare_metal`, `virtual_machine` or `container`. It decides which steps apply |
-| NUMA node | A socket (or part of one) with its own memory controller. Memory on another node costs an interconnect hop |
-| IRQ affinity | The set of CPUs allowed to handle one interrupt (`/proc/irq/<n>/smp_affinity_list`) |
-| Softirq | Deferred interrupt work (network receive, timers, RCU) that runs right after a hard interrupt, on the same CPU |
-| Workqueue | Kernel mechanism that runs deferred work in `kworker` threads. Unbound workqueues honor a cpumask |
-| C-state | CPU idle state. Deeper states save power but take microseconds to wake from |
-| PM QoS | Kernel interface (`/dev/cpu_dma_latency`) that caps how deep a CPU may sleep while a process holds it open |
-| RT throttling | Kernel limit (`sched_rt_runtime_us`) that takes a CPU away from real-time tasks for part of every second |
-| Busy polling | The application (or the kernel on its behalf) spins on a queue instead of sleeping until an interrupt |
-| Pre-touch | Writing every page of a memory region at startup, so that no page fault happens later on the hot path |
-| SMI | System Management Interrupt: firmware work that stops every CPU, invisible to the OS |
-| `lowlat-runtime.service` | The oneshot unit that re-applies all runtime (non-persistent) settings at every boot |
-| Drift | A tuned setting that has silently reverted, for example after a kernel, firmware, driver or agent update ([Guide 11](guides/11-day2-operations.md)) |
-| `lowlat-verify.timer` | The timer that runs `verify-tuning` daily and 10 minutes after every boot, and fails the unit on a FAIL |
-| Idle sibling | The Hyper-Threading sibling of an isolated core that is isolated with it but runs no thread ([Guide 02 §3](guides/02-cpu-core-isolation.md#3-designing-the-cpu-layout)) |
-| Illustrative | Marks a number that shows a shape and is not a measurement. All figures in the use cases and diagrams are either this or a typical order of magnitude |
+Every abbreviation, product and unusual word has an entry in the [Glossary](GLOSSARY.md), written in plain English for readers whose first language is not English. Start there when a term such as [SMI](GLOSSARY.md#smi), [NAPI](GLOSSARY.md#napi) or [housekeeping CPU](GLOSSARY.md#housekeeping-cpu) is new.

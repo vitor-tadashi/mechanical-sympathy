@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 426" width="760" height="426" role="img" aria-labelledby="t d">
+<title id="t">A default receive buffer holds only about 90 to 280 small datagrams</title>
+<desc id="d">Each small datagram is charged its truesize, far more than its payload: about 2,304 bytes for a driver that uses 2 KiB buffers, or about 768 bytes for a driver that copies small packets. A 208 KiB default receive buffer therefore holds about 92 to 277 datagrams, which is 0.09 to 0.28 milliseconds of a stopped reader at 1 million packets per second. A tuned 8 MiB buffer holds about 3,600 to 10,900 datagrams, which is 3.6 to 10.9 milliseconds. The truesize values are illustrative.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .dash { fill: #ffffff; stroke: #777777; stroke-width: 1.5; stroke-dasharray: 5 3; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .sm { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .smb { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .tiny { font: 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .mono { font: 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #1a1a1a; }
+  .monob { font: 600 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #1a1a1a; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .redt { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; }
+  .grnt { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; }
+  .tick { stroke: #8c959f; stroke-width: 1; }
+  .arrow { stroke: #57606a; stroke-width: 1.5; fill: none; marker-end: url(#ah); }
+  .arrowr { stroke: #9b1c1c; stroke-width: 1.5; fill: none; marker-end: url(#ahr); }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="426" rx="8"/>
+<text class="cap" x="24" y="28">The kernel charges each datagram its truesize, not its payload size</text>
+<text class="sub" x="24" y="46">So a small buffer fills after far fewer packets than the payload sizes suggest. Everything below is drawn to scale.</text>
+<rect class="lane" x="10" y="60" width="740" height="118" rx="6"/>
+<text class="smb" x="24" y="80">One 64-byte UDP datagram, and what the socket is charged for it</text>
+<text class="sm" x="24" y="105">Driver, 2 KiB buffers</text>
+<rect class="app" x="190" y="92" width="11.1111" height="20" rx="2"/>
+<rect class="box" x="201.111" y="92" width="7.29167" height="20" rx="2"/>
+<rect class="mut" x="208.403" y="92" width="381.597" height="20" rx="2"/>
+<text class="sm" x="598" y="106">truesize about 2,304 B</text>
+<text class="sm" x="24" y="135">Driver copies small</text>
+<rect class="app" x="190" y="122" width="11.1111" height="20" rx="2"/>
+<rect class="box" x="201.111" y="122" width="7.29167" height="20" rx="2"/>
+<rect class="mut" x="208.403" y="122" width="114.931" height="20" rx="2"/>
+<text class="sm" x="331.333" y="136">truesize about 768 B</text>
+<rect class="app" x="24" y="152" width="14" height="14" rx="2"/>
+<text class="sm" x="44" y="163">payload 64 B</text>
+<rect class="box" x="150" y="152" width="14" height="14" rx="2"/>
+<text class="sm" x="170" y="163">headers 42 B</text>
+<rect class="mut" x="280" y="152" width="14" height="14" rx="2"/>
+<text class="sm" x="300" y="163">buffer, skb bookkeeping, padding</text>
+<rect class="lane" x="10" y="188" width="740" height="92" rx="6"/>
+<text class="smb" x="24" y="208">The receive buffer, drawn to scale</text>
+<rect class="wait" x="24" y="218" width="17.7734" height="22" rx="2"/>
+<text class="sm" x="49.7734" y="233">208 KiB, the kernel default: about 92 to 277 datagrams</text>
+<rect class="app" x="24" y="248" width="700" height="22" rx="2"/>
+<text class="smb" x="32" y="263">8 MiB, tuned: about 3,640 to 10,920 datagrams</text>
+<rect class="lane" x="10" y="290" width="740" height="100" rx="6"/>
+<text class="smb" x="24" y="310">How long a stopped reader is covered at 1 Mpps (0.001 ms per packet)</text>
+<text class="sm" x="24" y="333">208 KiB</text>
+<rect class="wait" x="190" y="320" width="3.27273" height="20" rx="2"/>
+<rect class="wait" x="193.273" y="320" width="6.90909" height="20" rx="2" style="opacity:.55"/>
+<text class="sm" x="208.182" y="334">0.09 to 0.28 ms</text>
+<text class="sm" x="24" y="363">8 MiB</text>
+<rect class="app" x="190" y="350" width="130.909" height="20" rx="2"/>
+<rect class="app" x="320.909" y="350" width="265.455" height="20" rx="2" style="opacity:.55"/>
+<text class="sm" x="594.364" y="364">3.6 to 10.9 ms</text>
+<text class="tiny" x="24" y="384">Solid part: at 2,304 B truesize. Lighter part: up to 768 B truesize.</text>
+<text class="sub" x="380" y="412" text-anchor="middle">Illustrative truesize values. Measure yours: in ss -m, compare skmem r (bytes held) with rb (limit), and read d for drops.</text>
+</svg>

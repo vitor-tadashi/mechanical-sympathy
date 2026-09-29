@@ -1,6 +1,6 @@
 # Guide 07 — Operating System Hygiene
 
-> **Script:** [`scripts/07-os-hygiene`](../scripts/07-os-hygiene) · **Previous:** [Guide 06](06-kernel-sysctl-tuning.md) · **Then:** [`scripts/verify-tuning`](../scripts/verify-tuning) · **Optional:** [Guide 08 — Kernel bypass](08-kernel-bypass.md)
+> **Script:** [`scripts/07-os-hygiene`](../scripts/07-os-hygiene) · **Previous:** [Guide 06](06-kernel-sysctl-tuning.md) · **Then:** [`scripts/verify-tuning`](../scripts/verify-tuning) · **Optional:** [Guide 08 — Kernel bypass](08-kernel-bypass.md) · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|

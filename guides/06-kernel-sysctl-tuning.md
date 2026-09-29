@@ -1,6 +1,6 @@
 # Guide 06 — Kernel Runtime Parameters (sysctl)
 
-> **Script:** [`scripts/06-kernel-sysctl`](../scripts/06-kernel-sysctl) · **Concepts:** [network-tuning](../concepts/network-tuning.md), [cpu-isolation](../concepts/cpu-isolation.md) · **Previous:** [Guide 05](05-cgroup-isolation.md) · **Next:** [Guide 07 — OS hygiene](07-os-hygiene.md)
+> **Script:** [`scripts/06-kernel-sysctl`](../scripts/06-kernel-sysctl) · **Concepts:** [network-tuning](../concepts/network-tuning.md), [cpu-isolation](../concepts/cpu-isolation.md) · **Previous:** [Guide 05](05-cgroup-isolation.md) · **Next:** [Guide 07 — OS hygiene](07-os-hygiene.md) · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|
@@ -92,6 +92,10 @@ flowchart LR
 
 ## 4. Socket buffers
 
+<img src="../assets/diagrams/buffer-stack.svg" alt="The receive path as six boxes: NIC FIFO, RX ring, NAPI poll, backlog (dashed, only with RPS), socket buffer and application, with the knob that resizes each and what happens when it is full" width="720">
+
+*Two queues are sized here and in Guide 04: the RX ring (`ethtool -G`) and the socket buffer (`rmem`). The backlog exists only with RPS, loopback and veth.*
+
 | Key | Value | Why |
 |---|---|---|
 | `net.core.rmem_max`, `wmem_max` | `134217728` (128 MiB) | The largest `SO_RCVBUF`/`SO_SNDBUF` an application may request. UDP-based messaging transports size their socket buffers to their flow-control window (often 16–64 MiB). Without this ceiling, the request is **silently clamped** and packets drop under bursts. |
@@ -101,11 +105,17 @@ flowchart LR
 
 **Memory cost:** these are ceilings, not allocations. Memory is used only by data actually queued. Check with `ss -tmn` (`skmem`) and `cat /proc/net/sockstat`.
 
+<img src="../assets/diagrams/rcvbuf-truesize.svg" alt="A 64-byte datagram is charged about 2,304 or 768 bytes; a 208 KiB default buffer holds only 92 to 277 datagrams, 0.09 to 0.28 ms at 1 Mpps, while an 8 MiB buffer holds about 3,640 to 10,920, 3.6 to 10.9 ms; all drawn to scale" width="720">
+
+*The kernel charges each datagram its truesize, so a default buffer holds far fewer small datagrams than its size suggests. The values are illustrative.*
+
+[Concept: network buffers §4](../concepts/network-buffers.md#4-socket-buffers) explains the doubling of `SO_RCVBUF`, the `rmem_max` clamp and how to read `ss -m`.
+
 ## 5. Queues
 
 | Key | Value | Why |
 |---|---|---|
-| `net.core.netdev_max_backlog` | `300000` | Per-CPU queue between the driver (NAPI) and the protocol stack, used when packets arrive faster than the stack processes them. With coalescing 0 ([Guide 04](04-network-optimization.md#53-coalescing-0-ethtool--c-rx-usecs-0-tx-usecs-0)) and one IRQ CPU per NIC, bursts land on one CPU. Overflows show in column 2 of `/proc/net/softnet_stat`. This is an **RX** queue and has nothing to do with `txqueuelen`. |
+| `net.core.netdev_max_backlog` | `300000` | Per-CPU queue in front of the protocol stack. A NAPI driver hands packets to the stack straight from the RX ring, so this queue is used only with RPS/RFS, loopback, veth and some tunnels, where it absorbs bursts that arrive faster than the stack processes them. With coalescing 0 ([Guide 04](04-network-optimization.md#53-coalescing-0-ethtool--c-rx-usecs-0-tx-usecs-0)) and one IRQ CPU per NIC, bursts land on one CPU, and the RX ring absorbs them. Overflows of this queue show in column 2 of `/proc/net/softnet_stat`, which stays 0 on other paths. This is an **RX** queue and has nothing to do with `txqueuelen`. |
 | `net.core.default_qdisc` | `fq_codel` | Queueing discipline for new interfaces. `fq_codel` (the RHEL default) gives flow isolation and active queue management, which is good for bulk NICs. For pacing-heavy TCP senders, use `fq` explicitly with `tc` on that interface. Some scripts label this "fq" while setting `fq_codel`, and `fq_codel` is the value used here. |
 | `net.core.txrehash` | `1` | Re-hash the TX queue on retransmission (kernel ≥ 5.18; skipped on RHEL 8/9). |
 

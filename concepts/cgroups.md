@@ -1,6 +1,6 @@
 # Concept — cgroups v2 and systemd Resource Control
 
-> Used by: [Guide 05](../guides/05-cgroup-isolation.md). Related: [cpu-isolation](cpu-isolation.md).
+> Used by: [Guide 05](../guides/05-cgroup-isolation.md). Related: [cpu-isolation](cpu-isolation.md). Terms: [Glossary](../GLOSSARY.md).
 
 ## At a glance
 
