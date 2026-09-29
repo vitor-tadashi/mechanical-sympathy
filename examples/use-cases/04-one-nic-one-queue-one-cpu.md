@@ -76,6 +76,9 @@ ethtool -n ens1f0                                                           # li
 # then place queue 0's IRQ on one housekeeping CPU and queue 1's IRQ on another
 ```
 
+> [!IMPORTANT]
+> These commands are **not managed by `04-network`**. It sets the queue count from the `irq_cpus` field of the `NICS` entry (one queue for `1`), and it never restores RSS weights or ntuple rules. After a reboot or a driver reload the NIC is back to `combined 1` and the flow steering is gone. To keep it, run the same commands, and the IRQ placement for both queues, from a oneshot unit of your own ordered `After=lowlat-runtime.service` ([Guide 04 §8](../../guides/04-network-optimization.md#8-persistence)). **Not proven in production**, and not tested by this repository.
+
 <img src="../../assets/diagrams/packet-path.svg" alt="Animation: on the kernel path a packet passes through a DMA, an interrupt, softirq processing, a socket buffer, a wake-up and recv, and the interrupt and wake-up steps are highlighted; with kernel bypass a pinned thread polls the ring and about 6 microseconds are not spent" width="720">
 
 *The steps of the kernel path. This use case moves the interrupt and the softirq off the critical CPU, and [Guide 08](../../guides/08-kernel-bypass.md) removes them altogether.*
