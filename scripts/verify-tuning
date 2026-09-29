@@ -49,7 +49,7 @@ section() {
 
 cpu_governor_is_performance() {
 	local f governor
-	for f in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+	for f in "${LOWLAT_ROOT}"/sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
 		[[ -r "${f}" ]] || return 0 # no cpufreq (VM): nothing to check
 		governor="$(read_value "${f}")"
 		[[ "${governor}" == performance ]] || return 1
@@ -59,18 +59,18 @@ cpu_governor_is_performance() {
 no_deep_cstate_usage() {
 	# With idle=poll there is no cpuidle driver; otherwise states deeper than C1 must be disabled or unused.
 	local driver
-	driver="$(read_value /sys/devices/system/cpu/cpuidle/current_driver none)"
+	driver="$(read_value "${LOWLAT_ROOT}"/sys/devices/system/cpu/cpuidle/current_driver none)"
 	[[ "${driver}" == none ]]
 }
 
 swap_off_or_unused() {
 	local used
-	used="$(awk '/^SwapTotal/{t=$2} /^SwapFree/{f=$2} END{print t-f}' /proc/meminfo)"
+	used="$(awk '/^SwapTotal/{t=$2} /^SwapFree/{f=$2} END{print t-f}' "${LOWLAT_ROOT}"/proc/meminfo)"
 	((used == 0))
 }
 
 clocksource_is_tsc() {
-	grep -qx tsc /sys/devices/system/clocksource/clocksource0/current_clocksource
+	grep -qx tsc "${LOWLAT_ROOT}"/sys/devices/system/clocksource/clocksource0/current_clocksource
 }
 
 time_synchronized() {
@@ -85,8 +85,8 @@ verify_host_wide() {
 	verify_soft "no swap in use" swap_off_or_unused
 	verify_soft "clock synchronized (chrony/PTP)" time_synchronized
 	local mitigations load up
-	mitigations="$({ grep -l -v -i '^not affected' /sys/devices/system/cpu/vulnerabilities/* 2>/dev/null || true; } | xargs -r -n1 basename | tr '\n' ' ')"
-	load="$(read_value /proc/loadavg)"
+	mitigations="$({ grep -l -v -i '^not affected' "${LOWLAT_ROOT}"/sys/devices/system/cpu/vulnerabilities/* 2>/dev/null || true; } | xargs -r -n1 basename | tr '\n' ' ')"
+	load="$(read_value "${LOWLAT_ROOT}"/proc/loadavg)"
 	load="${load% * *}"
 	up="$(uptime -p 2>/dev/null || true)"
 	verify_info "vulnerability mitigations: ${mitigations}"

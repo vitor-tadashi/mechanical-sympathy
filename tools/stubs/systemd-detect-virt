@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+#
+# systemd-detect-virt (fake) - kvm when the fake CPUs carry the hypervisor flag,
+# none otherwise. The fake host is never a container.
+
+# shellcheck source=tools/stubs/lib/fake
+. "$(dirname "${BASH_SOURCE[0]}")/lib/fake"
+
+case "$*" in
+"--quiet --container" | --container) exit 1 ;;
+"") ;;
+*) fake_fail 1 "unsupported arguments: $*" ;;
+esac
+if grep -q '^flags.*hypervisor' "${LOWLAT_ROOT}/proc/cpuinfo"; then
+	printf 'kvm\n'
+	exit 0
+fi
+printf 'none\n'
+exit 1

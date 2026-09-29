@@ -1,0 +1,176 @@
+#!/usr/bin/env bash
+#
+# systemctl (fake) - unit state inside the fake host tree LOWLAT_ROOT.
+#
+# A unit exists when its file is in etc/systemd/system or usr/lib/systemd/system.
+# Enabling persists across a simulated reboot; starting does not. Starting a service
+# creates a fake process whose CPU affinity is the unit's CPUAffinity= (drop-ins
+# included), or PID 1's, as systemd does.
+
+# shellcheck source=tools/stubs/lib/fake
+. "$(dirname "${BASH_SOURCE[0]}")/lib/fake"
+
+ACTIVE_DIR="${LOWLAT_ROOT}/run/fake-systemd/active"
+PID_DIR="${LOWLAT_ROOT}/run/fake-systemd/pid"
+ENABLED_DIR="${LOWLAT_ROOT}/var/lib/fake-systemd/enabled"
+
+unit_name() {
+	case "$1" in
+	*.service | *.timer | *.slice | *.socket | *.target | *.mount) printf '%s\n' "$1" ;;
+	*) printf '%s.service\n' "$1" ;;
+	esac
+}
+
+unit_file() {
+	local dir
+	for dir in etc/systemd/system usr/lib/systemd/system; do
+		if [[ -f "${LOWLAT_ROOT}/${dir}/$1" ]]; then
+			printf '%s\n' "${LOWLAT_ROOT}/${dir}/$1"
+			return 0
+		fi
+	done
+	return 1
+}
+
+require_unit() {
+	unit_file "$1" >/dev/null || fake_fail 5 "Unit $1 not found."
+}
+
+# unit_setting <unit> <key> - last value of key= in the unit file and its drop-ins.
+unit_setting() {
+	local file files=() dir
+	file="$(unit_file "$1")" || return 0
+	files+=("${file}")
+	for dir in "${LOWLAT_ROOT}/usr/lib/systemd/system/$1.d" "${LOWLAT_ROOT}/etc/systemd/system/$1.d"; do
+		for file in "${dir}"/*.conf; do
+			[[ -f "${file}" ]] && files+=("${file}")
+		done
+	done
+	awk -F= -v k="$2" '$1 == k { v = substr($0, length(k) + 2) } END { if (v != "") print v }' "${files[@]}"
+}
+
+start_unit() {
+	local unit="$1" affinity comm pid type
+	require_unit "${unit}"
+	mkdir -p "${ACTIVE_DIR}" "${PID_DIR}"
+	[[ -e "${ACTIVE_DIR}/${unit}" ]] && return 0
+	: >"${ACTIVE_DIR}/${unit}"
+	[[ "${unit}" == *.service ]] || return 0
+	type="$(unit_setting "${unit}" Type)"
+	[[ "${type}" == oneshot ]] && return 0
+	affinity="$(unit_setting "${unit}" CPUAffinity)"
+	if [[ -n "${affinity}" ]]; then
+		affinity="$(tr -s ' ' ',' <<<"${affinity}")"
+	else
+		affinity="$(cpus_allowed 1)"
+	fi
+	comm="${unit%.service}"
+	pid="$(spawn_process "${comm}" "${affinity}")"
+	printf '%s\n' "${pid}" >"${PID_DIR}/${unit}"
+}
+
+stop_unit() {
+	local unit="$1" pid
+	rm -f "${ACTIVE_DIR}/${unit}"
+	if [[ -f "${PID_DIR}/${unit}" ]]; then
+		pid="$(<"${PID_DIR}/${unit}")"
+		rm -rf "${LOWLAT_ROOT:?}/proc/${pid}" "${PID_DIR:?}/${unit}"
+	fi
+}
+
+main() {
+	local verb="" quiet=0 now=0 property="" value_only=0 units=() arg unit
+	case "${1:-}" in
+	is-* | cat | show) ;;
+	*) fake_record "$@" ;;
+	esac
+	while (($# > 0)); do
+		arg="$1"
+		shift
+		case "${arg}" in
+		--quiet | -q) quiet=1 ;;
+		--now) now=1 ;;
+		--value) value_only=1 ;;
+		-p)
+			property="$1"
+			shift
+			;;
+		--no-pager | --no-reload) ;;
+		-*) fake_fail 1 "unsupported option ${arg}" ;;
+		*)
+			if [[ -z "${verb}" ]]; then
+				verb="${arg}"
+			else
+				units+=("$(unit_name "${arg}")")
+			fi
+			;;
+		esac
+	done
+	case "${verb}" in
+	daemon-reload | daemon-reexec | reset-failed) ;;
+	enable)
+		for unit in "${units[@]}"; do
+			require_unit "${unit}"
+			mkdir -p "${ENABLED_DIR}"
+			: >"${ENABLED_DIR}/${unit}"
+			if ((now == 1)); then start_unit "${unit}"; fi
+		done
+		;;
+	disable)
+		for unit in "${units[@]}"; do
+			require_unit "${unit}"
+			rm -f "${ENABLED_DIR}/${unit}"
+			if ((now == 1)); then stop_unit "${unit}"; fi
+		done
+		;;
+	start)
+		for unit in "${units[@]}"; do start_unit "${unit}"; done
+		;;
+	stop)
+		for unit in "${units[@]}"; do stop_unit "${unit}"; done
+		;;
+	restart)
+		for unit in "${units[@]}"; do
+			stop_unit "${unit}"
+			start_unit "${unit}"
+		done
+		;;
+	is-active)
+		if [[ -e "${ACTIVE_DIR}/${units[0]}" ]]; then
+			((quiet == 1)) || printf 'active\n'
+			return 0
+		fi
+		((quiet == 1)) || printf 'inactive\n'
+		return 3
+		;;
+	is-enabled)
+		if [[ -e "${ENABLED_DIR}/${units[0]}" ]]; then
+			((quiet == 1)) || printf 'enabled\n'
+			return 0
+		fi
+		((quiet == 1)) || printf 'disabled\n'
+		return 1
+		;;
+	is-failed)
+		((quiet == 1)) || printf 'inactive\n'
+		return 1
+		;;
+	cat)
+		arg="$(unit_file "${units[0]}")" || fake_fail 1 "No files found for ${units[0]}."
+		cat "${arg}"
+		;;
+	show)
+		[[ -n "${property}" ]] || fake_fail 1 "show needs -p"
+		arg="$(unit_setting "${units[0]}" "${property}")"
+		[[ "${property}" == Slice && -z "${arg}" ]] && arg=system.slice
+		if ((value_only == 1)); then
+			printf '%s\n' "${arg}"
+		else
+			printf '%s=%s\n' "${property}" "${arg}"
+		fi
+		;;
+	*) fake_fail 1 "unsupported verb '${verb}'" ;;
+	esac
+}
+
+main "$@"

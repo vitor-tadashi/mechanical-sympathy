@@ -16,7 +16,7 @@ set -Eeuo pipefail
 # shellcheck source=lib/common
 . "$(dirname "${BASH_SOURCE[0]}")/lib/common"
 
-SYSTEMD_SYSTEM_CONF="${SYSTEMD_SYSTEM_CONF:-/etc/systemd/system.conf}"
+SYSTEMD_SYSTEM_CONF="${SYSTEMD_SYSTEM_CONF:-${LOWLAT_ROOT}/etc/systemd/system.conf}"
 
 # Sets CPUAffinity in systemd's manager configuration. PID 1 applies it to itself
 # at boot, and every unit it forks inherits it, so all services, user sessions
@@ -46,10 +46,10 @@ set_workqueue_affinity() {
 	mask="$(cpu_mask_from_list "${WORKQUEUE_CPUS[@]}")"
 
 	log_sub_step "Unbound workqueues -> CPUs ${WORKQUEUE_CPUS[*]} (mask ${mask})"
-	sysfs_write "${mask}" /sys/devices/virtual/workqueue/cpumask
+	sysfs_write "${mask}" "${LOWLAT_ROOT}"/sys/devices/virtual/workqueue/cpumask
 
 	log_sub_step "Writeback workqueue -> CPUs ${WORKQUEUE_CPUS[*]} (mask ${mask})"
-	sysfs_write "${mask}" /sys/bus/workqueue/devices/writeback/cpumask
+	sysfs_write "${mask}" "${LOWLAT_ROOT}"/sys/bus/workqueue/devices/writeback/cpumask
 }
 
 # irqbalance periodically rewrites /proc/irq/*/smp_affinity. With manual placement
@@ -67,7 +67,7 @@ disable_irqbalance() {
 # isolated CPUs: a runaway FIFO thread on a housekeeping CPU will starve kernel threads.
 set_rt_throttling() {
 	log_sub_step "Disabling real-time throttling (kernel.sched_rt_runtime_us=-1)"
-	write_file /etc/sysctl.d/91-lowlat-rt.conf <<'EOF'
+	write_file "${LOWLAT_ROOT}"/etc/sysctl.d/91-lowlat-rt.conf <<'EOF'
 # Managed by mechanical-sympathy 02-cpu-isolation
 # Allow SCHED_FIFO/RR threads on isolated CPUs to run without the 950ms/1s cap.
 kernel.sched_rt_runtime_us = -1
@@ -81,7 +81,7 @@ pin_process() {
 	local pid="$1" cpus
 	shift
 	cpus="$(printf '%s' "$*" | tr -s ' ' ',' | sed 's/^,//; s/,$//')"
-	[[ -n "${pid}" && -d "/proc/${pid}" ]] || {
+	[[ -n "${pid}" && -d "${LOWLAT_ROOT}/proc/${pid}" ]] || {
 		log_warn "pin_process: invalid pid '${pid}'"
 		return 2
 	}
@@ -95,12 +95,12 @@ pin_process() {
 # show_affinity <pid> - prints the allowed CPU list and the CPU each thread last ran on.
 show_affinity() {
 	local pid="$1" task tid list psr comm
-	[[ -n "${pid}" && -d "/proc/${pid}" ]] || {
+	[[ -n "${pid}" && -d "${LOWLAT_ROOT}/proc/${pid}" ]] || {
 		log_warn "show_affinity: invalid pid '${pid}'"
 		return 2
 	}
 	printf '%-8s %-20s %-4s %s\n' TID AFFINITY_LIST PSR THREAD
-	for task in /proc/"${pid}"/task/*; do
+	for task in "${LOWLAT_ROOT}"/proc/"${pid}"/task/*; do
 		tid="${task##*/}"
 		list="$(awk -F'\t' '/^Cpus_allowed_list/{print $2}' "${task}/status" 2>/dev/null)"
 		psr="$(awk '{print $39}' "${task}/stat" 2>/dev/null)"
@@ -151,7 +151,7 @@ mask_equals() {
 
 pid1_affinity_is() {
 	local actual expanded
-	actual="$(awk -F'\t' '/^Cpus_allowed_list/{print $2}' /proc/1/status)"
+	actual="$(awk -F'\t' '/^Cpus_allowed_list/{print $2}' "${LOWLAT_ROOT}"/proc/1/status)"
 	expanded="$(cpu_list_expand "${actual}")"
 	[[ "${expanded}" == "$*" ]]
 }
@@ -169,11 +169,11 @@ verify_cpu_isolation() {
 	verify_check "systemd.conf CPUAffinity is set" grep -q '^CPUAffinity=' "${SYSTEMD_SYSTEM_CONF}"
 
 	expected="$(cpu_mask_from_list "${WORKQUEUE_CPUS[@]}")"
-	mask="$(cat /sys/devices/virtual/workqueue/cpumask 2>/dev/null || echo 0)"
+	mask="$(cat "${LOWLAT_ROOT}"/sys/devices/virtual/workqueue/cpumask 2>/dev/null || echo 0)"
 	verify_check "workqueue cpumask ${mask} (expected ${expected})" mask_equals "${mask}" "${expected}"
 
 	verify_check "irqbalance is not running" not systemctl is-active --quiet irqbalance
-	verify_check "kernel.sched_rt_runtime_us = -1" grep -qx -- '-1' /proc/sys/kernel/sched_rt_runtime_us
+	verify_check "kernel.sched_rt_runtime_us = -1" grep -qx -- '-1' "${LOWLAT_ROOT}"/proc/sys/kernel/sched_rt_runtime_us
 
 	# User-space threads on isolated CPUs. Expected: only your pinned application threads.
 	for cpu in "${ISOLATED_CPUS[@]}"; do

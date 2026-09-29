@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#
+# uname (fake) - "uname -r" is the fake kernel's osrelease; "uname -s" is Linux.
+
+# shellcheck source=tools/stubs/lib/fake
+. "$(dirname "${BASH_SOURCE[0]}")/lib/fake"
+
+case "${1:-}" in
+-r) cat "${LOWLAT_ROOT}/proc/sys/kernel/osrelease" ;;
+-s | "") printf 'Linux\n' ;;
+*) fake_fail 1 "unsupported arguments: $*" ;;
+esac

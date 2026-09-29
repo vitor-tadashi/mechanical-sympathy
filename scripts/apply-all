@@ -39,11 +39,11 @@ SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 # shellcheck source=11-day2-operations
 . "${SCRIPTS_DIR}/11-day2-operations"
 
-RUNTIME_UNIT=/etc/systemd/system/lowlat-runtime.service
+RUNTIME_UNIT="${LOWLAT_ROOT}"/etc/systemd/system/lowlat-runtime.service
 
 print_header() {
 	local os kernel now
-	os="$(awk -F= '$1=="PRETTY_NAME"{gsub(/"/,"",$2); print $2}' /etc/os-release 2>/dev/null || uname -s)"
+	os="$(awk -F= '$1=="PRETTY_NAME"{gsub(/"/,"",$2); print $2}' "${LOWLAT_ROOT}"/etc/os-release 2>/dev/null || uname -s)"
 	kernel="$(uname -r)"
 	now="$(date '+%Y-%m-%d %H:%M:%S')"
 	printf 'LOW-LATENCY TUNING (%s)\n' "$1"

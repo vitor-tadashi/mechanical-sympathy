@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#
+# chronyc (fake) - "chronyc tracking" answers only while chronyd.service is active.
+
+# shellcheck source=tools/stubs/lib/fake
+. "$(dirname "${BASH_SOURCE[0]}")/lib/fake"
+
+[[ "$*" == tracking ]] || fake_fail 1 "unsupported arguments: $*"
+[[ -e "${LOWLAT_ROOT}/run/fake-systemd/active/chronyd.service" ]] || fake_fail 1 "506 Cannot talk to daemon"
+printf 'Reference ID    : C0000201 (192.0.2.1)\nStratum         : 2\n'
+printf 'System time     : 0.000000100 seconds fast of NTP time\nLeap status     : Normal\n'

@@ -16,10 +16,10 @@ set -Eeuo pipefail
 # shellcheck source=lib/common
 . "$(dirname "${BASH_SOURCE[0]}")/lib/common"
 
-SYSTEMD_UNIT_DIR="${SYSTEMD_UNIT_DIR:-/etc/systemd/system}"
-PTP4L_SYSCONFIG="${PTP4L_SYSCONFIG:-/etc/sysconfig/ptp4l}"
-PHC2SYS_SYSCONFIG="${PHC2SYS_SYSCONFIG:-/etc/sysconfig/phc2sys}"
-PTP4L_CONF="${PTP4L_CONF:-/etc/ptp4l.conf}"
+SYSTEMD_UNIT_DIR="${SYSTEMD_UNIT_DIR:-${LOWLAT_ROOT}/etc/systemd/system}"
+PTP4L_SYSCONFIG="${PTP4L_SYSCONFIG:-${LOWLAT_ROOT}/etc/sysconfig/ptp4l}"
+PHC2SYS_SYSCONFIG="${PHC2SYS_SYSCONFIG:-${LOWLAT_ROOT}/etc/sysconfig/phc2sys}"
+PTP4L_CONF="${PTP4L_CONF:-${LOWLAT_ROOT}/etc/ptp4l.conf}"
 TIME_DAEMONS=(chronyd ptp4l phc2sys)
 TIME_DROPIN_NAME=10-lowlat-time-sync.conf
 
@@ -130,7 +130,7 @@ daemon_pinned() {
 	want="$(cpu_list_join "${TIME_SYNC_CPUS[@]}")"
 	for pid in $(pgrep -x "$1" || true); do
 		found=0
-		allowed="$(awk '/^Cpus_allowed_list/{print $2}' "/proc/${pid}/status" 2>/dev/null || true)"
+		allowed="$(awk '/^Cpus_allowed_list/{print $2}' "${LOWLAT_ROOT}/proc/${pid}/status" 2>/dev/null || true)"
 		[[ "${allowed}" == "${want}" ]] || return 1
 	done
 	return "${found}"
@@ -170,7 +170,7 @@ verify_time_sync() {
 }
 
 rollback_time_sync() {
-	local unit
+	local unit factory
 	time_sync_defaults
 	log_step "Time synchronization"
 	for unit in "${TIME_DAEMONS[@]}"; do
@@ -182,9 +182,10 @@ rollback_time_sync() {
 		run_quiet systemctl disable --now phc2sys
 		run_quiet systemctl disable --now ptp4l
 		for unit in "${PTP4L_SYSCONFIG}" "${PHC2SYS_SYSCONFIG}"; do
-			if [[ -f "${LOWLAT_FACTORY_DIR}${unit}" ]]; then
+			factory="$(factory_copy "${unit}")"
+			if [[ -f "${factory}" ]]; then
 				log_sub_step "Restoring ${unit}"
-				run cp -a "${LOWLAT_FACTORY_DIR}${unit}" "${unit}"
+				run cp -a "${factory}" "${unit}"
 			fi
 		done
 	fi

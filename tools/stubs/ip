@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#
+# ip (fake) - "ip link set dev IFACE txqueuelen N" writes sys/class/net/IFACE/tx_queue_len.
+
+# shellcheck source=tools/stubs/lib/fake
+. "$(dirname "${BASH_SOURCE[0]}")/lib/fake"
+
+fake_record "$@"
+[[ "$*" =~ ^link\ set\ dev\ ([^ ]+)\ txqueuelen\ ([0-9]+)$ ]] || fake_fail 1 "unsupported arguments: $*"
+file="${LOWLAT_ROOT}/sys/class/net/${BASH_REMATCH[1]}/tx_queue_len"
+[[ -f "${file}" ]] || fake_fail 1 "Cannot find device \"${BASH_REMATCH[1]}\""
+printf '%s\n' "${BASH_REMATCH[2]}" >"${file}"

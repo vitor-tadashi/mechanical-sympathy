@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+#
+# ethtool (fake) - NIC settings kept in run/fake-ethtool/<iface> (key=value lines),
+# printed in the layout of the real ethtool so the scripts parse them the same way.
+#
+#   -i  -l/-L combined N  -c/-C  -a/-A  -k/-K  -g/-G rx N tx N  -T
+#
+# A value above the pre-set maximum, or an unknown interface, fails as it does with
+# a real driver.
+
+# shellcheck source=tools/stubs/lib/fake
+. "$(dirname "${BASH_SOURCE[0]}")/lib/fake"
+
+STATE=""
+declare -A NIC=()
+
+load_state() {
+	local key value
+	while IFS='=' read -r key value; do
+		[[ -n "${key}" ]] && NIC["${key}"]="${value}"
+	done <"${STATE}"
+}
+
+save_state() {
+	local key
+	for key in "${!NIC[@]}"; do
+		printf '%s=%s\n' "${key}" "${NIC[${key}]}"
+	done | sort >"${STATE}"
+}
+
+# set_pairs <map> <name value>... - applies "name value" pairs; map is name:key,...
+set_pairs() {
+	local map=",$1," name key
+	shift
+	while (($# > 1)); do
+		name="$1"
+		[[ "${map}" == *",${name}:"* ]] || fake_fail 1 "unsupported parameter '${name}'"
+		key="${map#*,"${name}":}"
+		NIC["${key%%,*}"]="$2"
+		shift 2
+	done
+}
+
+show_channels() {
+	printf 'Channel parameters for %s:\nPre-set maximums:\nRX:\t\tn/a\nTX:\t\tn/a\nOther:\t\t1\nCombined:\t%s\n' "$1" "${NIC[combined_max]}"
+	printf 'Current hardware settings:\nRX:\t\tn/a\nTX:\t\tn/a\nOther:\t\t1\nCombined:\t%s\n' "${NIC[combined]}"
+}
+
+show_rings() {
+	printf 'Ring parameters for %s:\nPre-set maximums:\nRX:\t\t\t%s\nRX Mini:\t\tn/a\nRX Jumbo:\t\tn/a\nTX:\t\t\t%s\n' "$1" "${NIC[rx_ring_max]}" "${NIC[tx_ring_max]}"
+	printf 'Current hardware settings:\nRX:\t\t\t%s\nRX Mini:\t\tn/a\nRX Jumbo:\t\tn/a\nTX:\t\t\t%s\n' "${NIC[rx_ring]}" "${NIC[tx_ring]}"
+}
+
+show_coalesce() {
+	printf 'Coalesce parameters for %s:\nAdaptive RX: %s  TX: %s\n' "$1" "${NIC[adaptive_rx]}" "${NIC[adaptive_tx]}"
+	printf 'rx-usecs: %s\nrx-frames: 0\ntx-usecs: %s\ntx-frames: 0\n' "${NIC[rx_usecs]}" "${NIC[tx_usecs]}"
+}
+
+show_pause() {
+	printf 'Pause parameters for %s:\nAutonegotiate:\t%s\nRX:\t\t%s\nTX:\t\t%s\n' "$1" "${NIC[pause_autoneg]}" "${NIC[pause_rx]}" "${NIC[pause_tx]}"
+}
+
+show_features() {
+	printf 'Features for %s:\nrx-checksumming: %s\ntx-checksumming: %s\n' "$1" "${NIC[rx_csum]}" "${NIC[tx_csum]}"
+	printf 'tcp-segmentation-offload: %s\ngeneric-segmentation-offload: %s\n' "${NIC[tso]}" "${NIC[gso]}"
+	printf 'generic-receive-offload: %s\nlarge-receive-offload: %s\n' "${NIC[gro]}" "${NIC[lro]}"
+}
+
+show_timestamping() {
+	printf 'Time stamping parameters for %s:\nCapabilities:\n\tsoftware-transmit\n\tsoftware-receive\n' "$1"
+	if [[ "${NIC[hw_timestamping]}" == yes ]]; then
+		printf '\thardware-transmit\n\thardware-receive\n\thardware-raw-clock\nPTP Hardware Clock: 0\n'
+	else
+		printf 'PTP Hardware Clock: none\n'
+	fi
+}
+
+main() {
+	local option="${1:-}" iface="${2:-}"
+	[[ "${option}" == -[LCAKG] ]] && fake_record "$@"
+	STATE="${LOWLAT_ROOT}/run/fake-ethtool/${iface}"
+	[[ -n "${iface}" && -f "${STATE}" ]] || fake_fail 71 "Cannot get device settings: No such device"
+	load_state
+	shift 2
+	case "${option}" in
+	-i) printf 'driver: %s\nversion: 1.0\nbus-info: %s\n' "${NIC[driver]}" "${NIC[bus_info]}" ;;
+	-l) show_channels "${iface}" ;;
+	-L)
+		set_pairs combined:combined "$@"
+		((NIC[combined] >= 1 && NIC[combined] <= NIC[combined_max])) ||
+			fake_fail 1 "Cannot set device channel parameters: Invalid argument"
+		;;
+	-g) show_rings "${iface}" ;;
+	-G)
+		set_pairs rx:rx_ring,tx:tx_ring "$@"
+		((NIC[rx_ring] <= NIC[rx_ring_max] && NIC[tx_ring] <= NIC[tx_ring_max])) ||
+			fake_fail 1 "Cannot set device ring parameters: Invalid argument"
+		;;
+	-c) show_coalesce "${iface}" ;;
+	-C) set_pairs adaptive-rx:adaptive_rx,adaptive-tx:adaptive_tx,rx-usecs:rx_usecs,tx-usecs:tx_usecs "$@" ;;
+	-a) show_pause "${iface}" ;;
+	-A) set_pairs autoneg:pause_autoneg,rx:pause_rx,tx:pause_tx "$@" ;;
+	-k) show_features "${iface}" ;;
+	-K) set_pairs tso:tso,gso:gso,lro:lro,gro:gro,rx:rx_csum,tx:tx_csum "$@" ;;
+	-T) show_timestamping "${iface}" ;;
+	*) fake_fail 1 "unsupported option ${option}" ;;
+	esac
+	save_state
+}
+
+main "$@"

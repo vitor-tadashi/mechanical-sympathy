@@ -16,9 +16,9 @@ set -Eeuo pipefail
 # shellcheck source=lib/common
 . "$(dirname "${BASH_SOURCE[0]}")/lib/common"
 
-LIMITS_FILE="${LIMITS_FILE:-/etc/security/limits.d/90-lowlat.conf}"
-TUNED_PROFILE_DIR="${TUNED_PROFILE_DIR:-/etc/tuned/low-latency}"
-FSTAB="${FSTAB:-/etc/fstab}"
+LIMITS_FILE="${LIMITS_FILE:-${LOWLAT_ROOT}/etc/security/limits.d/90-lowlat.conf}"
+TUNED_PROFILE_DIR="${TUNED_PROFILE_DIR:-${LOWLAT_ROOT}/etc/tuned/low-latency}"
+FSTAB="${FSTAB:-${LOWLAT_ROOT}/etc/fstab}"
 
 # Netfilter modules unloaded by remove_netfilter_modules, in dependency order.
 NETFILTER_MODULES=(
@@ -117,9 +117,9 @@ energy_perf_bias=performance
 min_perf_pct=100
 EOF
 	log_sub_step "Making sure tuned re-applies /etc/sysctl.d after its own sysctls"
-	if [[ -f /etc/tuned/tuned-main.conf ]] && grep -q '^reapply_sysctl *= *0' /etc/tuned/tuned-main.conf; then
-		backup_file /etc/tuned/tuned-main.conf
-		run sed -i 's/^reapply_sysctl *= *0/reapply_sysctl = 1/' /etc/tuned/tuned-main.conf
+	if [[ -f "${LOWLAT_ROOT}"/etc/tuned/tuned-main.conf ]] && grep -q '^reapply_sysctl *= *0' "${LOWLAT_ROOT}"/etc/tuned/tuned-main.conf; then
+		backup_file "${LOWLAT_ROOT}"/etc/tuned/tuned-main.conf
+		run sed -i 's/^reapply_sysctl *= *0/reapply_sysctl = 1/' "${LOWLAT_ROOT}"/etc/tuned/tuned-main.conf
 	fi
 	log_sub_step "Activating tuned profile low-latency"
 	run_quiet systemctl enable --now tuned
@@ -147,7 +147,7 @@ flush_firewall_rules() {
 remove_netfilter_modules() {
 	local module
 	for module in "${NETFILTER_MODULES[@]}"; do
-		if [[ "${DRY_RUN}" -ne 1 ]] && ! grep -q "^${module} " /proc/modules; then
+		if [[ "${DRY_RUN}" -ne 1 ]] && ! grep -q "^${module} " "${LOWLAT_ROOT}"/proc/modules; then
 			continue
 		fi
 		log_sub_step "Unloading ${module}"

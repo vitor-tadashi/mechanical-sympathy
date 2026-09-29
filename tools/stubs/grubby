@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+#
+# grubby (fake) - edits the BootLoaderSpec entries in boot/loader/entries of the fake
+# host tree. The newest non-rescue entry is the default one.
+#
+#   --update-kernel=ALL --args="a b=c"      append the arguments to every entry
+#   --update-kernel=ALL --remove-args="a"   remove "a" and "a=<anything>" (or exactly "a=c")
+#   --info=ALL | --info=DEFAULT             print index, kernel, args for the entries
+#
+# Like the real grubby, --args does not replace an argument that is already there.
+
+# shellcheck source=tools/stubs/lib/fake
+. "$(dirname "${BASH_SOURCE[0]}")/lib/fake"
+
+ENTRIES_DIR="${LOWLAT_ROOT}/boot/loader/entries"
+
+entries() {
+	local entry
+	for entry in "${ENTRIES_DIR}"/*.conf; do
+		[[ -f "${entry}" ]] && printf '%s\n' "${entry}"
+	done | sort -r
+}
+
+default_entry() {
+	local list
+	list="$(entries)"
+	grep -v rescue <<<"${list}" | head -n 1
+}
+
+entry_value() { # entry_value <file> <key>
+	awk -v k="$2" '$1 == k { sub("^" k "[ \t]+", ""); print; exit }' "$1"
+}
+
+# edit_options <file> <add|remove> <argument> - rewrites the options line.
+edit_options() {
+	local file="$1" action="$2" wanted="$3" options token out=()
+	options="$(entry_value "${file}" options)"
+	for token in ${options}; do
+		if [[ "${action}" == remove ]]; then
+			[[ "${token}" == "${wanted}" ]] && continue
+			[[ "${wanted}" != *=* && "${token}" == "${wanted}="* ]] && continue
+		fi
+		out+=("${token}")
+	done
+	[[ "${action}" == add ]] && out+=("${wanted}")
+	awk -v o="${out[*]}" '$1 == "options" { print "options " o; next } { print }' "${file}" >"${file}.new"
+	mv "${file}.new" "${file}"
+}
+
+has_option() { # has_option <file> <argument>
+	local options
+	options=" $(entry_value "$1" options) "
+	[[ "${options}" == *" $2 "* ]]
+}
+
+info() {
+	local file index=0 kernel args title
+	for file in "$@"; do
+		kernel="$(entry_value "${file}" linux)"
+		args="$(entry_value "${file}" options)"
+		title="$(entry_value "${file}" title)"
+		printf 'index=%s\nkernel="%s"\nargs="%s"\ntitle="%s"\n' "${index}" "${kernel}" "${args}" "${title}"
+		index=$((index + 1))
+	done
+}
+
+main() {
+	local arg add="" remove="" target="" file argument list files=()
+	[[ "$*" == *--info=* || "$*" == *--default-kernel* ]] || fake_record "$@"
+	for arg in "$@"; do
+		case "${arg}" in
+		--update-kernel=*) target="${arg#*=}" ;;
+		--args=*) add="${arg#*=}" ;;
+		--remove-args=*) remove="${arg#*=}" ;;
+		--info=ALL)
+			list="$(entries)"
+			mapfile -t files <<<"${list}"
+			info "${files[@]}"
+			return 0
+			;;
+		--info=DEFAULT)
+			file="$(default_entry)"
+			info "${file}"
+			return 0
+			;;
+		--default-kernel)
+			file="$(default_entry)"
+			entry_value "${file}" linux
+			return 0
+			;;
+		*) fake_fail 1 "unsupported argument ${arg}" ;;
+		esac
+	done
+	[[ "${target}" == ALL ]] || fake_fail 1 "only --update-kernel=ALL is supported"
+	list="$(entries)"
+	while read -r file; do
+		for argument in ${remove}; do
+			edit_options "${file}" remove "${argument}"
+		done
+		for argument in ${add}; do
+			has_option "${file}" "${argument}" || edit_options "${file}" add "${argument}"
+		done
+	done <<<"${list}"
+}
+
+main "$@"

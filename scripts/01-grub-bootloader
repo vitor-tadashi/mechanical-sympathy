@@ -128,10 +128,10 @@ apply_grub_kernel_parameters() {
 	fi
 
 	log_step "Regenerating GRUB configuration"
-	if [[ -d /sys/firmware/efi ]] && [[ -f /boot/efi/EFI/redhat/grub.cfg ]] && ! grep -q configfile /boot/efi/EFI/redhat/grub.cfg; then
-		run grub2-mkconfig -o /boot/efi/EFI/redhat/grub.cfg
+	if [[ -d "${LOWLAT_ROOT}"/sys/firmware/efi ]] && [[ -f "${LOWLAT_ROOT}"/boot/efi/EFI/redhat/grub.cfg ]] && ! grep -q configfile "${LOWLAT_ROOT}"/boot/efi/EFI/redhat/grub.cfg; then
+		run grub2-mkconfig -o "${LOWLAT_ROOT}"/boot/efi/EFI/redhat/grub.cfg
 	else
-		run grub2-mkconfig -o /boot/grub2/grub.cfg
+		run grub2-mkconfig -o "${LOWLAT_ROOT}"/boot/grub2/grub.cfg
 	fi
 	log_sub_step "Reboot required: the new command line is used on the next boot"
 }
@@ -147,7 +147,7 @@ managed_grub_args() {
 # cmdline_has <arg> [value] - checks the RUNNING kernel.
 cmdline_has() {
 	local cmdline
-	cmdline=" $(cat /proc/cmdline) "
+	cmdline=" $(cat "${LOWLAT_ROOT}"/proc/cmdline) "
 	if [[ $# -eq 2 ]]; then
 		[[ "${cmdline}" == *" $1=$2 "* ]]
 	else
@@ -175,9 +175,9 @@ verify_grub_kernel_parameters() {
 		verify_check "nmi_watchdog=0" cmdline_has nmi_watchdog 0
 		verify_check "mce=ignore_ce" cmdline_has mce ignore_ce
 		verify_check "default_hugepagesz=${HUGEPAGE_SIZE}" cmdline_has default_hugepagesz "${HUGEPAGE_SIZE}"
-		value="$(read_value /sys/devices/system/cpu/isolated)"
+		value="$(read_value "${LOWLAT_ROOT}"/sys/devices/system/cpu/isolated)"
 		verify_info "kernel isolated CPUs: ${value}"
-		value="$(read_value /sys/devices/system/cpu/nohz_full)"
+		value="$(read_value "${LOWLAT_ROOT}"/sys/devices/system/cpu/nohz_full)"
 		verify_info "kernel nohz_full CPUs: ${value}"
 	fi
 	value="$(grubby --info=DEFAULT 2>/dev/null | awk -F'"' '/^args=/{print $2}' || true)"

@@ -1,0 +1,26 @@
+# shellcheck shell=bash disable=SC2034
+#
+# rhel10-2s-ref - the reference host of scripts/lowlat.conf.example (2 sockets x 16 cores,
+# no SMT, CPUs interleaved across sockets) on RHEL 10, bare metal. Read by
+# tools/stubs/lib/host. The kernel release, cgroup version and absent sysctl keys model
+# RHEL 10; they are illustrative, not measured.
+
+OS_PRETTY_NAME="Red Hat Enterprise Linux"
+OS_VERSION=10.0
+KERNEL=6.12.0-55.9.1.el10_0.x86_64
+VIRTUAL=no
+SOCKETS=2
+CPUS=32
+CGROUP=2
+ABSENT_SYSCTLS=()
+# name|driver|numa node|combined queue maximum|ring maximum|hardware timestamping
+FAKE_NICS=(
+	"ens1f0|ixgbe|1|63|4096|no"
+	"ens1f1|ixgbe|1|63|4096|no"
+	"eno1|igb|0|8|4096|yes"
+	"ens2f0|i40e|1|64|4096|no"
+	"ens2f1|i40e|1|64|4096|no"
+	"eno2|igb|0|8|4096|no"
+)
+SERVICES=(chronyd crond firewalld irqbalance node_exporter rsyslog sshd tuned)
+PROCESSES=(edr-agentd)

@@ -1,0 +1,226 @@
+#!/usr/bin/env bash
+#
+# check-scripts - run the tuning scripts end to end against fake hosts (Level 1 of the
+# validation ladder: every code path, no real kernel).
+#
+# For every scripts/fixtures/hosts/NAME/host, build a fake host tree (tools/stubs/lib/host),
+# boot it, and record in one transcript:
+#   1. apply-all --plan and --dry-run
+#   2. apply-all --apply, the commands it ran and the files it changed
+#   3. a simulated reboot (lowlat-runtime.service included), then verify-tuning
+#   4. every guide's --rollback, in reverse apply order, and a second reboot
+#   5. what the rollback left behind: differences from the tree before apply
+# The transcript must equal NAME/expected. Commands run against tools/stubs, with a
+# PATH that holds only those fakes and a fixed set of core utilities, so the result
+# does not depend on the machine that runs the check.
+#
+# Needs Linux with GNU coreutils, sed and gawk, and bash >= 4.2 (the scripts' own
+# requirements). Elsewhere, run it in a RHEL-family container, for example:
+#   podman run --rm -v "$PWD:/repo:Z" -w /repo registry.access.redhat.com/ubi9/ubi tools/check-scripts
+#
+# Usage: tools/check-scripts [--update] [NAME...]
+
+set -Eeuo pipefail
+export LC_ALL=C
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+HOSTS="${REPO}/scripts/fixtures/hosts"
+STUBS="${REPO}/tools/stubs"
+# Guides in the order apply-all applies them; rollback walks the list backwards.
+APPLY_ORDER=(00-bios-firmware 01-grub-bootloader 02-cpu-isolation 03-huge-pages 06-kernel-sysctl
+	07-os-hygiene 10-time-sync 05-cgroup-isolation 08-kernel-bypass 04-network 11-day2-operations)
+CORE_UTILITIES=(bash sh cat sed gawk grep tr cut sort uniq wc head tail tee find xargs basename
+	dirname readlink mkdir rm cp mv chmod ln touch date diff getconf id printf env mktemp)
+
+UPDATE=0
+NAMES=()
+failures=0
+
+fail() {
+	printf 'check-scripts: %s\n' "$*" >&2
+	failures=$((failures + 1))
+}
+
+die() {
+	printf 'check-scripts: %s\n' "$*" >&2
+	exit 1
+}
+
+# preflight - the scripts need GNU tools and bash >= 4.2: say so instead of failing later.
+preflight() {
+	local tool os
+	os="$(uname -s)"
+	[[ "${os}" == Linux ]] || die "needs Linux (GNU coreutils, sed, gawk). Run it in a container, see the header of this script"
+	((BASH_VERSINFO[0] > 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] >= 2))) || die "needs bash >= 4.2"
+	for tool in "${CORE_UTILITIES[@]}"; do
+		command -v "${tool}" >/dev/null 2>&1 || die "missing command: ${tool}"
+	done
+}
+
+# make_bin <dir> - the only PATH the scripts see besides tools/stubs.
+make_bin() {
+	local tool path
+	mkdir -p "$1"
+	for tool in "${CORE_UTILITIES[@]}"; do
+		path="$(command -v "${tool}")"
+		ln -s "${path}" "$1/${tool}"
+	done
+	ln -s "$1/gawk" "$1/awk"
+}
+
+# normalize <root> - host-specific text out of a transcript: the fake root, the checkout
+# location (shown where the scripts are installed on a real host), dates and timings.
+normalize() {
+	sed -E -e "s|$1||g" -e "s|${REPO}|/opt/lowlat|g" \
+		-e 's/[0-9]{8}-[0-9]{6}/<timestamp>/g' \
+		-e 's/^( *date: +).*/\1<date>/' \
+		-e 's/ +[0-9]+\.[0-9]{3} s \|$/    0.000 s |/'
+}
+
+# in_host <command...> - runs a command against the fake host, with a clean environment.
+in_host() {
+	env -i PATH="${STUBS}:${BIN}" LOWLAT_ROOT="${ROOT}" HOME="${WORK}" LANG=C LC_ALL=C "$@"
+}
+
+section() {
+	printf '\n==== %s\n' "$1"
+}
+
+# step <title> <command...> - one transcript section with the command's output and status.
+step() {
+	local title="$1" status=0
+	shift
+	section "${title}"
+	in_host "$@" 2>&1 || status=$?
+	printf -- '---- exit %s\n' "${status}"
+}
+
+boot() {
+	section "$1"
+	# The fake host library is sourced by the inner shell, which expands its own arguments.
+	# shellcheck disable=SC2016
+	in_host bash -c '. "$1"; host_boot "$2" "$3"' _ "${STUBS}/lib/host" "${ROOT}" "${WORK}/pristine" 2>&1
+}
+
+# manifest <tree> - "checksum size path" for every file and link, sorted by path.
+manifest() {
+	(cd "$1" && find . \( -type f -o -type l \) -print0 | xargs -0 cksum | sort -k 3)
+}
+
+# changed_files <before> <after> - A(dded), M(odified) and D(eleted) files. Left out:
+# the timestamped backups, and the fake processes and pids, which processes() lists.
+changed_files() {
+	join -1 3 -2 3 -a 1 -a 2 -e - -o 0,1.1,2.1 <(manifest "$1") <(manifest "$2") |
+		awk '$2 == "-" { print "A " substr($1, 2); next }
+			$3 == "-" { print "D " substr($1, 2); next }
+			$2 != $3 { print "M " substr($1, 2) }' |
+		grep -v -E '^. /(var/lib/lowlat/backup/|proc/[0-9]{4}|run/fake-(calls|next-pid|systemd/pid/))' |
+		compact || true
+}
+
+# compact - one line for a set of per-CPU or per-IRQ files: "M /proc/irq/*/smp_affinity_list (48)".
+compact() {
+	sed -E 's|/(cpu)?[0-9]+/|/\1*/|' | sort | uniq -c | awk '{ print $2, $3 ($1 > 1 ? " (" $1 ")" : "") }'
+}
+
+processes() {
+	local status name allowed
+	for status in "$1"/proc/[0-9]*/status; do
+		name="$(awk -F'\t' '/^Name/ {print $2}' "${status}")"
+		allowed="$(awk -F'\t' '/^Cpus_allowed_list/ {print $2}' "${status}")"
+		printf '%-20s cpus %s\n' "${name}" "${allowed}"
+	done | sort
+}
+
+# transcript <name> - the whole run for one fixture, not yet normalized.
+transcript() {
+	local name="$1" guide index
+	# shellcheck source=tools/stubs/lib/host
+	. "${STUBS}/lib/host"
+	local config="${HOSTS}/${name}/lowlat.conf"
+	[[ -f "${config}" ]] || config="${REPO}/scripts/lowlat.conf.example"
+	host_build "${ROOT}" "${HOSTS}/${name}/host" "${config}"
+	cp -a "${ROOT}" "${WORK}/pristine"
+	boot "first boot" >/dev/null
+	cp -a "${ROOT}" "${WORK}/before"
+
+	step "apply-all --plan" "${REPO}/scripts/apply-all" --plan
+	step "apply-all --dry-run" "${REPO}/scripts/apply-all" --dry-run
+	step "apply-all --apply" "${REPO}/scripts/apply-all" --apply
+	section "commands that changed the host"
+	cat "${ROOT}/run/fake-calls" 2>/dev/null || true
+	section "files changed by apply"
+	changed_files "${WORK}/before" "${ROOT}"
+
+	boot "reboot"
+	section "/proc/cmdline"
+	cat "${ROOT}/proc/cmdline"
+	section "processes"
+	processes "${ROOT}"
+	step "verify-tuning" "${REPO}/scripts/verify-tuning"
+
+	for ((index = ${#APPLY_ORDER[@]} - 1; index >= 0; index--)); do
+		guide="${APPLY_ORDER[index]}"
+		step "${guide} --rollback" "${REPO}/scripts/${guide}" --rollback
+	done
+	boot "reboot after rollback"
+	section "left behind by rollback (compared with the host before apply)"
+	changed_files "${WORK}/before" "${ROOT}"
+	section "/proc/cmdline differences"
+	diff <(tr ' ' '\n' <"${WORK}/before/proc/cmdline") <(tr ' ' '\n' <"${ROOT}/proc/cmdline") || true
+	section "process differences"
+	diff <(processes "${WORK}/before") <(processes "${ROOT}") || true
+}
+
+check_host() {
+	local name="$1" actual expected="${HOSTS}/$1/expected"
+	WORK="$(mktemp -d)"
+	ROOT="${WORK}/root"
+	BIN="${WORK}/bin"
+	make_bin "${BIN}"
+	actual="$(transcript "${name}" | normalize "${ROOT}")"
+	rm -rf "${WORK}"
+	if ((UPDATE == 1)); then
+		printf '%s\n' "${actual}" >"${expected}"
+		return 0
+	fi
+	if [[ ! -f "${expected}" ]]; then
+		fail "${name}: no expected transcript (run tools/check-scripts --update ${name})"
+		return 0
+	fi
+	if [[ "${actual}" != "$(<"${expected}")" ]]; then
+		fail "${name}: transcript differs from scripts/fixtures/hosts/${name}/expected"
+		diff <(cat "${expected}") <(printf '%s\n' "${actual}") >&2 || true
+	fi
+}
+
+main() {
+	local host name
+	while (($# > 0)); do
+		case "$1" in
+		--update) UPDATE=1 ;;
+		-*) die "unknown option $1 (usage: tools/check-scripts [--update] [NAME...])" ;;
+		*) NAMES+=("$1") ;;
+		esac
+		shift
+	done
+	preflight
+	if ((${#NAMES[@]} == 0)); then
+		for host in "${HOSTS}"/*/host; do
+			host="${host%/host}"
+			NAMES+=("${host##*/}")
+		done
+	fi
+	((${#NAMES[@]} > 0)) || die "no fake hosts in ${HOSTS}"
+	for name in "${NAMES[@]}"; do
+		[[ -f "${HOSTS}/${name}/host" ]] || die "no fake host ${name} in ${HOSTS}"
+		check_host "${name}"
+	done
+	if ((failures > 0)); then
+		printf 'check-scripts: %d problem(s)\n' "${failures}" >&2
+		exit 1
+	fi
+	printf 'check-scripts: %d fake host(s) %s\n' "${#NAMES[@]}" "$( ((UPDATE == 1)) && printf updated || printf passed)"
+}
+
+main "$@"

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#
+# lscpu (fake) - "lscpu -p=SOCKET" from sys/devices/system/cpu/cpuN/topology.
+
+# shellcheck source=tools/stubs/lib/fake
+. "$(dirname "${BASH_SOURCE[0]}")/lib/fake"
+
+[[ "$*" == "-p=SOCKET" ]] || fake_fail 1 "unsupported arguments: $*"
+printf '# The following is the parsable format, which can be fed to other\n# Socket\n'
+for dir in "${LOWLAT_ROOT}"/sys/devices/system/cpu/cpu[0-9]*; do
+	cat "${dir}/topology/physical_package_id"
+done

@@ -1,0 +1,1791 @@
+
+==== apply-all --plan
+host_class=bare_metal
+bios_firmware        apply
+latency_grub         apply
+isolation_grub       apply
+core_isolation       apply
+irqbalance_disable   apply
+rt_throttling        apply
+huge_pages           apply
+sysctl               apply
+os_hygiene           apply
+time_sync            apply
+cgroup_isolation     apply
+nic_tuning           apply
+nic_irq_affinity     apply
+kernel_bypass        apply
+day2_operations      apply
+flush_firewall       no
+remove_netfilter     no
+bypass_stack         none
+time_sync_mode       chrony
+day2_verify_timer    yes
+---- exit 0
+
+==== apply-all --dry-run
+LOW-LATENCY TUNING (apply)
+  os:         Red Hat Enterprise Linux 9.6
+  kernel:     5.14.0-570.12.1.el9_6.x86_64
+  host class: bare_metal
+  config:     /etc/lowlat/lowlat.conf
+  date:       <date>
+  mode:       DRY-RUN (nothing is changed)
+
+01. Firmware settings visible to the OS
+    01.01 PCIe ASPM policy default -> performance
+           [dry-run] echo performance > /sys/module/pcie_aspm/parameters/policy
+    01.02 Everything else is set in the BIOS setup: see Guide 00 §4
+
+02. Kernel command line: latency subset (host_class=bare_metal)
+    02.01 Polling idle loop instead of halting (idle=poll)
+           [dry-run] grubby --update-kernel=ALL --remove-args=idle
+           [dry-run] grubby --update-kernel=ALL --args=idle=poll
+    02.02 Limiting ACPI C-states to C0/C1 (processor.max_cstate=0)
+           [dry-run] grubby --update-kernel=ALL --remove-args=processor.max_cstate
+           [dry-run] grubby --update-kernel=ALL --args=processor.max_cstate=0
+    02.03 Disabling intel_idle deep C-states (intel_idle.max_cstate=0)
+           [dry-run] grubby --update-kernel=ALL --remove-args=intel_idle.max_cstate
+           [dry-run] grubby --update-kernel=ALL --args=intel_idle.max_cstate=0
+    02.04 Disabling transparent huge pages (transparent_hugepage=never)
+           [dry-run] grubby --update-kernel=ALL --remove-args=transparent_hugepage
+           [dry-run] grubby --update-kernel=ALL --args=transparent_hugepage=never
+
+03. Kernel command line: CPU isolation set
+    03.01 Removing CPUs 3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 from the scheduler (isolcpus)
+           [dry-run] grubby --update-kernel=ALL --remove-args=isolcpus
+           [dry-run] grubby --update-kernel=ALL --args=isolcpus=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31
+    03.02 Stopping the scheduler tick on 3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 (nohz_full)
+           [dry-run] grubby --update-kernel=ALL --remove-args=nohz_full
+           [dry-run] grubby --update-kernel=ALL --args=nohz_full=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31
+    03.03 Disabling idle dynticks (nohz=off)
+           [dry-run] grubby --update-kernel=ALL --remove-args=nohz
+           [dry-run] grubby --update-kernel=ALL --args=nohz=off
+    03.04 Offloading RCU callbacks from 3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 (rcu_nocbs)
+           [dry-run] grubby --update-kernel=ALL --remove-args=rcu_nocbs
+           [dry-run] grubby --update-kernel=ALL --args=rcu_nocbs=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31
+    03.05 Letting rcuo kthreads poll instead of being woken by isolated CPUs (rcu_nocb_poll)
+           [dry-run] grubby --update-kernel=ALL --remove-args=rcu_nocb_poll
+           [dry-run] grubby --update-kernel=ALL --args=rcu_nocb_poll
+    03.06 Staggering per-CPU tick timers (skew_tick=1)
+           [dry-run] grubby --update-kernel=ALL --remove-args=skew_tick
+           [dry-run] grubby --update-kernel=ALL --args=skew_tick=1
+    03.07 Handing frequency control to acpi-cpufreq (intel_pstate=disable)
+           [dry-run] grubby --update-kernel=ALL --remove-args=intel_pstate
+           [dry-run] grubby --update-kernel=ALL --args=intel_pstate=disable
+    03.08 Disabling soft-lockup detector (nosoftlockup)
+           [dry-run] grubby --update-kernel=ALL --remove-args=nosoftlockup
+           [dry-run] grubby --update-kernel=ALL --args=nosoftlockup
+    03.09 Disabling NMI watchdog (nmi_watchdog=0)
+           [dry-run] grubby --update-kernel=ALL --remove-args=nmi_watchdog
+           [dry-run] grubby --update-kernel=ALL --args=nmi_watchdog=0
+    03.10 Ignoring corrected machine-check errors (mce=ignore_ce)
+           [dry-run] grubby --update-kernel=ALL --remove-args=mce
+           [dry-run] grubby --update-kernel=ALL --args=mce=ignore_ce
+    03.11 Setting huge page size to 2M (default_hugepagesz, hugepagesz)
+           [dry-run] grubby --update-kernel=ALL --remove-args=default_hugepagesz
+           [dry-run] grubby --update-kernel=ALL --args=default_hugepagesz=2M
+           [dry-run] grubby --update-kernel=ALL --remove-args=hugepagesz
+           [dry-run] grubby --update-kernel=ALL --args=hugepagesz=2M
+    03.12 Disabling IOMMU translation (intel_iommu=off iommu=off)
+           [dry-run] grubby --update-kernel=ALL --remove-args=intel_iommu
+           [dry-run] grubby --update-kernel=ALL --args=intel_iommu=off
+           [dry-run] grubby --update-kernel=ALL --remove-args=iommu
+           [dry-run] grubby --update-kernel=ALL --args=iommu=off
+    03.13 Disabling CPU vulnerability mitigations (nospectre_v1 nospectre_v2 pti=off mds=off tsx_async_abort=off)
+           [dry-run] grubby --update-kernel=ALL --remove-args=nospectre_v1
+           [dry-run] grubby --update-kernel=ALL --args=nospectre_v1
+           [dry-run] grubby --update-kernel=ALL --remove-args=nospectre_v2
+           [dry-run] grubby --update-kernel=ALL --args=nospectre_v2
+           [dry-run] grubby --update-kernel=ALL --remove-args=pti
+           [dry-run] grubby --update-kernel=ALL --args=pti=off
+           [dry-run] grubby --update-kernel=ALL --remove-args=mds
+           [dry-run] grubby --update-kernel=ALL --args=mds=off
+           [dry-run] grubby --update-kernel=ALL --remove-args=tsx_async_abort
+           [dry-run] grubby --update-kernel=ALL --args=tsx_async_abort=off
+    03.14 Removing graphical console (console=tty0)
+           [dry-run] grubby --update-kernel=ALL --remove-args=console=tty0
+
+04. Regenerating GRUB configuration
+           [dry-run] grub2-mkconfig -o /boot/grub2/grub.cfg
+    04.01 Reboot required: the new command line is used on the next boot
+
+05. systemd CPU affinity and RT limits
+    05.01 Restricting systemd and all services to CPUs 0 1 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 (/etc/systemd/system.conf)
+           [dry-run] set CPUAffinity=0 1 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 in /etc/systemd/system.conf
+    05.02 Allowing real-time priority up to 99 for services (DefaultLimitRTPRIO)
+           [dry-run] set DefaultLimitRTPRIO=99 in /etc/systemd/system.conf
+    05.03 Allowing nice down to -20 for services (DefaultLimitNICE=40)
+           [dry-run] set DefaultLimitNICE=40 in /etc/systemd/system.conf
+    05.04 Reboot required for PID 1 to re-read CPUAffinity (daemon-reexec is not enough for running units)
+
+06. Kernel workqueue CPU mask
+    06.01 Unbound workqueues -> CPUs 0 2 (mask 00000005)
+           [dry-run] echo 00000005 > /sys/devices/virtual/workqueue/cpumask
+    06.02 Writeback workqueue -> CPUs 0 2 (mask 00000005)
+           [dry-run] echo 00000005 > /sys/bus/workqueue/devices/writeback/cpumask
+
+07. irqbalance
+    07.01 Stopping and disabling irqbalance
+           [dry-run] systemctl stop irqbalance
+           [dry-run] systemctl disable irqbalance
+
+08. Real-time throttling
+    08.01 Disabling real-time throttling (kernel.sched_rt_runtime_us=-1)
+           [dry-run] write /etc/sysctl.d/91-lowlat-rt.conf (mode 0644):
+             | # Managed by mechanical-sympathy 02-cpu-isolation
+             | # Allow SCHED_FIFO/RR threads on isolated CPUs to run without the 950ms/1s cap.
+             | kernel.sched_rt_runtime_us = -1
+           [dry-run] sysctl -w kernel.sched_rt_runtime_us=-1
+
+09. Huge page reservation per NUMA node
+    09.01 Writing per-node reservation script /usr/lib/systemd/hugetlb-reserve-pages
+           [dry-run] write /usr/lib/systemd/hugetlb-reserve-pages (mode 0755):
+             | #!/bin/bash
+             | # Managed by mechanical-sympathy 03-huge-pages - reserves 2M huge pages per NUMA node.
+             | nodes_path=/sys/devices/system/node
+             | if [[ ! -d ${nodes_path} ]]; then
+             | 	echo "ERROR: ${nodes_path} does not exist" >&2
+             | 	exit 1
+             | fi
+             | 
+             | reserve_pages() {
+             | 	local wanted="$1" node="$2" file got
+             | 	file="${nodes_path}/${node}/hugepages/hugepages-2048kB/nr_hugepages"
+             | 	if [[ ! -w "${file}" ]]; then
+             | 		echo "WARN: ${file} not writable (node missing?)" >&2
+             | 		return 0
+             | 	fi
+             | 	echo "${wanted}" >"${file}"
+             | 	got="$(cat "${file}")"
+             | 	echo "${node}: requested ${wanted} x 2M, reserved ${got}"
+             | 	[[ "${got}" -ge "${wanted}" ]] || echo "WARN: ${node} short by $((wanted - got)) pages (fragmentation?)" >&2
+             | }
+             | 
+             | reserve_pages 2048 node0
+             | reserve_pages 12288 node1
+    09.02 Writing systemd unit /etc/systemd/system/hugetlb-reserve-pages.service
+           [dry-run] write /etc/systemd/system/hugetlb-reserve-pages.service (mode 0644):
+             | # Managed by mechanical-sympathy 03-huge-pages
+             | [Unit]
+             | Description=Reserve 2M huge pages per NUMA node
+             | DefaultDependencies=no
+             | Before=dev-hugepages.mount
+             | ConditionPathExists=/sys/devices/system/node
+             | # Only on hosts where Guide 01 set the huge page size on the kernel command line.
+             | ConditionKernelCommandLine=hugepagesz=2M
+             | 
+             | [Service]
+             | Type=oneshot
+             | RemainAfterExit=yes
+             | ExecStart=/usr/lib/systemd/hugetlb-reserve-pages
+             | 
+             | [Install]
+             | WantedBy=sysinit.target
+    09.03 Enabling hugetlb-reserve-pages.service
+           [dry-run] systemctl daemon-reload
+           [dry-run] systemctl enable hugetlb-reserve-pages.service
+    09.04 Reserving 2048 x 2M on node0 now
+           [dry-run] echo 2048 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages
+    09.05 Reserving 12288 x 2M on node1 now
+           [dry-run] echo 12288 > /sys/devices/system/node/node1/hugepages/hugepages-2048kB/nr_hugepages
+
+10. Huge page sysctls
+    10.01 Writing /etc/sysctl.d/92-lowlat-hugepages.conf
+           [dry-run] write /etc/sysctl.d/92-lowlat-hugepages.conf (mode 0644):
+             | # Managed by mechanical-sympathy 03-huge-pages
+             | # Surplus pages the kernel may allocate on demand once the reserved pool is exhausted.
+             | # Surplus allocation happens at fault time and can fail under fragmentation, so size
+             | # the reserved pool (hugetlb-reserve-pages.service) for the steady state.
+             | vm.nr_overcommit_hugepages = 2048
+             | # Maximum number of System V shared memory segments (IPC libraries, SHM_HUGETLB users).
+             | kernel.shmmni = 24576
+             | # Group allowed to create SHM_HUGETLB segments without CAP_IPC_LOCK.
+             | vm.hugetlb_shm_group = 1001
+           [dry-run] sysctl -p /etc/sysctl.d/92-lowlat-hugepages.conf
+
+11. Kernel sysctl profile
+    11.01 Not available on kernel 5.14.0-570.12.1.el9_6.x86_64, skipped: net.ipv4.tcp_shrink_window
+    11.02 Writing /etc/sysctl.d/90-lowlat.conf
+           [dry-run] write /etc/sysctl.d/90-lowlat.conf (mode 0644):
+             | # Managed by mechanical-sympathy 06-kernel-sysctl - see guides/06-kernel-sysctl-tuning.md
+             | 
+             | # Kernel logging and debug
+             | # console loglevel 1: only emergencies are printed synchronously on the console
+             | kernel.printk = 1 4 1 7
+             | # no periodic perf NMI on every CPU (also nmi_watchdog=0 on the command line)
+             | kernel.nmi_watchdog = 0
+             | # do not log every user-space segfault/trap to the kernel log
+             | debug.exception-trace = 0
+             | # disable function tracer hooks (re-enable temporarily when you need ftrace)
+             | kernel.ftrace_enabled = 0
+             | # no automatic NUMA page migration: memory placement is decided by pinning + huge pages
+             | kernel.numa_balancing = 0
+             | 
+             | # TCP behaviour
+             | # keep RFC 7323 timestamps: required by tcp_tw_reuse and PAWS, improves RTT estimation
+             | net.ipv4.tcp_timestamps = 1
+             | # selective ACKs: recover several lost segments in one round trip
+             | net.ipv4.tcp_sack = 1
+             | # receive windows above 64 KiB (needed for the buffer sizes below)
+             | net.ipv4.tcp_window_scaling = 1
+             | # do not collapse cwnd after idle: the first message after a quiet period is not throttled
+             | net.ipv4.tcp_slow_start_after_idle = 0
+             | # TFO for client and server: data in the SYN on reconnect
+             | net.ipv4.tcp_fastopen = 3
+             | # FIN_WAIT_2 orphan timeout (seconds); frees half-closed sockets quickly
+             | net.ipv4.tcp_fin_timeout = 5
+             | # reuse TIME_WAIT sockets for NEW OUTGOING connections (safe with timestamps)
+             | net.ipv4.tcp_tw_reuse = 1
+             | # room for TIME_WAIT sockets on busy gateways
+             | net.ipv4.tcp_max_tw_buckets = 262144
+             | # orphaned sockets allowed before the kernel resets them
+             | net.ipv4.tcp_max_orphans = 32768
+             | # fail a connect() after ~3 s instead of ~127 s: fail over to the backup peer fast
+             | net.ipv4.tcp_syn_retries = 1
+             | # keep SYN-flood protection on
+             | net.ipv4.tcp_syncookies = 1
+             | # drop (do not RST) when the accept queue is full; clients retry
+             | net.ipv4.tcp_abort_on_overflow = 0
+             | # accept queue length limit
+             | net.core.somaxconn = 2048
+             | # half-open connection queue
+             | net.ipv4.tcp_max_syn_backlog = 2048
+             | # start keepalive probes after 2 min idle
+             | net.ipv4.tcp_keepalive_time = 120
+             | # probe every 15 s
+             | net.ipv4.tcp_keepalive_intvl = 15
+             | # declare the peer dead after 5 probes (~3 min total)
+             | net.ipv4.tcp_keepalive_probes = 5
+             | # receive buffer auto-tuning within tcp_rmem
+             | net.ipv4.tcp_moderate_rcvbuf = 1
+             | # keep per-destination metrics (RTT, cwnd) between connections
+             | net.ipv4.tcp_no_metrics_save = 0
+             | 
+             | # Socket buffers (128 MiB ceilings: large enough for IPC/messaging windows)
+             | # max SO_RCVBUF an application may request
+             | net.core.rmem_max = 134217728
+             | # max SO_SNDBUF an application may request
+             | net.core.wmem_max = 134217728
+             | # default receive buffer (UDP sockets that never call setsockopt)
+             | net.core.rmem_default = 8388608
+             | # default send buffer
+             | net.core.wmem_default = 8388608
+             | # ancillary buffer (timestamps, cmsg) per socket
+             | net.core.optmem_max = 134217728
+             | # TCP receive min/default/max
+             | net.ipv4.tcp_rmem = 4096 8388608 134217728
+             | # TCP send min/default/max
+             | net.ipv4.tcp_wmem = 4096 8388608 134217728
+             | 
+             | # Queues
+             | # per-CPU RX backlog between driver and stack (not related to txqueuelen)
+             | net.core.netdev_max_backlog = 300000
+             | # default qdisc for new interfaces (RHEL default; bulk NICs benefit from AQM)
+             | net.core.default_qdisc = fq_codel
+             | # re-hash TX queue selection on retransmit (kernel >= 5.18 only)
+             | net.core.txrehash = 1
+             | 
+             | # Routing / forwarding (this host is an endpoint, not a router)
+             | # do not route between interfaces
+             | net.ipv4.ip_forward = 0
+             | # same for IPv6
+             | net.ipv6.conf.all.forwarding = 0
+             | 
+             | # BPF
+             | # JIT-compile BPF (socket filters, tc, tracing) instead of interpreting it
+             | net.core.bpf_jit_enable = 1
+             | # memory allowed for JIT-compiled BPF programs
+             | net.core.bpf_jit_limit = 528482304
+             | 
+             | # Virtual memory
+             | # synchronous writeback throttling starts at 10% dirty memory
+             | vm.dirty_ratio = 10
+             | # background writeback starts at 3%: small, frequent flushes instead of big bursts
+             | vm.dirty_background_ratio = 3
+             | # keep 1 GiB free: kswapd starts earlier, allocations rarely hit direct reclaim
+             | vm.min_free_kbytes = 1048576
+             | # fold per-CPU VM statistics every 60 s instead of 1 s (fewer kworker wake-ups)
+             | vm.stat_interval = 60
+             | # system-wide open file limit
+             | fs.file-max = 13076444
+             | 
+             | # IPv6 disabled (IPv4-only host; avoids RA/ND/MLD traffic and timers)
+             | net.ipv6.conf.all.disable_ipv6 = 1
+             | net.ipv6.conf.default.disable_ipv6 = 1
+             | net.ipv6.conf.lo.disable_ipv6 = 1
+             | net.ipv6.conf.ens1f0.disable_ipv6 = 1
+             | net.ipv6.conf.ens1f1.disable_ipv6 = 1
+             | net.ipv6.conf.eno1.disable_ipv6 = 1
+             | net.ipv6.conf.ens2f0.disable_ipv6 = 1
+             | net.ipv6.conf.ens2f1.disable_ipv6 = 1
+             | net.ipv6.conf.eno2.disable_ipv6 = 1
+             | 
+             | # ARP on a multi-homed host: only answer for addresses configured on the receiving interface
+             | net.ipv4.conf.lo.arp_ignore = 1
+             | net.ipv4.conf.lo.arp_announce = 0
+             | net.ipv4.conf.lo.arp_filter = 0
+             | net.ipv4.conf.lo.arp_accept = 0
+             | net.ipv4.conf.ens1f0.arp_ignore = 1
+             | net.ipv4.conf.ens1f0.arp_announce = 0
+             | net.ipv4.conf.ens1f0.arp_filter = 0
+             | net.ipv4.conf.ens1f0.arp_accept = 0
+             | net.ipv4.conf.ens1f1.arp_ignore = 1
+             | net.ipv4.conf.ens1f1.arp_announce = 0
+             | net.ipv4.conf.ens1f1.arp_filter = 0
+             | net.ipv4.conf.ens1f1.arp_accept = 0
+             | net.ipv4.conf.eno1.arp_ignore = 1
+             | net.ipv4.conf.eno1.arp_announce = 0
+             | net.ipv4.conf.eno1.arp_filter = 0
+             | net.ipv4.conf.eno1.arp_accept = 0
+             | net.ipv4.conf.ens2f0.arp_ignore = 1
+             | net.ipv4.conf.ens2f0.arp_announce = 0
+             | net.ipv4.conf.ens2f0.arp_filter = 0
+             | net.ipv4.conf.ens2f0.arp_accept = 0
+             | net.ipv4.conf.ens2f1.arp_ignore = 1
+             | net.ipv4.conf.ens2f1.arp_announce = 0
+             | net.ipv4.conf.ens2f1.arp_filter = 0
+             | net.ipv4.conf.ens2f1.arp_accept = 0
+             | net.ipv4.conf.eno2.arp_ignore = 1
+             | net.ipv4.conf.eno2.arp_announce = 0
+             | net.ipv4.conf.eno2.arp_filter = 0
+             | net.ipv4.conf.eno2.arp_accept = 0
+    11.03 Loading /etc/sysctl.d/90-lowlat.conf (per-interface keys for absent interfaces may warn)
+           [dry-run] sysctl -p /etc/sysctl.d/90-lowlat.conf
+
+12. Unnecessary services
+    12.01 Stopping and disabling crond
+           [dry-run] systemctl stop crond
+           [dry-run] systemctl disable crond
+    12.02 Stopping and disabling plymouth-quit-wait
+           [dry-run] systemctl stop plymouth-quit-wait
+           [dry-run] systemctl disable plymouth-quit-wait
+    12.03 Stopping and disabling plymouth-quit
+           [dry-run] systemctl stop plymouth-quit
+           [dry-run] systemctl disable plymouth-quit
+    12.04 Stopping and disabling plymouth-read-write
+           [dry-run] systemctl stop plymouth-read-write
+           [dry-run] systemctl disable plymouth-read-write
+    12.05 Stopping and disabling plymouth-start
+           [dry-run] systemctl stop plymouth-start
+           [dry-run] systemctl disable plymouth-start
+    12.06 Stopping and disabling auth-rpcgss-module
+           [dry-run] systemctl stop auth-rpcgss-module
+           [dry-run] systemctl disable auth-rpcgss-module
+    12.07 Stopping and disabling rpcbind.service
+           [dry-run] systemctl stop rpcbind.service
+           [dry-run] systemctl disable rpcbind.service
+    12.08 Stopping and disabling rpcbind.socket
+           [dry-run] systemctl stop rpcbind.socket
+           [dry-run] systemctl disable rpcbind.socket
+    12.09 Stopping and disabling rpcbind.target
+           [dry-run] systemctl stop rpcbind.target
+           [dry-run] systemctl disable rpcbind.target
+    12.10 Stopping and disabling rpc_pipefs.target
+           [dry-run] systemctl stop rpc_pipefs.target
+           [dry-run] systemctl disable rpc_pipefs.target
+    12.11 Stopping and disabling rpc-statd-notify
+           [dry-run] systemctl stop rpc-statd-notify
+           [dry-run] systemctl disable rpc-statd-notify
+    12.12 Stopping and disabling nfs-client.target
+           [dry-run] systemctl stop nfs-client.target
+           [dry-run] systemctl disable nfs-client.target
+    12.13 Stopping and disabling remote-fs-pre.target
+           [dry-run] systemctl stop remote-fs-pre.target
+           [dry-run] systemctl disable remote-fs-pre.target
+    12.14 Stopping and disabling sysstat-collect.timer
+           [dry-run] systemctl stop sysstat-collect.timer
+           [dry-run] systemctl disable sysstat-collect.timer
+    12.15 Stopping and disabling sysstat-summary.timer
+           [dry-run] systemctl stop sysstat-summary.timer
+           [dry-run] systemctl disable sysstat-summary.timer
+    12.16 Stopping and disabling pcscd
+           [dry-run] systemctl stop pcscd
+           [dry-run] systemctl disable pcscd
+    12.17 Stopping and disabling cpupower
+           [dry-run] systemctl stop cpupower
+           [dry-run] systemctl disable cpupower
+    12.18 Stopping and disabling cpuspeed
+           [dry-run] systemctl stop cpuspeed
+           [dry-run] systemctl disable cpuspeed
+    12.19 Stopping and disabling cpufreqd
+           [dry-run] systemctl stop cpufreqd
+           [dry-run] systemctl disable cpufreqd
+    12.20 Stopping and disabling powerd
+           [dry-run] systemctl stop powerd
+           [dry-run] systemctl disable powerd
+    12.21 Enabling rsyslog
+           [dry-run] systemctl enable --now rsyslog
+
+13. Resource limits for app-user
+    13.01 Writing /etc/security/limits.d/90-lowlat.conf for @app-user
+           [dry-run] write /etc/security/limits.d/90-lowlat.conf (mode 0644):
+             | # Managed by mechanical-sympathy 07-os-hygiene
+             | # Applies to login sessions (PAM). systemd services use LimitXXX= in the unit instead.
+             | @app-user  soft  nproc    65535
+             | @app-user  hard  nproc    65535
+             | @app-user  soft  nofile   65535
+             | @app-user  hard  nofile   65535
+             | # SCHED_FIFO/RR up to this priority without root
+             | @app-user  -     rtprio   99
+             | # may renice down to -20
+             | @app-user  -     nice     -20
+             | # mlockall() of the whole process (huge pages do not need it, the rest of the process does)
+             | @app-user  -     memlock  unlimited
+
+14. noatime on local filesystems
+    14.01 Adding noatime to local ext4/xfs mounts in /etc/fstab
+           [dry-run] write /etc/fstab (mode 0644):
+             | /dev/mapper/rhel-root / xfs defaults,noatime 0 0
+             | UUID=0000-boot /boot xfs defaults,noatime 0 0
+             | /dev/mapper/rhel-swap  none   swap  defaults  0 0
+    14.02 Remounting / with noatime
+           [dry-run] mount -o remount,noatime /
+    14.03 Remounting /boot with noatime
+           [dry-run] mount -o remount,noatime /boot
+
+15. tuned profile
+    15.01 Writing /etc/tuned/low-latency/tuned.conf (include=network-latency)
+           [dry-run] write /etc/tuned/low-latency/tuned.conf (mode 0644):
+             | # Managed by mechanical-sympathy 07-os-hygiene
+             | [main]
+             | summary=Low latency: network-latency + mechanical-sympathy host settings
+             | include=network-latency
+             | 
+             | [cpu]
+             | governor=performance
+             | energy_perf_bias=performance
+             | min_perf_pct=100
+    15.02 Making sure tuned re-applies /etc/sysctl.d after its own sysctls
+    15.03 Activating tuned profile low-latency
+           [dry-run] systemctl enable --now tuned
+           [dry-run] tuned-adm profile low-latency
+
+16. Host packet filtering (opt-in)
+    16.01 FLUSH_FIREWALL_RULES=no, keeping firewall rules
+    16.02 REMOVE_NETFILTER_MODULES=no, keeping netfilter modules
+
+17. Time synchronization (TIME_SYNC_MODE=chrony)
+    17.01 Pinning chronyd.service to CPUs 0
+           [dry-run] write /etc/systemd/system/chronyd.service.d/10-lowlat-time-sync.conf (mode 0644):
+             | # Managed by mechanical-sympathy 10-time-sync
+             | # Housekeeping CPU, not housekeeping.slice: the daemon's scheduling latency is part
+             | # of the clock error, so it must not share a CPU quota with agents.
+             | [Service]
+             | CPUAffinity=0
+    17.02 Pinning ptp4l.service to CPUs 0
+           [dry-run] write /etc/systemd/system/ptp4l.service.d/10-lowlat-time-sync.conf (mode 0644):
+             | # Managed by mechanical-sympathy 10-time-sync
+             | # Housekeeping CPU, not housekeeping.slice: the daemon's scheduling latency is part
+             | # of the clock error, so it must not share a CPU quota with agents.
+             | [Service]
+             | CPUAffinity=0
+    17.03 Pinning phc2sys.service to CPUs 0
+           [dry-run] write /etc/systemd/system/phc2sys.service.d/10-lowlat-time-sync.conf (mode 0644):
+             | # Managed by mechanical-sympathy 10-time-sync
+             | # Housekeeping CPU, not housekeeping.slice: the daemon's scheduling latency is part
+             | # of the clock error, so it must not share a CPU quota with agents.
+             | [Service]
+             | CPUAffinity=0
+           [dry-run] systemctl daemon-reload
+    17.04 Stopping ptp4l and phc2sys (they would fight chronyd over the system clock)
+           [dry-run] systemctl disable --now phc2sys
+           [dry-run] systemctl disable --now ptp4l
+    17.05 Enabling chronyd
+           [dry-run] systemctl enable chronyd
+           [dry-run] systemctl restart chronyd
+
+18. Housekeeping slice
+    18.01 Writing /etc/systemd/system/housekeeping.slice (cgroup v2)
+           [dry-run] write /etc/systemd/system/housekeeping.slice (mode 0644):
+             | # Managed by mechanical-sympathy 05-cgroup-isolation
+             | [Unit]
+             | Description=Housekeeping processes (agents, log shippers, monitoring)
+             | Before=slices.target
+             | 
+             | [Slice]
+             | # cpuset: a hard fence. Processes in this slice cannot run elsewhere, even if they
+             | # call sched_setaffinity() themselves.
+             | AllowedCPUs=4 6
+             | # At most 150% of one CPU in total, across the whole slice.
+             | CPUQuota=150%
+             | # Hard memory cap: exceeding it triggers the OOM killer inside this slice only,
+             | # never on the application. No swap for these processes either.
+             | MemoryMax=4G
+             | MemorySwapMax=0
+             | # Relative I/O share (default 100): agents yield to everything else on contention.
+             | IOWeight=50
+           [dry-run] systemctl daemon-reload
+
+19. Moving agent services into the housekeeping slice
+    19.01 Moving node_exporter.service into housekeeping.slice
+           [dry-run] write /etc/systemd/system/node_exporter.service.d/10-lowlat-housekeeping.conf (mode 0644):
+             | # Managed by mechanical-sympathy 05-cgroup-isolation
+             | [Service]
+             | Slice=housekeeping.slice
+             | CPUAffinity=4 6
+             | Nice=10
+             | IOSchedulingClass=idle
+    19.02 Moving fluent-bit.service into housekeeping.slice
+           [dry-run] write /etc/systemd/system/fluent-bit.service.d/10-lowlat-housekeeping.conf (mode 0644):
+             | # Managed by mechanical-sympathy 05-cgroup-isolation
+             | [Service]
+             | Slice=housekeeping.slice
+             | CPUAffinity=4 6
+             | Nice=10
+             | IOSchedulingClass=idle
+           [dry-run] systemctl daemon-reload
+    19.03 Restart the moved services (or reboot) for the new slice to take effect
+
+20. Pinning housekeeping processes
+    20.01 Pinning edr-agentd pid 1008 (all threads) to CPUs 4
+           [dry-run] taskset -a -cp 4 1008
+    20.02 av-scand is not running
+
+21. Kernel bypass (none)
+    21.01 KERNEL_BYPASS_STACK is empty, nothing to do
+
+22. NIC queues, coalescing, pause frames, offloads and rings
+    22.01 ens1f0: 1 combined queue(s), one per IRQ CPU (1)
+           [dry-run] ethtool -L ens1f0 combined 1
+    22.02 ens1f0: adaptive-rx off, adaptive-tx off
+           [dry-run] ethtool -C ens1f0 adaptive-rx off adaptive-tx off
+    22.03 ens1f0: rx-usecs 0, tx-usecs 0
+           [dry-run] ethtool -C ens1f0 rx-usecs 0
+           [dry-run] ethtool -C ens1f0 tx-usecs 0
+    22.04 ens1f0: pause frames off (ethtool -A autoneg off rx off tx off)
+           [dry-run] ethtool -A ens1f0 autoneg off rx off tx off
+    22.05 ens1f0: tso off, gso off, lro off
+           [dry-run] ethtool -K ens1f0 tso off gso off lro off
+    22.06 ens1f0: RX ring 4096
+           [dry-run] ethtool -G ens1f0 rx 4096
+    22.07 ens1f0: TX ring 4096
+           [dry-run] ethtool -G ens1f0 tx 4096
+    22.08 ens1f1: 1 combined queue(s), one per IRQ CPU (1)
+           [dry-run] ethtool -L ens1f1 combined 1
+    22.09 ens1f1: adaptive-rx off, adaptive-tx off
+           [dry-run] ethtool -C ens1f1 adaptive-rx off adaptive-tx off
+    22.10 ens1f1: rx-usecs 0, tx-usecs 0
+           [dry-run] ethtool -C ens1f1 rx-usecs 0
+           [dry-run] ethtool -C ens1f1 tx-usecs 0
+    22.11 ens1f1: pause frames off (ethtool -A autoneg off rx off tx off)
+           [dry-run] ethtool -A ens1f1 autoneg off rx off tx off
+    22.12 ens1f1: tso off, gso off, lro off
+           [dry-run] ethtool -K ens1f1 tso off gso off lro off
+    22.13 ens1f1: RX ring 4096
+           [dry-run] ethtool -G ens1f1 rx 4096
+    22.14 ens1f1: TX ring 4096
+           [dry-run] ethtool -G ens1f1 tx 4096
+    22.15 eno1: 1 combined queue(s), one per IRQ CPU (0)
+           [dry-run] ethtool -L eno1 combined 1
+    22.16 eno1: adaptive-rx off, adaptive-tx off
+           [dry-run] ethtool -C eno1 adaptive-rx off adaptive-tx off
+    22.17 eno1: rx-usecs 0, tx-usecs 0
+           [dry-run] ethtool -C eno1 rx-usecs 0
+           [dry-run] ethtool -C eno1 tx-usecs 0
+    22.18 eno1: pause frames off (ethtool -A autoneg off rx off tx off)
+           [dry-run] ethtool -A eno1 autoneg off rx off tx off
+    22.19 eno1: tso off, gso off, lro off
+           [dry-run] ethtool -K eno1 tso off gso off lro off
+    22.20 eno1: RX ring 4096
+           [dry-run] ethtool -G eno1 rx 4096
+    22.21 eno1: TX ring 4096
+           [dry-run] ethtool -G eno1 tx 4096
+    22.22 ens2f0: 1 combined queue(s), one per IRQ CPU (30)
+           [dry-run] ethtool -L ens2f0 combined 1
+    22.23 ens2f0: adaptive-rx off, adaptive-tx off
+           [dry-run] ethtool -C ens2f0 adaptive-rx off adaptive-tx off
+    22.24 ens2f0: rx-usecs 0, tx-usecs 0
+           [dry-run] ethtool -C ens2f0 rx-usecs 0
+           [dry-run] ethtool -C ens2f0 tx-usecs 0
+    22.25 ens2f0: pause frames off (ethtool -A autoneg off rx off tx off)
+           [dry-run] ethtool -A ens2f0 autoneg off rx off tx off
+    22.26 ens2f0: tso off, gso off, lro off
+           [dry-run] ethtool -K ens2f0 tso off gso off lro off
+    22.27 ens2f0: RX ring 4096
+           [dry-run] ethtool -G ens2f0 rx 4096
+    22.28 ens2f0: TX ring 4096
+           [dry-run] ethtool -G ens2f0 tx 4096
+    22.29 ens2f0: txqueuelen 300000
+           [dry-run] ip link set dev ens2f0 txqueuelen 300000
+    22.30 ens2f1: 1 combined queue(s), one per IRQ CPU (30)
+           [dry-run] ethtool -L ens2f1 combined 1
+    22.31 ens2f1: adaptive-rx off, adaptive-tx off
+           [dry-run] ethtool -C ens2f1 adaptive-rx off adaptive-tx off
+    22.32 ens2f1: rx-usecs 0, tx-usecs 0
+           [dry-run] ethtool -C ens2f1 rx-usecs 0
+           [dry-run] ethtool -C ens2f1 tx-usecs 0
+    22.33 ens2f1: pause frames off (ethtool -A autoneg off rx off tx off)
+           [dry-run] ethtool -A ens2f1 autoneg off rx off tx off
+    22.34 ens2f1: tso off, gso off, lro off
+           [dry-run] ethtool -K ens2f1 tso off gso off lro off
+    22.35 ens2f1: RX ring 4096
+           [dry-run] ethtool -G ens2f1 rx 4096
+    22.36 ens2f1: TX ring 4096
+           [dry-run] ethtool -G ens2f1 tx 4096
+    22.37 ens2f1: txqueuelen 300000
+           [dry-run] ip link set dev ens2f1 txqueuelen 300000
+    22.38 eno2 is a management interface, leaving it untouched
+
+23. NIC interrupt affinity
+    23.01 ens1f0: routing interrupts to CPUs 1
+           [dry-run] echo 1 > /proc/irq/100/smp_affinity_list
+           [dry-run] echo 1 > /proc/irq/101/smp_affinity_list
+           [dry-run] echo 1 > /proc/irq/102/smp_affinity_list
+           [dry-run] echo 1 > /proc/irq/103/smp_affinity_list
+           [dry-run] echo 1 > /proc/irq/104/smp_affinity_list
+           [dry-run] echo 1 > /proc/irq/105/smp_affinity_list
+           [dry-run] echo 1 > /proc/irq/106/smp_affinity_list
+           [dry-run] echo 1 > /proc/irq/107/smp_affinity_list
+    23.02 ens1f0: 8 IRQ(s) placed
+    23.03 ens1f1: routing interrupts to CPUs 1
+           [dry-run] echo 1 > /proc/irq/108/smp_affinity_list
+           [dry-run] echo 1 > /proc/irq/109/smp_affinity_list
+           [dry-run] echo 1 > /proc/irq/110/smp_affinity_list
+           [dry-run] echo 1 > /proc/irq/111/smp_affinity_list
+           [dry-run] echo 1 > /proc/irq/112/smp_affinity_list
+           [dry-run] echo 1 > /proc/irq/113/smp_affinity_list
+           [dry-run] echo 1 > /proc/irq/114/smp_affinity_list
+           [dry-run] echo 1 > /proc/irq/115/smp_affinity_list
+    23.04 ens1f1: 8 IRQ(s) placed
+    23.05 eno1: routing interrupts to CPUs 0
+           [dry-run] echo 0 > /proc/irq/116/smp_affinity_list
+           [dry-run] echo 0 > /proc/irq/117/smp_affinity_list
+           [dry-run] echo 0 > /proc/irq/118/smp_affinity_list
+           [dry-run] echo 0 > /proc/irq/119/smp_affinity_list
+           [dry-run] echo 0 > /proc/irq/120/smp_affinity_list
+           [dry-run] echo 0 > /proc/irq/121/smp_affinity_list
+           [dry-run] echo 0 > /proc/irq/122/smp_affinity_list
+           [dry-run] echo 0 > /proc/irq/123/smp_affinity_list
+    23.06 eno1: 8 IRQ(s) placed
+    23.07 ens2f0: routing interrupts to CPUs 30
+           [dry-run] echo 30 > /proc/irq/124/smp_affinity_list
+           [dry-run] echo 30 > /proc/irq/125/smp_affinity_list
+           [dry-run] echo 30 > /proc/irq/126/smp_affinity_list
+           [dry-run] echo 30 > /proc/irq/127/smp_affinity_list
+           [dry-run] echo 30 > /proc/irq/128/smp_affinity_list
+           [dry-run] echo 30 > /proc/irq/129/smp_affinity_list
+           [dry-run] echo 30 > /proc/irq/130/smp_affinity_list
+           [dry-run] echo 30 > /proc/irq/131/smp_affinity_list
+    23.08 ens2f0: 8 IRQ(s) placed
+    23.09 ens2f1: routing interrupts to CPUs 30
+           [dry-run] echo 30 > /proc/irq/132/smp_affinity_list
+           [dry-run] echo 30 > /proc/irq/133/smp_affinity_list
+           [dry-run] echo 30 > /proc/irq/134/smp_affinity_list
+           [dry-run] echo 30 > /proc/irq/135/smp_affinity_list
+           [dry-run] echo 30 > /proc/irq/136/smp_affinity_list
+           [dry-run] echo 30 > /proc/irq/137/smp_affinity_list
+           [dry-run] echo 30 > /proc/irq/138/smp_affinity_list
+           [dry-run] echo 30 > /proc/irq/139/smp_affinity_list
+    23.10 ens2f1: 8 IRQ(s) placed
+    23.11 eno2: routing interrupts to CPUs 0
+           [dry-run] echo 0 > /proc/irq/140/smp_affinity_list
+           [dry-run] echo 0 > /proc/irq/141/smp_affinity_list
+           [dry-run] echo 0 > /proc/irq/142/smp_affinity_list
+           [dry-run] echo 0 > /proc/irq/143/smp_affinity_list
+           [dry-run] echo 0 > /proc/irq/144/smp_affinity_list
+           [dry-run] echo 0 > /proc/irq/145/smp_affinity_list
+           [dry-run] echo 0 > /proc/irq/146/smp_affinity_list
+           [dry-run] echo 0 > /proc/irq/147/smp_affinity_list
+    23.12 eno2: 8 IRQ(s) placed
+
+24. Verification timer (DAY2_VERIFY_TIMER=yes)
+    24.01 Writing lowlat-verify.service (ExecStart=/opt/lowlat/scripts/verify-tuning, CPUs: 0 1 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
+           [dry-run] write /etc/systemd/system/lowlat-verify.service (mode 0644):
+             | # Managed by mechanical-sympathy 11-day2-operations
+             | [Unit]
+             | Description=Verify the low-latency tuning (read-only report)
+             | ConditionPathExists=/etc/lowlat/lowlat.conf
+             | # A missed run that Persistent=true triggers at activation must not inspect runtime state before
+             | # lowlat-runtime.service has re-applied it. Ordering only: no Wants=, so verification never starts
+             | # runtime tuning that the operator disabled.
+             | After=lowlat-runtime.service
+             | 
+             | [Service]
+             | Type=oneshot
+             | Environment="LOWLAT_CONFIG=/etc/lowlat/lowlat.conf"
+             | ExecStartPre=/usr/bin/mkdir -p /var/lib/lowlat/opt/lowlatrts
+             | # verify-tuning exits 5 when a check FAILs, which marks this unit as failed.
+             | ExecStart="/opt/lowlat/scripts/verify-tuning" --report "/var/lib/lowlat/opt/lowlatrts/verify-latest.txt"
+             | SyslogIdentifier=lowlat-verify
+             | Nice=19
+             | IOSchedulingClass=idle
+             | CPUAffinity=0 1 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30
+    24.02 Writing lowlat-verify.timer (daily, and 10 min after every boot)
+           [dry-run] write /etc/systemd/system/lowlat-verify.timer (mode 0644):
+             | # Managed by mechanical-sympathy 11-day2-operations
+             | [Unit]
+             | Description=Verify the low-latency tuning on a schedule
+             | 
+             | [Timer]
+             | OnBootSec=10min
+             | OnCalendar=daily
+             | Persistent=true
+             | RandomizedDelaySec=15min
+             | 
+             | [Install]
+             | WantedBy=timers.target
+           [dry-run] systemctl daemon-reload
+           [dry-run] systemctl enable --now lowlat-verify.timer
+
+25. Boot-time re-application of runtime settings
+    25.01 Installing /etc/systemd/system/lowlat-runtime.service (ExecStart=/opt/lowlat/scripts/apply-all --runtime)
+           [dry-run] write /etc/systemd/system/lowlat-runtime.service (mode 0644):
+             | # Re-applies the NON-persistent part of the low-latency tuning at every boot:
+             | #   00 PCIe ASPM policy, 02 workqueue cpumask, 08 DPDK port binding, 04 NIC coalescing/offloads/rings/IRQ affinity,
+             | #   05 pinning of housekeeping processes, 07 opt-in firewall/module removal.
+             | # Persistent settings (GRUB, systemd.conf, sysctl.d, huge page unit, slices, tuned)
+             | # are not touched here.
+             | #
+             | # Installed by `scripts/apply-all --apply`, which rewrites ExecStart with the real
+             | # location of the scripts. Latency-critical services should order themselves
+             | # After=lowlat-runtime.service.
+             | 
+             | [Unit]
+             | Description=Low-latency runtime tuning (IRQ affinity, NIC settings, workqueues)
+             | Wants=network-online.target
+             | After=network-online.target hugetlb-reserve-pages.service tuned.service
+             | ConditionPathExists=/etc/lowlat/lowlat.conf
+             | 
+             | [Service]
+             | Type=oneshot
+             | RemainAfterExit=yes
+             | Environment=LOWLAT_CONFIG=/etc/lowlat/lowlat.conf
+             | ExecStart=/opt/lowlat/scripts/apply-all --runtime
+             | # Run the tuning itself on a housekeeping CPU.
+             | CPUAffinity=0
+             | StandardOutput=journal
+             | 
+             | [Install]
+             | WantedBy=multi-user.target
+           [dry-run] systemctl daemon-reload
+           [dry-run] systemctl enable lowlat-runtime.service
+
+Step timing summary
++------+----------------------------------------------------------+------------+
+| Step | Description                                              |   Duration |
++------+----------------------------------------------------------+------------+
+| 01   | Firmware settings visible to the OS                      |    0.000 s |
+| 02   | Kernel command line: latency subset (host_class=bare_met |    0.000 s |
+| 03   | Kernel command line: CPU isolation set                   |    0.000 s |
+| 04   | Regenerating GRUB configuration                          |    0.000 s |
+| 05   | systemd CPU affinity and RT limits                       |    0.000 s |
+| 06   | Kernel workqueue CPU mask                                |    0.000 s |
+| 07   | irqbalance                                               |    0.000 s |
+| 08   | Real-time throttling                                     |    0.000 s |
+| 09   | Huge page reservation per NUMA node                      |    0.000 s |
+| 10   | Huge page sysctls                                        |    0.000 s |
+| 11   | Kernel sysctl profile                                    |    0.000 s |
+| 12   | Unnecessary services                                     |    0.000 s |
+| 13   | Resource limits for app-user                             |    0.000 s |
+| 14   | noatime on local filesystems                             |    0.000 s |
+| 15   | tuned profile                                            |    0.000 s |
+| 16   | Host packet filtering (opt-in)                           |    0.000 s |
+| 17   | Time synchronization (TIME_SYNC_MODE=chrony)             |    0.000 s |
+| 18   | Housekeeping slice                                       |    0.000 s |
+| 19   | Moving agent services into the housekeeping slice        |    0.000 s |
+| 20   | Pinning housekeeping processes                           |    0.000 s |
+| 21   | Kernel bypass (none)                                     |    0.000 s |
+| 22   | NIC queues, coalescing, pause frames, offloads and rings |    0.000 s |
+| 23   | NIC interrupt affinity                                   |    0.000 s |
+| 24   | Verification timer (DAY2_VERIFY_TIMER=yes)               |    0.000 s |
+| 25   | Boot-time re-application of runtime settings             |    0.000 s |
++------+----------------------------------------------------------+------------+
+|      | TOTAL                                                    |    0.000 s |
++------+----------------------------------------------------------+------------+
+
+Reboot required for GRUB, systemd CPUAffinity and huge page reservation.
+After the reboot: /opt/lowlat/scripts/verify-tuning
+---- exit 0
+
+==== apply-all --apply
+LOW-LATENCY TUNING (apply)
+  os:         Red Hat Enterprise Linux 9.6
+  kernel:     5.14.0-570.12.1.el9_6.x86_64
+  host class: bare_metal
+  config:     /etc/lowlat/lowlat.conf
+  date:       <date>
+
+01. Firmware settings visible to the OS
+    01.01 PCIe ASPM policy default -> performance
+    01.02 Everything else is set in the BIOS setup: see Guide 00 §4
+
+02. Kernel command line: latency subset (host_class=bare_metal)
+    02.01 Polling idle loop instead of halting (idle=poll)
+    02.02 Limiting ACPI C-states to C0/C1 (processor.max_cstate=0)
+    02.03 Disabling intel_idle deep C-states (intel_idle.max_cstate=0)
+    02.04 Disabling transparent huge pages (transparent_hugepage=never)
+
+03. Kernel command line: CPU isolation set
+    03.01 Removing CPUs 3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 from the scheduler (isolcpus)
+    03.02 Stopping the scheduler tick on 3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 (nohz_full)
+    03.03 Disabling idle dynticks (nohz=off)
+    03.04 Offloading RCU callbacks from 3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 (rcu_nocbs)
+    03.05 Letting rcuo kthreads poll instead of being woken by isolated CPUs (rcu_nocb_poll)
+    03.06 Staggering per-CPU tick timers (skew_tick=1)
+    03.07 Handing frequency control to acpi-cpufreq (intel_pstate=disable)
+    03.08 Disabling soft-lockup detector (nosoftlockup)
+    03.09 Disabling NMI watchdog (nmi_watchdog=0)
+    03.10 Ignoring corrected machine-check errors (mce=ignore_ce)
+    03.11 Setting huge page size to 2M (default_hugepagesz, hugepagesz)
+    03.12 Disabling IOMMU translation (intel_iommu=off iommu=off)
+    03.13 Disabling CPU vulnerability mitigations (nospectre_v1 nospectre_v2 pti=off mds=off tsx_async_abort=off)
+    03.14 Removing graphical console (console=tty0)
+
+04. Regenerating GRUB configuration
+    04.01 Reboot required: the new command line is used on the next boot
+
+05. systemd CPU affinity and RT limits
+    05.01 Restricting systemd and all services to CPUs 0 1 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 (/etc/systemd/system.conf)
+    05.02 Allowing real-time priority up to 99 for services (DefaultLimitRTPRIO)
+    05.03 Allowing nice down to -20 for services (DefaultLimitNICE=40)
+    05.04 Reboot required for PID 1 to re-read CPUAffinity (daemon-reexec is not enough for running units)
+
+06. Kernel workqueue CPU mask
+    06.01 Unbound workqueues -> CPUs 0 2 (mask 00000005)
+    06.02 Writeback workqueue -> CPUs 0 2 (mask 00000005)
+
+07. irqbalance
+    07.01 Stopping and disabling irqbalance
+
+08. Real-time throttling
+    08.01 Disabling real-time throttling (kernel.sched_rt_runtime_us=-1)
+
+09. Huge page reservation per NUMA node
+    09.01 Writing per-node reservation script /usr/lib/systemd/hugetlb-reserve-pages
+    09.02 Writing systemd unit /etc/systemd/system/hugetlb-reserve-pages.service
+    09.03 Enabling hugetlb-reserve-pages.service
+    09.04 Reserving 2048 x 2M on node0 now
+    09.05 node0: 2048 pages reserved
+    09.06 Reserving 12288 x 2M on node1 now
+    09.07 node1: 12288 pages reserved
+
+10. Huge page sysctls
+    10.01 Writing /etc/sysctl.d/92-lowlat-hugepages.conf
+
+11. Kernel sysctl profile
+    11.01 Not available on kernel 5.14.0-570.12.1.el9_6.x86_64, skipped: net.ipv4.tcp_shrink_window
+    11.02 Writing /etc/sysctl.d/90-lowlat.conf
+    11.03 Loading /etc/sysctl.d/90-lowlat.conf (per-interface keys for absent interfaces may warn)
+
+12. Unnecessary services
+    12.01 Stopping and disabling crond
+    12.02 Enabling rsyslog
+
+13. Resource limits for app-user
+    13.01 Writing /etc/security/limits.d/90-lowlat.conf for @app-user
+
+14. noatime on local filesystems
+    14.01 Adding noatime to local ext4/xfs mounts in /etc/fstab
+    14.02 Remounting / with noatime
+    14.03 Remounting /boot with noatime
+
+15. tuned profile
+    15.01 Writing /etc/tuned/low-latency/tuned.conf (include=network-latency)
+    15.02 Making sure tuned re-applies /etc/sysctl.d after its own sysctls
+    15.03 Activating tuned profile low-latency
+
+16. Host packet filtering (opt-in)
+    16.01 FLUSH_FIREWALL_RULES=no, keeping firewall rules
+    16.02 REMOVE_NETFILTER_MODULES=no, keeping netfilter modules
+
+17. Time synchronization (TIME_SYNC_MODE=chrony)
+    17.01 Pinning chronyd.service to CPUs 0
+    17.02 Pinning ptp4l.service to CPUs 0
+    17.03 Pinning phc2sys.service to CPUs 0
+    17.04 Stopping ptp4l and phc2sys (they would fight chronyd over the system clock)
+    17.05 Enabling chronyd
+
+18. Housekeeping slice
+    18.01 Writing /etc/systemd/system/housekeeping.slice (cgroup v2)
+
+19. Moving agent services into the housekeeping slice
+    19.01 Moving node_exporter.service into housekeeping.slice
+    19.02 fluent-bit.service is not installed, skipping
+    19.03 Restart the moved services (or reboot) for the new slice to take effect
+
+20. Pinning housekeeping processes
+    20.01 Pinning edr-agentd pid 1008 (all threads) to CPUs 4
+    20.02 av-scand is not running
+
+21. Kernel bypass (none)
+    21.01 KERNEL_BYPASS_STACK is empty, nothing to do
+
+22. NIC queues, coalescing, pause frames, offloads and rings
+    22.01 ens1f0: 1 combined queue(s), one per IRQ CPU (1)
+    22.02 ens1f0: adaptive-rx off, adaptive-tx off
+    22.03 ens1f0: rx-usecs 0, tx-usecs 0
+    22.04 ens1f0: pause frames off (ethtool -A autoneg off rx off tx off)
+    22.05 ens1f0: tso off, gso off, lro off
+    22.06 ens1f0: RX ring 4096
+    22.07 ens1f0: TX ring 4096
+    22.08 ens1f1: 1 combined queue(s), one per IRQ CPU (1)
+    22.09 ens1f1: adaptive-rx off, adaptive-tx off
+    22.10 ens1f1: rx-usecs 0, tx-usecs 0
+    22.11 ens1f1: pause frames off (ethtool -A autoneg off rx off tx off)
+    22.12 ens1f1: tso off, gso off, lro off
+    22.13 ens1f1: RX ring 4096
+    22.14 ens1f1: TX ring 4096
+    22.15 eno1: 1 combined queue(s), one per IRQ CPU (0)
+    22.16 eno1: adaptive-rx off, adaptive-tx off
+    22.17 eno1: rx-usecs 0, tx-usecs 0
+    22.18 eno1: pause frames off (ethtool -A autoneg off rx off tx off)
+    22.19 eno1: tso off, gso off, lro off
+    22.20 eno1: RX ring 4096
+    22.21 eno1: TX ring 4096
+    22.22 ens2f0: 1 combined queue(s), one per IRQ CPU (30)
+    22.23 ens2f0: adaptive-rx off, adaptive-tx off
+    22.24 ens2f0: rx-usecs 0, tx-usecs 0
+    22.25 ens2f0: pause frames off (ethtool -A autoneg off rx off tx off)
+    22.26 ens2f0: tso off, gso off, lro off
+    22.27 ens2f0: RX ring 4096
+    22.28 ens2f0: TX ring 4096
+    22.29 ens2f0: txqueuelen 300000
+    22.30 ens2f1: 1 combined queue(s), one per IRQ CPU (30)
+    22.31 ens2f1: adaptive-rx off, adaptive-tx off
+    22.32 ens2f1: rx-usecs 0, tx-usecs 0
+    22.33 ens2f1: pause frames off (ethtool -A autoneg off rx off tx off)
+    22.34 ens2f1: tso off, gso off, lro off
+    22.35 ens2f1: RX ring 4096
+    22.36 ens2f1: TX ring 4096
+    22.37 ens2f1: txqueuelen 300000
+    22.38 eno2 is a management interface, leaving it untouched
+
+23. NIC interrupt affinity
+    23.01 ens1f0: routing interrupts to CPUs 1
+    23.02 ens1f0: 8 IRQ(s) placed
+    23.03 ens1f1: routing interrupts to CPUs 1
+    23.04 ens1f1: 8 IRQ(s) placed
+    23.05 eno1: routing interrupts to CPUs 0
+    23.06 eno1: 8 IRQ(s) placed
+    23.07 ens2f0: routing interrupts to CPUs 30
+    23.08 ens2f0: 8 IRQ(s) placed
+    23.09 ens2f1: routing interrupts to CPUs 30
+    23.10 ens2f1: 8 IRQ(s) placed
+    23.11 eno2: routing interrupts to CPUs 0
+    23.12 eno2: 8 IRQ(s) placed
+
+24. Verification timer (DAY2_VERIFY_TIMER=yes)
+    24.01 Writing lowlat-verify.service (ExecStart=/opt/lowlat/scripts/verify-tuning, CPUs: 0 1 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
+    24.02 Writing lowlat-verify.timer (daily, and 10 min after every boot)
+
+25. Boot-time re-application of runtime settings
+    25.01 Installing /etc/systemd/system/lowlat-runtime.service (ExecStart=/opt/lowlat/scripts/apply-all --runtime)
+
+Step timing summary
++------+----------------------------------------------------------+------------+
+| Step | Description                                              |   Duration |
++------+----------------------------------------------------------+------------+
+| 01   | Firmware settings visible to the OS                      |    0.000 s |
+| 02   | Kernel command line: latency subset (host_class=bare_met |    0.000 s |
+| 03   | Kernel command line: CPU isolation set                   |    0.000 s |
+| 04   | Regenerating GRUB configuration                          |    0.000 s |
+| 05   | systemd CPU affinity and RT limits                       |    0.000 s |
+| 06   | Kernel workqueue CPU mask                                |    0.000 s |
+| 07   | irqbalance                                               |    0.000 s |
+| 08   | Real-time throttling                                     |    0.000 s |
+| 09   | Huge page reservation per NUMA node                      |    0.000 s |
+| 10   | Huge page sysctls                                        |    0.000 s |
+| 11   | Kernel sysctl profile                                    |    0.000 s |
+| 12   | Unnecessary services                                     |    0.000 s |
+| 13   | Resource limits for app-user                             |    0.000 s |
+| 14   | noatime on local filesystems                             |    0.000 s |
+| 15   | tuned profile                                            |    0.000 s |
+| 16   | Host packet filtering (opt-in)                           |    0.000 s |
+| 17   | Time synchronization (TIME_SYNC_MODE=chrony)             |    0.000 s |
+| 18   | Housekeeping slice                                       |    0.000 s |
+| 19   | Moving agent services into the housekeeping slice        |    0.000 s |
+| 20   | Pinning housekeeping processes                           |    0.000 s |
+| 21   | Kernel bypass (none)                                     |    0.000 s |
+| 22   | NIC queues, coalescing, pause frames, offloads and rings |    0.000 s |
+| 23   | NIC interrupt affinity                                   |    0.000 s |
+| 24   | Verification timer (DAY2_VERIFY_TIMER=yes)               |    0.000 s |
+| 25   | Boot-time re-application of runtime settings             |    0.000 s |
++------+----------------------------------------------------------+------------+
+|      | TOTAL                                                    |    0.000 s |
++------+----------------------------------------------------------+------------+
+
+Reboot required for GRUB, systemd CPUAffinity and huge page reservation.
+After the reboot: /opt/lowlat/scripts/verify-tuning
+---- exit 0
+
+==== commands that changed the host
+grubby --update-kernel=ALL --remove-args=idle
+grubby --update-kernel=ALL --args=idle=poll
+grubby --update-kernel=ALL --remove-args=processor.max_cstate
+grubby --update-kernel=ALL --args=processor.max_cstate=0
+grubby --update-kernel=ALL --remove-args=intel_idle.max_cstate
+grubby --update-kernel=ALL --args=intel_idle.max_cstate=0
+grubby --update-kernel=ALL --remove-args=transparent_hugepage
+grubby --update-kernel=ALL --args=transparent_hugepage=never
+grubby --update-kernel=ALL --remove-args=isolcpus
+grubby --update-kernel=ALL --args=isolcpus=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31
+grubby --update-kernel=ALL --remove-args=nohz_full
+grubby --update-kernel=ALL --args=nohz_full=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31
+grubby --update-kernel=ALL --remove-args=nohz
+grubby --update-kernel=ALL --args=nohz=off
+grubby --update-kernel=ALL --remove-args=rcu_nocbs
+grubby --update-kernel=ALL --args=rcu_nocbs=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31
+grubby --update-kernel=ALL --remove-args=rcu_nocb_poll
+grubby --update-kernel=ALL --args=rcu_nocb_poll
+grubby --update-kernel=ALL --remove-args=skew_tick
+grubby --update-kernel=ALL --args=skew_tick=1
+grubby --update-kernel=ALL --remove-args=intel_pstate
+grubby --update-kernel=ALL --args=intel_pstate=disable
+grubby --update-kernel=ALL --remove-args=nosoftlockup
+grubby --update-kernel=ALL --args=nosoftlockup
+grubby --update-kernel=ALL --remove-args=nmi_watchdog
+grubby --update-kernel=ALL --args=nmi_watchdog=0
+grubby --update-kernel=ALL --remove-args=mce
+grubby --update-kernel=ALL --args=mce=ignore_ce
+grubby --update-kernel=ALL --remove-args=default_hugepagesz
+grubby --update-kernel=ALL --args=default_hugepagesz=2M
+grubby --update-kernel=ALL --remove-args=hugepagesz
+grubby --update-kernel=ALL --args=hugepagesz=2M
+grubby --update-kernel=ALL --remove-args=intel_iommu
+grubby --update-kernel=ALL --args=intel_iommu=off
+grubby --update-kernel=ALL --remove-args=iommu
+grubby --update-kernel=ALL --args=iommu=off
+grubby --update-kernel=ALL --remove-args=nospectre_v1
+grubby --update-kernel=ALL --args=nospectre_v1
+grubby --update-kernel=ALL --remove-args=nospectre_v2
+grubby --update-kernel=ALL --args=nospectre_v2
+grubby --update-kernel=ALL --remove-args=pti
+grubby --update-kernel=ALL --args=pti=off
+grubby --update-kernel=ALL --remove-args=mds
+grubby --update-kernel=ALL --args=mds=off
+grubby --update-kernel=ALL --remove-args=tsx_async_abort
+grubby --update-kernel=ALL --args=tsx_async_abort=off
+grubby --update-kernel=ALL --remove-args=console=tty0
+grub2-mkconfig -o /boot/grub2/grub.cfg
+systemctl stop irqbalance
+systemctl disable irqbalance
+sysctl -w kernel.sched_rt_runtime_us=-1
+systemctl daemon-reload
+systemctl enable hugetlb-reserve-pages.service
+sysctl -p /etc/sysctl.d/92-lowlat-hugepages.conf
+sysctl -p /etc/sysctl.d/90-lowlat.conf
+systemctl stop crond
+systemctl disable crond
+systemctl enable --now rsyslog
+mount -o remount,noatime /
+mount -o remount,noatime /boot
+systemctl enable --now tuned
+tuned-adm profile low-latency
+systemctl daemon-reload
+systemctl disable --now phc2sys
+systemctl disable --now ptp4l
+systemctl enable chronyd
+systemctl restart chronyd
+systemctl daemon-reload
+systemctl daemon-reload
+taskset -a -cp 4 1008
+ethtool -L ens1f0 combined 1
+ethtool -C ens1f0 adaptive-rx off adaptive-tx off
+ethtool -C ens1f0 rx-usecs 0
+ethtool -C ens1f0 tx-usecs 0
+ethtool -A ens1f0 autoneg off rx off tx off
+ethtool -K ens1f0 tso off gso off lro off
+ethtool -G ens1f0 rx 4096
+ethtool -G ens1f0 tx 4096
+ethtool -L ens1f1 combined 1
+ethtool -C ens1f1 adaptive-rx off adaptive-tx off
+ethtool -C ens1f1 rx-usecs 0
+ethtool -C ens1f1 tx-usecs 0
+ethtool -A ens1f1 autoneg off rx off tx off
+ethtool -K ens1f1 tso off gso off lro off
+ethtool -G ens1f1 rx 4096
+ethtool -G ens1f1 tx 4096
+ethtool -L eno1 combined 1
+ethtool -C eno1 adaptive-rx off adaptive-tx off
+ethtool -C eno1 rx-usecs 0
+ethtool -C eno1 tx-usecs 0
+ethtool -A eno1 autoneg off rx off tx off
+ethtool -K eno1 tso off gso off lro off
+ethtool -G eno1 rx 4096
+ethtool -G eno1 tx 4096
+ethtool -L ens2f0 combined 1
+ethtool -C ens2f0 adaptive-rx off adaptive-tx off
+ethtool -C ens2f0 rx-usecs 0
+ethtool -C ens2f0 tx-usecs 0
+ethtool -A ens2f0 autoneg off rx off tx off
+ethtool -K ens2f0 tso off gso off lro off
+ethtool -G ens2f0 rx 4096
+ethtool -G ens2f0 tx 4096
+ip link set dev ens2f0 txqueuelen 300000
+ethtool -L ens2f1 combined 1
+ethtool -C ens2f1 adaptive-rx off adaptive-tx off
+ethtool -C ens2f1 rx-usecs 0
+ethtool -C ens2f1 tx-usecs 0
+ethtool -A ens2f1 autoneg off rx off tx off
+ethtool -K ens2f1 tso off gso off lro off
+ethtool -G ens2f1 rx 4096
+ethtool -G ens2f1 tx 4096
+ip link set dev ens2f1 txqueuelen 300000
+systemctl daemon-reload
+systemctl enable --now lowlat-verify.timer
+systemctl daemon-reload
+systemctl enable lowlat-runtime.service
+
+==== files changed by apply
+A /etc/security/limits.d/90-lowlat.conf
+A /etc/sysctl.d/90-lowlat.conf
+A /etc/sysctl.d/91-lowlat-rt.conf
+A /etc/sysctl.d/92-lowlat-hugepages.conf
+A /etc/systemd/system/chronyd.service.d/10-lowlat-time-sync.conf
+A /etc/systemd/system/housekeeping.slice
+A /etc/systemd/system/hugetlb-reserve-pages.service
+A /etc/systemd/system/lowlat-runtime.service
+A /etc/systemd/system/lowlat-verify.service
+A /etc/systemd/system/lowlat-verify.timer
+A /etc/systemd/system/node_exporter.service.d/10-lowlat-housekeeping.conf
+A /etc/systemd/system/phc2sys.service.d/10-lowlat-time-sync.conf
+A /etc/systemd/system/ptp4l.service.d/10-lowlat-time-sync.conf
+A /etc/tuned/low-latency/tuned.conf
+A /run/fake-systemd/active/lowlat-verify.timer
+A /usr/lib/systemd/hugetlb-reserve-pages
+A /var/lib/fake-systemd/enabled/hugetlb-reserve-pages.service
+A /var/lib/fake-systemd/enabled/lowlat-runtime.service
+A /var/lib/fake-systemd/enabled/lowlat-verify.timer
+A /var/lib/lowlat/aspm-original-policy
+A /var/lib/lowlat/factory-settings/etc/fstab
+A /var/lib/lowlat/factory-settings/etc/systemd/system.conf
+D /run/fake-systemd/active/crond.service
+D /run/fake-systemd/active/irqbalance.service
+D /var/lib/fake-systemd/enabled/crond.service
+D /var/lib/fake-systemd/enabled/irqbalance.service
+M /boot/loader/entries/0f1e2d3c4b5a69788796a5b4c3d2e1f0-0-rescue.conf
+M /boot/loader/entries/0f1e2d3c4b5a69788796a5b4c3d2e1f0-5.14.0-570.12.1.el9_6.x86_64.conf
+M /etc/fstab
+M /etc/systemd/system.conf
+M /etc/tuned/active_profile
+M /proc/irq/*/smp_affinity_list (48)
+M /proc/sys/fs/file-max
+M /proc/sys/kernel/printk
+M /proc/sys/kernel/sched_rt_runtime_us
+M /proc/sys/kernel/shmmni
+M /proc/sys/net/core/bpf_jit_enable
+M /proc/sys/net/core/bpf_jit_limit
+M /proc/sys/net/core/default_qdisc
+M /proc/sys/net/core/netdev_max_backlog
+M /proc/sys/net/core/optmem_max
+M /proc/sys/net/core/rmem_default
+M /proc/sys/net/core/rmem_max
+M /proc/sys/net/core/somaxconn
+M /proc/sys/net/core/txrehash
+M /proc/sys/net/core/wmem_default
+M /proc/sys/net/core/wmem_max
+M /proc/sys/net/ipv4/conf/eno1/arp_ignore
+M /proc/sys/net/ipv4/conf/eno2/arp_ignore
+M /proc/sys/net/ipv4/conf/ens1f0/arp_ignore
+M /proc/sys/net/ipv4/conf/ens1f1/arp_ignore
+M /proc/sys/net/ipv4/conf/ens2f0/arp_ignore
+M /proc/sys/net/ipv4/conf/ens2f1/arp_ignore
+M /proc/sys/net/ipv4/conf/lo/arp_ignore
+M /proc/sys/net/ipv4/tcp_fastopen
+M /proc/sys/net/ipv4/tcp_fin_timeout
+M /proc/sys/net/ipv4/tcp_keepalive_intvl
+M /proc/sys/net/ipv4/tcp_keepalive_probes
+M /proc/sys/net/ipv4/tcp_keepalive_time
+M /proc/sys/net/ipv4/tcp_max_orphans
+M /proc/sys/net/ipv4/tcp_max_syn_backlog
+M /proc/sys/net/ipv4/tcp_max_tw_buckets
+M /proc/sys/net/ipv4/tcp_moderate_rcvbuf
+M /proc/sys/net/ipv4/tcp_rmem
+M /proc/sys/net/ipv4/tcp_sack
+M /proc/sys/net/ipv4/tcp_syn_retries
+M /proc/sys/net/ipv4/tcp_syncookies
+M /proc/sys/net/ipv4/tcp_timestamps
+M /proc/sys/net/ipv4/tcp_tw_reuse
+M /proc/sys/net/ipv4/tcp_window_scaling
+M /proc/sys/net/ipv4/tcp_wmem
+M /proc/sys/net/ipv6/conf/all/disable_ipv6
+M /proc/sys/net/ipv6/conf/default/disable_ipv6
+M /proc/sys/net/ipv6/conf/eno1/disable_ipv6
+M /proc/sys/net/ipv6/conf/eno2/disable_ipv6
+M /proc/sys/net/ipv6/conf/ens1f0/disable_ipv6
+M /proc/sys/net/ipv6/conf/ens1f1/disable_ipv6
+M /proc/sys/net/ipv6/conf/ens2f0/disable_ipv6
+M /proc/sys/net/ipv6/conf/ens2f1/disable_ipv6
+M /proc/sys/net/ipv6/conf/lo/disable_ipv6
+M /proc/sys/vm/dirty_background_ratio
+M /proc/sys/vm/dirty_ratio
+M /proc/sys/vm/hugetlb_shm_group
+M /proc/sys/vm/min_free_kbytes
+M /proc/sys/vm/nr_overcommit_hugepages
+M /proc/sys/vm/stat_interval
+M /run/fake-ethtool/eno1
+M /run/fake-ethtool/ens1f0
+M /run/fake-ethtool/ens1f1
+M /run/fake-ethtool/ens2f0
+M /run/fake-ethtool/ens2f1
+M /sys/bus/workqueue/devices/writeback/cpumask
+M /sys/class/net/ens2f0/tx_queue_len
+M /sys/class/net/ens2f1/tx_queue_len
+M /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages
+M /sys/devices/system/node/node1/hugepages/hugepages-2048kB/nr_hugepages
+M /sys/devices/virtual/workqueue/cpumask
+M /sys/module/pcie_aspm/parameters/policy
+
+==== reboot
+hugetlb-reserve-pages.service:
+  node0: requested 2048 x 2M, reserved 2048
+  node1: requested 12288 x 2M, reserved 12288
+lowlat-runtime.service: /opt/lowlat/scripts/apply-all --runtime
+  LOW-LATENCY TUNING (runtime)
+    os:         Red Hat Enterprise Linux 9.6
+    kernel:     5.14.0-570.12.1.el9_6.x86_64
+    host class: bare_metal
+    config:     /etc/lowlat/lowlat.conf
+    date:       <date>
+  
+  01. Firmware settings visible to the OS
+      01.01 PCIe ASPM policy default -> performance
+  
+  02. Kernel workqueue CPU mask
+      02.01 Unbound workqueues -> CPUs 0 2 (mask 00000005)
+      02.02 Writeback workqueue -> CPUs 0 2 (mask 00000005)
+  
+  03. NIC queues, coalescing, pause frames, offloads and rings
+      03.01 ens1f0: 1 combined queue(s), one per IRQ CPU (1)
+      03.02 ens1f0: adaptive-rx off, adaptive-tx off
+      03.03 ens1f0: rx-usecs 0, tx-usecs 0
+      03.04 ens1f0: pause frames off (ethtool -A autoneg off rx off tx off)
+      03.05 ens1f0: tso off, gso off, lro off
+      03.06 ens1f0: RX ring 4096
+      03.07 ens1f0: TX ring 4096
+      03.08 ens1f1: 1 combined queue(s), one per IRQ CPU (1)
+      03.09 ens1f1: adaptive-rx off, adaptive-tx off
+      03.10 ens1f1: rx-usecs 0, tx-usecs 0
+      03.11 ens1f1: pause frames off (ethtool -A autoneg off rx off tx off)
+      03.12 ens1f1: tso off, gso off, lro off
+      03.13 ens1f1: RX ring 4096
+      03.14 ens1f1: TX ring 4096
+      03.15 eno1: 1 combined queue(s), one per IRQ CPU (0)
+      03.16 eno1: adaptive-rx off, adaptive-tx off
+      03.17 eno1: rx-usecs 0, tx-usecs 0
+      03.18 eno1: pause frames off (ethtool -A autoneg off rx off tx off)
+      03.19 eno1: tso off, gso off, lro off
+      03.20 eno1: RX ring 4096
+      03.21 eno1: TX ring 4096
+      03.22 ens2f0: 1 combined queue(s), one per IRQ CPU (30)
+      03.23 ens2f0: adaptive-rx off, adaptive-tx off
+      03.24 ens2f0: rx-usecs 0, tx-usecs 0
+      03.25 ens2f0: pause frames off (ethtool -A autoneg off rx off tx off)
+      03.26 ens2f0: tso off, gso off, lro off
+      03.27 ens2f0: RX ring 4096
+      03.28 ens2f0: TX ring 4096
+      03.29 ens2f0: txqueuelen 300000
+      03.30 ens2f1: 1 combined queue(s), one per IRQ CPU (30)
+      03.31 ens2f1: adaptive-rx off, adaptive-tx off
+      03.32 ens2f1: rx-usecs 0, tx-usecs 0
+      03.33 ens2f1: pause frames off (ethtool -A autoneg off rx off tx off)
+      03.34 ens2f1: tso off, gso off, lro off
+      03.35 ens2f1: RX ring 4096
+      03.36 ens2f1: TX ring 4096
+      03.37 ens2f1: txqueuelen 300000
+      03.38 eno2 is a management interface, leaving it untouched
+  
+  04. NIC interrupt affinity
+      04.01 ens1f0: routing interrupts to CPUs 1
+      04.02 ens1f0: 8 IRQ(s) placed
+      04.03 ens1f1: routing interrupts to CPUs 1
+      04.04 ens1f1: 8 IRQ(s) placed
+      04.05 eno1: routing interrupts to CPUs 0
+      04.06 eno1: 8 IRQ(s) placed
+      04.07 ens2f0: routing interrupts to CPUs 30
+      04.08 ens2f0: 8 IRQ(s) placed
+      04.09 ens2f1: routing interrupts to CPUs 30
+      04.10 ens2f1: 8 IRQ(s) placed
+      04.11 eno2: routing interrupts to CPUs 0
+      04.12 eno2: 8 IRQ(s) placed
+  
+  05. Pinning housekeeping processes
+      05.01 Pinning edr-agentd pid 1006 (all threads) to CPUs 4
+      05.02 av-scand is not running
+  
+  06. Host packet filtering (opt-in)
+  
+  Step timing summary
+  +------+----------------------------------------------------------+------------+
+  | Step | Description                                              |   Duration |
+  +------+----------------------------------------------------------+------------+
+  | 01   | Firmware settings visible to the OS                      |    0.000 s |
+  | 02   | Kernel workqueue CPU mask                                |    0.000 s |
+  | 03   | NIC queues, coalescing, pause frames, offloads and rings |    0.000 s |
+  | 04   | NIC interrupt affinity                                   |    0.000 s |
+  | 05   | Pinning housekeeping processes                           |    0.000 s |
+  | 06   | Host packet filtering (opt-in)                           |    0.000 s |
+  +------+----------------------------------------------------------+------------+
+  |      | TOTAL                                                    |    0.000 s |
+  +------+----------------------------------------------------------+------------+
+
+==== /proc/cmdline
+BOOT_IMAGE=(hd0,gpt2)/vmlinuz-5.14.0-570.12.1.el9_6.x86_64 root=/dev/mapper/rhel-root ro crashkernel=auto resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet idle=poll processor.max_cstate=0 intel_idle.max_cstate=0 transparent_hugepage=never isolcpus=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 nohz_full=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 nohz=off rcu_nocbs=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 rcu_nocb_poll skew_tick=1 intel_pstate=disable nosoftlockup nmi_watchdog=0 mce=ignore_ce default_hugepagesz=2M hugepagesz=2M intel_iommu=off iommu=off nospectre_v1 nospectre_v2 pti=off mds=off tsx_async_abort=off
+
+==== processes
+chronyd              cpus 0
+edr-agentd           cpus 4
+firewalld            cpus 0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30
+node_exporter        cpus 4,6
+rsyslog              cpus 0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30
+sshd                 cpus 0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30
+systemd              cpus 0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30
+tuned                cpus 0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30
+
+==== verify-tuning
+LOW-LATENCY TUNING VERIFICATION
+  host:       lowlat-fixture
+  kernel:     5.14.0-570.12.1.el9_6.x86_64
+  host class: bare_metal
+  config:     /etc/lowlat/lowlat.conf
+  date:       <date>
+
+== 00 BIOS and firmware ==
+  PASS Hyper-Threading (SMT) off
+  PASS NUMA exposed: at least one node per socket (no node interleaving)
+  PASS energy_perf_bias = 0 (performance) on every CPU
+  PASS PCIe ASPM policy is 'performance'
+  INFO platform: Reference Server 2S, BIOS Example BIOS 1.0.0 (01/01/2026)
+  INFO turbo: not visible to the OS
+  INFO cpuidle states on CPU 0: POLL C1
+  INFO SMIs in 1 s (all CPUs, from turbostat): n/a (turbostat not installed)
+
+== 01 Kernel command line ==
+  INFO running kernel 5.14.0-570.12.1.el9_6.x86_64
+  PASS idle=poll
+  PASS processor.max_cstate=0
+  PASS intel_idle.max_cstate=0
+  PASS transparent_hugepage=never
+  PASS isolcpus=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31
+  PASS nohz_full=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31
+  PASS rcu_nocbs=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31
+  PASS rcu_nocb_poll
+  PASS skew_tick=1
+  PASS intel_pstate=disable
+  PASS nosoftlockup
+  PASS nmi_watchdog=0
+  PASS mce=ignore_ce
+  PASS default_hugepagesz=2M
+  INFO kernel isolated CPUs: 3,5,7,9,11,13,15,17,19,21,23,25,27,29,31
+  INFO kernel nohz_full CPUs: 3,5,7,9,11,13,15,17,19,21,23,25,27,29,31
+  INFO grubby default entry: root=/dev/mapper/rhel-root ro crashkernel=auto resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet idle=poll processor.max_cstate=0 intel_idle.max_cstate=0 transparent_hugepage=never isolcpus=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 nohz_full=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 nohz=off rcu_nocbs=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 rcu_nocb_poll skew_tick=1 intel_pstate=disable nosoftlockup nmi_watchdog=0 mce=ignore_ce default_hugepagesz=2M hugepagesz=2M intel_iommu=off iommu=off nospectre_v1 nospectre_v2 pti=off mds=off tsx_async_abort=off
+
+== 02 CPU isolation ==
+  PASS PID 1 (systemd) affinity is OS_CPUS (0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30)
+  PASS systemd.conf CPUAffinity is set
+  PASS workqueue cpumask 00000005 (expected 00000005)
+  PASS irqbalance is not running
+  PASS kernel.sched_rt_runtime_us = -1
+
+== 03 Huge pages ==
+  PASS transparent huge pages disabled ([never])
+  PASS hugetlb-reserve-pages.service enabled
+  PASS node0 has >= 2048 x 2M pages reserved
+  PASS node1 has >= 12288 x 2M pages reserved
+  PASS vm.nr_overcommit_hugepages = 2048
+  INFO AnonHugePages:          0 kB
+  INFO HugePages_Total:   14336
+  INFO HugePages_Free:    14336
+  INFO Hugepagesize:       2048 kB
+  INFO Hugetlb:               0 kB
+  INFO node0 hugepages-1048576kB: total=0 free=0 surplus=0
+  INFO node0 hugepages-2048kB: total=2048 free=2048 surplus=0
+  INFO node1 hugepages-1048576kB: total=0 free=0 surplus=0
+  INFO node1 hugepages-2048kB: total=12288 free=12288 surplus=0
+
+== 04 Network ==
+  PASS ens1f0 (critical) rx-usecs=0
+  PASS ens1f0 (critical) adaptive RX off
+  PASS ens1f0 (critical) 1 combined queue(s)
+  PASS ens1f0 (critical) IRQs on CPUs 1
+  PASS ens1f1 (critical) rx-usecs=0
+  PASS ens1f1 (critical) adaptive RX off
+  PASS ens1f1 (critical) 1 combined queue(s)
+  PASS ens1f1 (critical) IRQs on CPUs 1
+  PASS eno1 (timing) rx-usecs=0
+  PASS eno1 (timing) adaptive RX off
+  PASS eno1 (timing) 1 combined queue(s)
+  PASS eno1 (timing) IRQs on CPUs 0
+  PASS ens2f0 (bulk) rx-usecs=0
+  PASS ens2f0 (bulk) adaptive RX off
+  PASS ens2f0 (bulk) 1 combined queue(s)
+  PASS ens2f0 (bulk) IRQs on CPUs 30
+  PASS ens2f1 (bulk) rx-usecs=0
+  PASS ens2f1 (bulk) adaptive RX off
+  PASS ens2f1 (bulk) 1 combined queue(s)
+  PASS ens2f1 (bulk) IRQs on CPUs 30
+  PASS no NIC IRQ effective on an isolated CPU
+
+== 05 cgroup isolation ==
+  INFO cgroup version: v2
+  PASS housekeeping.slice exists
+  PASS node_exporter.service runs in housekeeping.slice
+  INFO fluent-bit.service not installed
+  PASS edr-agentd (1006) pinned to 4
+
+== 06 Kernel sysctl ==
+  PASS /etc/sysctl.d/90-lowlat.conf exists
+  PASS kernel.printk = 1 4 1 7
+  PASS kernel.nmi_watchdog = 0
+  PASS debug.exception-trace = 0
+  PASS kernel.ftrace_enabled = 0
+  PASS kernel.numa_balancing = 0
+  PASS net.ipv4.tcp_timestamps = 1
+  PASS net.ipv4.tcp_sack = 1
+  PASS net.ipv4.tcp_window_scaling = 1
+  PASS net.ipv4.tcp_slow_start_after_idle = 0
+  PASS net.ipv4.tcp_fastopen = 3
+  PASS net.ipv4.tcp_fin_timeout = 5
+  PASS net.ipv4.tcp_tw_reuse = 1
+  PASS net.ipv4.tcp_max_tw_buckets = 262144
+  PASS net.ipv4.tcp_max_orphans = 32768
+  PASS net.ipv4.tcp_syn_retries = 1
+  PASS net.ipv4.tcp_syncookies = 1
+  PASS net.ipv4.tcp_abort_on_overflow = 0
+  PASS net.core.somaxconn = 2048
+  PASS net.ipv4.tcp_max_syn_backlog = 2048
+  PASS net.ipv4.tcp_keepalive_time = 120
+  PASS net.ipv4.tcp_keepalive_intvl = 15
+  PASS net.ipv4.tcp_keepalive_probes = 5
+  PASS net.ipv4.tcp_moderate_rcvbuf = 1
+  PASS net.ipv4.tcp_no_metrics_save = 0
+  PASS net.core.rmem_max = 134217728
+  PASS net.core.wmem_max = 134217728
+  PASS net.core.rmem_default = 8388608
+  PASS net.core.wmem_default = 8388608
+  PASS net.core.optmem_max = 134217728
+  PASS net.ipv4.tcp_rmem = 4096 8388608 134217728
+  PASS net.ipv4.tcp_wmem = 4096 8388608 134217728
+  PASS net.core.netdev_max_backlog = 300000
+  PASS net.core.default_qdisc = fq_codel
+  PASS net.core.txrehash = 1
+  PASS net.ipv4.ip_forward = 0
+  PASS net.ipv6.conf.all.forwarding = 0
+  PASS net.core.bpf_jit_enable = 1
+  PASS net.core.bpf_jit_limit = 528482304
+  PASS vm.dirty_ratio = 10
+  PASS vm.dirty_background_ratio = 3
+  PASS vm.min_free_kbytes = 1048576
+  PASS vm.stat_interval = 60
+  PASS fs.file-max = 13076444
+
+== 07 OS hygiene ==
+  PASS crond not running
+  PASS rsyslog running
+  PASS /etc/security/limits.d/90-lowlat.conf exists
+  PASS tuned profile low-latency active
+  PASS local ext4/xfs mounted with noatime
+  INFO iptables rules: 0, nft tables: 0
+
+== 08 Kernel bypass ==
+  INFO KERNEL_BYPASS_STACK is empty: no kernel bypass configured
+
+== 09 Measurement ==
+  WARN rtla installed
+  WARN rt-tests installed
+  WARN sysstat installed
+  WARN perf installed
+  WARN kernel-tools installed
+  WARN numactl installed
+  WARN at least one bundle in /var/lib/lowlat/measurements (09-measure-latency --run)
+
+== 10 Time synchronization ==
+  PASS chronyd running
+  PASS chronyd pinned to CPUs 0
+  PASS chrony synchronized (Leap status Normal)
+  PASS ptp4l not running
+  INFO chrony system time offset: 0.000000100 seconds fast of NTP time
+
+== 11 Day-2 operations ==
+  PASS lowlat-verify.timer is enabled
+  PASS lowlat-verify.timer is active
+  PASS the last lowlat-verify run did not fail
+  INFO no report yet: the timer has not run
+  PASS every installed kernel entry sets isolcpus, nohz_full and rcu_nocbs to ISOLATED_CPUS (WARN also when grubby cannot list them)
+
+== Host-wide ==
+  PASS CPU frequency governor is performance on every CPU
+  PASS no cpuidle driver active (idle=poll)
+  PASS clocksource is tsc (cheap, vDSO-accelerated clock_gettime)
+  PASS no swap in use
+  PASS clock synchronized (chrony/PTP)
+  INFO vulnerability mitigations: spectre_v2 
+  INFO load average: 0.00 0.01 0.05, uptime: 
+
+== Summary ==
+  PASSED WITH 7 WARNING(S)
+
+  Configuration verified is not latency verified. Next steps:
+    * noise on an isolated CPU:   rtla osnoise top -c <cpu> -d 60s
+    * per-thread context switches: perf stat -e context-switches,cpu-migrations -t <tid> -- sleep 30
+    * end-to-end:                 compare p50/p99/p99.9/max with the baseline taken before tuning
+---- exit 0
+
+==== 11-day2-operations --rollback
+
+01. Verification timer
+    01.01 Disabling lowlat-verify.timer and removing the units
+    01.02 Removing the reports
+---- exit 0
+
+==== 04-network --rollback
+Usage: 04-network [--apply | --dry-run | --verify | --rollback] [--config FILE]
+
+  --apply      apply this guide's tuning (root)
+  --dry-run    print every command/file that --apply would run/write
+  --verify     read-only check of this guide's tuning
+  --rollback   undo this guide's tuning (when supported)
+  --runtime    re-apply only the non-persistent part (used at boot by lowlat-runtime.service)
+  --config     configuration file (default: /etc/lowlat/lowlat.conf)
+
+Host class: bare_metal (override with LOWLAT_HOST_CLASS=bare_metal|virtual_machine)
+---- exit 0
+
+==== 08-kernel-bypass --rollback
+
+01. Kernel bypass rollback
+    01.01 KERNEL_BYPASS_STACK is empty, nothing to undo
+---- exit 0
+
+==== 05-cgroup-isolation --rollback
+
+01. Removing housekeeping slice and drop-ins
+    01.01 Restart the affected services to move them back to system.slice
+---- exit 0
+
+==== 10-time-sync --rollback
+
+01. Time synchronization
+    01.01 Removing chronyd.service drop-in
+    01.02 Removing ptp4l.service drop-in
+    01.03 Removing phc2sys.service drop-in
+    01.04 Enabling chronyd (the RHEL default)
+---- exit 0
+
+==== 07-os-hygiene --rollback
+Usage: 07-os-hygiene [--apply | --dry-run | --verify | --rollback] [--config FILE]
+
+  --apply      apply this guide's tuning (root)
+  --dry-run    print every command/file that --apply would run/write
+  --verify     read-only check of this guide's tuning
+  --rollback   undo this guide's tuning (when supported)
+  --runtime    re-apply only the non-persistent part (used at boot by lowlat-runtime.service)
+  --config     configuration file (default: /etc/lowlat/lowlat.conf)
+
+Host class: bare_metal (override with LOWLAT_HOST_CLASS=bare_metal|virtual_machine)
+---- exit 0
+
+==== 06-kernel-sysctl --rollback
+
+01. Removing /etc/sysctl.d/90-lowlat.conf
+    01.01 Values stay active until reboot (or re-run: sysctl --system)
+---- exit 0
+
+==== 03-huge-pages --rollback
+
+01. Removing huge page reservation
+    01.01 Releasing reserved pages (pages in use are released when their owner exits)
+---- exit 0
+
+==== 02-cpu-isolation --rollback
+Usage: 02-cpu-isolation [--apply | --dry-run | --verify | --rollback] [--config FILE]
+
+  --apply      apply this guide's tuning (root)
+  --dry-run    print every command/file that --apply would run/write
+  --verify     read-only check of this guide's tuning
+  --rollback   undo this guide's tuning (when supported)
+  --runtime    re-apply only the non-persistent part (used at boot by lowlat-runtime.service)
+  --config     configuration file (default: /etc/lowlat/lowlat.conf)
+
+Host class: bare_metal (override with LOWLAT_HOST_CLASS=bare_metal|virtual_machine)
+---- exit 0
+
+==== 01-grub-bootloader --rollback
+
+01. Removing managed kernel arguments from every kernel entry
+    01.01 Removing idle
+    01.02 Removing processor.max_cstate
+    01.03 Removing intel_idle.max_cstate
+    01.04 Removing transparent_hugepage
+    01.05 Removing isolcpus
+    01.06 Removing nohz_full
+    01.07 Removing nohz
+    01.08 Removing rcu_nocbs
+    01.09 Removing rcu_nocb_poll
+    01.10 Removing skew_tick
+    01.11 Removing intel_pstate
+    01.12 Removing nosoftlockup
+    01.13 Removing nmi_watchdog
+    01.14 Removing mce
+    01.15 Removing default_hugepagesz
+    01.16 Removing hugepagesz
+    01.17 Removing intel_iommu
+    01.18 Removing iommu
+    01.19 Removing nospectre_v1
+    01.20 Removing nospectre_v2
+    01.21 Removing pti
+    01.22 Removing mds
+    01.23 Removing tsx_async_abort
+    01.24 Reboot required
+---- exit 0
+
+==== 00-bios-firmware --rollback
+
+01. Firmware settings visible to the OS
+    01.01 PCIe ASPM policy -> default
+    01.02 Set BIOS_PCIE_ASPM_POLICY="" so that lowlat-runtime.service stops re-applying it
+---- exit 0
+
+==== reboot after rollback
+lowlat-runtime.service: /opt/lowlat/scripts/apply-all --runtime
+  LOW-LATENCY TUNING (runtime)
+    os:         Red Hat Enterprise Linux 9.6
+    kernel:     5.14.0-570.12.1.el9_6.x86_64
+    host class: bare_metal
+    config:     /etc/lowlat/lowlat.conf
+    date:       <date>
+  
+  01. Firmware settings visible to the OS
+      01.01 PCIe ASPM policy default -> performance
+  
+  02. Kernel workqueue CPU mask
+      02.01 Unbound workqueues -> CPUs 0 2 (mask 00000005)
+      02.02 Writeback workqueue -> CPUs 0 2 (mask 00000005)
+  
+  03. NIC queues, coalescing, pause frames, offloads and rings
+      03.01 ens1f0: 1 combined queue(s), one per IRQ CPU (1)
+      03.02 ens1f0: adaptive-rx off, adaptive-tx off
+      03.03 ens1f0: rx-usecs 0, tx-usecs 0
+      03.04 ens1f0: pause frames off (ethtool -A autoneg off rx off tx off)
+      03.05 ens1f0: tso off, gso off, lro off
+      03.06 ens1f0: RX ring 4096
+      03.07 ens1f0: TX ring 4096
+      03.08 ens1f1: 1 combined queue(s), one per IRQ CPU (1)
+      03.09 ens1f1: adaptive-rx off, adaptive-tx off
+      03.10 ens1f1: rx-usecs 0, tx-usecs 0
+      03.11 ens1f1: pause frames off (ethtool -A autoneg off rx off tx off)
+      03.12 ens1f1: tso off, gso off, lro off
+      03.13 ens1f1: RX ring 4096
+      03.14 ens1f1: TX ring 4096
+      03.15 eno1: 1 combined queue(s), one per IRQ CPU (0)
+      03.16 eno1: adaptive-rx off, adaptive-tx off
+      03.17 eno1: rx-usecs 0, tx-usecs 0
+      03.18 eno1: pause frames off (ethtool -A autoneg off rx off tx off)
+      03.19 eno1: tso off, gso off, lro off
+      03.20 eno1: RX ring 4096
+      03.21 eno1: TX ring 4096
+      03.22 ens2f0: 1 combined queue(s), one per IRQ CPU (30)
+      03.23 ens2f0: adaptive-rx off, adaptive-tx off
+      03.24 ens2f0: rx-usecs 0, tx-usecs 0
+      03.25 ens2f0: pause frames off (ethtool -A autoneg off rx off tx off)
+      03.26 ens2f0: tso off, gso off, lro off
+      03.27 ens2f0: RX ring 4096
+      03.28 ens2f0: TX ring 4096
+      03.29 ens2f0: txqueuelen 300000
+      03.30 ens2f1: 1 combined queue(s), one per IRQ CPU (30)
+      03.31 ens2f1: adaptive-rx off, adaptive-tx off
+      03.32 ens2f1: rx-usecs 0, tx-usecs 0
+      03.33 ens2f1: pause frames off (ethtool -A autoneg off rx off tx off)
+      03.34 ens2f1: tso off, gso off, lro off
+      03.35 ens2f1: RX ring 4096
+      03.36 ens2f1: TX ring 4096
+      03.37 ens2f1: txqueuelen 300000
+      03.38 eno2 is a management interface, leaving it untouched
+  
+  04. NIC interrupt affinity
+      04.01 ens1f0: routing interrupts to CPUs 1
+      04.02 ens1f0: 8 IRQ(s) placed
+      04.03 ens1f1: routing interrupts to CPUs 1
+      04.04 ens1f1: 8 IRQ(s) placed
+      04.05 eno1: routing interrupts to CPUs 0
+      04.06 eno1: 8 IRQ(s) placed
+      04.07 ens2f0: routing interrupts to CPUs 30
+      04.08 ens2f0: 8 IRQ(s) placed
+      04.09 ens2f1: routing interrupts to CPUs 30
+      04.10 ens2f1: 8 IRQ(s) placed
+      04.11 eno2: routing interrupts to CPUs 0
+      04.12 eno2: 8 IRQ(s) placed
+  
+  05. Pinning housekeeping processes
+      05.01 Pinning edr-agentd pid 1006 (all threads) to CPUs 4
+      05.02 av-scand is not running
+  
+  06. Host packet filtering (opt-in)
+  
+  Step timing summary
+  +------+----------------------------------------------------------+------------+
+  | Step | Description                                              |   Duration |
+  +------+----------------------------------------------------------+------------+
+  | 01   | Firmware settings visible to the OS                      |    0.000 s |
+  | 02   | Kernel workqueue CPU mask                                |    0.000 s |
+  | 03   | NIC queues, coalescing, pause frames, offloads and rings |    0.000 s |
+  | 04   | NIC interrupt affinity                                   |    0.000 s |
+  | 05   | Pinning housekeeping processes                           |    0.000 s |
+  | 06   | Host packet filtering (opt-in)                           |    0.000 s |
+  +------+----------------------------------------------------------+------------+
+  |      | TOTAL                                                    |    0.000 s |
+  +------+----------------------------------------------------------+------------+
+
+==== left behind by rollback (compared with the host before apply)
+A /etc/security/limits.d/90-lowlat.conf
+A /etc/sysctl.d/91-lowlat-rt.conf
+A /etc/systemd/system/lowlat-runtime.service
+A /etc/tuned/low-latency/tuned.conf
+A /run/fake-systemd/active/lowlat-runtime.service
+A /var/lib/fake-systemd/enabled/lowlat-runtime.service
+A /var/lib/lowlat/aspm-original-policy
+A /var/lib/lowlat/factory-settings/etc/fstab
+A /var/lib/lowlat/factory-settings/etc/systemd/system.conf
+D /run/fake-systemd/active/crond.service
+D /run/fake-systemd/active/irqbalance.service
+D /var/lib/fake-systemd/enabled/crond.service
+D /var/lib/fake-systemd/enabled/irqbalance.service
+M /boot/loader/entries/0f1e2d3c4b5a69788796a5b4c3d2e1f0-0-rescue.conf
+M /boot/loader/entries/0f1e2d3c4b5a69788796a5b4c3d2e1f0-5.14.0-570.12.1.el9_6.x86_64.conf
+M /etc/fstab
+M /etc/systemd/system.conf
+M /etc/tuned/active_profile
+M /proc/*/status
+M /proc/cmdline
+M /proc/irq/*/effective_affinity_list (32)
+M /proc/irq/*/smp_affinity_list (48)
+M /proc/sys/kernel/sched_rt_runtime_us
+M /run/fake-ethtool/eno1
+M /run/fake-ethtool/ens1f0
+M /run/fake-ethtool/ens1f1
+M /run/fake-ethtool/ens2f0
+M /run/fake-ethtool/ens2f1
+M /sys/bus/workqueue/devices/writeback/cpumask
+M /sys/class/net/ens2f0/tx_queue_len
+M /sys/class/net/ens2f1/tx_queue_len
+M /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor (32)
+M /sys/devices/system/cpu/cpu*/power/energy_perf_bias (32)
+M /sys/devices/virtual/workqueue/cpumask
+M /sys/module/pcie_aspm/parameters/policy
+
+==== /proc/cmdline differences
+10d9
+< console=tty0
+
+==== process differences
+1,10c1,8
+< chronyd              cpus 0-31
+< crond                cpus 0-31
+< edr-agentd           cpus 0-31
+< firewalld            cpus 0-31
+< irqbalance           cpus 0-31
+< node_exporter        cpus 0-31
+< rsyslog              cpus 0-31
+< sshd                 cpus 0-31
+< systemd              cpus 0-31
+< tuned                cpus 0-31
+---
+> chronyd              cpus 0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30
+> edr-agentd           cpus 4
+> firewalld            cpus 0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30
+> node_exporter        cpus 0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30
+> rsyslog              cpus 0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30
+> sshd                 cpus 0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30
+> systemd              cpus 0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30
+> tuned                cpus 0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30

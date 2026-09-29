@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+#
+# getent (fake) - "getent group NAME" from etc/group.
+
+# shellcheck source=tools/stubs/lib/fake
+. "$(dirname "${BASH_SOURCE[0]}")/lib/fake"
+
+[[ "${1:-}" == group && -n "${2:-}" ]] || fake_fail 1 "unsupported arguments: $*"
+grep "^$2:" "${LOWLAT_ROOT}/etc/group" || exit 2
