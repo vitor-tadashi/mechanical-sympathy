@@ -45,6 +45,10 @@ flowchart LR
 - **Interaction with affinity**: a task's `sched_setaffinity()` mask is always intersected with its cpuset. Asking for a CPU outside the cpuset fails with `EINVAL`. That is the fence, and it is also the trap described in [Guide 05 §4.4](../guides/05-cgroup-isolation.md#44-the-cpuset-trap).
 - `cpuset.cpus.partition` (v2): `member` (default), `root` (the CPUs become an exclusive scheduling domain), and on newer kernels `isolated`, where the CPUs are removed from load balancing entirely: runtime `isolcpus`.
 
+<img src="../assets/diagrams/cgroup-slices.svg" alt="A row of 32 CPUs colored isolated or OS, with the CPUs each slice may use: system and user slices on the OS CPUs by advisory affinity, housekeeping.slice on CPUs 4 and 6 by a hard cpuset fence, latency.slice on all CPUs" width="720">
+
+*Affinity versus a cpuset, on one host: the first two slices rely on an inherited mask a process can change, and housekeeping.slice is a fence the kernel enforces.*
+
 ### cpu
 
 - `cpu.weight` (1–10000, default 100): proportional share under contention (`CPUWeight=`).

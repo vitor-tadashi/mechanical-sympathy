@@ -44,6 +44,10 @@ A latency-critical thread that spins on a CPU is delayed by every event that tak
 | RT throttling | **50 ms every second** for SCHED_FIFO spinners | `sched_rt_runtime_us=-1` (this guide) |
 | TLB shootdown IPIs from threads of the same process | 1–5 µs | fewer `munmap`/`mprotect` calls, huge pages ([Guide 03](03-huge-pages-configuration.md)) |
 
+<img src="../assets/diagrams/who-wants-my-cpu.svg" alt="Seven sources of interference on a CPU, each paired with the setting that removes it, leading to an isolated CPU that runs one pinned thread uninterrupted" width="720">
+
+*Seven things take a CPU away from a thread, and each has exactly one removal. Guides 01, 02, 04 and 05 apply them.*
+
 The kernel parameters from Guide 01 make the isolated CPUs *eligible* to be quiet. This guide moves the rest of the system away from them, and then puts **exactly one** application thread on each one.
 
 ## 2. When to apply
@@ -108,6 +112,10 @@ flowchart TD
 ```
 
 *Node 0 runs the operating system, agents and non-critical interrupts. Node 1 keeps one housekeeping CPU for the critical NIC's interrupts, and every other CPU there is isolated and runs exactly one pinned thread role.*
+
+<img src="../assets/diagrams/cpu-map-reference-host.svg" alt="Two NUMA panels of 16 CPUs each: node 1 has one housekeeping CPU for the critical NICs and isolated CPUs with pinned thread roles, node 0 runs the operating system, agents and bulk interrupts" width="720">
+
+*The same layout as a floor plan: the critical NICs, their interrupts, the pinned threads and their memory all sit on node 1, and node 0 carries everything else.*
 
 <details>
 <summary><b>The same layout as text</b> (for copying into a runbook)</summary>
@@ -211,6 +219,10 @@ Isolated CPUs have **no load balancing**. A thread whose affinity mask spans sev
 
 > [!IMPORTANT]
 > **One critical thread → one isolated CPU. Every other thread → the OS CPUs.**
+
+<img src="../assets/diagrams/thread-migration.svg" alt="Animation: an unpinned thread hops across four CPUs and starts with a cold cache after every hop, while a pinned thread on one isolated CPU starts cold once and then keeps its caches warm" width="720">
+
+*A thread that may move will move, and each hop costs a cold start. Pinning turns five cold starts into one.*
 
 ### 6.1 Describe the mapping in configuration, not in code
 

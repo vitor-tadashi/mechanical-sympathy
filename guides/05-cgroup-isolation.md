@@ -36,6 +36,10 @@ flowchart LR
 1. **Agents that set their own affinity or spawn processes outside systemd**: endpoint security (EDR/antivirus), some monitoring and backup agents, vendor tools started from their own init scripts. They can end up anywhere, including on an isolated CPU or on the CPU that serves the critical NIC's interrupts.
 2. **Agents that misbehave under load**: a log shipper that reads 2 GB of backlog after a network blip, or a scanner walking the filesystem. They do not need an isolated CPU to hurt you. Saturating the **housekeeping** CPUs (where NIC IRQs and softirqs run), filling the page cache, or hammering the disk is enough.
 
+<img src="../assets/diagrams/noisy-neighbor.svg" alt="Animation: three agent bursts stall a critical thread when the agent shares its CPU, and never reach it when the agent runs in housekeeping.slice on another CPU" width="720">
+
+*The same three bursts, two placements. Sharing the critical CPU stalls the thread every time. The fence sends the bursts elsewhere.*
+
 cgroups solve both. A **cpuset** is a hard fence (a process cannot leave it). The **cpu, memory and io controllers** cap what the processes inside can consume. systemd exposes all of it through **slices**, so you never touch `/sys/fs/cgroup` by hand.
 
 ## 2. When to apply
@@ -81,6 +85,10 @@ flowchart TD
 ```
 
 *The OS and SSH keep Guide 02's inherited affinity. Agents go into `housekeeping.slice`, a hard fence on two quiet CPUs with CPU, memory and I/O caps. The application can get its own slice that spans every CPU.*
+
+<img src="../assets/diagrams/cgroup-slices.svg" alt="A row of 32 CPUs colored isolated or OS, with the CPUs each slice may use: system and user slices on the OS CPUs by advisory affinity, housekeeping.slice on CPUs 4 and 6 by a hard cpuset fence, latency.slice on all CPUs" width="720">
+
+*Which CPUs each slice may touch. Dashed cells are advisory affinity, and solid cells are a cpuset fence the kernel enforces.*
 
 <details>
 <summary><b>The same tree as text</b></summary>

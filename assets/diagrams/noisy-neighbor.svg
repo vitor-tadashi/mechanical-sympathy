@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" width="760" height="330" role="img" aria-labelledby="t d">
+<title id="t">A fenced agent burst never reaches the critical CPU</title>
+<desc id="d">Two timelines with the same three agent bursts. When the agent shares the critical CPU, each burst takes that CPU and the critical thread stalls. When the agent runs in housekeeping.slice, a cpuset fence on CPU 4, the bursts run there and the critical thread on CPU 5 runs without interruption.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .spare { fill: #e6f7ea; stroke: #1d6b33; stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .off { fill: #ffffff; stroke: #d0d7de; stroke-width: 1; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .role { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .mid { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .midr { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #2b0a0a; text-anchor: middle; }
+  .midw { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0b1f33; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+
+  .agentr, .agentb { transform-box: fill-box; transform-origin: center; animation: 6s linear infinite; }
+  .agentr { animation-name: cut; }
+  .agentb { animation-name: take; fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .rowbg { fill: #ffffff; stroke: #d0d7de; }
+  .inw { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #ffffff; text-anchor: middle; }
+  @keyframes cut {
+    0%, 6%   { fill: #ff6b6b; transform: scaleY(1.15); }
+    7%, 100% { fill: #ffc9c9; transform: scaleY(1); }
+  }
+  @keyframes take {
+    0%, 6%   { fill: #3d7fd9; transform: scaleY(1.15); }
+    7%, 100% { fill: #1f4e8c; transform: scaleY(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .head, .agentr, .agentb { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="330" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="140" rx="6"/>
+<text class="cap" x="24" y="34">Agent shares the critical CPU (wrong)</text>
+<text class="sub" x="24" y="52">Every agent burst takes the CPU, and the critical thread waits until it is done.</text>
+<text class="lbl" x="24" y="98">CPU 5</text>
+<text class="role" x="24" y="112">critical thread</text>
+<rect class="app" x="150" y="84" width="570" height="30" rx="4"/>
+<text class="mid" x="192" y="103">runs</text>
+<rect class="wait agentr" style="animation-delay:-4.62s" x="252" y="80" width="58" height="38" rx="3"/>
+<text class="midr" x="281.0" y="103">agent</text>
+<rect class="wait agentr" style="animation-delay:-2.94s" x="412" y="80" width="58" height="38" rx="3"/>
+<text class="midr" x="441.0" y="103">agent</text>
+<rect class="wait agentr" style="animation-delay:-1.00s" x="596" y="80" width="58" height="38" rx="3"/>
+<text class="midr" x="625.0" y="103">agent</text>
+<text class="axis" x="435" y="140">the thread stalls three times</text>
+<rect class="lane" x="10" y="160" width="740" height="160" rx="6"/>
+<text class="cap" x="24" y="184">Agent fenced in housekeeping.slice</text>
+<text class="sub" x="24" y="202">The same bursts run on CPU 4. CPU 5 never sees them.</text>
+<text class="lbl" x="24" y="240">CPU 5</text>
+<text class="role" x="24" y="254">critical thread</text>
+<rect class="app" x="150" y="226" width="570" height="30" rx="4"/>
+<text class="mid" x="435" y="245">runs, never interrupted</text>
+<text class="lbl" x="24" y="284">CPU 4</text>
+<text class="role" x="24" y="298">housekeeping</text>
+<rect class="rowbg" x="150" y="270" width="570" height="30" rx="4"/>
+<rect class="agentb" style="animation-delay:-4.62s" x="252" y="270" width="58" height="30" rx="3"/>
+<text class="inw" x="281.0" y="289">agent</text>
+<rect class="agentb" style="animation-delay:-2.94s" x="412" y="270" width="58" height="30" rx="3"/>
+<text class="inw" x="441.0" y="289">agent</text>
+<rect class="agentb" style="animation-delay:-1.00s" x="596" y="270" width="58" height="30" rx="3"/>
+<text class="inw" x="625.0" y="289">agent</text>
+<line class="head" x1="150" y1="72" x2="150" y2="308"/>
+</svg>
