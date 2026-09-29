@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" width="760" height="330" role="img" aria-labelledby="t d">
+<title id="t">Migration makes every hop a cold start; pinning removes the hops</title>
+<desc id="d">Two timelines of one critical thread. Unpinned, the scheduler moves it across four CPUs and each hop starts with a cold cache, so the next events run from L3 or DRAM. Pinned to one isolated CPU, the thread starts cold once and then runs from warm L1 and L2 caches.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .spare { fill: #e6f7ea; stroke: #1d6b33; stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .off { fill: #ffffff; stroke: #d0d7de; stroke-width: 1; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .role { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .mid { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .midr { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #2b0a0a; text-anchor: middle; }
+  .midw { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0b1f33; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+
+  .cold { transform-box: fill-box; transform-origin: center; animation: cut 6s linear infinite; }
+  .hop { stroke: #57606a; stroke-width: 1.5; stroke-dasharray: 3 2; fill: none; }
+  .rowbg { fill: #ffffff; stroke: #d0d7de; }
+  @keyframes cut {
+    0%, 6%   { fill: #ff6b6b; transform: scaleY(1.2); }
+    7%, 100% { fill: #ffc9c9; transform: scaleY(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .head, .cold { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="330" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="190" rx="6"/>
+<text class="cap" x="24" y="34">Unpinned: the scheduler moves the thread</text>
+<text class="sub" x="24" y="52">Every hop lands on a CPU whose L1 and L2 hold someone else's data, so the next events miss.</text>
+<text class="role" x="24" y="87">CPU 2</text>
+<rect class="rowbg" x="150" y="74" width="570" height="18" rx="3"/>
+<text class="role" x="24" y="113">CPU 4</text>
+<rect class="rowbg" x="150" y="100" width="570" height="18" rx="3"/>
+<text class="role" x="24" y="139">CPU 6</text>
+<rect class="rowbg" x="150" y="126" width="570" height="18" rx="3"/>
+<text class="role" x="24" y="165">CPU 8</text>
+<rect class="rowbg" x="150" y="152" width="570" height="18" rx="3"/>
+<rect class="app" x="151.0" y="74" width="112.0" height="18" rx="3"/>
+<rect class="wait cold" style="animation-delay:-5.82s" x="151.0" y="71" width="34" height="24" rx="3"/>
+<text class="midr" x="168.0" y="87">cold</text>
+<text class="mid" x="225.0" y="87">runs</text>
+<rect class="app" x="265.0" y="126" width="112.0" height="18" rx="3"/>
+<rect class="wait cold" style="animation-delay:-4.62s" x="265.0" y="123" width="34" height="24" rx="3"/>
+<text class="midr" x="282.0" y="139">cold</text>
+<text class="mid" x="339.0" y="139">runs</text>
+<line class="hop" x1="264.0" y1="83" x2="264.0" y2="135"/>
+<rect class="app" x="379.0" y="100" width="112.0" height="18" rx="3"/>
+<rect class="wait cold" style="animation-delay:-3.42s" x="379.0" y="97" width="34" height="24" rx="3"/>
+<text class="midr" x="396.0" y="113">cold</text>
+<text class="mid" x="453.0" y="113">runs</text>
+<line class="hop" x1="378.0" y1="135" x2="378.0" y2="109"/>
+<rect class="app" x="493.0" y="152" width="112.0" height="18" rx="3"/>
+<rect class="wait cold" style="animation-delay:-2.22s" x="493.0" y="149" width="34" height="24" rx="3"/>
+<text class="midr" x="510.0" y="165">cold</text>
+<text class="mid" x="567.0" y="165">runs</text>
+<line class="hop" x1="492.0" y1="109" x2="492.0" y2="161"/>
+<rect class="app" x="607.0" y="100" width="112.0" height="18" rx="3"/>
+<rect class="wait cold" style="animation-delay:-1.02s" x="607.0" y="97" width="34" height="24" rx="3"/>
+<text class="midr" x="624.0" y="113">cold</text>
+<text class="mid" x="681.0" y="113">runs</text>
+<line class="hop" x1="606.0" y1="161" x2="606.0" y2="109"/>
+<text class="axis" x="435" y="190">one thread, five hops, five cold starts</text>
+<rect class="lane" x="10" y="210" width="740" height="110" rx="6"/>
+<text class="cap" x="24" y="234">Pinned to one isolated CPU</text>
+<text class="sub" x="24" y="252">The thread never moves, so its working set stays in L1 and L2 after the first few events.</text>
+<text class="role" x="24" y="287">CPU 3</text>
+<rect class="rowbg" x="150" y="274" width="570" height="18" rx="3"/>
+<rect class="app" x="151" y="274" width="568" height="18" rx="3"/>
+<rect class="wait cold" style="animation-delay:-5.82s" x="151" y="271" width="34" height="24" rx="3"/>
+<text class="midr" x="168" y="287">cold</text>
+<text class="mid" x="453" y="287">runs, caches stay warm</text>
+<text class="axis" x="435" y="310">the same stretch of time: one cold start</text>
+<line class="head" x1="150" y1="66" x2="150" y2="300"/>
+</svg>
