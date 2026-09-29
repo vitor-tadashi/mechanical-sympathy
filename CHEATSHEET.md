@@ -102,3 +102,11 @@ The "I have two minutes" page. One command per check, with the answer you want t
 | Is the VM losing time to the host? | `mpstat -P ALL 1` (`%steal`) |
 
 Always compare against the baseline you took before tuning.
+
+## Staying tuned — [Guide 11](guides/11-day2-operations.md#8-verification)
+
+| Check | Command | Want |
+|---|---|---|
+| Timer installed | `systemctl list-timers lowlat-verify.timer` | a NEXT time |
+| Last report | `systemctl show -p Result --value lowlat-verify.service` | `success` |
+| Kernel entries keep the arguments | `grubby --info=ALL \| grep -E '^(kernel\|args)='` | `isolcpus=` on every entry but rescue |
