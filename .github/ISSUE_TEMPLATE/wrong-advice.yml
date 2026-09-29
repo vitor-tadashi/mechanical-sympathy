@@ -1,0 +1,41 @@
+name: Wrong or unsafe advice
+description: A guide, script or example says something incorrect, outdated or dangerous.
+labels: ["accuracy"]
+body:
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      description: Guide and section, or script and function.
+      placeholder: "Guide 02, section 4.1"
+    validations:
+      required: true
+  - type: textarea
+    id: says
+    attributes:
+      label: What the text says
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: What you observed instead
+      description: Commands and output. Remove host names, addresses and anything private first.
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Kernel, distribution and hardware
+      placeholder: "RHEL 9.4, kernel 5.14.0-427, 2 x 16 cores, HT off"
+    validations:
+      required: true
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Can it lock a host out, break boot or weaken security?
+      options:
+        - "No"
+        - "Yes (if it is a vulnerability, use the private report in SECURITY.md instead)"
+    validations:
+      required: true

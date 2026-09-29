@@ -1,0 +1,24 @@
+name: New guide or use case idea
+description: Propose a topic. Say what is in scope and what is not.
+labels: ["idea"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: One paragraph. Which latency problem does it solve?
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+    validations:
+      required: true
+  - type: textarea
+    id: proof
+    attributes:
+      label: How would we verify it, and has it been proven in production?
+      description: Be honest. Unproven advice is welcome, and it is marked as such in the text.
+    validations:
+      required: true
