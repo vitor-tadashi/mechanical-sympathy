@@ -8,6 +8,10 @@ A field guide, with working scripts, for turning a Red Hat Enterprise Linux 8/9 
 
 Every guide explains **what the kernel does**, **why each value is chosen**, **how to verify it**, and **how to undo it**. Every guide ships with a shell script whose functions implement exactly what the guide describes, with a `--dry-run` mode that shows every command and file before anything changes.
 
+<img src="assets/diagrams/jitter-map.svg" alt="A stack of six layers from the application down to the hardware, each with its typical rare events and the guides that remove them, and a bar showing that Guide 09 measures every layer" width="760">
+
+*Where the tail comes from. Every layer adds its own rare events, and each has a guide that removes them. Typical orders of magnitude, not measurements.*
+
 ## Start here (5 minutes)
 
 - **What it is:** eleven guides, and one script per guide, that make a RHEL 8/9 host quiet and predictable for a few latency-critical threads.
@@ -22,6 +26,24 @@ Every guide explains **what the kernel does**, **why each value is chosen**, **h
 | See a problem solved from symptom to result | [Use cases](examples/use-cases/README.md) |
 | Make my application behave on a tuned host | [Java on a tuned host](examples/hugepages-java-example.md) |
 | Check a host that is already tuned | `scripts/verify-tuning`, see [the scripts](INDEX.md#scripts) |
+
+## See it in 60 seconds
+
+| | |
+|---|---|
+| **Design a CPU layout** | The [layout explorer](https://vitor-tadashi.github.io/mechanical-sympathy/explorer.html) takes your sockets, cores and critical threads, and prints the isolated CPUs, the OS CPUs and the kernel arguments. It runs in the browser, and `scripts/plan-layout` gives the same answer on a host. |
+| **Follow a whole afternoon** | [Capstone: stock RHEL to tuned in one afternoon](examples/use-cases/08-stock-to-tuned-in-one-afternoon.md), from the baseline to an honest before and after. |
+| **Learn one mechanism** | The [use cases](examples/use-cases/README.md), each from symptom to diagnosis, change, result and rollback. |
+| **Browse everything** | The [site](https://vitor-tadashi.github.io/mechanical-sympathy/), with the same guides and use cases. |
+
+## Use cases
+
+| | | | |
+|---|---|---|---|
+| <a href="examples/use-cases/01-the-quiet-core.md"><img src="assets/diagrams/tick-nohz.svg" alt="A busy CPU interrupted by the timer tick, and the same CPU uninterrupted with nohz_full" width="190"></a><br>**1. The quiet core**<br>Stop the tick. | <a href="examples/use-cases/02-critical-and-non-critical.md"><img src="assets/diagrams/cpu-map-reference-host.svg" alt="A floor plan of a 32-CPU host with isolated, housekeeping and agent CPUs" width="190"></a><br>**2. Critical and non-critical**<br>Give every thread a home. | <a href="examples/use-cases/03-the-noisy-neighbor.md"><img src="assets/diagrams/noisy-neighbor.svg" alt="An agent burst stalling a shared CPU, and a fenced agent leaving the critical CPU alone" width="190"></a><br>**3. The noisy neighbor**<br>Fence the agents. | <a href="examples/use-cases/04-one-nic-one-queue-one-cpu.md"><img src="assets/diagrams/irq-placement.svg" alt="A NIC interrupt on an isolated CPU cutting into a spinning thread, and on a housekeeping CPU leaving it alone" width="190"></a><br>**4. One NIC, one queue, one CPU**<br>Move the interrupt. |
+| <a href="examples/use-cases/05-page-faults-on-the-hot-path.md"><img src="assets/diagrams/page-fault-hotpath.svg" alt="Page faults stalling a serving thread, and pre-touched huge pages moving them to start-up" width="190"></a><br>**5. Page faults on the hot path**<br>Pre-touch huge pages. | <a href="examples/use-cases/06-two-sockets-one-mistake.md"><img src="assets/diagrams/numa-locality.svg" alt="A thread reading NIC buffers locally on one socket and across the interconnect on the other" width="190"></a><br>**6. Two sockets, one mistake**<br>Keep thread, memory and NIC together. | <a href="examples/use-cases/07-the-freeze-nobody-logs.md"><img src="assets/diagrams/smi-freeze.svg" alt="An SMI stopping every CPU at once while only the SMI counter notices" width="190"></a><br>**7. The freeze nobody logs**<br>Count the SMIs. | <a href="examples/use-cases/08-stock-to-tuned-in-one-afternoon.md"><img src="assets/diagrams/tail-before-after.svg" alt="An illustrative percentile ladder with a default and a tuned host" width="190"></a><br>**8. Capstone**<br>Stock to tuned in one afternoon. |
+
+*All numbers in the use cases are illustrative and labeled as such. They come from the mechanism costs in the guides, not from benchmarks.*
 
 ---
 
@@ -125,15 +147,21 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 ```
 .
 ├── README.md  QUICK_START.md  INDEX.md  CHEATSHEET.md  FAQ.md  STYLE.md
+├── CONTRIBUTING.md  SECURITY.md  CITATION.cff  AGENTS.md
 ├── guides/          00..10 step-by-step guides
 ├── concepts/        6 deep dives
-├── examples/        use cases, Java on a tuned host (+ runnable probe), multi-NIC segmentation
+├── examples/        use-cases/ (8 stories), Java on a tuned host (+ runnable probe), multi-NIC segmentation
+├── assets/          diagrams/ (20 hand-written SVGs), social-preview.svg (source of the repository card)
+├── site/            the GitHub Pages site and the CPU layout explorer (no dependencies)
+├── tools/           lint, fixture tests, site build
 └── scripts/
     ├── lib/common            logging, dry-run, host class, backups, CPU list helpers
     ├── lowlat.conf.example    the host description
     ├── 00..10-*               one script per guide (--apply / --dry-run / --verify / --rollback)
     ├── apply-all              sequencing + step timing
     ├── verify-tuning          read-only report
+    ├── plan-layout            propose or check the CPU layout of lowlat.conf
+    ├── fixtures/              lscpu fixtures and golden proposals for plan-layout
     └── systemd/lowlat-runtime.service
 ```
 
@@ -143,8 +171,8 @@ Copyright (c) 2026 Vitor Tadashi. Use it freely, with credit.
 
 | What | License |
 |---|---|
-| Prose: `guides/`, `concepts/`, the Markdown in `examples/`, `README.md`, `INDEX.md`, `QUICK_START.md`, `CHEATSHEET.md`, `FAQ.md` | [CC BY 4.0](LICENSE-docs) |
-| Code: `scripts/`, `tools/`, `.githooks/`, the Java probe, `Makefile`, CI config | [MIT](LICENSE) |
+| Prose and diagrams: `guides/`, `concepts/`, the Markdown in `examples/`, `assets/`, `README.md`, `INDEX.md`, `QUICK_START.md`, `CHEATSHEET.md`, `FAQ.md` | [CC BY 4.0](LICENSE-docs) |
+| Code: `scripts/`, `tools/`, `site/`, `.githooks/`, the Java probe, `Makefile`, CI config | [MIT](LICENSE) |
 
 To reuse the docs, credit them, for example: *"Based on mechanical-sympathy by Vitor Tadashi, CC BY 4.0"*, with a link to this repository and a note of what you changed.
 
