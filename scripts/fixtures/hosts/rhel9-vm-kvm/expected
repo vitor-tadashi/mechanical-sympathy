@@ -433,9 +433,9 @@ LOW-LATENCY TUNING (apply)
              | [Service]
              | Type=oneshot
              | Environment="LOWLAT_CONFIG=/etc/lowlat/lowlat.conf"
-             | ExecStartPre=/usr/bin/mkdir -p /var/lib/lowlat/opt/lowlatrts
+             | ExecStartPre=/usr/bin/mkdir -p /var/lib/lowlat/reports
              | # verify-tuning exits 5 when a check FAILs, which marks this unit as failed.
-             | ExecStart="/opt/lowlat/scripts/verify-tuning" --report "/var/lib/lowlat/opt/lowlatrts/verify-latest.txt"
+             | ExecStart="/opt/lowlat/scripts/verify-tuning" --report "/var/lib/lowlat/reports/verify-latest.txt"
              | SyslogIdentifier=lowlat-verify
              | Nice=19
              | IOSchedulingClass=idle

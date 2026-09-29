@@ -71,7 +71,7 @@ make_bin() {
 # normalize <root> - host-specific text out of a transcript: the fake root, the checkout
 # location (shown where the scripts are installed on a real host), dates and timings.
 normalize() {
-	sed -E -e "s|$1||g" -e "s|${REPO}|/opt/lowlat|g" \
+	sed -E -e "s|$1||g" -e "s|${REPO}/|/opt/lowlat/|g" \
 		-e 's/[0-9]{8}-[0-9]{6}/<timestamp>/g' \
 		-e 's/^( *date: +).*/\1<date>/' \
 		-e 's/ +[0-9]+\.[0-9]{3} s \|$/    0.000 s |/'
