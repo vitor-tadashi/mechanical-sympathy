@@ -32,6 +32,8 @@ remove_verify_timer() {
 	run_quiet systemctl disable --now "${VERIFY_UNIT}.timer"
 	run rm -f "${SYSTEMD_UNIT_DIR}/${VERIFY_UNIT}.service" "${SYSTEMD_UNIT_DIR}/${VERIFY_UNIT}.timer"
 	run systemctl daemon-reload
+	# A failed last run would keep showing up in `systemctl --failed` after the opt-out.
+	run_quiet systemctl reset-failed "${VERIFY_UNIT}.service"
 }
 
 install_verify_timer() {
