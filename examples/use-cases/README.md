@@ -15,6 +15,8 @@ Each use case follows one path: the **symptom** you see, how to **diagnose** it 
 | 6 | [Two sockets, one mistake](06-two-sockets-one-mistake.md) | A histogram with two humps | [02](../../guides/02-cpu-core-isolation.md), [03](../../guides/03-huge-pages-configuration.md) | ~15 min |
 | 7 | [The freeze nobody logs](07-the-freeze-nobody-logs.md) | A rare spike, a clean OS log, a clean `osnoise` | [00](../../guides/00-bios-firmware.md), [09](../../guides/09-measuring-latency.md) | ~2 h |
 | 8 | [Capstone: stock RHEL to tuned in one afternoon](08-stock-to-tuned-in-one-afternoon.md) | The whole path, with an honest before and after | [00](../../guides/00-bios-firmware.md) to [10](../../guides/10-time-sync.md) | ~half a day |
+| 9 | [The two-millisecond burst](09-the-two-millisecond-burst.md) | A few thousand packets lost per upstream batch, with a low average load | [04](../../guides/04-network-optimization.md), [06](../../guides/06-kernel-sysctl-tuning.md) | ~20 min |
+| 10 | [Line rate without the kernel](10-line-rate-without-the-kernel.md) | Packets lost all the time, with the rings already at the maximum | [04](../../guides/04-network-optimization.md), [08](../../guides/08-kernel-bypass.md) | ~1 h + window |
 
 <img src="../../assets/diagrams/who-wants-my-cpu.svg" alt="Seven sources of interference on a CPU, each paired with the setting that removes it, leading to an isolated CPU that runs one pinned thread uninterrupted" width="720">
 
