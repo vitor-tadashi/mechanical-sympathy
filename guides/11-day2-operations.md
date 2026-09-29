@@ -127,7 +127,7 @@ grubby --info=ALL | grep -E '^(kernel|args)='    # every entry and its arguments
 # expect: every kernel line (the rescue entry aside) has args with isolcpus=, nohz_full= and rcu_nocbs=
 ```
 
-The script's `all_kernel_entries_isolated` check does exactly this (it skips the rescue entry, and wants all three arguments), and `--verify` reports it as a WARN, so a host that has installed a kernel but not rebooted yet already shows it. If a new entry lacks the arguments:
+The script's `all_kernel_entries_isolated` check does exactly this (it skips the rescue entry, and wants all three arguments), and `--verify` reports a WARN when an entry lacks them, or when `grubby` cannot list the entries at all, so a host that has installed a kernel but not rebooted yet already shows it. If a new entry lacks the arguments:
 
 ```bash
 sudo scripts/01-grub-bootloader --apply          # grubby --update-kernel=ALL: adds them to every entry
@@ -160,7 +160,7 @@ Alert on a **change** more than on a level: a tick rate that doubled, a device i
 
 A new critical thread does not need a reboot as long as the layout has a spare isolated CPU ([Guide 02 §3](02-cpu-core-isolation.md#3-designing-the-cpu-layout), rule 5):
 
-1. Pick the next spare from `ISOLATED_CPUS`, on the critical NIC's node (`scripts/plan-layout --check` tells you if the layout still follows the rules).
+1. Pick a spare **physical core** on the critical NIC's node: one whose CPUs no thread uses (`lscpu -b -e=CPU,NODE,SOCKET,CORE` shows which CPUs share a `CORE`). With Hyper-Threading on, use one CPU of that core and leave its sibling idle, because `ISOLATED_CPUS` lists both. `scripts/plan-layout --check` tells you if the layout still follows the rules.
 2. Add the role to `affinity.properties` ([Guide 02 §6.1](02-cpu-core-isolation.md#61-describe-the-mapping-in-configuration-not-in-code)) and restart the application.
 3. Check with `show_affinity` that the thread runs on its CPU alone, and with `rtla osnoise` on that CPU **before** the application uses it ([Guide 09](09-measuring-latency.md)).
 

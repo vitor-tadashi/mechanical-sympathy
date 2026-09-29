@@ -91,16 +91,16 @@ EOF
 # --- verification (read-only) ------------------------------------------------
 
 # all_kernel_entries_isolated - predicate: every installed kernel entry (the rescue entry
-# aside) has isolcpus, nohz_full and rcu_nocbs on its command line. True when grubby is
-# missing or lists nothing.
+# aside) has isolcpus, nohz_full and rcu_nocbs on its command line. False when grubby is
+# missing, fails or lists no entry: an entry that cannot be inspected is not known to be tuned.
 all_kernel_entries_isolated() {
 	local entries
-	command -v grubby >/dev/null 2>&1 || return 0
+	command -v grubby >/dev/null 2>&1 || return 1
 	entries="$(grubby --info=ALL 2>/dev/null || true)"
-	[[ -n "${entries}" ]] || return 0
+	[[ -n "${entries}" ]] || return 1
 	awk '/^kernel=/ { rescue = ($0 ~ /rescue/) }
 		/^args=/ && !rescue { n++; if ($0 !~ /isolcpus=/ || $0 !~ /nohz_full=/ || $0 !~ /rcu_nocbs=/) bad++ }
-		END { exit !(n == 0 || bad == 0) }' <<<"${entries}"
+		END { exit !(n > 0 && bad == 0) }' <<<"${entries}"
 }
 
 verify_day2_operations() {
@@ -121,7 +121,7 @@ verify_day2_operations() {
 		verify_info "verification timer not managed here (DAY2_VERIFY_TIMER=${DAY2_VERIFY_TIMER}, host_class=${HOST_CLASS})"
 	fi
 	if host_is_bare_metal && ((${#ISOLATED_CPUS[@]} > 0)); then
-		verify_soft "every installed kernel entry carries isolcpus, nohz_full and rcu_nocbs (a new kernel would boot untuned otherwise)" all_kernel_entries_isolated
+		verify_soft "every installed kernel entry carries isolcpus, nohz_full and rcu_nocbs (WARN also when grubby cannot list them)" all_kernel_entries_isolated
 	fi
 	verify_result
 }
