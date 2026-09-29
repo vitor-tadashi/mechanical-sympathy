@@ -3,6 +3,8 @@
 > [!IMPORTANT]
 > Before anything else, capture a **baseline**: latency percentiles (p50/p99/p99.9/max) of your real workload, or of the [probe](examples/hugepages-java-example.md), plus a host bundle with `sudo scripts/09-measure-latency --apply && sudo scripts/09-measure-latency --run` ([Guide 09](guides/09-measuring-latency.md)). Without a baseline you cannot tell whether tuning helped.
 
+Prefer to learn from a worked problem? The [use cases](examples/use-cases/README.md) walk from symptom to diagnosis to change to result, one topic at a time.
+
 ## Which scenario am I?
 
 ```mermaid

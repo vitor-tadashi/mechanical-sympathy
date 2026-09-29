@@ -19,6 +19,7 @@ Every guide explains **what the kernel does**, **why each value is chosen**, **h
 | Tune a dedicated physical server | [Quick start, Scenario A](QUICK_START.md#scenario-a-dedicated-bare-metal-host-the-full-treatment) |
 | Tune a virtual machine | [Quick start, Scenario B](QUICK_START.md#scenario-b-virtual-machine) |
 | Understand why it works before touching a host | [Reading paths](INDEX.md#reading-paths), then the [concepts](INDEX.md#concepts) |
+| See a problem solved from symptom to result | [Use cases](examples/use-cases/README.md) |
 | Make my application behave on a tuned host | [Java on a tuned host](examples/hugepages-java-example.md) |
 | Check a host that is already tuned | `scripts/verify-tuning`, see [the scripts](INDEX.md#scripts) |
 
@@ -56,6 +57,7 @@ Every guide explains **what the kernel does**, **why each value is chosen**, **h
 Plus:
 
 - **Concepts**: why it works. [Boot path](concepts/bootloader.md) · [CPU isolation](concepts/cpu-isolation.md) · [Network path](concepts/network-tuning.md) · [`ethtool` reference](concepts/ethtool.md) · [Huge pages & NUMA](concepts/huge-pages.md) · [cgroups](concepts/cgroups.md)
+- **Use cases**: stories from symptom to result. [The quiet core](examples/use-cases/01-the-quiet-core.md) · [Critical and non-critical threads](examples/use-cases/02-critical-and-non-critical.md) · [The noisy neighbor](examples/use-cases/03-the-noisy-neighbor.md) · [One NIC, one queue, one CPU](examples/use-cases/04-one-nic-one-queue-one-cpu.md) ([all of them](examples/use-cases/README.md))
 - **Examples**: [Java on a tuned host](examples/hugepages-java-example.md), with a [runnable probe](examples/java-latency-probe/) · [Multi-NIC segmentation](examples/network-segmentation-example.md)
 - **Quick help**: [Cheat sheet](CHEATSHEET.md) (every check on one page) · [FAQ](FAQ.md)
 - **Tools**: [`apply-all`](scripts/apply-all) (plan / dry-run / apply / runtime) · [`verify-tuning`](scripts/verify-tuning) (PASS/WARN/FAIL report) · [`lowlat-runtime.service`](scripts/systemd/lowlat-runtime.service) (re-applies runtime state at boot)
@@ -125,7 +127,7 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 ├── README.md  QUICK_START.md  INDEX.md  CHEATSHEET.md  FAQ.md  STYLE.md
 ├── guides/          00..10 step-by-step guides
 ├── concepts/        6 deep dives
-├── examples/        Java on a tuned host (+ runnable probe), multi-NIC segmentation
+├── examples/        use cases, Java on a tuned host (+ runnable probe), multi-NIC segmentation
 └── scripts/
     ├── lib/common            logging, dry-run, host class, backups, CPU list helpers
     ├── lowlat.conf.example    the host description
