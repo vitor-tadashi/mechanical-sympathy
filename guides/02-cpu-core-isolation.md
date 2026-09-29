@@ -145,7 +145,7 @@ flowchart TD
 **Let the script propose it.** [`scripts/plan-layout`](../scripts/plan-layout) applies the rules above to your topology. It isolates the critical NIC's node except one housekeeping core, keeps CPU 0 and Hyper-Threading siblings together, and refuses when the node cannot hold your threads plus spares:
 
 ```bash
-lscpu -e=CPU,NODE,SOCKET,CORE > topology.txt
+lscpu -b -e=CPU,NODE,SOCKET,CORE > topology.txt     # -b: online CPUs only
 scripts/plan-layout --lscpu topology.txt --nic-node 1 --threads 6
 # prints ISOLATED_CPUS, OS_CPUS, WORKQUEUE_CPUS, HOUSEKEEPING_PIN_CPUS, HOUSEKEEPING_SLICE_CPUS
 # and the isolcpus, nohz_full and rcu_nocbs arguments. On the reference host it prints the layout above.
