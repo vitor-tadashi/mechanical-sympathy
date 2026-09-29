@@ -42,6 +42,9 @@ log/
 scripts/lowlat.conf
 *.conf.local
 
+# ── Site build output (tools/build-site) ───────────────────────────────────────
+_site/
+
 # ── Archives ───────────────────────────────────────────────────────────────────
 *.zip
 *.tar.gz
