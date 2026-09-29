@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" width="760" height="330" role="img" aria-labelledby="t d">
+<title id="t">A kernel-bypass packet skips the interrupt, the softirq, the socket and the wake-up</title>
+<desc id="d">Two timelines for one packet arriving at a pinned thread. On the kernel path it passes through a DMA, an interrupt, softirq processing, a socket buffer, a thread wake-up and a recv call, about 5 to 10 microseconds one way, and the interrupt and wake-up steps shape the tail. With kernel bypass the NIC writes into user memory and the thread polls it, about 1 to 2 microseconds, so about 6 microseconds are not spent at all. The times are typical orders of magnitude, not measurements.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .spare { fill: #e6f7ea; stroke: #1d6b33; stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .off { fill: #ffffff; stroke: #d0d7de; stroke-width: 1; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .role { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .mid { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .midr { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #2b0a0a; text-anchor: middle; }
+  .midw { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0b1f33; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+
+  .pw, .pb, .pg { transform-box: fill-box; transform-origin: center; animation: 6s linear infinite; }
+  .pw { animation-name: cut; }
+  .pb { animation-name: take; }
+  .pg { animation-name: ok; }
+  @keyframes cut {
+    0%, 6%   { fill: #ff6b6b; transform: scaleY(1.15); }
+    7%, 100% { fill: #ffc9c9; transform: scaleY(1); }
+  }
+  @keyframes take {
+    0%, 6%   { fill: #3d7fd9; transform: scaleY(1.15); }
+    7%, 100% { fill: #1f4e8c; transform: scaleY(1); }
+  }
+  @keyframes ok {
+    0%, 6%   { fill: #7fe39a; transform: scaleY(1.15); }
+    7%, 100% { fill: #c8f0d0; transform: scaleY(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .head, .pw, .pb, .pg { animation: none; }
+    .head { display: none; }
+  }
+
+  .stage { font: 600 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0b1f33; text-anchor: middle; }
+  .note { font: 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; text-anchor: middle; }
+  .brace { stroke: #57606a; stroke-width: 1.5; stroke-dasharray: 4 3; fill: none; }
+  .tick { stroke: #8c959f; stroke-width: 1; }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="330" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="150" rx="6"/>
+<text class="cap" x="24" y="34">Kernel path: about 5 to 10 µs one way</text>
+<text class="sub" x="24" y="52">Two steps depend on the scheduler and the interrupt controller, and they shape the tail.</text>
+<text class="lbl" x="24" y="102">CPU 3</text>
+<text class="role" x="24" y="116">net.rx thread</text>
+<rect class="box" x="150.0" y="82" width="43.6" height="36" rx="4"/>
+<text class="stage" x="171.8" y="104">DMA</text>
+<rect class="wait pw" style="animation-delay:-5.16s" x="195.6" y="82" width="66.4" height="36" rx="4"/>
+<text class="midr" x="228.8" y="104">IRQ</text>
+<text class="note" x="228.8" y="134">interrupts the CPU</text>
+<rect class="box" x="264.0" y="82" width="140.5" height="36" rx="4"/>
+<text class="stage" x="334.2" y="104">softirq: NAPI, IP, UDP</text>
+<text class="note" x="334.2" y="134">kernel stack work</text>
+<rect class="box" x="406.5" y="82" width="43.6" height="36" rx="4"/>
+<text class="stage" x="428.3" y="104">socket</text>
+<rect class="wait pw" style="animation-delay:-2.40s" x="452.1" y="82" width="77.8" height="36" rx="4"/>
+<text class="midr" x="491.0" y="104">wake-up</text>
+<text class="note" x="491.0" y="134">scheduler picks the time</text>
+<rect class="box" x="531.9" y="82" width="43.6" height="36" rx="4"/>
+<text class="stage" x="553.7" y="104">recv()</text>
+<line class="tick" x1="150.0" y1="130" x2="150.0" y2="135"/>
+<text class="axis" x="150.0" y="149">0 µs</text>
+<line class="tick" x1="264.0" y1="130" x2="264.0" y2="135"/>
+<text class="axis" x="264.0" y="149">2 µs</text>
+<line class="tick" x1="378.0" y1="130" x2="378.0" y2="135"/>
+<text class="axis" x="378.0" y="149">4 µs</text>
+<line class="tick" x1="492.0" y1="130" x2="492.0" y2="135"/>
+<text class="axis" x="492.0" y="149">6 µs</text>
+<line class="tick" x1="606.0" y1="130" x2="606.0" y2="135"/>
+<text class="axis" x="606.0" y="149">8 µs</text>
+<line class="tick" x1="720.0" y1="130" x2="720.0" y2="135"/>
+<text class="axis" x="720.0" y="149">10 µs</text>
+<rect class="lane" x="10" y="170" width="740" height="150" rx="6"/>
+<text class="cap" x="24" y="194">Kernel bypass: about 1 to 2 µs one way</text>
+<text class="sub" x="24" y="212">The NIC writes into memory the application owns, and a pinned thread polls it. No interrupt, no syscall.</text>
+<text class="lbl" x="24" y="262">CPU 3</text>
+<text class="role" x="24" y="276">polling thread</text>
+<rect class="box" x="150.0" y="242" width="43.6" height="36" rx="4"/>
+<text class="stage" x="171.8" y="264">DMA</text>
+<rect class="app pg" style="animation-delay:-5.40s" x="195.6" y="242" width="20.8" height="36" rx="4"/>
+<rect class="app pg" style="animation-delay:-5.19s" x="218.4" y="242" width="15.1" height="36" rx="4"/>
+<text class="note" x="193.0" y="294">app polls the ring and handles it</text>
+<path class="brace" d="M239.5 260 H577.5"/>
+<text class="note" x="406.5" y="256">about 6 µs not spent</text>
+<line class="tick" x1="150.0" y1="290" x2="150.0" y2="295"/>
+<text class="axis" x="150.0" y="309">0 µs</text>
+<line class="tick" x1="264.0" y1="290" x2="264.0" y2="295"/>
+<text class="axis" x="264.0" y="309">2 µs</text>
+<line class="tick" x1="378.0" y1="290" x2="378.0" y2="295"/>
+<text class="axis" x="378.0" y="309">4 µs</text>
+<line class="tick" x1="492.0" y1="290" x2="492.0" y2="295"/>
+<text class="axis" x="492.0" y="309">6 µs</text>
+<line class="tick" x1="606.0" y1="290" x2="606.0" y2="295"/>
+<text class="axis" x="606.0" y="309">8 µs</text>
+<line class="tick" x1="720.0" y1="290" x2="720.0" y2="295"/>
+<text class="axis" x="720.0" y="309">10 µs</text>
+<line class="head" x1="150" y1="70" x2="150" y2="296"/>
+</svg>
