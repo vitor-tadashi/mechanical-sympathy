@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+#
+# check-size-buffers - test scripts/size-buffers against the fixtures in scripts/fixtures/buffers.
+#
+# For every NAME.args, run size-buffers with those arguments and compare its output with
+# NAME.golden. Then check the numbers that the documentation prints, so a change to the model
+# cannot silently make a page wrong:
+#   - Concept: network buffers section 3: a 1.5 ms burst at 4 Mpps, drained at 1.5 Mpps,
+#     drops 3238 packets on a ring of 512, 2726 on 1024 and 1702 on 2048, and peaks at 3750
+#   - Use case 9: the socket buffer of that scenario must hold 2000 packets, and 1908 are lost
+#     when it stays at 208 KiB
+# site/buffers.js is held to the same goldens by tools/check-buffers.
+#
+# Usage: tools/check-size-buffers            compare with the goldens
+#        tools/check-size-buffers --update   rewrite the goldens from the current output
+
+set -Eeuo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "${ROOT}"
+
+FIXTURES=scripts/fixtures/buffers
+UPDATE=0
+[[ "${1:-}" == "--update" ]] && UPDATE=1
+
+failures=0
+
+fail() {
+	printf 'check-size-buffers: %s\n' "$*" >&2
+	failures=$((failures + 1))
+}
+
+cases=0
+for args_file in "${FIXTURES}"/*.args; do
+	name="${args_file%.args}"
+	cases=$((cases + 1))
+	read -r -a args <"${args_file}"
+	status=0
+	actual="$(scripts/size-buffers "${args[@]}")" || status=$?
+	if ((status != 0)); then
+		fail "${name##*/}: size-buffers exited ${status}"
+		continue
+	fi
+	if ((UPDATE == 1)); then
+		printf '%s\n' "${actual}" >"${name}.golden"
+		continue
+	fi
+	if [[ ! -f "${name}.golden" ]]; then
+		fail "${name##*/}: no golden file (run tools/check-size-buffers --update)"
+		continue
+	fi
+	expected="$(cat "${name}.golden")"
+	if [[ "${actual}" != "${expected}" ]]; then
+		fail "${name##*/}: output differs from ${name##*/}.golden"
+		diff <(printf '%s\n' "${expected}") <(printf '%s\n' "${actual}") >&2 || true
+	fi
+done
+((cases > 0)) || fail "no fixtures found in ${FIXTURES}"
+
+# expect_line ARGS PATTERN - the report for ARGS must contain a line that matches PATTERN.
+expect_line() {
+	local out
+	local -a words
+	read -r -a words <<<"$1"
+	out="$(scripts/size-buffers "${words[@]}")"
+	grep -qE "$2" <<<"${out}" || fail "size-buffers $1: no line matches '$2'"
+}
+
+burst="--burst-mpps 4 --burst-us 1500 --drain-mpps 1.5 --app-mpps 1 --rcvbuf-bytes 999999999"
+expect_line "--ring 512 ${burst}" '^dropped, stage 1 +3238 packets'
+expect_line "--ring 1024 ${burst}" '^dropped, stage 1 +2726 packets'
+expect_line "--ring 2048 ${burst}" '^dropped, stage 1 +1702 packets'
+expect_line "--ring 4096 ${burst}" '^dropped, stage 1 +0 packets'
+expect_line "--ring 4096 ${burst}" '^ring +3750 packets'
+expect_line "--ring 8160 ${burst}" '^socket buffer +2000 packets'
+expect_line "--ring 8160 --burst-mpps 4 --burst-us 1500 --drain-mpps 1.5 --app-mpps 1" '^dropped, stage 2 +1908 packets'
+# Line rate, nothing drained: the ring fills in about N / 14.88 microseconds (10 us steps).
+expect_line "--ring 512 --burst-mpps 14.88 --burst-us 1000 --pre-us 0 --drain-mpps 0 --rcvbuf-bytes 999999999" '^first drop +stage 1 at 30 us'
+expect_line "--ring 4096 --burst-mpps 14.88 --burst-us 1000 --pre-us 0 --drain-mpps 0 --rcvbuf-bytes 999999999" '^first drop +stage 1 at 270 us'
+
+# A queue that never empties is reported as unbounded, and a DPDK pool must also hold the posted ring.
+expect_line "--burst-mpps 10 --burst-us 100000 --pre-us 0 --ring 1000000 --drain-mpps 1 --app-mpps 0" '^unbounded '
+expect_line "--stack dpdk --ring 4096 --buffer-packets 2048 --burst-mpps 1 --burst-us 1000 --pre-us 0 --drain-mpps 2 --app-mpps 2" '^stage 2 +.*: 0 packets'
+expect_line "--burst-mpps 4 --burst-us 100000 --pre-us 0 --drain-mpps 1 --app-mpps 0.5 --ring 1000000 --rcvbuf-bytes 999999999" '^ring +300000 packets'
+
+# Bad input is refused.
+status=0
+scripts/size-buffers --ring abc >/dev/null 2>&1 || status=$?
+((status != 0)) || fail "a ring of 'abc' was accepted"
+status=0
+scripts/size-buffers --stack solaris >/dev/null 2>&1 || status=$?
+((status != 0)) || fail "an unknown stack was accepted"
+
+if ((failures > 0)); then
+	printf 'check-size-buffers: %d problem(s)\n' "${failures}" >&2
+	exit 1
+fi
+printf 'check-size-buffers: %d fixture(s) and the documented numbers passed\n' "${cases}"

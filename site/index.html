@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mechanical Sympathy</title>
-<meta name="description" content="Low-latency tuning for RHEL 8 and 9: twelve guides, one script per guide, use cases from symptom to result, and a CPU layout explorer.">
+<meta name="description" content="Low-latency tuning for RHEL 8 and 9: twelve guides, one script per guide, use cases from symptom to result, and a CPU layout explorer and a buffer simulator.">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,6 +15,7 @@
 			<a href="#guides">Guides</a>
 			<a href="#use-cases">Use cases</a>
 			<a href="explorer.html">Layout explorer</a>
+			<a href="buffers.html">Buffer simulator</a>
 			<a href="https://github.com/vitor-tadashi/mechanical-sympathy">GitHub</a>
 		</nav>
 	</div>
@@ -96,6 +97,14 @@
 		<h2>Design your CPU layout in a minute</h2>
 		<p class="lead">The hardest first step is deciding which CPUs are isolated. The explorer applies the rules of Guide 02 to your topology, draws the map, and prints the block for the config file. Paste the output of <code>lscpu</code> to use your own host.</p>
 		<div class="buttons"><a class="btn" href="explorer.html">Open the explorer</a></div>
+	</div>
+</section>
+
+<section>
+	<div class="wrap">
+		<h2>See where a burst is lost</h2>
+		<p class="lead">A ring, a socket buffer, a drain and a reader are four numbers, and the loss depends on all of them. The simulator takes a burst and your sizes, shows where the packets are dropped and which counter reports it, and says how big each queue must be to lose nothing. The figures are illustrative.</p>
+		<div class="buttons"><a class="btn" href="buffers.html">Open the simulator</a></div>
 	</div>
 </section>
 

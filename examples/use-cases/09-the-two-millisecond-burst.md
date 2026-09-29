@@ -64,12 +64,20 @@ ethtool -g ens1f0
 
 ```bash
 nstat | grep UdpRcvbufErrors
-# UdpRcvbufErrors     1874         <- the socket buffer overflowed
+# UdpRcvbufErrors     1908         <- the socket buffer overflowed
 ss -umn 'sport = :5000'
-# skmem:(r212992,rb212992,...,d1874)   <- full at 208 KiB, and d counts its drops
+# skmem:(r212992,rb212992,...,d1908)   <- full at 208 KiB, and d counts its drops
 ```
 
-The ring now hands the whole burst to the socket at 1.5 Mpps, while the application reads 1.0 Mpps. The socket buffer must hold what is left when the last packet arrives, about 2,000 datagrams. At about 2.3 KiB of truesize each, that is 4.4 MiB, and the 208 KiB default holds 92 to 277 ([Concept: network buffers §4](../../concepts/network-buffers.md#4-socket-buffers)).
+The ring now hands the whole burst to the socket at 1.5 Mpps, while the application reads 1.0 Mpps. The socket buffer must hold what is left when the last packet arrives, about 2,000 datagrams. At about 2.3 KiB of truesize each, that is 4.4 MiB, and the 208 KiB default holds 92 to 277 ([Concept: network buffers §4](../../concepts/network-buffers.md#4-socket-buffers)). The calculator does this arithmetic for you:
+
+```bash
+scripts/size-buffers --ring 8160 --burst-mpps 4 --burst-us 1500 --drain-mpps 1.5 --app-mpps 1
+# dropped, stage 2  1908 packets (UdpRcvbufErrors)
+# socket buffer     2000 packets, 4608000 B, SO_RCVBUF request 2250 KiB
+```
+
+The [buffer simulator](https://vitor-tadashi.github.io/mechanical-sympathy/buffers.html) shows the same run as a chart.
 
 <img src="../../assets/diagrams/rcvbuf-truesize.svg" alt="A 64-byte datagram is charged about 2,304 or 768 bytes; a 208 KiB default buffer holds only 92 to 277 datagrams, 0.09 to 0.28 ms at 1 Mpps, while an 8 MiB buffer holds about 3,640 to 10,920, 3.6 to 10.9 ms; all drawn to scale" width="720">
 

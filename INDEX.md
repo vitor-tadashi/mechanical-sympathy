@@ -94,6 +94,7 @@ flowchart TD
 | [`plan-layout`](scripts/plan-layout) `--threads N --nic-node N` | Propose the CPU layout of `lowlat.conf` from `lscpu`, or `--check` one you wrote by hand. The [explorer](https://vitor-tadashi.github.io/mechanical-sympathy/explorer.html) does the same in a browser |
 | `NN-* --dry-run / --apply / --verify / --rollback` | One guide at a time (00–11). `09-measure-latency --run` captures a measurement bundle. |
 | [`apply-all`](scripts/apply-all) `--plan / --dry-run / --apply / --runtime` | All guides in order, with step timing |
+| [`size-buffers`](scripts/size-buffers) `--burst-mpps R --ring N` | How long a burst lasts and how big the ring and the socket buffer must be to lose nothing. The [simulator](https://vitor-tadashi.github.io/mechanical-sympathy/buffers.html) does the same in a browser |
 | [`verify-tuning`](scripts/verify-tuning) `[--report FILE]` | Read-only PASS/WARN/FAIL for everything |
 | [`systemd/lowlat-runtime.service`](scripts/systemd/lowlat-runtime.service) | Re-applies runtime state at boot |
 

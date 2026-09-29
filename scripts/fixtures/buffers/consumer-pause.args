@@ -1,0 +1,1 @@
+--stack kernel --idle-mpps 1 --burst-mpps 1 --burst-us 3000 --pre-us 0 --ring 4096 --drain-mpps 3 --app-mpps 2 --pause-us 1000 --pause-at-us 500 --rcvbuf-bytes 212992 --truesize 2304
