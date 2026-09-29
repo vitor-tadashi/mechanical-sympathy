@@ -1,6 +1,6 @@
 # Guide 04 — Network Optimization (NIC, Interrupts, Segmentation)
 
-> **Script:** [`scripts/04-network`](../scripts/04-network) · **Concepts:** [network-tuning](../concepts/network-tuning.md), [ethtool reference](../concepts/ethtool.md) · **Example:** [examples/network-segmentation-example.md](../examples/network-segmentation-example.md) · **Previous:** [Guide 03](03-huge-pages-configuration.md) · **Next:** [Guide 05 — cgroups](05-cgroup-isolation.md)
+> **Script:** [`scripts/04-network`](../scripts/04-network) · **Concepts:** [network-tuning](../concepts/network-tuning.md), [ethtool reference](../concepts/ethtool.md) · **Example:** [examples/network-segmentation-example.md](../examples/network-segmentation-example.md) · **Previous:** [Guide 03](03-huge-pages-configuration.md) · **Next:** [Guide 05 — cgroups](05-cgroup-isolation.md) · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|

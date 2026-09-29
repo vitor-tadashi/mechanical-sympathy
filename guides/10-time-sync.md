@@ -1,6 +1,6 @@
 # Guide 10 — Time Synchronization (chrony and PTP)
 
-> **Script:** [`scripts/10-time-sync`](../scripts/10-time-sync) · **Concepts:** [ethtool §12 (timestamping)](../concepts/ethtool.md#12--t-timestamping), [network-tuning](../concepts/network-tuning.md) · **Example:** [segmentation §7 (PTP on the timing NIC)](../examples/network-segmentation-example.md#7-ptp-on-the-timing-nic) · **Builds on:** [Guide 04](04-network-optimization.md) (the `timing` NIC role) · **Next:** [Guide 11 — Day-2 operations](11-day2-operations.md)
+> **Script:** [`scripts/10-time-sync`](../scripts/10-time-sync) · **Concepts:** [ethtool §12 (timestamping)](../concepts/ethtool.md#12--t-timestamping), [network-tuning](../concepts/network-tuning.md) · **Example:** [segmentation §7 (PTP on the timing NIC)](../examples/network-segmentation-example.md#7-ptp-on-the-timing-nic) · **Builds on:** [Guide 04](04-network-optimization.md) (the `timing` NIC role) · **Next:** [Guide 11 — Day-2 operations](11-day2-operations.md) · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|

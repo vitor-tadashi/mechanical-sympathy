@@ -1,6 +1,6 @@
 # Guide 08 — Kernel Bypass (Onload, DPDK, and the Alternatives)
 
-> **Script:** [`scripts/08-kernel-bypass`](../scripts/08-kernel-bypass) · **Concepts:** [network-tuning §8–9](../concepts/network-tuning.md#9-kernel-bypass), [ethtool reference](../concepts/ethtool.md) · **Previous:** [Guide 07](07-os-hygiene.md) · **Builds on:** [Guide 04 — Network](04-network-optimization.md)
+> **Script:** [`scripts/08-kernel-bypass`](../scripts/08-kernel-bypass) · **Concepts:** [network-tuning §8–9](../concepts/network-tuning.md#9-kernel-bypass), [ethtool reference](../concepts/ethtool.md) · **Previous:** [Guide 07](07-os-hygiene.md) · **Builds on:** [Guide 04 — Network](04-network-optimization.md) · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|

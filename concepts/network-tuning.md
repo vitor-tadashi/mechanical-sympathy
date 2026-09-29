@@ -1,6 +1,6 @@
 # Concept — The Linux Receive/Transmit Path and Where Latency Hides
 
-> Used by: [Guide 04](../guides/04-network-optimization.md), [Guide 06](../guides/06-kernel-sysctl-tuning.md). Related: [cpu-isolation](cpu-isolation.md), [huge-pages](huge-pages.md).
+> Used by: [Guide 04](../guides/04-network-optimization.md), [Guide 06](../guides/06-kernel-sysctl-tuning.md). Related: [cpu-isolation](cpu-isolation.md), [huge-pages](huge-pages.md). Terms: [Glossary](../GLOSSARY.md).
 
 ## At a glance
 

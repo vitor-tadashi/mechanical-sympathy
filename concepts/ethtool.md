@@ -1,6 +1,6 @@
 # Concept — `ethtool`: What Each Option Controls
 
-> Used by: [Guide 04](../guides/04-network-optimization.md), [Guide 08](../guides/08-kernel-bypass.md). Related: [network-tuning](network-tuning.md). Example: [network-segmentation-example](../examples/network-segmentation-example.md).
+> Used by: [Guide 04](../guides/04-network-optimization.md), [Guide 08](../guides/08-kernel-bypass.md). Related: [network-tuning](network-tuning.md). Example: [network-segmentation-example](../examples/network-segmentation-example.md). Terms: [Glossary](../GLOSSARY.md).
 
 ## At a glance
 

@@ -1,6 +1,6 @@
 # Guide 02 — CPU Core Isolation
 
-> **Script:** [`scripts/02-cpu-isolation`](../scripts/02-cpu-isolation) · **Concept:** [concepts/cpu-isolation.md](../concepts/cpu-isolation.md) · **Previous:** [Guide 01](01-grub-bootloader-tuning.md) · **Next:** [Guide 03 — Huge pages](03-huge-pages-configuration.md)
+> **Script:** [`scripts/02-cpu-isolation`](../scripts/02-cpu-isolation) · **Concept:** [concepts/cpu-isolation.md](../concepts/cpu-isolation.md) · **Previous:** [Guide 01](01-grub-bootloader-tuning.md) · **Next:** [Guide 03 — Huge pages](03-huge-pages-configuration.md) · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|

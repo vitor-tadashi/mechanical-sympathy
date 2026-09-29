@@ -1,6 +1,6 @@
 # Concept — Virtual Memory, TLBs, Page Faults and NUMA
 
-> Used by: [Guide 03](../guides/03-huge-pages-configuration.md). Related: [cpu-isolation](cpu-isolation.md), [bootloader](bootloader.md). Example: [hugepages-java-example](../examples/hugepages-java-example.md).
+> Used by: [Guide 03](../guides/03-huge-pages-configuration.md). Related: [cpu-isolation](cpu-isolation.md), [bootloader](bootloader.md). Example: [hugepages-java-example](../examples/hugepages-java-example.md). Terms: [Glossary](../GLOSSARY.md).
 
 ## At a glance
 

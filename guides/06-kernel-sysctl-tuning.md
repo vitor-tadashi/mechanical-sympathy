@@ -1,6 +1,6 @@
 # Guide 06 — Kernel Runtime Parameters (sysctl)
 
-> **Script:** [`scripts/06-kernel-sysctl`](../scripts/06-kernel-sysctl) · **Concepts:** [network-tuning](../concepts/network-tuning.md), [cpu-isolation](../concepts/cpu-isolation.md) · **Previous:** [Guide 05](05-cgroup-isolation.md) · **Next:** [Guide 07 — OS hygiene](07-os-hygiene.md)
+> **Script:** [`scripts/06-kernel-sysctl`](../scripts/06-kernel-sysctl) · **Concepts:** [network-tuning](../concepts/network-tuning.md), [cpu-isolation](../concepts/cpu-isolation.md) · **Previous:** [Guide 05](05-cgroup-isolation.md) · **Next:** [Guide 07 — OS hygiene](07-os-hygiene.md) · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|
