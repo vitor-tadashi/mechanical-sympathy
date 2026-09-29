@@ -5,7 +5,7 @@
 #   plan-layout --threads N (--nic-node N | --nic IFACE) [--spares N] [--lscpu FILE]
 #   plan-layout --check CONF (--nic-node N | --nic IFACE) [--lscpu FILE]
 #
-# Propose mode reads `lscpu -e=CPU,NODE,SOCKET,CORE` (from this host, or from --lscpu FILE)
+# Propose mode reads `lscpu -b -e=CPU,NODE,SOCKET,CORE` (online CPUs, from this host, or from --lscpu FILE)
 # and prints an ISOLATED_CPUS / OS_CPUS / WORKQUEUE_CPUS / HOUSEKEEPING_* block that follows
 # Guide 02 section 3:
 #   1. with a second NUMA node to run the OS, every core of the critical NIC's node is
@@ -200,7 +200,7 @@ Usage: $(basename "$0") --threads N (--nic-node N | --nic IFACE) [--spares N] [-
   --spares N      isolated cores to leave free for growth (default 2)
   --nic-node N    NUMA node of the critical NIC
   --nic IFACE     read the node from /sys/class/net/IFACE/device/numa_node
-  --lscpu FILE    topology as printed by: lscpu -e=CPU,NODE,SOCKET,CORE (default: run it)
+  --lscpu FILE    topology as printed by: lscpu -b -e=CPU,NODE,SOCKET,CORE (default: run it)
   --check CONF    check ISOLATED_CPUS and OS_CPUS of a lowlat.conf instead of proposing
 EOF
 }
@@ -263,7 +263,7 @@ if [[ -n "${LSCPU_FILE}" ]]; then
 	TOPOLOGY="$(cat "${LSCPU_FILE}")"
 else
 	require_commands lscpu
-	TOPOLOGY="$(lscpu -e=CPU,NODE,SOCKET,CORE)"
+	TOPOLOGY="$(lscpu -b -e=CPU,NODE,SOCKET,CORE)"
 fi
 
 PROGRAM="$(plan_awk)"

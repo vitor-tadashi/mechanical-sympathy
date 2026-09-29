@@ -27,12 +27,20 @@ day2_defaults() {
 	return 0
 }
 
+# remove_verify_timer - stop the timer and remove the units, whether or not an earlier run installed them.
+remove_verify_timer() {
+	run_quiet systemctl disable --now "${VERIFY_UNIT}.timer"
+	run rm -f "${SYSTEMD_UNIT_DIR}/${VERIFY_UNIT}.service" "${SYSTEMD_UNIT_DIR}/${VERIFY_UNIT}.timer"
+	run systemctl daemon-reload
+}
+
 install_verify_timer() {
 	local cpus config config_dir dir=.
 	day2_defaults
 	log_step "Verification timer (DAY2_VERIFY_TIMER=${DAY2_VERIFY_TIMER})"
 	if [[ "${DAY2_VERIFY_TIMER}" != yes ]]; then
-		log_sub_step "DAY2_VERIFY_TIMER is not yes, not installing the timer"
+		log_sub_step "DAY2_VERIFY_TIMER is not yes: no timer, and removing one that an earlier run installed"
+		remove_verify_timer
 		return 0
 	fi
 	require_capability day2_operations || return 0
@@ -125,12 +133,10 @@ apply_day2_operations() {
 rollback_day2_operations() {
 	day2_defaults
 	log_step "Verification timer"
-	log_sub_step "Disabling ${VERIFY_UNIT}.timer"
-	run_quiet systemctl disable --now "${VERIFY_UNIT}.timer"
-	log_sub_step "Removing the units and the reports"
-	run rm -f "${SYSTEMD_UNIT_DIR}/${VERIFY_UNIT}.service" "${SYSTEMD_UNIT_DIR}/${VERIFY_UNIT}.timer"
+	log_sub_step "Disabling ${VERIFY_UNIT}.timer and removing the units"
+	remove_verify_timer
+	log_sub_step "Removing the reports"
 	run rm -rf "${REPORT_DIR}"
-	run systemctl daemon-reload
 }
 
 main() {

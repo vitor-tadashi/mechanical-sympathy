@@ -50,7 +50,7 @@
 							<option value="round-robin">Round-robin across sockets (even CPUs on node 0)</option>
 							<option value="socket-by-socket">Socket by socket, siblings last</option>
 						</select>
-						<span class="hint">Check yours with <code>lscpu -e=CPU,NODE,SOCKET,CORE</code>.</span>
+						<span class="hint">Check yours with <code>lscpu -b -e=CPU,NODE,SOCKET,CORE</code>.</span>
 					</div>
 				</div>
 
@@ -59,7 +59,7 @@
 					<label for="paste">Paste my own topology instead</label>
 				</div>
 				<div class="field hidden">
-					<label for="paste-box">Output of <code>lscpu -e=CPU,NODE,SOCKET,CORE</code></label>
+					<label for="paste-box">Output of <code>lscpu -b -e=CPU,NODE,SOCKET,CORE</code></label>
 					<textarea id="paste-box" spellcheck="false" placeholder="CPU NODE SOCKET CORE&#10;  0    0      0    0&#10;  1    1      1    1"></textarea>
 				</div>
 			</div>

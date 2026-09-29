@@ -190,7 +190,7 @@ sudo scripts/11-day2-operations --rollback      # remove the units and the repor
 
 | `lowlat.conf` key | Default | Meaning |
 |---|---|---|
-| `DAY2_VERIFY_TIMER` | `yes` | `no` skips the timer, and `apply-all` leaves the host without it |
+| `DAY2_VERIFY_TIMER` | `yes` | `no` leaves the host without the timer: `apply-all` or this script removes one that an earlier run installed |
 | `DAY2_VERIFY_SCHEDULE` | `daily` | a systemd `OnCalendar` expression, for example `hourly` or `*-*-* 03:00:00` |
 
 `apply-all --apply` installs the timer as its last persistent step, and `verify-tuning` prints a "11 Day-2 operations" section.
