@@ -69,7 +69,7 @@ if [[ "${show_missing}" == yes ]]; then
 		FNR == 1 { fence = 0 }
 		/^(```|~~~)/ { fence = !fence; next }
 		fence { next }
-		{ gsub(/`[^`]*`/, ""); print }
+		{ gsub(/`[^`]*`/, ""); gsub(/\]\([^)]*\)/, "]"); gsub(/(src|href)="[^"]*"/, ""); print }
 	' ${docs} | grep -oE '\b[A-Z][A-Za-z0-9]*[A-Z][A-Za-z0-9]*\b' | grep -E '^[A-Z]{3,}s?$|^[A-Z]{2,}[a-z]$' || true)"
 	# Words that are defined: bold terms and ids of the glossary, lower case, split on separators.
 	defined="$(grep -oE '<a id="[^"]+">|\*\*[^*]+\*\*' "${glossary}" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9\n' '\n' | sort -u)"
