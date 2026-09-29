@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mechanical Sympathy</title>
+<meta name="description" content="Low-latency tuning for RHEL 8 and 9: eleven guides, one script per guide, use cases from symptom to result, and a CPU layout explorer.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+	<div class="wrap">
+		<a class="brand" href="index.html">Mechanical Sympathy</a>
+		<nav aria-label="Main">
+			<a href="#guides">Guides</a>
+			<a href="#use-cases">Use cases</a>
+			<a href="explorer.html">Layout explorer</a>
+			<a href="https://github.com/vitor-tadashi/mechanical-sympathy">GitHub</a>
+		</nav>
+	</div>
+</header>
+
+<main>
+<section class="hero">
+	<div class="wrap">
+		<h1>Make a Linux server quiet enough for microseconds.</h1>
+		<p class="lead">A field guide, with working scripts, for turning a RHEL 8 or 9 host into a deterministic, low-jitter machine. Every guide explains what the kernel does, why each value was chosen, how to verify it, and how to undo it.</p>
+		<div class="buttons">
+			<a class="btn" href="explorer.html">Try the CPU layout explorer</a>
+			<a class="btn secondary" href="#use-cases">See the use cases</a>
+			<a class="btn secondary" href="https://github.com/vitor-tadashi/mechanical-sympathy">Read the guides on GitHub</a>
+		</div>
+		<div class="figure"><img src="assets/diagrams/jitter-map.svg" alt="A stack of six layers from the application down to the hardware, each with its typical rare events and the guides that remove them, and a bar showing that Guide 09 measures every layer"></div>
+		<p class="small">Typical orders of magnitude from the guides, not measurements.</p>
+		<div class="notice">
+			<strong>Read this first.</strong> These settings are for dedicated hosts that run a few well-understood, latency-critical processes. They trade power, throughput, flexibility and, in places, security for predictable latency. Some options are opt-in and marked, and need written approval. <a href="https://github.com/vitor-tadashi/mechanical-sympathy#read-this-first">Read the warnings and the cases where you should not apply any of this.</a>
+		</div>
+	</div>
+</section>
+
+<section>
+	<div class="wrap">
+		<h2>How it works</h2>
+		<p class="lead">One config file describes your hardware. The scripts read it, and every step shows what it would do before it does it.</p>
+		<div class="steps">
+			<div class="step"><h3>Measure</h3><p>Capture a baseline: percentiles and a host bundle, before any change.</p></div>
+			<div class="step"><h3>Design</h3><p>Decide which CPUs are critical, which run the OS, and where the NIC sits.</p></div>
+			<div class="step"><h3>Apply</h3><p><code>--dry-run</code> first, then apply once and reboot once. Every file is backed up.</p></div>
+			<div class="step"><h3>Verify, then measure</h3><p>A PASS, WARN or FAIL report proves the configuration. Your histograms prove the benefit.</p></div>
+		</div>
+	</div>
+</section>
+
+<section id="guides">
+	<div class="wrap">
+		<h2>Eleven guides, one script each</h2>
+		<p class="lead">Each guide starts with a short answer, a picture and the cost, then goes as deep as the setting deserves. Each script has <code>--dry-run</code>, <code>--verify</code> and <code>--rollback</code>.</p>
+		<div class="grid">
+			<div class="card"><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/guides/00-bios-firmware.md">00 BIOS and firmware</a><p>Power profile, C-states, turbo, Hyper-Threading, NUMA, SMI sources, PCIe power management.</p><div class="meta">Reboot into BIOS</div></div>
+			<div class="card"><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/guides/01-grub-bootloader-tuning.md">01 Kernel command line</a><p>isolcpus, nohz_full, rcu_nocbs, idle states, THP off, watchdogs, mitigations.</p><div class="meta">Reboot</div></div>
+			<div class="card"><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/guides/02-cpu-core-isolation.md">02 CPU isolation</a><p>CPU layout, systemd CPUAffinity, workqueues, irqbalance, RT throttling, thread pinning.</p><div class="meta">Reboot</div></div>
+			<div class="card"><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/guides/03-huge-pages-configuration.md">03 Huge pages</a><p>Explicit hugetlbfs reserved per NUMA node at early boot, Java flags, pre-touch. Never THP.</p><div class="meta">Reboot recommended</div></div>
+			<div class="card"><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/guides/04-network-optimization.md">04 Network</a><p>NIC roles, queues, coalescing, offloads, rings, IRQ affinity, one traffic class per NIC.</p><div class="meta">No reboot</div></div>
+			<div class="card"><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/guides/05-cgroup-isolation.md">05 cgroups</a><p>A housekeeping slice that fences agents onto quiet CPUs, and the cpuset trap.</p><div class="meta">No reboot</div></div>
+			<div class="card"><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/guides/06-kernel-sysctl-tuning.md">06 Kernel sysctl</a><p>Logging, TCP behavior, buffers, queues, VM settings.</p><div class="meta">No reboot</div></div>
+			<div class="card"><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/guides/07-os-hygiene.md">07 OS hygiene</a><p>Services, limits, noatime, tuned, and an opt-in firewall section.</p><div class="meta">No reboot</div></div>
+			<div class="card"><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/guides/08-kernel-bypass.md">08 Kernel bypass</a><p>Onload, DPDK, XLIO, AF_XDP, busy polling: choose per card and application. Optional.</p><div class="meta">Optional</div></div>
+			<div class="card"><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/guides/09-measuring-latency.md">09 Measuring latency</a><p>Baselines, percentiles, coordinated omission, rtla, turbostat, a measurement protocol.</p><div class="meta">Do it first, and after every guide</div></div>
+			<div class="card"><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/guides/10-time-sync.md">10 Time synchronization</a><p>chrony versus PTP, hardware timestamping, the timing NIC, pinning the daemons.</p><div class="meta">No reboot</div></div>
+		</div>
+	</div>
+</section>
+
+<section id="use-cases">
+	<div class="wrap">
+		<h2>Use cases: from symptom to result</h2>
+		<p class="lead">Eight stories. Each one has the diagnosis commands, the exact configuration lines, the result and the rollback. The numbers are illustrative and labeled, never presented as benchmarks.</p>
+		<div class="grid">
+			<div class="card"><div class="figure flush"><img src="assets/diagrams/tick-nohz.svg" alt="Animation: a busy CPU is interrupted by a timer tick many times per second; with nohz_full the same CPU runs uninterrupted except for one residual tick"></div><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/examples/use-cases/01-the-quiet-core.md">1. The quiet core</a><p>A clean median and a comb of spikes: stop the tick on the CPU that spins.</p></div>
+			<div class="card"><div class="figure flush"><img src="assets/diagrams/cpu-map-reference-host.svg" alt="Two NUMA panels of 16 CPUs each: node 1 has one housekeeping CPU for the critical NICs and isolated CPUs with pinned thread roles, node 0 runs the operating system, agents and bulk interrupts"></div><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/examples/use-cases/02-critical-and-non-critical.md">2. Critical and non-critical, side by side</a><p>Give every thread a home: one critical thread per isolated CPU, everything else on the OS CPUs.</p></div>
+			<div class="card"><div class="figure flush"><img src="assets/diagrams/noisy-neighbor.svg" alt="Animation: three agent bursts stall a critical thread when the agent shares its CPU, and never reach it when the agent runs in housekeeping.slice on another CPU"></div><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/examples/use-cases/03-the-noisy-neighbor.md">3. The noisy neighbor</a><p>An agent bursts onto a critical core: fence it with a cpuset and a budget.</p></div>
+			<div class="card"><div class="figure flush"><img src="assets/diagrams/irq-placement.svg" alt="Animation: with the NIC interrupt on isolated CPU 3, every packet cuts into the spinning net.rx thread; with the interrupt on housekeeping CPU 1, the spin is never cut"></div><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/examples/use-cases/04-one-nic-one-queue-one-cpu.md">4. One NIC, one queue, one CPU</a><p>Move the interrupt off the spinning thread, and give one flow its own queue.</p></div>
+			<div class="card"><div class="figure flush"><img src="assets/diagrams/page-fault-hotpath.svg" alt="Animation: with default first-touch memory six page faults stall an event-loop thread while it serves; with pre-touched huge pages all the faults happen at start-up"></div><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/examples/use-cases/05-page-faults-on-the-hot-path.md">5. Page faults on the hot path</a><p>Reserve huge pages per node and pre-touch the heap: the faults move to start-up.</p></div>
+			<div class="card"><div class="figure flush"><img src="assets/diagrams/numa-locality.svg" alt="Two sockets: a net.rx thread on node 1 reads the NIC's packet buffers locally; the same thread on node 0 crosses the interconnect on every cache miss"></div><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/examples/use-cases/06-two-sockets-one-mistake.md">6. Two sockets, one mistake</a><p>A histogram with two humps: the thread, its memory and the NIC belong on one node.</p></div>
+			<div class="card"><div class="figure flush"><img src="assets/diagrams/smi-freeze.svg" alt="Animation: an SMI stops four isolated CPUs at the same instant; only the turbostat SMI counter records it"></div><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/examples/use-cases/07-the-freeze-nobody-logs.md">7. The freeze nobody logs</a><p>A rare spike with a clean OS log: count SMIs and fix the firmware.</p></div>
+			<div class="card"><div class="figure flush"><img src="assets/diagrams/tail-before-after.svg" alt="Illustrative percentile ladder on a log scale, from p50 to max, for a default host and a tuned host, with fictional numbers"></div><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/examples/use-cases/08-stock-to-tuned-in-one-afternoon.md">8. Capstone: stock to tuned in one afternoon</a><p>The whole path with an honest before and after. The ladder shown is illustrative.</p></div>
+		</div>
+	</div>
+</section>
+
+<section>
+	<div class="wrap">
+		<h2>Design your CPU layout in a minute</h2>
+		<p class="lead">The hardest first step is deciding which CPUs are isolated. The explorer applies the rules of Guide 02 to your topology, draws the map, and prints the block for the config file. Paste the output of <code>lscpu</code> to use your own host.</p>
+		<div class="buttons"><a class="btn" href="explorer.html">Open the explorer</a></div>
+	</div>
+</section>
+
+<section>
+	<div class="wrap">
+		<h2>Quick start</h2>
+		<div class="codewrap">
+<pre>sudo mkdir -p /etc/lowlat &amp;&amp; sudo cp scripts/lowlat.conf.example /etc/lowlat/lowlat.conf
+sudo vi /etc/lowlat/lowlat.conf              # describe your CPUs, NICs and memory
+
+scripts/apply-all --plan                     # what applies on this host class
+scripts/apply-all --dry-run | less           # every command and file, nothing changed
+sudo scripts/apply-all --apply               # apply the guides + install lowlat-runtime.service
+sudo systemctl reboot
+scripts/verify-tuning                        # PASS/WARN/FAIL for every guide</pre>
+		</div>
+		<p class="small">Bare metal gets the full treatment. A virtual machine gets the subset that helps without pretending to isolate what the hypervisor controls. <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/QUICK_START.md">Choose your scenario.</a></p>
+	</div>
+</section>
+</main>
+
+<footer>
+	<div class="wrap">
+		<p>Copyright (c) 2026 Vitor Tadashi. Prose is <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/LICENSE-docs">CC BY 4.0</a>, code is <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/LICENSE">MIT</a>. All figures on this site are typical orders of magnitude or fictional illustrations, not benchmark results.</p>
+	</div>
+</footer>
+</body>
+</html>

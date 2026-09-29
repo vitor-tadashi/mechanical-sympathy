@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+#
+# build-site - assemble _site/ from site/ and assets/diagrams/, for GitHub Pages and for a local preview.
+#
+# The pages refer to assets/diagrams/*.svg relative to their own folder, so the published
+# tree needs the diagrams next to them. There is nothing to compile or bundle.
+#
+# Usage: tools/build-site
+#        python3 -m http.server --directory _site      # then open http://localhost:8000
+
+set -Eeuo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "${ROOT}"
+
+rm -rf _site
+mkdir -p _site/assets
+cp -R site/. _site/
+cp -R assets/diagrams _site/assets/
+files="$(find _site -type f)"
+count="$(grep -c . <<<"${files}")"
+printf 'build-site: wrote _site (%d files)\n' "${count}"

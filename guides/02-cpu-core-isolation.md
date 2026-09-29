@@ -154,6 +154,8 @@ scripts/plan-layout --nic ens1f0 --threads 6              # reads the node from 
 scripts/plan-layout --nic-node 1 --check /etc/lowlat/lowlat.conf   # PASS, WARN or FAIL for a layout you wrote by hand
 ```
 
+The [layout explorer](../site/explorer.html) does the same in a browser, draws the map, and accepts a pasted `lscpu` output.
+
 > [!NOTE]
 > **Not proven in production.** The proposal is a starting point that applies the rules of this section mechanically. Review it against your application's thread roles before you write it into `lowlat.conf`.
 

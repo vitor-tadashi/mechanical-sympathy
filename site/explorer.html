@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CPU Layout Explorer</title>
+<meta name="description" content="Describe a host, and get a proposed CPU layout for low-latency tuning: isolated CPUs, OS CPUs, workqueues, agents and the kernel arguments.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+	<div class="wrap">
+		<a class="brand" href="index.html">Mechanical Sympathy</a>
+		<nav aria-label="Main">
+			<a href="index.html#guides">Guides</a>
+			<a href="index.html#use-cases">Use cases</a>
+			<a href="explorer.html" aria-current="page">Layout explorer</a>
+			<a href="https://github.com/vitor-tadashi/mechanical-sympathy">GitHub</a>
+		</nav>
+	</div>
+</header>
+
+<main class="wrap">
+	<h1>CPU layout explorer</h1>
+	<p class="lead">Describe a host and the number of latency-critical threads. The explorer applies the rules of <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/guides/02-cpu-core-isolation.md#3-designing-the-cpu-layout">Guide 02, section 3</a> and prints the block to put into <code>lowlat.conf</code>.</p>
+	<p class="small">It runs in your browser, sends nothing anywhere, and gives the same answer as <code>scripts/plan-layout</code>. The proposal is a starting point that is <strong>not proven in production</strong>: review it against your application's thread roles.</p>
+
+	<div class="explorer">
+		<div>
+			<div class="panel">
+				<h2>Start from a host</h2>
+				<div class="presets" id="presets"></div>
+
+				<div id="generated-fields">
+					<div class="field">
+						<label for="sockets">Sockets (one NUMA node each)</label>
+						<input id="sockets" type="number" min="1" max="8" value="2">
+					</div>
+					<div class="field">
+						<label for="cores">Cores per socket</label>
+						<input id="cores" type="number" min="1" max="64" value="16">
+					</div>
+					<div class="field check">
+						<input id="ht" type="checkbox">
+						<label for="ht">Hyper-Threading on</label>
+					</div>
+					<div class="field">
+						<label for="numbering">CPU numbering</label>
+						<select id="numbering">
+							<option value="round-robin">Round-robin across sockets (even CPUs on node 0)</option>
+							<option value="socket-by-socket">Socket by socket, siblings last</option>
+						</select>
+						<span class="hint">Check yours with <code>lscpu -e=CPU,NODE,SOCKET,CORE</code>.</span>
+					</div>
+				</div>
+
+				<div class="field check">
+					<input id="paste" type="checkbox">
+					<label for="paste">Paste my own topology instead</label>
+				</div>
+				<div class="field hidden">
+					<label for="paste-box">Output of <code>lscpu -e=CPU,NODE,SOCKET,CORE</code></label>
+					<textarea id="paste-box" spellcheck="false" placeholder="CPU NODE SOCKET CORE&#10;  0    0      0    0&#10;  1    1      1    1"></textarea>
+				</div>
+			</div>
+
+			<div class="panel" style="margin-top:16px">
+				<h2>Your workload</h2>
+				<div class="field">
+					<label for="nic">NUMA node of the critical NIC</label>
+					<select id="nic"></select>
+					<span class="hint"><code>cat /sys/class/net/&lt;nic&gt;/device/numa_node</code></span>
+				</div>
+				<div class="field">
+					<label for="threads">Latency-critical threads</label>
+					<input id="threads" type="number" min="1" max="128" value="6">
+					<span class="hint">One isolated CPU each.</span>
+				</div>
+				<div class="field">
+					<label for="spares">Spare isolated cores</label>
+					<input id="spares" type="number" min="0" max="16" value="2">
+					<span class="hint">Headroom for a new thread or a debug tool.</span>
+				</div>
+			</div>
+		</div>
+
+		<div>
+			<div id="error" class="error hidden" role="alert"></div>
+
+			<div class="legend" aria-label="Legend">
+				<span><span class="cpu thread"></span>isolated, one pinned thread</span>
+				<span><span class="cpu spare"></span>isolated, spare</span>
+				<span><span class="cpu sibling"></span>isolated, idle Hyper-Threading sibling</span>
+				<span><span class="cpu irq"></span>housekeeping: critical NIC interrupts</span>
+				<span><span class="cpu workqueue"></span>kernel workqueues</span>
+				<span><span class="cpu agents"></span>agents (housekeeping slice)</span>
+				<span><span class="cpu os"></span>OS and other threads</span>
+			</div>
+
+			<div id="map" aria-live="polite"></div>
+
+			<h2 style="margin-top:8px">Put this in <code>lowlat.conf</code></h2>
+			<div class="codewrap">
+				<button id="copy" class="btn secondary copy" type="button">Copy</button>
+				<pre id="out" aria-live="polite"></pre>
+			</div>
+			<p class="small">Then follow <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/examples/use-cases/01-the-quiet-core.md">use case 1</a> to apply the kernel arguments, and <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/examples/use-cases/02-critical-and-non-critical.md">use case 2</a> to pin each thread role. To check a layout you wrote by hand: <code>scripts/plan-layout --nic-node N --check /etc/lowlat/lowlat.conf</code>.</p>
+		</div>
+	</div>
+</main>
+
+<footer>
+	<div class="wrap">
+		<p>The rules live in <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/site/layout.js"><code>site/layout.js</code></a>, a port of <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/scripts/plan-layout"><code>scripts/plan-layout</code></a>. CI compares both with the same golden files.</p>
+	</div>
+</footer>
+
+<script src="layout.js"></script>
+<script src="explorer.js"></script>
+</body>
+</html>
