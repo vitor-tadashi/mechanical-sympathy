@@ -92,3 +92,24 @@ Every guide has a rollback checklist in its last sections, every script has `--r
 A verified configuration is not a measured improvement. Find what still interrupts the thread: `rtla osnoise` on its CPU, `/proc/interrupts` deltas, context switches with `perf stat`, and SMIs with `turbostat`. Also check the application: an unpinned thread, a syscall-heavy loop on a `nohz_full` CPU, or memory on the wrong NUMA node. See [concepts/cpu-isolation §8](concepts/cpu-isolation.md#8-measuring-noise).
 
 </details>
+
+<details>
+<summary><b>How do I decide which CPUs to isolate?</b></summary>
+
+Start from the NUMA node of the critical NIC. Isolate the cores of that node except one housekeeping core for the NIC's interrupts, keep CPU 0 and Hyper-Threading siblings together, and leave a spare or two. `scripts/plan-layout` applies those rules to your `lscpu` output, and the [layout explorer](https://vitor-tadashi.github.io/mechanical-sympathy/explorer.html) does the same in a browser. Review the proposal against your thread roles. See [Guide 02 §3](guides/02-cpu-core-isolation.md#3-designing-the-cpu-layout).
+
+</details>
+
+<details>
+<summary><b>How do I keep the host tuned after a kernel or firmware update?</b></summary>
+
+Let it check itself. `scripts/11-day2-operations` installs a timer that runs `verify-tuning` daily and 10 minutes after every boot, and a failed run leaves a failed unit. Before rebooting into a new kernel, check that its boot entry kept `isolcpus`, `nohz_full` and `rcu_nocbs`. See [Guide 11](guides/11-day2-operations.md).
+
+</details>
+
+<details>
+<summary><b>Are the numbers in the use cases real measurements?</b></summary>
+
+No. They are typical orders of magnitude taken from the guides, or fictional numbers that show a shape, and every page says which. Measure your own host before and after, as [Guide 09](guides/09-measuring-latency.md) describes.
+
+</details>

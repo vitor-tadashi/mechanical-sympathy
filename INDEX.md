@@ -8,8 +8,12 @@ Pick the lane that matches your role. Each box is one page, read left to right, 
 flowchart TD
   subgraph op["Operator: apply the tuning (1-2 h plus a reboot)"]
     direction LR
-    o0["Quick start"] --> o1["01<br/>GRUB"] --> o2["02<br/>CPUs"] --> o3["03<br/>Huge pages"] --> o4["04<br/>Network"] --> o5["05<br/>cgroups"] --> o6["06<br/>sysctl"] --> o7["07<br/>Hygiene"] -.-> o8["08 Bypass<br/>(only with a<br/>bypass stack)"] -.-> ov[["verify-tuning"]]
-    o7 --> ov
+    o0["Quick start"] --> o00["00<br/>BIOS"] --> o1["01<br/>GRUB"] --> o2["02<br/>CPUs"] --> o3["03<br/>Huge pages"] --> o4["04<br/>Network"] --> o5["05<br/>cgroups"] --> o6["06<br/>sysctl"] --> o7["07<br/>Hygiene"] --> o10["10 Time<br/>11 Day-2"] --> ov[["verify-tuning"]]
+    o7 -.-> o8["08 Bypass<br/>(only with a<br/>bypass stack)"] -.-> o10
+  end
+  subgraph story["Learner: from stories"]
+    direction LR
+    s1["Use case 1<br/>The quiet core"] --> s2["Use case 2<br/>Critical and<br/>non-critical"] --> s3["Use case 8<br/>Capstone"] --> s4["Layout<br/>explorer"]
   end
   subgraph dev["Application developer: how my code should behave"]
     direction LR
@@ -23,15 +27,18 @@ flowchart TD
     direction LR
     n1["04<br/>Network"] --> n2["Concept:<br/>network path"] --> n3["Concept:<br/>ethtool"] --> n4["08<br/>Bypass"] --> n5["Segmentation<br/>example"] --> n6["06 §3-6<br/>TCP, buffers"]
   end
-  op ~~~ dev ~~~ mgr ~~~ net
+  op ~~~ story ~~~ dev ~~~ mgr ~~~ net
   classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
   class m3,m4 risk
 ```
 
-*Four lanes: the operator walks guides 01 to 07 (08 only with kernel bypass) and ends at verify-tuning; the developer reads the pinning and Java sections and the Java example; the reviewer reads the risks, with mitigations and firewall highlighted; the network engineer goes from Guide 04 through the network concepts to bypass and segmentation.*
+*Five lanes: the operator walks guides 00 to 07, then 10 and 11 (08 only with kernel bypass), and ends at verify-tuning; the learner follows three use cases and the layout explorer; the developer reads the pinning and Java sections and the Java example; the reviewer reads the risks, with mitigations and firewall highlighted; the network engineer goes from Guide 04 through the network concepts to bypass and segmentation.*
 
 **Operator applying the tuning (1–2 h plus a reboot)**
-[QUICK_START](QUICK_START.md) → [00](guides/00-bios-firmware.md) → [01](guides/01-grub-bootloader-tuning.md) → [02](guides/02-cpu-core-isolation.md) → [03](guides/03-huge-pages-configuration.md) → [04](guides/04-network-optimization.md) → [05](guides/05-cgroup-isolation.md) → [06](guides/06-kernel-sysctl-tuning.md) → [07](guides/07-os-hygiene.md) → ([08](guides/08-kernel-bypass.md), only with a bypass stack) → `scripts/verify-tuning`
+[QUICK_START](QUICK_START.md) → [00](guides/00-bios-firmware.md) → [01](guides/01-grub-bootloader-tuning.md) → [02](guides/02-cpu-core-isolation.md) → [03](guides/03-huge-pages-configuration.md) → [04](guides/04-network-optimization.md) → [05](guides/05-cgroup-isolation.md) → [06](guides/06-kernel-sysctl-tuning.md) → [07](guides/07-os-hygiene.md) → ([08](guides/08-kernel-bypass.md), only with a bypass stack) → [10](guides/10-time-sync.md) → [11](guides/11-day2-operations.md) → `scripts/verify-tuning`
+
+**Learner (from stories)**
+[Use case 1 — the quiet core](examples/use-cases/01-the-quiet-core.md) → [Use case 2 — critical and non-critical threads](examples/use-cases/02-critical-and-non-critical.md) → [Use case 8 — the capstone](examples/use-cases/08-stock-to-tuned-in-one-afternoon.md) → the [layout explorer](https://vitor-tadashi.github.io/mechanical-sympathy/explorer.html)
 
 **Application developer (how my code should behave on a tuned host)**
 [Guide 02 §6 — pinning the application](guides/02-cpu-core-isolation.md#6-pinning-the-application) → [Guide 03 §5 — Java flags](guides/03-huge-pages-configuration.md#5-java-applications) → [Java example](examples/hugepages-java-example.md) → [concepts/cpu-isolation §5 — caches and coherence](concepts/cpu-isolation.md#5-caches-and-coherence-the-mechanical-sympathy-part)
@@ -83,7 +90,7 @@ flowchart TD
 | Script | Use |
 |---|---|
 | [`lowlat.conf.example`](scripts/lowlat.conf.example) | Describe the host. Copy to `/etc/lowlat/lowlat.conf`. |
-| [`plan-layout`](scripts/plan-layout) `--threads N --nic-node N` | Propose the CPU layout of `lowlat.conf` from `lscpu`, or `--check` one you wrote by hand. The [explorer](site/explorer.html) does the same in a browser |
+| [`plan-layout`](scripts/plan-layout) `--threads N --nic-node N` | Propose the CPU layout of `lowlat.conf` from `lscpu`, or `--check` one you wrote by hand. The [explorer](https://vitor-tadashi.github.io/mechanical-sympathy/explorer.html) does the same in a browser |
 | `NN-* --dry-run / --apply / --verify / --rollback` | One guide at a time (00–11). `09-measure-latency --run` captures a measurement bundle. |
 | [`apply-all`](scripts/apply-all) `--plan / --dry-run / --apply / --runtime` | All guides in order, with step timing |
 | [`verify-tuning`](scripts/verify-tuning) `[--report FILE]` | Read-only PASS/WARN/FAIL for everything |
@@ -125,3 +132,7 @@ flowchart TD
 | Pre-touch | Writing every page of a memory region at startup, so that no page fault happens later on the hot path |
 | SMI | System Management Interrupt: firmware work that stops every CPU, invisible to the OS |
 | `lowlat-runtime.service` | The oneshot unit that re-applies all runtime (non-persistent) settings at every boot |
+| Drift | A tuned setting that has silently reverted, for example after a kernel, firmware, driver or agent update ([Guide 11](guides/11-day2-operations.md)) |
+| `lowlat-verify.timer` | The timer that runs `verify-tuning` daily and 10 minutes after every boot, and fails the unit on a FAIL |
+| Idle sibling | The Hyper-Threading sibling of an isolated core that is isolated with it but runs no thread ([Guide 02 §3](guides/02-cpu-core-isolation.md#3-designing-the-cpu-layout)) |
+| Illustrative | Marks a number that shows a shape and is not a measurement. All figures in the use cases and diagrams are either this or a typical order of magnitude |

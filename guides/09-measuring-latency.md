@@ -138,6 +138,8 @@ flowchart LR
 6. **Repeat steps 3 and 4** under the same conditions.
 7. **Compare** the percentiles side by side (§7), and keep or roll back the change.
 
+Run the same protocol after every kernel, firmware or driver update: [Guide 11 §6](11-day2-operations.md#6-an-update-routine) turns it into a routine.
+
 Keep a results table per host model. Use this template:
 
 ```text

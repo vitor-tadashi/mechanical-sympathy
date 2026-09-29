@@ -109,4 +109,5 @@ Always compare against the baseline you took before tuning.
 |---|---|---|
 | Timer installed | `systemctl list-timers lowlat-verify.timer` | a NEXT time |
 | Last report | `systemctl show -p Result --value lowlat-verify.service` | `success` |
+| Layout follows the rules of Guide 02 §3 | `scripts/plan-layout --nic-node N --check /etc/lowlat/lowlat.conf` | every line `PASS` |
 | Kernel entries keep the arguments | `grubby --info=ALL \| grep -E '^(kernel\|args)='` | `isolcpus=`, `nohz_full=` and `rcu_nocbs=` on every entry but rescue |

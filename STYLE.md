@@ -127,7 +127,7 @@ classDef muted fill:#eeeeee,stroke:#777777,color:#333333
 
 ### 3.3 The "you are here" strip
 
-Every guide shows where it sits in the sequence. Copy this block, and move `:::focus` to the current guide:
+The ordered tuning guides (00 to 08) show where they sit in the sequence. Guides 09, 10 and 11 are cross-cutting (measuring, clocks, keeping a host tuned), so they open with a diagram of their own instead. Copy this block, and move `:::focus` to the current guide:
 
 ```mermaid
 flowchart LR
