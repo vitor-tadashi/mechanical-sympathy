@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 320" width="760" height="320" role="img" aria-labelledby="t d">
+<title id="t">Pre-touching moves every page fault out of the serving path</title>
+<desc id="d">Two timelines for one event-loop thread. With default first-touch memory, six page faults land in the middle of serving and each one stalls the thread while the kernel allocates and zeroes a page. With explicit huge pages that the application pre-touches at start-up, all the faults happen before the first request, and the serving path has none.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .spare { fill: #e6f7ea; stroke: #1d6b33; stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .off { fill: #ffffff; stroke: #d0d7de; stroke-width: 1; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .role { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .mid { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .midr { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #2b0a0a; text-anchor: middle; }
+  .midw { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0b1f33; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+
+  .pw, .pb, .pg { transform-box: fill-box; transform-origin: center; animation: 6s linear infinite; }
+  .pw { animation-name: cut; }
+  .pb { animation-name: take; }
+  .pg { animation-name: ok; }
+  @keyframes cut {
+    0%, 6%   { fill: #ff6b6b; transform: scaleY(1.15); }
+    7%, 100% { fill: #ffc9c9; transform: scaleY(1); }
+  }
+  @keyframes take {
+    0%, 6%   { fill: #3d7fd9; transform: scaleY(1.15); }
+    7%, 100% { fill: #1f4e8c; transform: scaleY(1); }
+  }
+  @keyframes ok {
+    0%, 6%   { fill: #7fe39a; transform: scaleY(1.15); }
+    7%, 100% { fill: #c8f0d0; transform: scaleY(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .head, .pw, .pb, .pg { animation: none; }
+    .head { display: none; }
+  }
+
+  .note { font: 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; text-anchor: middle; }
+  .fence { stroke: #1d6b33; stroke-width: 2; }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="320" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="140" rx="6"/>
+<text class="cap" x="24" y="34">First touch on the hot path (default)</text>
+<text class="sub" x="24" y="52">Each first access to a page is a fault: allocate, zero, map. The thread waits for every one.</text>
+<text class="lbl" x="24" y="98">CPU 3</text>
+<text class="role" x="24" y="112">event.loop</text>
+<rect class="app" x="150" y="84" width="570" height="30" rx="4"/>
+<rect class="wait pw" style="animation-delay:-5.46s" x="186" y="80" width="30" height="38" rx="3"/>
+<text class="midr" x="201" y="103">fault</text>
+<rect class="wait pw" style="animation-delay:-4.66s" x="262" y="80" width="30" height="38" rx="3"/>
+<text class="midr" x="277" y="103">fault</text>
+<rect class="wait pw" style="animation-delay:-3.84s" x="340" y="80" width="30" height="38" rx="3"/>
+<text class="midr" x="355" y="103">fault</text>
+<rect class="wait pw" style="animation-delay:-2.79s" x="440" y="80" width="30" height="38" rx="3"/>
+<text class="midr" x="455" y="103">fault</text>
+<rect class="wait pw" style="animation-delay:-1.84s" x="530" y="80" width="30" height="38" rx="3"/>
+<text class="midr" x="545" y="103">fault</text>
+<rect class="wait pw" style="animation-delay:-0.68s" x="640" y="80" width="30" height="38" rx="3"/>
+<text class="midr" x="655" y="103">fault</text>
+<text class="axis" x="435" y="140">serving starts at once, and the faults land between requests</text>
+<rect class="lane" x="10" y="160" width="740" height="150" rx="6"/>
+<text class="cap" x="24" y="184">Pre-touched huge pages</text>
+<text class="sub" x="24" y="202">Start-up takes longer, and that is the point: every fault happens before the first request.</text>
+<text class="lbl" x="24" y="248">CPU 3</text>
+<text class="role" x="24" y="262">event.loop</text>
+<rect class="box pb" style="animation-delay:-5.47s" x="150" y="234" width="100" height="30" rx="4"/>
+<text class="midw" x="200" y="253" style="fill:#ffffff">pre-touch</text>
+<rect class="app" x="250" y="234" width="470" height="30" rx="4"/>
+<text class="mid" x="485.0" y="253">serving: no page faults</text>
+<line class="fence" x1="250" y1="226" x2="250" y2="272"/>
+<text class="note" x="250" y="288">first request</text>
+<text class="axis" x="435" y="300">the same time: no stall while serving</text>
+<line class="head" x1="150" y1="72" x2="150" y2="292"/>
+</svg>

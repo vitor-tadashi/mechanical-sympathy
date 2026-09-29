@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 489" width="760" height="489" role="img" aria-labelledby="t d">
+<title id="t">Latency ladder: the events that decide your tail sit orders of magnitude above a cache hit</title>
+<desc id="d">A logarithmic ruler from 1 nanosecond to 100 milliseconds. Cache hits are 1 to 20 nanoseconds and DRAM about 100 nanoseconds. Page faults, context switches and the kernel network path are microseconds. Zeroing a huge page, an SMI, direct reclaim and RT throttling are 50 microseconds to 50 milliseconds, and they are the events that set p99.9 and the maximum. The ranges are typical orders of magnitude, not measurements.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .spare { fill: #e6f7ea; stroke: #1d6b33; stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .off { fill: #ffffff; stroke: #d0d7de; stroke-width: 1; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .role { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .mid { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .midr { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #2b0a0a; text-anchor: middle; }
+  .midw { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0b1f33; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+
+  .grid { stroke: #d0d7de; stroke-width: 1; }
+  .val { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .grp { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="489" rx="8"/>
+<text class="cap" x="20" y="28">One ruler, eight decades: from a cache hit to a throttled CPU</text>
+<text class="sub" x="20" y="46">Each bar is a typical range on a current server. Green stays in the CPU, blue is memory and the kernel, red is a stall.</text>
+<line class="grid" x1="290.0" y1="54" x2="290.0" y2="413"/>
+<text class="axis" x="290.0" y="429">1 ns</text>
+<line class="grid" x1="346.25" y1="54" x2="346.25" y2="413"/>
+<text class="axis" x="346.25" y="429">10 ns</text>
+<line class="grid" x1="402.5" y1="54" x2="402.5" y2="413"/>
+<text class="axis" x="402.5" y="429">100 ns</text>
+<line class="grid" x1="458.75" y1="54" x2="458.75" y2="413"/>
+<text class="axis" x="458.75" y="429">1 µs</text>
+<line class="grid" x1="515.0" y1="54" x2="515.0" y2="413"/>
+<text class="axis" x="515.0" y="429">10 µs</text>
+<line class="grid" x1="571.25" y1="54" x2="571.25" y2="413"/>
+<text class="axis" x="571.25" y="429">100 µs</text>
+<line class="grid" x1="627.5" y1="54" x2="627.5" y2="413"/>
+<text class="axis" x="627.5" y="429">1 ms</text>
+<line class="grid" x1="683.75" y1="54" x2="683.75" y2="413"/>
+<text class="axis" x="683.75" y="429">10 ms</text>
+<line class="grid" x1="740.0" y1="54" x2="740.0" y2="413"/>
+<text class="axis" x="740.0" y="429">100 ms</text>
+<text class="lbl" x="20" y="76" style="font-weight:500">L1 cache hit</text>
+<rect class="app" x="290.0" y="64" width="6.4" height="18" rx="3"/>
+<text class="val" x="302.4" y="77">~1 ns</text>
+<text class="lbl" x="20" y="103" style="font-weight:500">L2 cache hit</text>
+<rect class="app" x="323.9" y="91" width="9.9" height="18" rx="3"/>
+<text class="val" x="339.8" y="104">~5 ns</text>
+<text class="lbl" x="20" y="130" style="font-weight:500">L3 cache hit</text>
+<rect class="app" x="356.2" y="118" width="7.0" height="18" rx="3"/>
+<text class="val" x="369.2" y="131">15-20 ns</text>
+<text class="lbl" x="20" y="157" style="font-weight:500">TLB miss (page walk)</text>
+<rect class="box" x="373.1" y="145" width="39.3" height="18" rx="3"/>
+<text class="val" x="418.4" y="158">tens of ns, 100+ if uncached</text>
+<text class="lbl" x="20" y="184" style="font-weight:500">Local DRAM</text>
+<rect class="box" x="397.0" y="172" width="9.9" height="18" rx="3"/>
+<text class="val" x="413.0" y="185">80-120 ns</text>
+<text class="lbl" x="20" y="211" style="font-weight:500">Remote DRAM (other socket)</text>
+<rect class="box" x="410.7" y="199" width="11.0" height="18" rx="3"/>
+<text class="val" x="427.8" y="212">+60-100 ns over local</text>
+<text class="lbl" x="20" y="238" style="font-weight:500">Minor page fault</text>
+<rect class="box" x="441.8" y="226" width="33.9" height="18" rx="3"/>
+<text class="val" x="481.7" y="239">0.5-2 µs</text>
+<text class="lbl" x="20" y="265" style="font-weight:500">Context switch, then cold caches</text>
+<rect class="box" x="458.8" y="253" width="90.1" height="18" rx="3"/>
+<text class="val" x="554.9" y="266">1-40 µs</text>
+<text class="lbl" x="20" y="292" style="font-weight:500">Kernel network path, one way</text>
+<rect class="box" x="498.1" y="280" width="16.9" height="18" rx="3"/>
+<text class="val" x="521.0" y="293">5-10 µs</text>
+<text class="lbl" x="20" y="319" style="font-weight:500">Zeroing a 2 MiB page (first touch)</text>
+<rect class="wait" x="554.3" y="307" width="16.9" height="18" rx="3"/>
+<text class="val" x="548.3" y="320" style="text-anchor:end">50-100 µs</text>
+<text class="lbl" x="20" y="346" style="font-weight:500">SMI or deep C-state exit</text>
+<rect class="wait" x="531.9" y="334" width="78.6" height="18" rx="3"/>
+<text class="val" x="525.9" y="347" style="text-anchor:end">tens to hundreds of µs</text>
+<text class="lbl" x="20" y="373" style="font-weight:500">Direct reclaim, THP compaction</text>
+<rect class="wait" x="627.5" y="361" width="39.3" height="18" rx="3"/>
+<text class="val" x="621.5" y="374" style="text-anchor:end">ms-scale</text>
+<text class="lbl" x="20" y="400" style="font-weight:500">RT throttling</text>
+<rect class="wait" x="723.1" y="388" width="6.0" height="18" rx="3"/>
+<text class="val" x="717.1" y="401" style="text-anchor:end">50 ms every second</text>
+<text class="sub" x="20" y="457">Typical orders of magnitude, not measurements. Measure your own host.</text>
+<text class="sub" x="20" y="475">Sources: Guides 00, 02, 03, 08 and the concept pages on CPU isolation and huge pages.</text>
+</svg>

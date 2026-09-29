@@ -57,6 +57,10 @@ flowchart TD
 
 *On the kernel path a packet passes through an interrupt, a softirq, a socket buffer and a syscall. With bypass, the NIC writes into memory the application owns, and a pinned thread polls it directly.*
 
+<img src="../assets/diagrams/packet-path.svg" alt="Animation: on the kernel path a packet passes through a DMA, an interrupt, softirq processing, a socket buffer, a wake-up and recv, and the interrupt and wake-up steps are highlighted; with kernel bypass a pinned thread polls the ring and about 6 microseconds are not spent" width="720">
+
+*The same packet on both paths, on one time scale: bypass removes the interrupt, the softirq, the socket and the wake-up, which are the steps that shape the kernel path's tail.*
+
 That brings one-way latency down to roughly **1–2 µs**, with a much tighter tail. It costs:
 
 - **One spinning core per polling thread**, on an isolated CPU ([Guide 02](02-cpu-core-isolation.md)).

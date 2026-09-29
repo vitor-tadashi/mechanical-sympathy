@@ -115,6 +115,10 @@ The `ethtool` options that control queues, RSS indirection and flow rules are de
 
 A user-space driver maps the NIC's rings (descriptor queues and doorbells) into the process. Packets are DMA'd straight into memory the application reads, and the application polls the ring. There is no interrupt, no softirq, no syscall, no copy, and no netfilter. Socket-compatible implementations intercept the libc socket calls, so existing applications work unmodified with an `LD_PRELOAD` launcher. The costs are one spinning core per polling thread, vendor-specific tuning, huge pages for buffers, and operational differences: `tcpdump` does not see accelerated traffic without vendor tooling. See [Guide 08 — Kernel bypass](../guides/08-kernel-bypass.md) for the stacks, how each one interacts with the kernel queues, and how to set them up.
 
+<img src="../assets/diagrams/packet-path.svg" alt="Animation: on the kernel path a packet passes through a DMA, an interrupt, softirq processing, a socket buffer, a wake-up and recv, and the interrupt and wake-up steps are highlighted; with kernel bypass a pinned thread polls the ring and about 6 microseconds are not spent" width="720">
+
+*Kernel bypass removes the interrupt, the softirq, the socket and the wake-up from the path, which are the steps that shape its tail.*
+
 ## 10. Measuring
 
 | Question | Tool |

@@ -12,6 +12,10 @@
 
 Every load and store your code issues uses a **virtual** address. Before the cache can even be checked, the CPU has to translate it to a physical address. With 4 KiB pages and multi-GiB working sets, translation becomes a measurable share of memory latency. Page faults, which allocate and zero memory on first touch, can land in the middle of a latency-critical code path. Huge pages and pre-touching remove both problems.
 
+<img src="../assets/diagrams/memory-ladder.svg" alt="A logarithmic ruler from 1 nanosecond to 100 milliseconds with the typical range of a cache hit, DRAM, a page fault, a context switch, the kernel network path, an SMI, reclaim and RT throttling" width="720">
+
+*Cache hits are nanoseconds, and the events that set p99.9 (page faults, reclaim, SMIs, throttling) are microseconds to milliseconds, so one event costs as much as thousands of memory accesses.*
+
 ## 2. Translation: page tables and the TLB
 
 x86-64 with 4-level paging splits a virtual address into four 9-bit indices and a 12-bit offset:
@@ -52,6 +56,10 @@ A virtual mapping (`mmap`, `malloc` of a large block, JVM heap reservation) does
 A minor fault on 4 KiB costs ~0.5–2 µs. If memory is low, allocation can fall into **direct reclaim or compaction**, costing ms. A JVM that grows its heap during the day, an off-heap buffer touched for the first time by the first burst of traffic, or a new thread's stack all fault on the hot path.
 
 **Pre-touching** (`-XX:+AlwaysPreTouch`, `memset`, `MAP_POPULATE`, or pre-allocated non-sparse files) moves all of that to start-up.
+
+<img src="../assets/diagrams/page-fault-hotpath.svg" alt="Animation: with default first-touch memory six page faults stall an event-loop thread while it serves; with pre-touched huge pages all the faults happen at start-up and serving has none" width="720">
+
+*Pre-touch does not remove the faults, it moves them to start-up, before the first request.*
 
 ## 4. Transparent Huge Pages (THP) vs hugetlbfs
 

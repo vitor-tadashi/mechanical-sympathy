@@ -83,6 +83,10 @@ cat /sys/class/net/<nic>/device/numa_node
 
 *Rule 1 in one picture: the thread, the NIC and the memory belong on the same node, or every cache miss pays the trip across sockets.*
 
+<img src="../assets/diagrams/memory-ladder.svg" alt="A logarithmic ruler from 1 nanosecond to 100 milliseconds with the typical range of a cache hit, DRAM, a page fault, a context switch, the kernel network path, an SMI, reclaim and RT throttling" width="720">
+
+*Where the remote-DRAM penalty sits among the other latencies on the host: small next to a page fault, but paid on every cache miss.*
+
 **Reference layout** (2 × 16 cores, HT off, even CPUs = node 0, odd = node 1, critical NICs on node 1):
 
 ```mermaid

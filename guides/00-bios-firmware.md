@@ -41,6 +41,10 @@ The firmware (UEFI/BIOS, plus the BMC that manages it) decides several things be
 
 SMIs are the worst kind of noise. An SMI stops **every** CPU and runs firmware code in System Management Mode, invisible to the OS. `rtla osnoise` sees only a gap it cannot attribute, and `/proc/interrupts` shows nothing. Only the SMI counter (`turbostat`) and the hwlat tracer reveal them.
 
+<img src="../assets/diagrams/smi-freeze.svg" alt="Animation: an SMI stops four isolated CPUs at the same instant; /proc/interrupts shows nothing, rtla osnoise shows an unattributed gap, and only the turbostat SMI counter goes from N to N plus 1" width="720">
+
+*An SMI stops every CPU at once, and only the SMI counter records it. That is why this guide sets firmware options and Guide 09 measures the count.*
+
 ## 2. When to apply
 
 | Situation | Apply? |
