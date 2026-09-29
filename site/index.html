@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mechanical Sympathy</title>
-<meta name="description" content="Low-latency tuning for RHEL 8 and 9: eleven guides, one script per guide, use cases from symptom to result, and a CPU layout explorer.">
+<meta name="description" content="Low-latency tuning for RHEL 8 and 9: twelve guides, one script per guide, use cases from symptom to result, and a CPU layout explorer.">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -53,7 +53,7 @@
 
 <section id="guides">
 	<div class="wrap">
-		<h2>Eleven guides, one script each</h2>
+		<h2>Twelve guides, one script each</h2>
 		<p class="lead">Each guide starts with a short answer, a picture and the cost, then goes as deep as the setting deserves. Each script has <code>--dry-run</code>, <code>--verify</code> and <code>--rollback</code>.</p>
 		<div class="grid">
 			<div class="card"><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/guides/00-bios-firmware.md">00 BIOS and firmware</a><p>Power profile, C-states, turbo, Hyper-Threading, NUMA, SMI sources, PCIe power management.</p><div class="meta">Reboot into BIOS</div></div>
@@ -67,6 +67,7 @@
 			<div class="card"><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/guides/08-kernel-bypass.md">08 Kernel bypass</a><p>Onload, DPDK, XLIO, AF_XDP, busy polling: choose per card and application. Optional.</p><div class="meta">Optional</div></div>
 			<div class="card"><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/guides/09-measuring-latency.md">09 Measuring latency</a><p>Baselines, percentiles, coordinated omission, rtla, turbostat, a measurement protocol.</p><div class="meta">Do it first, and after every guide</div></div>
 			<div class="card"><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/guides/10-time-sync.md">10 Time synchronization</a><p>chrony versus PTP, hardware timestamping, the timing NIC, pinning the daemons.</p><div class="meta">No reboot</div></div>
+			<div class="card"><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/guides/11-day2-operations.md">11 Day-2 operations</a><p>A verification timer, kernel entries that must keep isolcpus, what to alert on, adding a thread.</p><div class="meta">No reboot</div></div>
 		</div>
 	</div>
 </section>
