@@ -8,6 +8,8 @@
 #      skipped with a warning on a workstation without it)
 #   3. every SVG in assets/diagrams/ has <title> and <desc>, no <script>, is at most
 #      30 KiB, and honors prefers-reduced-motion when it animates
+#   4. every SVG in assets/diagrams/ is used by a page (STYLE.md does not count), and
+#      every image in Markdown has a non-empty alt text
 #
 # Usage: tools/lint-docs            (from anywhere inside the repository)
 # Env:   MMDC=<command>             mermaid-cli to use (default: mmdc)
@@ -174,6 +176,41 @@ while IFS= read -r svg; do
 		fail "${svg}: animates without a prefers-reduced-motion rule"
 	fi
 done <<<"${svgs}"
+
+# 4. Orphan diagrams and images without alt text. Pages that embed a diagram are the
+#    Markdown files except STYLE.md (which only talks about the diagrams) and the HTML
+#    files of the site.
+referrers=()
+for file in "${docs[@]}"; do
+	[[ "${file}" == "STYLE.md" ]] || referrers+=("${file}")
+done
+site_pages="$(git ls-files --cached --others --exclude-standard -- 'site/*.html')"
+while IFS= read -r page; do
+	[[ -n "${page}" && -f "${page}" ]] && referrers+=("${page}")
+done <<<"${site_pages}"
+while IFS= read -r svg; do
+	[[ -n "${svg}" && -f "${svg}" ]] || continue
+	grep -qF -- "${svg##*/}" "${referrers[@]}" || fail "${svg}: not used by any page"
+done <<<"${svgs}"
+
+for file in "${docs[@]}"; do
+	missing="$(perl -0777 -ne '
+		s/(?<!`)`(?!`)[^`\n]*`(?!`)/ /g;          # inline code is text, not an image
+		while (/<img\b[^>]*>/gs) {
+			my $tag = $&;
+			next if $tag =~ /\balt="[^"]*\S[^"]*"/;
+			my $line = 1 + (substr($_, 0, $-[0]) =~ tr/\n//);
+			print "$line\n";
+		}
+		while (/!\[\s*\]\(/g) {
+			my $line = 1 + (substr($_, 0, $-[0]) =~ tr/\n//);
+			print "$line\n";
+		}
+	' "${file}")"
+	while IFS= read -r line; do
+		[[ -n "${line}" ]] && fail "${file}:${line}: image without alt text"
+	done <<<"${missing}"
+done
 
 if ((failures > 0)); then
 	printf 'lint-docs: %d problem(s) in %d Markdown file(s)\n' "${failures}" "${#docs[@]}" >&2

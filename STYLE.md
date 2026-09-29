@@ -190,7 +190,7 @@ Embed it with an `<img>` that has an `alt` text, followed by the same one-senten
 ## 4. Accessibility checklist (every PR that touches docs)
 
 - [ ] The page opens with the short answer (At a glance / TL;DR).
-- [ ] Each diagram, Mermaid or SVG, has a one-sentence text summary. Each image has `alt` text.
+- [ ] Each diagram, Mermaid or SVG, has a one-sentence text summary. Each image has `alt` text. `make lint` fails on an image without `alt` and on an SVG that no page uses.
 - [ ] No meaning is carried by color alone.
 - [ ] Long output and deep dives are folded. Warnings and required commands are not.
 - [ ] Headings are real headings, in order (no jump from `##` to `####`), so the GitHub outline works.
