@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+#
+# check-glossary - keep GLOSSARY.md usable.
+#
+#   Checks (each failure exits 1):
+#     1. every entry row starts with <a id="..."></a> and every id is unique
+#     2. inside "## A–Z", each id sits under the letter heading it starts with
+#     3. inside "## A–Z", ids are in ascending order (byte-wise, so "c-state" sorts before "cache")
+#
+#   --missing   also list acronyms used in the docs at least twice that have no entry.
+#               Informational only: it never changes the exit status.
+#
+# Usage: tools/check-glossary [--missing]
+
+set -Eeuo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "${ROOT}"
+
+glossary=GLOSSARY.md
+show_missing=no
+
+case "${1:-}" in
+'') ;;
+--missing) show_missing=yes ;;
+*)
+	printf 'usage: tools/check-glossary [--missing]\n' >&2
+	exit 2
+	;;
+esac
+
+if [[ ! -f "${glossary}" ]]; then
+	printf 'check-glossary: %s not found\n' "${glossary}" >&2
+	exit 1
+fi
+
+errors="$(LC_ALL=C awk '
+/^## / { in_az = ($0 ~ /^## A.Z$/); letter = ""; next }
+!in_az { next }
+/^### / { letter = tolower(substr($0, 5, 1)); prev = ""; next }
+/^\| / {
+	if ($0 ~ /^\| Term /  || $0 ~ /^\|---/) next
+	if (!match($0, /^\| <a id="[^"]+"><\/a>/)) {
+		printf "%s:%d: entry row does not start with <a id=\"...\"></a>\n", FILENAME, FNR
+		next
+	}
+	id = substr($0, RSTART + 10, RLENGTH - 15)
+	if (id in seen) printf "%s:%d: duplicate id %s (first at line %d)\n", FILENAME, FNR, id, seen[id]
+	seen[id] = FNR
+	if (letter == "" || substr(id, 1, 1) != letter)
+		printf "%s:%d: id %s is under the wrong letter heading\n", FILENAME, FNR, id
+	if (prev != "" && id < prev)
+		printf "%s:%d: id %s should sort before %s\n", FILENAME, FNR, id, prev
+	prev = id
+}
+' "${glossary}")"
+
+if [[ -n "${errors}" ]]; then
+	printf '%s\n' "${errors}" >&2
+	printf 'check-glossary: problems found in %s\n' "${glossary}" >&2
+	exit 1
+fi
+
+if [[ "${show_missing}" == yes ]]; then
+	docs="$(git ls-files --cached --others --exclude-standard -- 'guides/*.md' 'concepts/*.md' 'examples/*.md' 'README.md' 'FAQ.md' 'QUICK_START.md' 'CHEATSHEET.md')"
+	# Prose only: skip fenced code, drop inline code, then collect tokens of 3+ capitals.
+	# shellcheck disable=SC2086 # the file list is split on purpose
+	used="$(awk '
+		FNR == 1 { fence = 0 }
+		/^(```|~~~)/ { fence = !fence; next }
+		fence { next }
+		{ gsub(/`[^`]*`/, ""); print }
+	' ${docs} | grep -oE '\b[A-Z][A-Za-z0-9]*[A-Z][A-Za-z0-9]*\b' | grep -E '^[A-Z]{3,}s?$|^[A-Z]{2,}[a-z]$' || true)"
+	# Words that are defined: bold terms and ids of the glossary, lower case, split on separators.
+	defined="$(grep -oE '<a id="[^"]+">|\*\*[^*]+\*\*' "${glossary}" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9\n' '\n' | sort -u)"
+	# Markup and status words, file names and company names are not terms to define.
+	ignore=' NOTE WARNING WARN FAIL PASS IMPORTANT CAUTION README INDEX LICENSE FAQ AGENTS ACCEPT MIT AMD NVIDIA '
+	printf '%s\n' "${used}" | sort | uniq -c | sort -rn | awk '$1 >= 2 { print $2 " " $1 }' |
+		while read -r word count; do
+			if [[ "${ignore}" == *" ${word} "* ]]; then
+				continue
+			fi
+			base="${word%s}"
+			lower="$(printf '%s' "${word}" | tr '[:upper:]' '[:lower:]')"
+			lower_base="$(printf '%s' "${base}" | tr '[:upper:]' '[:lower:]')"
+			if grep -qxF -e "${lower}" -e "${lower_base}" <<<"${defined}"; then
+				continue
+			fi
+			printf 'no entry: %s (used %s times)\n' "${word}" "${count}"
+		done
+fi
+
+printf 'check-glossary: %s is well formed\n' "${glossary}"

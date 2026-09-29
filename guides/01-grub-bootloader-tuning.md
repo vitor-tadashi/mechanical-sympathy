@@ -1,6 +1,6 @@
 # Guide 01 — Kernel Command Line (GRUB) Tuning
 
-> **Script:** [`scripts/01-grub-bootloader`](../scripts/01-grub-bootloader) · **Concept:** [concepts/bootloader.md](../concepts/bootloader.md) · **Next:** [Guide 02 — CPU core isolation](02-cpu-core-isolation.md)
+> **Script:** [`scripts/01-grub-bootloader`](../scripts/01-grub-bootloader) · **Concept:** [concepts/bootloader.md](../concepts/bootloader.md) · **Next:** [Guide 02 — CPU core isolation](02-cpu-core-isolation.md) · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|

@@ -1,6 +1,6 @@
 # Guide 09 — Measuring Latency
 
-> **Script:** [`scripts/09-measure-latency`](../scripts/09-measure-latency) · **Concepts:** [cpu-isolation §8](../concepts/cpu-isolation.md#8-measuring-noise), [network-tuning §10](../concepts/network-tuning.md#10-measuring) · **Example:** [Java latency probe](../examples/hugepages-java-example.md) · **Use it:** before [Guide 01](01-grub-bootloader-tuning.md), and after every guide
+> **Script:** [`scripts/09-measure-latency`](../scripts/09-measure-latency) · **Concepts:** [cpu-isolation §8](../concepts/cpu-isolation.md#8-measuring-noise), [network-tuning §10](../concepts/network-tuning.md#10-measuring) · **Example:** [Java latency probe](../examples/hugepages-java-example.md) · **Use it:** before [Guide 01](01-grub-bootloader-tuning.md), and after every guide · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|

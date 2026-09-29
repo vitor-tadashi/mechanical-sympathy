@@ -57,6 +57,7 @@ Concept pages use the same idea on a smaller scale: a 3-bullet **At a glance** a
 | Give the number with its unit and its effect: "**50 ms every second**", not "a lot". | Concrete numbers stick. Vague words don't. |
 | Put a command in a code block with the expected output as a comment. | The reader can check the result without reading the paragraph around it. |
 | Use American English and the neutral names from AGENTS.md §1. | Consistency. |
+| Write for readers whose first language is not English: short sentences, no idioms, one meaning per word. Spell out an abbreviation the first time it appears in a page, or link it to [`GLOSSARY.md`](GLOSSARY.md). | Most readers translate as they read. An unexplained SMI or NAPI stops them, and an idiom such as "a wall of text" may not translate at all. |
 
 ### 2.1 Alerts
 
@@ -194,6 +195,7 @@ Embed it with an `<img>` that has an `alt` text, followed by the same one-senten
 - [ ] No meaning is carried by color alone.
 - [ ] Long output and deep dives are folded. Warnings and required commands are not.
 - [ ] Headings are real headings, in order (no jump from `##` to `####`), so the GitHub outline works.
+- [ ] Every new abbreviation, product or unusual word has an entry in [`GLOSSARY.md`](GLOSSARY.md), in the same change (`make lint` keeps the entries sorted).
 - [ ] Link text says where the link goes ("Guide 05 §4.4, the cpuset trap"), never "here".
 - [ ] Unproven advice is marked (§2.1).
 - [ ] `make lint` passes (links, anchors, Mermaid, SVG rules).

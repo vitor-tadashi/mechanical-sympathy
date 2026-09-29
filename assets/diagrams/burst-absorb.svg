@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 490" width="760" height="490" role="img" aria-labelledby="t d">
+<title id="t">A small ring overflows in a fraction of a millisecond, a large ring rides the same burst out</title>
+<desc id="d">Two charts of ring fill level over time for the same burst: 4 million packets per second arrive for 1.5 milliseconds while software drains 1.5 million per second. A ring of 512 descriptors is full after about 0.2 milliseconds and about 3,240 packets are dropped. A ring of 4096 descriptors peaks at 3,750 and drops nothing. The numbers are illustrative.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .dash { fill: #ffffff; stroke: #777777; stroke-width: 1.5; stroke-dasharray: 5 3; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .sm { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .smb { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .tiny { font: 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .mono { font: 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #1a1a1a; }
+  .monob { font: 600 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #1a1a1a; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .redt { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; }
+  .grnt { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; }
+  .tick { stroke: #8c959f; stroke-width: 1; }
+  .arrow { stroke: #57606a; stroke-width: 1.5; fill: none; marker-end: url(#ah); }
+  .arrowr { stroke: #9b1c1c; stroke-width: 1.5; fill: none; marker-end: url(#ahr); }
+
+  .band { fill: #fdf3d0; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  .evt { fill: #ff3b3b; stroke: #9b1c1c; stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: pop 6s linear infinite; }
+  .evg { fill: #7fe39a; stroke: #1d6b33; stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: pop 6s linear infinite; }
+  @keyframes pop { 0%, 4% { transform: scale(1.9); } 8%, 100% { transform: scale(1); } }
+  .curve { fill: none; stroke: #1f4e8c; stroke-width: 2.5; }
+  .would { fill: none; stroke: #9b1c1c; stroke-width: 1.5; stroke-dasharray: 5 3; }
+  .drops { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1; stroke-dasharray: 4 3; }
+  .kept { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1; }
+  @media (prefers-reduced-motion: reduce) {
+    .head, .evt, .evg { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="490" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="222" rx="6"/>
+<text class="cap" x="24" y="34">Default ring, 512 descriptors: about 3,240 packets dropped</text>
+<text class="sub" x="24" y="52">Full after 0.2 ms. Everything that arrives after that is lost while the burst lasts.</text>
+<rect class="band" x="211.957" y="84" width="185.87" height="116" rx="0"/>
+<text class="tiny" x="304.891" y="96" text-anchor="middle">burst: 4 Mpps in, 1.5 Mpps drained</text>
+<line class="tick" x1="150" y1="200" x2="720" y2="200"/>
+<line class="tick" x1="150" y1="100" x2="720" y2="100"/>
+<text class="axis" x="144" y="104" text-anchor="end">4096</text>
+<text class="axis" x="144" y="204" text-anchor="end">0</text>
+<line class="tick" x1="150" y1="200" x2="150" y2="205"/>
+<text class="axis" x="150" y="218" text-anchor="middle">0 ms</text>
+<line class="tick" x1="273.913" y1="200" x2="273.913" y2="205"/>
+<text class="axis" x="273.913" y="218" text-anchor="middle">1 ms</text>
+<line class="tick" x1="397.826" y1="200" x2="397.826" y2="205"/>
+<text class="axis" x="397.826" y="218" text-anchor="middle">2 ms</text>
+<line class="tick" x1="521.739" y1="200" x2="521.739" y2="205"/>
+<text class="axis" x="521.739" y="218" text-anchor="middle">3 ms</text>
+<line class="tick" x1="645.652" y1="200" x2="645.652" y2="205"/>
+<text class="axis" x="645.652" y="218" text-anchor="middle">4 ms</text>
+<text class="tiny" x="24" y="104">packets queued</text>
+<path class="drops" d="M237.3 187.5 L397.8 108.4 L397.8 187.5 Z"/>
+<path class="would" d="M212.0 200.0 L397.8 108.4"/>
+<path class="curve" d="M150.0 200.0 L212.0 200.0 L237.3 187.5 L397.8 187.5 L440.1 200.0 L720.0 200.0"/>
+<text class="smb" x="350.739" y="157.275" text-anchor="middle">about 3,240</text>
+<text class="smb" x="350.739" y="171.275" text-anchor="middle">packets dropped</text>
+<text class="tiny" x="416.413" y="111.447">where the fill would</text>
+<text class="tiny" x="416.413" y="123.447">be with no limit</text>
+<text class="redt" x="446.122" y="183.5">ring: 512 = full</text>
+<rect class="lane" x="10" y="240" width="740" height="222" rx="6"/>
+<text class="cap" x="24" y="264">Tuned ring, 4096 descriptors: nothing dropped</text>
+<text class="sub" x="24" y="282">Peaks at 3,750 of 4,096 slots, then drains at 1.5 Mpps once the burst ends.</text>
+<rect class="band" x="211.957" y="314" width="185.87" height="116" rx="0"/>
+<text class="tiny" x="304.891" y="326" text-anchor="middle">burst: 4 Mpps in, 1.5 Mpps drained</text>
+<line class="tick" x1="150" y1="430" x2="720" y2="430"/>
+<line class="tick" x1="150" y1="330" x2="720" y2="330"/>
+<text class="axis" x="144" y="334" text-anchor="end">4096</text>
+<text class="axis" x="144" y="434" text-anchor="end">0</text>
+<line class="tick" x1="150" y1="430" x2="150" y2="435"/>
+<text class="axis" x="150" y="448" text-anchor="middle">0 ms</text>
+<line class="tick" x1="273.913" y1="430" x2="273.913" y2="435"/>
+<text class="axis" x="273.913" y="448" text-anchor="middle">1 ms</text>
+<line class="tick" x1="397.826" y1="430" x2="397.826" y2="435"/>
+<text class="axis" x="397.826" y="448" text-anchor="middle">2 ms</text>
+<line class="tick" x1="521.739" y1="430" x2="521.739" y2="435"/>
+<text class="axis" x="521.739" y="448" text-anchor="middle">3 ms</text>
+<line class="tick" x1="645.652" y1="430" x2="645.652" y2="435"/>
+<text class="axis" x="645.652" y="448" text-anchor="middle">4 ms</text>
+<text class="tiny" x="24" y="334">packets queued</text>
+<path class="kept" d="M212.0 430.0 L397.8 338.4 L707.6 430.0 Z"/>
+<path class="curve" d="M150.0 430.0 L212.0 430.0 L397.8 338.4 L707.6 430.0 L720.0 430.0"/>
+<text class="grnt" x="515.543" y="412.91" text-anchor="middle">absorbed, then drained</text>
+<text class="grnt" x="405.826" y="331.447">peak 3,750</text>
+<circle class="evt" cx="237.3" cy="187.5" r="5" style="animation-delay:-5.08s"/>
+<circle class="evg" cx="397.8" cy="338.4" r="5" style="animation-delay:-3.39s"/>
+<line class="head" x1="150" y1="22" x2="150" y2="452"/>
+<text class="sub" x="380" y="480" text-anchor="middle">Illustrative numbers. 64-byte frames, one drain core, burst of 6,000 packets, 2,250 drained during it.</text>
+</svg>

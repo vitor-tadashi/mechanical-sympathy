@@ -1,6 +1,6 @@
 # Guide 03 — Huge Pages
 
-> **Script:** [`scripts/03-huge-pages`](../scripts/03-huge-pages) · **Concept:** [concepts/huge-pages.md](../concepts/huge-pages.md) · **Example:** [examples/hugepages-java-example.md](../examples/hugepages-java-example.md) · **Previous:** [Guide 02](02-cpu-core-isolation.md) · **Next:** [Guide 04 — Network](04-network-optimization.md)
+> **Script:** [`scripts/03-huge-pages`](../scripts/03-huge-pages) · **Concept:** [concepts/huge-pages.md](../concepts/huge-pages.md) · **Example:** [examples/hugepages-java-example.md](../examples/hugepages-java-example.md) · **Previous:** [Guide 02](02-cpu-core-isolation.md) · **Next:** [Guide 04 — Network](04-network-optimization.md) · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|

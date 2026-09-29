@@ -53,6 +53,9 @@ The "I have two minutes" page. One command per check, with the answer you want t
 | IRQs on the housekeeping CPU | `watch -d -n1 "grep -E 'CPU\|ens1f0' /proc/interrupts"` | only the IRQ CPU's column moves |
 | No drops | `ethtool -S ens1f0 \| grep -iE 'drop\|miss' \| grep -v ': 0$'` | nothing |
 | Runtime unit ran | `systemctl status lowlat-runtime` | `active (exited)` |
+| Socket buffer drops | `nstat -az \| grep -E 'UdpRcvbufErrors\|TCPRcvQDrop'` | 0, and no growth |
+| Softirq budget | `awk '{print NR-1, $3}' /proc/net/softnet_stat` | column 3 (`time_squeeze`) not growing |
+| Which stage drops | [Concept: network buffers §6](concepts/network-buffers.md#6-where-did-the-packet-die) | one counter per stage |
 
 ## cgroups — [Guide 05](guides/05-cgroup-isolation.md#6-verification)
 

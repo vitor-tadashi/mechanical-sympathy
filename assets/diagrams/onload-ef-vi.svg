@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 452" width="760" height="452" role="img" aria-labelledby="t d">
+<title id="t">On a Solarflare NIC, a VI is three queues over packet buffers that your process owns</title>
+<desc id="d">The NIC steers each flow with a hardware filter to a virtual interface. A virtual interface is a receive queue, a transmit queue and an event queue. The NIC writes packets by DMA into 2 KiB packet buffers in huge pages of host memory. The Onload library in your process, or your own ef_vi code, polls the event queue and reads the packets in place. Traffic that Onload does not accelerate still goes through the kernel driver. The default sizes are from the Onload sources and can differ by release.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .dash { fill: #ffffff; stroke: #777777; stroke-width: 1.5; stroke-dasharray: 5 3; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .sm { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .smb { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .tiny { font: 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .mono { font: 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #1a1a1a; }
+  .monob { font: 600 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #1a1a1a; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .redt { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; }
+  .grnt { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; }
+  .tick { stroke: #8c959f; stroke-width: 1; }
+  .arrow { stroke: #57606a; stroke-width: 1.5; fill: none; marker-end: url(#ah); }
+  .arrowr { stroke: #9b1c1c; stroke-width: 1.5; fill: none; marker-end: url(#ahr); }
+</style>
+<defs>
+<marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#57606a"/></marker>
+<marker id="ahr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#9b1c1c"/></marker>
+</defs>
+<rect class="bg" x="0" y="0" width="760" height="452" rx="8"/>
+<text class="cap" x="24" y="28">Solarflare: a VI is three queues over packet buffers that your process owns</text>
+<text class="sub" x="24" y="46">ef_vi is that layer. Onload adds a TCP/UDP stack and sockets on top of it, so unmodified programs can use it.</text>
+<rect class="lane" x="10" y="60" width="240" height="266" rx="6"/>
+<text class="cap" x="24" y="82">NIC</text>
+<rect class="mut" x="24" y="94" width="212" height="38" rx="4"/>
+<text class="smb" x="130" y="111" text-anchor="middle">hardware filters</text>
+<text class="tiny" x="130" y="125" text-anchor="middle">IP and port steer each flow to a VI</text>
+<rect class="app" x="24" y="144" width="212" height="84" rx="5"/>
+<text class="smb" x="32" y="161">VI 1: one Onload stack</text>
+<rect class="box" x="32" y="170" width="60" height="26" rx="3"/>
+<text class="smb" x="62" y="187" text-anchor="middle">RXQ</text>
+<rect class="box" x="98" y="170" width="60" height="26" rx="3"/>
+<text class="smb" x="128" y="187" text-anchor="middle">TXQ</text>
+<rect class="box" x="164" y="170" width="60" height="26" rx="3"/>
+<text class="smb" x="194" y="187" text-anchor="middle">EVQ</text>
+<text class="tiny" x="32" y="210">RXQ 512 by default (EF_RXQ_SIZE)</text>
+<rect class="dash" x="24" y="238" width="212" height="76" rx="5"/>
+<text class="smb" x="32" y="255">VI 0: the kernel sfc driver</text>
+<rect class="box" x="32" y="264" width="60" height="26" rx="3"/>
+<text class="smb" x="62" y="281" text-anchor="middle">RXQ</text>
+<rect class="box" x="98" y="264" width="60" height="26" rx="3"/>
+<text class="smb" x="128" y="281" text-anchor="middle">TXQ</text>
+<rect class="box" x="164" y="264" width="60" height="26" rx="3"/>
+<text class="smb" x="194" y="281" text-anchor="middle">EVQ</text>
+<text class="tiny" x="32" y="306">ARP, ICMP, other sockets</text>
+<rect class="lane" x="280" y="60" width="200" height="266" rx="6"/>
+<text class="cap" x="294" y="82">Host memory, huge pages</text>
+<rect class="box" x="294" y="98" width="17" height="17" rx="2"/>
+<rect class="box" x="315" y="98" width="17" height="17" rx="2"/>
+<rect class="box" x="336" y="98" width="17" height="17" rx="2"/>
+<rect class="box" x="357" y="98" width="17" height="17" rx="2"/>
+<rect class="box" x="378" y="98" width="17" height="17" rx="2"/>
+<rect class="box" x="399" y="98" width="17" height="17" rx="2"/>
+<rect class="box" x="420" y="98" width="17" height="17" rx="2"/>
+<rect class="box" x="441" y="98" width="17" height="17" rx="2"/>
+<rect class="box" x="294" y="119" width="17" height="17" rx="2"/>
+<rect class="box" x="315" y="119" width="17" height="17" rx="2"/>
+<rect class="box" x="336" y="119" width="17" height="17" rx="2"/>
+<rect class="box" x="357" y="119" width="17" height="17" rx="2"/>
+<rect class="box" x="378" y="119" width="17" height="17" rx="2"/>
+<rect class="box" x="399" y="119" width="17" height="17" rx="2"/>
+<rect class="box" x="420" y="119" width="17" height="17" rx="2"/>
+<rect class="box" x="441" y="119" width="17" height="17" rx="2"/>
+<rect class="box" x="294" y="140" width="17" height="17" rx="2"/>
+<rect class="box" x="315" y="140" width="17" height="17" rx="2"/>
+<rect class="box" x="336" y="140" width="17" height="17" rx="2"/>
+<rect class="box" x="357" y="140" width="17" height="17" rx="2"/>
+<rect class="box" x="378" y="140" width="17" height="17" rx="2"/>
+<rect class="box" x="399" y="140" width="17" height="17" rx="2"/>
+<rect class="box" x="420" y="140" width="17" height="17" rx="2"/>
+<rect class="box" x="441" y="140" width="17" height="17" rx="2"/>
+<rect class="box" x="294" y="161" width="17" height="17" rx="2"/>
+<rect class="box" x="315" y="161" width="17" height="17" rx="2"/>
+<rect class="box" x="336" y="161" width="17" height="17" rx="2"/>
+<rect class="box" x="357" y="161" width="17" height="17" rx="2"/>
+<rect class="box" x="378" y="161" width="17" height="17" rx="2"/>
+<rect class="box" x="399" y="161" width="17" height="17" rx="2"/>
+<rect class="box" x="420" y="161" width="17" height="17" rx="2"/>
+<rect class="box" x="441" y="161" width="17" height="17" rx="2"/>
+<text class="smb" x="294" y="198">packet buffers, 2 KiB each</text>
+<text class="tiny" x="294" y="212">registered with the NIC for DMA</text>
+<rect class="mut" x="292" y="226" width="176" height="88" rx="4"/>
+<text class="smb" x="302" y="244">EF_MAX_PACKETS 32768</text>
+<text class="sm" x="302" y="261">= 64 MiB per stack (2 KiB each)</text>
+<text class="smb" x="302" y="281">EF_MAX_RX_PACKETS 24576</text>
+<text class="sm" x="302" y="297">caps the receive share</text>
+<text class="tiny" x="302" y="309">defaults: check your release</text>
+<path class="arrow" d="M237 190 L279 190"/>
+<text class="tiny" x="258" y="182" text-anchor="middle">DMA</text>
+<rect class="lane" x="510" y="60" width="240" height="266" rx="6"/>
+<text class="cap" x="524" y="82">Your process</text>
+<rect class="box" x="524" y="94" width="212" height="98" rx="5"/>
+<text class="smb" x="534" y="112">Onload library (LD_PRELOAD)</text>
+<text class="sm" x="534" y="130">TCP and UDP in user space</text>
+<text class="sm" x="534" y="146">socket buffers per socket</text>
+<text class="sm" x="534" y="162">(EF_UDP_RCVBUF, EF_TCP_RCVBUF)</text>
+<text class="tiny" x="534" y="180">ef_vi programs skip this box</text>
+<rect class="app" x="524" y="206" width="212" height="108" rx="5"/>
+<text class="smb" x="534" y="224">application thread</text>
+<text class="sm" x="534" y="242">spins on the EVQ (EF_POLL_USEC)</text>
+<text class="sm" x="534" y="258">no interrupt, no system call</text>
+<text class="sm" x="534" y="274">while it spins</text>
+<text class="tiny" x="534" y="296">recv() copies once. A zero-copy</text>
+<text class="tiny" x="534" y="308">receive API exists.</text>
+<path class="arrow" d="M482 190 L523 190"/>
+<text class="tiny" x="502" y="182" text-anchor="middle">reads</text>
+<rect class="mut" x="10" y="340" width="240" height="34" rx="5"/>
+<text class="smb" x="130" y="355" text-anchor="middle">kernel network stack</text>
+<text class="tiny" x="130" y="368" text-anchor="middle">the same one as without Onload</text>
+<path class="arrow" d="M130 327 L130 339" stroke-dasharray="4 3"/>
+<line class="tick" x1="24" y1="396" x2="480" y2="396"/>
+<line class="tick" x1="24" y1="392" x2="24" y2="400"/>
+<line class="tick" x1="480" y1="392" x2="480" y2="400"/>
+<text class="sm" x="252" y="412" text-anchor="middle">ef_vi: queues and buffers, which you refill and poll yourself</text>
+<line class="tick" x1="280" y1="420" x2="736" y2="420"/>
+<line class="tick" x1="280" y1="416" x2="280" y2="424"/>
+<line class="tick" x1="736" y1="416" x2="736" y2="424"/>
+<text class="sm" x="508" y="436" text-anchor="middle">Onload: ef_vi plus TCP and UDP, sockets and their limits</text>
+</svg>

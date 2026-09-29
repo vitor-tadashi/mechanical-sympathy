@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 474" width="760" height="474" role="img" aria-labelledby="t d">
+<title id="t">Kernel bypass removes queues and copies, and moves the drop counters</title>
+<desc id="d">Three lanes for the same packet. On the kernel stack it crosses three queues, or four with RPS, and is copied once to the application, with an interrupt on the way. With Onload sockets it crosses three queues in user space and is copied once, with no interrupt while the thread spins. With DPDK or ef_vi it crosses two queues and the application reads the packet in place, with no copy. Drop counters live in ethtool and nstat, in onload_stackdump, or in the DPDK statistics.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .dash { fill: #ffffff; stroke: #777777; stroke-width: 1.5; stroke-dasharray: 5 3; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .sm { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .smb { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .tiny { font: 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .mono { font: 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #1a1a1a; }
+  .monob { font: 600 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #1a1a1a; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .redt { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; }
+  .grnt { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; }
+  .tick { stroke: #8c959f; stroke-width: 1; }
+  .arrow { stroke: #57606a; stroke-width: 1.5; fill: none; marker-end: url(#ah); }
+  .arrowr { stroke: #9b1c1c; stroke-width: 1.5; fill: none; marker-end: url(#ahr); }
+</style>
+<defs>
+<marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#57606a"/></marker>
+<marker id="ahr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#9b1c1c"/></marker>
+</defs>
+<rect class="bg" x="0" y="0" width="760" height="474" rx="8"/>
+<text class="cap" x="24" y="28">The same packet, counted in queues and copies</text>
+<text class="sub" x="24" y="46">DMA is the NIC writing to memory. A CPU copy is your core moving the bytes. The right column says where to read a drop.</text>
+<rect class="lane" x="10" y="60" width="740" height="112" rx="6"/>
+<text class="cap" x="24" y="84">Kernel stack</text>
+<rect class="box" x="24" y="108" width="90" height="46" rx="5"/>
+<text class="smb" x="69" y="128" text-anchor="middle">NIC FIFO</text>
+<text class="tiny" x="69" y="144" text-anchor="middle">hardware</text>
+<path class="arrow" d="M115 131 L125 131"/>
+<text class="tiny" x="120" y="104" text-anchor="middle">DMA</text>
+<rect class="foc" x="126" y="108" width="90" height="46" rx="5"/>
+<text class="smb" x="171" y="128" text-anchor="middle">RX ring</text>
+<text class="tiny" x="171" y="144" text-anchor="middle">DMA target</text>
+<path class="arrow" d="M217 131 L227 131"/>
+<rect class="box" x="228" y="108" width="90" height="46" rx="5"/>
+<text class="smb" x="273" y="128" text-anchor="middle">skb, softirq</text>
+<text class="tiny" x="273" y="144" text-anchor="middle">protocol work</text>
+<path class="arrow" d="M319 131 L329 131"/>
+<rect class="foc" x="330" y="108" width="90" height="46" rx="5"/>
+<text class="smb" x="375" y="128" text-anchor="middle">socket buffer</text>
+<text class="tiny" x="375" y="144" text-anchor="middle">rcvbuf</text>
+<path class="arrow" d="M421 131 L431 131"/>
+<text class="redt" x="426" y="104" text-anchor="middle">copy</text>
+<rect class="app" x="432" y="108" width="90" height="46" rx="5"/>
+<text class="smb" x="477" y="128" text-anchor="middle">app buffer</text>
+<text class="tiny" x="477" y="144" text-anchor="middle">your memory</text>
+<text class="sm" x="530" y="94">queues: 3, or 4 with RPS</text>
+<text class="sm" x="530" y="112">CPU copies: 1</text>
+<text class="sm" x="530" y="130">interrupts: yes</text>
+<text class="smb" x="530" y="148">drops: ethtool -S, nstat</text>
+<rect class="lane" x="10" y="182" width="740" height="112" rx="6"/>
+<text class="cap" x="24" y="206">Onload sockets</text>
+<rect class="box" x="24" y="230" width="90" height="46" rx="5"/>
+<text class="smb" x="69" y="250" text-anchor="middle">NIC FIFO</text>
+<text class="tiny" x="69" y="266" text-anchor="middle">hardware</text>
+<path class="arrow" d="M115 253 L125 253"/>
+<text class="tiny" x="120" y="226" text-anchor="middle">DMA</text>
+<rect class="foc" x="126" y="230" width="90" height="46" rx="5"/>
+<text class="smb" x="171" y="250" text-anchor="middle">VI RX ring</text>
+<text class="tiny" x="171" y="266" text-anchor="middle">DMA target</text>
+<path class="arrow" d="M217 253 L227 253"/>
+<rect class="box" x="228" y="230" width="90" height="46" rx="5"/>
+<text class="smb" x="273" y="250" text-anchor="middle">stack buffers</text>
+<text class="tiny" x="273" y="266" text-anchor="middle">user space</text>
+<path class="arrow" d="M319 253 L329 253"/>
+<rect class="foc" x="330" y="230" width="90" height="46" rx="5"/>
+<text class="smb" x="375" y="250" text-anchor="middle">socket buffer</text>
+<text class="tiny" x="375" y="266" text-anchor="middle">user space</text>
+<path class="arrow" d="M421 253 L431 253"/>
+<text class="redt" x="426" y="226" text-anchor="middle">copy</text>
+<rect class="app" x="432" y="230" width="90" height="46" rx="5"/>
+<text class="smb" x="477" y="250" text-anchor="middle">app buffer</text>
+<text class="tiny" x="477" y="266" text-anchor="middle">your memory</text>
+<text class="sm" x="530" y="216">queues: 3, all in user space</text>
+<text class="sm" x="530" y="234">CPU copies: 1 (0 zero-copy)</text>
+<text class="sm" x="530" y="252">interrupts: none while spinning</text>
+<text class="smb" x="530" y="270">drops: onload_stackdump</text>
+<rect class="lane" x="10" y="304" width="740" height="112" rx="6"/>
+<text class="cap" x="24" y="328">DPDK or ef_vi</text>
+<rect class="box" x="24" y="352" width="140" height="46" rx="5"/>
+<text class="smb" x="94" y="372" text-anchor="middle">NIC FIFO</text>
+<text class="tiny" x="94" y="388" text-anchor="middle">hardware</text>
+<path class="arrow" d="M165 375 L193 375"/>
+<text class="tiny" x="179" y="348" text-anchor="middle">DMA</text>
+<rect class="foc" x="194" y="352" width="140" height="46" rx="5"/>
+<text class="smb" x="264" y="372" text-anchor="middle">RX ring + mbuf</text>
+<text class="tiny" x="264" y="388" text-anchor="middle">your memory, DMA</text>
+<path class="arrow" d="M335 375 L363 375"/>
+<rect class="app" x="364" y="352" width="140" height="46" rx="5"/>
+<text class="smb" x="434" y="372" text-anchor="middle">your code</text>
+<text class="tiny" x="434" y="388" text-anchor="middle">reads in place</text>
+<text class="sm" x="530" y="338">queues: 2</text>
+<text class="sm" x="530" y="356">CPU copies: 0</text>
+<text class="sm" x="530" y="374">interrupts: none (polling)</text>
+<text class="smb" x="530" y="392">drops: imissed, rx_nombuf</text>
+<rect class="mut" x="10" y="426" width="740" height="40" rx="6"/>
+<text class="smb" x="24" y="443">What you give up with bypass</text>
+<text class="sm" x="24" y="459">tcpdump, netfilter and per-socket kernel counters no longer see the traffic, and a polling core is 100% busy.</text>
+</svg>

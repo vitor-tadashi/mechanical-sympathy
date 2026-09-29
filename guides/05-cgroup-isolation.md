@@ -1,6 +1,6 @@
 # Guide 05 — Process Isolation with cgroups and systemd Slices
 
-> **Script:** [`scripts/05-cgroup-isolation`](../scripts/05-cgroup-isolation) · **Concept:** [concepts/cgroups.md](../concepts/cgroups.md) · **Previous:** [Guide 04](04-network-optimization.md) · **Next:** [Guide 06 — Kernel sysctl](06-kernel-sysctl-tuning.md)
+> **Script:** [`scripts/05-cgroup-isolation`](../scripts/05-cgroup-isolation) · **Concept:** [concepts/cgroups.md](../concepts/cgroups.md) · **Previous:** [Guide 04](04-network-optimization.md) · **Next:** [Guide 06 — Kernel sysctl](06-kernel-sysctl-tuning.md) · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|
