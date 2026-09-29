@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+#
+# check-plan-layout - test scripts/plan-layout against the fixtures in scripts/fixtures.
+#
+# For every NAME.lscpu that has a NAME.args file, run plan-layout with those arguments and
+# compare its output with NAME.golden. Then:
+#   - the proposal for the reference host must equal the layout in scripts/lowlat.conf.example
+#   - check mode must accept that example and reject the broken configuration
+# site/layout.js is held to the same goldens by tools/check-explorer.
+#
+# Usage: tools/check-plan-layout            compare with the goldens
+#        tools/check-plan-layout --update   rewrite the goldens from the current output
+
+set -Eeuo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "${ROOT}"
+
+FIXTURES=scripts/fixtures
+REFERENCE=reference-2x16-ht-off
+UPDATE=0
+[[ "${1:-}" == "--update" ]] && UPDATE=1
+
+failures=0
+
+fail() {
+	printf 'check-plan-layout: %s\n' "$*" >&2
+	failures=$((failures + 1))
+}
+
+# layout_lines - the layout assignments of a proposal or of lowlat.conf, read from stdin.
+layout_lines() {
+	grep -E '^(ISOLATED_CPUS|OS_CPUS|WORKQUEUE_CPUS|HOUSEKEEPING_PIN_CPUS|HOUSEKEEPING_SLICE_CPUS)=' | sort
+}
+
+cases=0
+for lscpu in "${FIXTURES}"/*.lscpu; do
+	name="${lscpu%.lscpu}"
+	[[ -f "${name}.args" ]] || continue
+	cases=$((cases + 1))
+	read -r -a args <"${name}.args"
+	status=0
+	actual="$(scripts/plan-layout --lscpu "${lscpu}" "${args[@]}")" || status=$?
+	if ((status != 0)); then
+		fail "${name##*/}: plan-layout exited ${status}"
+		continue
+	fi
+	if ((UPDATE == 1)); then
+		printf '%s\n' "${actual}" >"${name}.golden"
+		continue
+	fi
+	if [[ ! -f "${name}.golden" ]]; then
+		fail "${name##*/}: no golden file (run tools/check-plan-layout --update)"
+		continue
+	fi
+	expected="$(cat "${name}.golden")"
+	if [[ "${actual}" != "${expected}" ]]; then
+		fail "${name##*/}: output differs from ${name##*/}.golden"
+		diff <(printf '%s\n' "${expected}") <(printf '%s\n' "${actual}") >&2 || true
+	fi
+done
+((cases > 0)) || fail "no fixtures found in ${FIXTURES}"
+
+# The reference proposal is the layout that scripts/lowlat.conf.example documents.
+proposal="$(scripts/plan-layout --lscpu "${FIXTURES}/${REFERENCE}.lscpu" --nic-node 1 --threads 6)"
+documented="$(layout_lines <scripts/lowlat.conf.example)"
+proposed="$(layout_lines <<<"${proposal}")"
+if [[ "${documented}" != "${proposed}" ]]; then
+	fail "the proposal for ${REFERENCE} differs from scripts/lowlat.conf.example"
+fi
+
+# Check mode accepts the example, and rejects a layout that isolates CPU 0.
+status=0
+scripts/plan-layout --lscpu "${FIXTURES}/${REFERENCE}.lscpu" --nic-node 1 --check scripts/lowlat.conf.example >/dev/null || status=$?
+((status == 0)) || fail "check mode rejected scripts/lowlat.conf.example (exit ${status})"
+
+status=0
+broken="$(scripts/plan-layout --lscpu "${FIXTURES}/${REFERENCE}.lscpu" --nic-node 1 --check "${FIXTURES}/broken-cpu0.conf")" || status=$?
+((status == 5)) || fail "check mode exited ${status} on broken-cpu0.conf, expected 5"
+grep -q '^FAIL CPU 0 is isolated' <<<"${broken}" || fail "check mode did not report that CPU 0 is isolated"
+
+if ((failures > 0)); then
+	printf 'check-plan-layout: %d problem(s)\n' "${failures}" >&2
+	exit 1
+fi
+printf 'check-plan-layout: %d fixture(s) and the reference checks passed\n' "${cases}"
