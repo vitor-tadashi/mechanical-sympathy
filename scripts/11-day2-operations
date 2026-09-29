@@ -60,8 +60,8 @@ install_verify_timer() {
 Description=Verify the low-latency tuning (read-only report)
 ConditionPathExists=${config}
 # A missed run that Persistent=true triggers at activation must not inspect runtime state before
-# lowlat-runtime.service has re-applied it.
-Wants=lowlat-runtime.service
+# lowlat-runtime.service has re-applied it. Ordering only: no Wants=, so verification never starts
+# runtime tuning that the operator disabled.
 After=lowlat-runtime.service
 
 [Service]

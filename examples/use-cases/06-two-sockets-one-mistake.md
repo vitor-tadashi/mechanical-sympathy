@@ -45,10 +45,16 @@ show_affinity "$(pgrep -f my-app)"                # TID, allowed CPUs, last CPU,
 You can reproduce the effect in two minutes with the [Java probe](../java-latency-probe/), which measures a core-to-core round trip ([example §6](../hugepages-java-example.md#6-reading-the-output), step 4). Put `ping` and `pong` on the same node, then put one of them on the other node, and watch the round trip change:
 
 ```properties
-ping.cpu.affinity=9       # node 1
-pong.cpu.affinity=11      # node 1: the baseline
-# then:
-pong.cpu.affinity=10      # node 0: the interconnect, made visible
+# baseline: both threads on node 1
+ping.cpu.affinity=9
+pong.cpu.affinity=11
+```
+
+Then change the second line, and restart the probe. Java's `Properties` has no inline comments, so keep the comment on its own line:
+
+```properties
+# pong on node 0: the interconnect, made visible
+pong.cpu.affinity=10
 ```
 
 <img src="../../assets/diagrams/memory-ladder.svg" alt="A logarithmic ruler from 1 nanosecond to 100 milliseconds with the typical range of a cache hit, DRAM, a page fault, a context switch, the kernel network path, an SMI, reclaim and RT throttling" width="720">

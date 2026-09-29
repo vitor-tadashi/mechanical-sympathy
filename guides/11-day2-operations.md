@@ -54,7 +54,7 @@ Every row has a command that answers "did it revert?". This guide runs the ones 
 `sudo scripts/11-day2-operations --apply` (or `apply-all`) installs two units:
 
 - `lowlat-verify.service`, a **oneshot** that runs `scripts/verify-tuning --report /var/lib/lowlat/reports/verify-latest.txt`. It starts on the OS CPUs (`CPUAffinity=` from `OS_CPUS`), at nice 19 and idle I/O priority, so it does not compete with the application for CPU or disk.
-- `lowlat-verify.timer`, which fires **10 minutes after every boot** (long enough for `lowlat-runtime.service` to have re-applied the runtime settings) and on `DAY2_VERIFY_SCHEDULE` (default `daily`), with up to 15 minutes of random delay so that a fleet does not run at once. The service is also ordered after `lowlat-runtime.service`, because `Persistent=true` makes systemd run a missed schedule as soon as the timer activates, and that run must not inspect runtime state before it is re-applied.
+- `lowlat-verify.timer`, which fires **10 minutes after every boot** (long enough for `lowlat-runtime.service` to have re-applied the runtime settings) and on `DAY2_VERIFY_SCHEDULE` (default `daily`), with up to 15 minutes of random delay so that a fleet does not run at once. The service is also ordered after `lowlat-runtime.service`, because `Persistent=true` makes systemd run a missed schedule as soon as the timer activates, and that run must not inspect runtime state before it is re-applied. It is ordering only (`After=`, no `Wants=`), so verification never starts runtime tuning that you disabled.
 
 `verify-tuning` exits with status 5 when a check **FAILs**, and 0 for PASS and WARN. That maps onto systemd like this:
 
@@ -73,7 +73,6 @@ Every row has a command that answers "did it revert?". This guide runs the ones 
 [Unit]
 Description=Verify the low-latency tuning (read-only report)
 ConditionPathExists=/etc/lowlat/lowlat.conf
-Wants=lowlat-runtime.service
 After=lowlat-runtime.service
 
 [Service]
