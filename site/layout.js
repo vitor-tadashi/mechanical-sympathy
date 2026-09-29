@@ -20,7 +20,7 @@
 
 	const byNumber = (a, b) => a - b;
 
-	/** Parse `lscpu -e=CPU,NODE,SOCKET,CORE`. Rows that do not start with a number are skipped. */
+	/** Parse `lscpu -b -e=CPU,NODE,SOCKET,CORE`. Rows that do not start with a number are skipped. */
 	function parseTopology(text) {
 		const cpus = [];
 		text.split(/\r?\n/).forEach((line) => {
@@ -196,7 +196,7 @@
 	}
 
 	/**
-	 * Generate a topology in the format of `lscpu -e=CPU,NODE,SOCKET,CORE`.
+	 * Generate a topology in the format of `lscpu -b -e=CPU,NODE,SOCKET,CORE`.
 	 * numbering: 'round-robin' (CPU n on socket n % sockets, like the reference host) or
 	 * 'socket-by-socket' (the first cores of a socket are numbered together, siblings last).
 	 */
