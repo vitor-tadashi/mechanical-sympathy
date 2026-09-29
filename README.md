@@ -23,7 +23,9 @@ Every guide explains **what the kernel does**, **why each value is chosen**, **h
 | Tune a dedicated physical server | [Quick start, Scenario A](QUICK_START.md#scenario-a-dedicated-bare-metal-host-the-full-treatment) |
 | Tune a virtual machine | [Quick start, Scenario B](QUICK_START.md#scenario-b-virtual-machine) |
 | Understand why it works before touching a host | [Reading paths](INDEX.md#reading-paths), then the [concepts](INDEX.md#concepts) |
+| Decide which CPUs to isolate | [Layout explorer](https://vitor-tadashi.github.io/mechanical-sympathy/explorer.html) or `scripts/plan-layout`, then [Guide 02 §3](guides/02-cpu-core-isolation.md#3-designing-the-cpu-layout) |
 | See a problem solved from symptom to result | [Use cases](examples/use-cases/README.md) |
+| Keep a host tuned after updates | [Guide 11](guides/11-day2-operations.md) |
 | Make my application behave on a tuned host | [Java on a tuned host](examples/hugepages-java-example.md) |
 | Check a host that is already tuned | `scripts/verify-tuning`, see [the scripts](INDEX.md#scripts) |
 
@@ -83,7 +85,7 @@ Plus:
 - **Use cases**: stories from symptom to result. [The quiet core](examples/use-cases/01-the-quiet-core.md) · [Critical and non-critical threads](examples/use-cases/02-critical-and-non-critical.md) · [The noisy neighbor](examples/use-cases/03-the-noisy-neighbor.md) · [One NIC, one queue, one CPU](examples/use-cases/04-one-nic-one-queue-one-cpu.md) · [Page faults](examples/use-cases/05-page-faults-on-the-hot-path.md) · [Two sockets, one mistake](examples/use-cases/06-two-sockets-one-mistake.md) · [The freeze nobody logs](examples/use-cases/07-the-freeze-nobody-logs.md) · [Capstone: stock to tuned in one afternoon](examples/use-cases/08-stock-to-tuned-in-one-afternoon.md) ([all eight](examples/use-cases/README.md))
 - **Examples**: [Java on a tuned host](examples/hugepages-java-example.md), with a [runnable probe](examples/java-latency-probe/) · [Multi-NIC segmentation](examples/network-segmentation-example.md)
 - **Quick help**: [Cheat sheet](CHEATSHEET.md) (every check on one page) · [FAQ](FAQ.md)
-- **Tools**: [`plan-layout`](scripts/plan-layout) (propose or check the CPU layout, also as a [browser explorer](site/explorer.html)) · [`apply-all`](scripts/apply-all) (plan / dry-run / apply / runtime) · [`verify-tuning`](scripts/verify-tuning) (PASS/WARN/FAIL report) · [`lowlat-runtime.service`](scripts/systemd/lowlat-runtime.service) (re-applies runtime state at boot)
+- **Tools**: [`plan-layout`](scripts/plan-layout) (propose or check the CPU layout, also as a [browser explorer](https://vitor-tadashi.github.io/mechanical-sympathy/explorer.html)) · [`apply-all`](scripts/apply-all) (plan / dry-run / apply / runtime) · [`verify-tuning`](scripts/verify-tuning) (PASS/WARN/FAIL report) · [`lowlat-runtime.service`](scripts/systemd/lowlat-runtime.service) (re-applies runtime state at boot)
 
 ## How it fits together
 
@@ -91,20 +93,22 @@ Plus:
 %%{init: {"flowchart": {"wrappingWidth": 480}}}%%
 flowchart TD
   conf[("<b>/etc/lowlat/lowlat.conf</b><br/>CPU layout · NIC roles · huge pages per node")]
-  once["<b>Apply once, then reboot</b> (persistent)<br/>01 kernel command line: isolcpus, nohz_full, rcu_nocbs, idle=poll, THP off<br/>02 systemd CPUAffinity, RT limits · 03 huge pages per NUMA node<br/>05 housekeeping.slice · 06 sysctl profile · 07 services, limits, noatime, tuned"]
+  once["<b>Apply once, then reboot</b> (persistent)<br/>00 BIOS setup (by hand) · 01 kernel command line: isolcpus, nohz_full, rcu_nocbs, idle=poll, THP off<br/>02 systemd CPUAffinity, RT limits · 03 huge pages per NUMA node<br/>05 housekeeping.slice · 06 sysctl profile · 07 services, limits, noatime, tuned · 10 time sync"]
   boot["<b>Every boot</b>: lowlat-runtime.service<br/>04 NIC coalescing, offloads, IRQ affinity · 02 workqueue cpumask<br/>05 pin agents · 07 opt-in firewall and modules"]
   app["<b>Application launcher</b><br/>JVM options by host class · large pages, NUMA, pre-touch when pinned<br/>threads pinned to isolated CPUs · busy-spin idle strategy"]
   verify{{"<b>scripts/verify-tuning</b><br/>PASS / WARN / FAIL"}}
+  watch["<b>11 Day-2</b>: lowlat-verify.timer<br/>daily and 10 min after every boot"]
   conf --> once --> boot --> app --> verify
+  verify -.-> watch
   classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
   classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
   classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
   class conf focus
-  class once,boot hk
+  class once,boot,watch hk
   class app iso
 ```
 
-*One config file drives everything. Persistent settings are applied once and take effect at the next boot. Runtime settings are re-applied at every boot by `lowlat-runtime.service`. The application pins its threads last, and `verify-tuning` checks the result.*
+*One config file drives everything. Persistent settings are applied once and take effect at the next boot. Runtime settings are re-applied at every boot by `lowlat-runtime.service`. The application pins its threads last, and `verify-tuning` checks the result. A timer then repeats that check daily and after every boot, so drift shows up as a failed unit.*
 
 All scripts read one file, **`/etc/lowlat/lowlat.conf`** ([example](scripts/lowlat.conf.example)), which describes *your* hardware: isolated CPUs, OS CPUs, workqueue CPUs, NIC roles and their IRQ CPUs, and huge pages per NUMA node. Nothing is hard-coded. The scripts detect the host class (`bare_metal`, `virtual_machine`, `container`) and apply only what makes sense there.
 
