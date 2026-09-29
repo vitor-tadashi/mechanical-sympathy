@@ -23,12 +23,13 @@ Thank you for reading closely enough to want to fix something. This repository i
 ```bash
 make install-git-hooks        # optional: pre-commit runs make lint, commit-msg checks titles
 git switch -c docs/short-slug # Conventional Branch: <type>/<kebab-slug>
-make lint                     # links, anchors, Mermaid, SVG rules, ShellCheck, Checkstyle
+make lint                     # links, anchors, Mermaid, SVG rules, ShellCheck, site, Checkstyle
+make site                     # optional: assemble _site/ to preview the site locally
 ```
 
 - Work lands on `main` through pull requests. Never push directly to `main`.
 - One change per pull request.
-- The PR title becomes the commit title after a squash merge. Use `type(scope): subject`, imperative and lowercase, at most 72 ASCII characters. `tools/check-commit-title` enforces it, and the full rules are in [AGENTS.md section 8](AGENTS.md#8-git).
+- Both squash and rebase merges are enabled. A squash merge turns the PR title into the commit title, and a rebase merge keeps every commit, so every commit title and the PR title follow the same rule. Use `type(scope): subject`, imperative and lowercase, at most 72 ASCII characters. `tools/check-commit-title` enforces it, and the full rules are in [AGENTS.md section 8](AGENTS.md#8-git).
 - PR and commit descriptions are plain text: no emojis, no tool attribution footers. `tools/check-description` enforces it.
 
 ## Reporting wrong or dangerous advice

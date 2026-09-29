@@ -26,6 +26,9 @@ These rules apply to every change, whoever makes it. If a rule and a request con
 - Advice that has not been proven in production is marked as such in the text.
 - Pages follow [`STYLE.md`](STYLE.md): the short answer first (At a glance), a diagram where a flow, layout or decision needs one, depth folded into `<details>`, and Key takeaways at the end.
 - American English in every committed file.
+- Use cases (`examples/use-cases/`) follow the same skeleton (situation, diagnose, change, result, verify and roll back, takeaways), are listed in `examples/use-cases/README.md`, `README.md` and `INDEX.md`, and reuse commands that a guide already documents. Every number that is not a measurement is labeled illustrative.
+- `site/` is hand-written HTML, CSS and JavaScript with no dependencies and no external loads. `site/layout.js` is a port of `scripts/plan-layout`: change the rules in both, and update the golden files (`tools/check-plan-layout --update`).
+- A new guide also goes into the guide grid of `site/index.html`, `scripts/apply-all`, `scripts/verify-tuning` and the guide counts in `README.md`.
 
 ## 4. Tuning stance
 
@@ -57,8 +60,10 @@ These rules apply to every change, whoever makes it. If a rule and a request con
 | Command | What it checks |
 |---|---|
 | `make lint` | everything below. CI runs it (`.github/workflows/lint.yml`) |
-| `make lint-scripts` | no `.sh`/`.bash` files, exec bits, ShellCheck `enable=all`, `bash -n` |
-| `make lint-docs` | relative links and `#anchors` resolve, every Mermaid block parses (mermaid-cli, required in CI), animated SVG rules from `STYLE.md` |
+| `make lint-scripts` | no `.sh`/`.bash` files, exec bits, ShellCheck `enable=all`, `bash -n`, and `tools/check-plan-layout` (`plan-layout` against the fixtures in `scripts/fixtures`) |
+| `make lint-docs` | relative links and `#anchors` resolve, every Mermaid block parses (mermaid-cli, required in CI), SVG rules from `STYLE.md`, no orphan SVG, no image without alt text |
+| `make lint-site` | `site/` pages load nothing from another origin, links and images exist, alt text, and `tools/check-explorer` (Node, required in CI) holds `site/layout.js` to the same golden files as `plan-layout` |
+| `make site` | assembles `_site/` for a local preview (`python3 -m http.server --directory _site`) |
 | `make lint-java` | Checkstyle, `-Werror` compile, dependency approval, checksums |
 | `make install-git-hooks` | opt-in hooks: pre-commit runs `make lint`, commit-msg runs `tools/check-commit-title` and `tools/check-description` |
 | `tools/check-commit-title` | Conventional Commits titles with a Google-style subject (section 8). CI checks every PR title and commit |
@@ -66,7 +71,7 @@ These rules apply to every change, whoever makes it. If a rule and a request con
 
 ## 8. Git
 
-- **Commit titles** use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) types with a subject written to Google's guidance for change descriptions. PR titles follow the same rules, because a squash merge turns the PR title into the commit title. `tools/check-commit-title` enforces them.
+- **Commit titles** use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) types with a subject written to Google's guidance for change descriptions. PR titles follow the same rules, because a squash merge turns the PR title into the commit title, and a rebase merge keeps every commit, so each commit title and description follow them too. `tools/check-commit-title` enforces them.
   - Format `type(scope)!: subject`. `type` is one of `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`. The scope and `!` (breaking change) are optional. No ticket prefix.
   - The subject completes "If applied, this commit will ...": imperative and lowercase, `docs(network): add ethtool reference`, not `docs(network): Added ethtool reference`.
   - Specific: `fix: pin IRQs of bulk NICs to housekeeping CPUs`, not `fix: bug` or `chore: update files`.

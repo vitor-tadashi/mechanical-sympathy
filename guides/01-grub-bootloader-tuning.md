@@ -318,6 +318,8 @@ kill $SPIN
 
 `scripts/verify-tuning` runs checks 1–5 for every guide and prints a PASS/WARN/FAIL report.
 
+After every kernel update, check that the **new** entry kept these arguments before you reboot into it: `grubby --info=ALL`, or `scripts/11-day2-operations --verify` ([Guide 11 §3](11-day2-operations.md#3-kernel-updates)).
+
 ## 8. Troubleshooting
 
 ```mermaid
