@@ -90,7 +90,7 @@ The burst brings 6,000 packets and software drains 2,250 of them meanwhile, so 3
 
 Two consequences that surprise people:
 
-- **The ring must hold the whole excess of the burst.** Draining faster helps as much as growing the ring, and the two multiply: a second IRQ CPU halves the excess.
+- **The ring must hold the whole excess of the burst.** Draining faster helps as much as growing the ring, and the two multiply. With two drain CPUs the excess is `arrival - 2 x drain`: at 4 Mpps against 1.5 Mpps per CPU it falls from 2.5 Mpps to 1 Mpps, and it is zero once the combined drain reaches the arrival rate.
 - **Coalescing eats ring headroom.** While the NIC waits for `rx-usecs`, packets pile up in the ring. With `rx-usecs 50` at 1 Mpps, 50 slots are already used before the first interrupt fires. This is one more reason the guides set `rx-usecs 0` on critical NICs.
 
 ## 4. Socket buffers
@@ -148,16 +148,16 @@ ss -umn 'sport = :5000'
 flowchart TD
   s(["Symptom: packets are missing"]) --> q1{"ethtool -S moved?"}
   q1 -- yes --> f1["NIC or ring full: raise the ring, give the IRQ CPU less work, check PAUSE"]
-  q1 -- no --> q2{"nstat drops moved?"}
-  q2 -- yes --> f2["Socket full: SO_RCVBUF and rmem_max, or the reader is too slow"]
+  q1 -- no --> q2{"softnet column 3?"}
+  q2 -- yes --> f2["Softirq out of budget: more IRQ CPUs and queues, or busy polling"]
   q2 -- no --> q3{"softnet column 2?"}
   q3 -- yes --> f3["Backlog full (RPS, loopback, veth): netdev_max_backlog, or turn RPS off"]
-  q3 -- no --> q4{"softnet column 3?"}
-  q4 -- yes --> f4["Softirq out of budget: more IRQ CPUs and queues, or busy polling"]
+  q3 -- no --> q4{"nstat drops moved?"}
+  q4 -- yes --> f4["Socket full: SO_RCVBUF and rmem_max, or the reader is too slow"]
   q4 -- no --> f5["Not on this host: check the switch, the sender and your own queue"]
 ```
 
-*Starting from missing packets, check the NIC counters first, then the socket counters, then the two softnet columns, and only then look outside the host.*
+*Starting from missing packets, check the stages in the order the packet crosses them: the NIC counters, the two softnet columns, the socket counters, and only then look outside the host. If several moved, fix the earliest.*
 
 <details>
 <summary><b>Commands to read every counter, twice, with the change between</b></summary>
@@ -221,7 +221,7 @@ A **VI** (virtual interface) is one set of hardware queues that one process owns
 | `EF_RXQ_SIZE`, `EF_TXQ_SIZE` | 512 (allowed: 512, 1024, 2048, 4096) | descriptors in the VI's RX and TX rings: the same idea as `ethtool -G`, but per stack |
 | `EF_MAX_PACKETS` | 32768 | packet buffers per stack, 2 KiB each, so 64 MiB |
 | `EF_MAX_RX_PACKETS`, `EF_MAX_TX_PACKETS` | 24576 each | the share of those buffers the receive or transmit path may use |
-| `EF_RXQ_LIMIT` | 65535 | the highest fill level of the RX ring |
+| `EF_RXQ_LIMIT` | 65535 | a software cap on how full Onload lets the RX ring get. It does not add ring capacity, so size the ring with `EF_RXQ_SIZE` and leave this at its default |
 | `EF_UDP_RCVBUF`, `EF_TCP_RCVBUF` | 0 (do not override `SO_RCVBUF`) | the socket buffer, as in §4 |
 | `EF_PREFAULT_PACKETS` | 1 | how many packet buffers to touch at stack creation. Set it to the number you expect to use ([Guide 08 §5.3](../guides/08-kernel-bypass.md#53-the-application-profile)) |
 
