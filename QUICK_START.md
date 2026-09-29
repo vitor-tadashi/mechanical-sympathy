@@ -54,7 +54,7 @@ sudo scripts/apply-all --apply && sudo systemctl reboot
 scripts/verify-tuning
 ```
 
-**Also, on every host:** time synchronization with chrony, or PTP on the timing NIC, with the daemons pinned to a housekeeping CPU ([Guide 10](guides/10-time-sync.md)). `apply-all` runs it after Guide 07.
+**Also, on every host:** time synchronization with chrony, or PTP on the timing NIC, with the daemons pinned to a housekeeping CPU ([Guide 10](guides/10-time-sync.md)). `apply-all` runs it after Guide 07. It also installs the [verification timer of Guide 11](guides/11-day2-operations.md), so the host reports its own drift.
 
 **Time:** half a day for the first host, including the reboot and verification. Subsequent hosts with the same hardware take minutes (same `lowlat.conf`).
 

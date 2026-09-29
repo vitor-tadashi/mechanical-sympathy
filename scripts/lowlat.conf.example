@@ -212,3 +212,14 @@ PTP_INTERFACE=""
 # CPUs for chronyd / ptp4l / phc2sys: a housekeeping CPU, never an isolated one.
 # The reference host serves the timing NIC's interrupts on CPU 0.
 TIME_SYNC_CPUS=(0)
+
+# -----------------------------------------------------------------------------
+# Day-2 operations (Guide 11)
+# -----------------------------------------------------------------------------
+
+# yes | no. Install lowlat-verify.timer, which runs verify-tuning on a schedule and
+# 10 minutes after every boot, on the OS CPUs. A FAIL makes the unit fail.
+DAY2_VERIFY_TIMER=yes
+
+# systemd OnCalendar expression for the scheduled run.
+DAY2_VERIFY_SCHEDULE=daily

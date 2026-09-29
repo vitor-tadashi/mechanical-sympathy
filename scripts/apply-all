@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# apply-all - applies Guides 00-08 and 10 in order, or re-applies their runtime part.
+# apply-all - applies Guides 00-08, 10 and 11 in order, or re-applies their runtime part.
 #
 #   --plan      print what each capability would do on this host class, change nothing
 #   --dry-run   print every command and file, change nothing
@@ -36,6 +36,8 @@ SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 . "${SCRIPTS_DIR}/08-kernel-bypass"
 # shellcheck source=10-time-sync
 . "${SCRIPTS_DIR}/10-time-sync"
+# shellcheck source=11-day2-operations
+. "${SCRIPTS_DIR}/11-day2-operations"
 
 RUNTIME_UNIT=/etc/systemd/system/lowlat-runtime.service
 
@@ -58,7 +60,7 @@ print_plan() {
 	local capability decision
 	printf 'host_class=%s\n' "${HOST_CLASS}"
 	for capability in bios_firmware latency_grub isolation_grub core_isolation irqbalance_disable rt_throttling \
-		huge_pages sysctl os_hygiene time_sync cgroup_isolation nic_tuning nic_irq_affinity kernel_bypass; do
+		huge_pages sysctl os_hygiene time_sync cgroup_isolation nic_tuning nic_irq_affinity kernel_bypass day2_operations; do
 		decision="$(capability_decision "${capability}")"
 		printf '%-20s %s\n' "${capability}" "${decision}"
 	done
@@ -66,6 +68,7 @@ print_plan() {
 	printf '%-20s %s\n' remove_netfilter "${REMOVE_NETFILTER_MODULES:-no}"
 	printf '%-20s %s\n' bypass_stack "${KERNEL_BYPASS_STACK:-none}"
 	printf '%-20s %s\n' time_sync_mode "${TIME_SYNC_MODE:-none}"
+	printf '%-20s %s\n' day2_verify_timer "${DAY2_VERIFY_TIMER:-yes}"
 }
 
 install_runtime_unit() {
@@ -93,6 +96,7 @@ apply_all() {
 	apply_cgroup_isolation              # 05
 	apply_kernel_bypass                 # 08 (before 04: a driver reload resets the NICs)
 	apply_network                       # 04 (runtime)
+	apply_day2_operations               # 11 (verification timer)
 	log_step "Boot-time re-application of runtime settings"
 	install_runtime_unit
 	print_step_timing_table

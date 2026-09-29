@@ -14,7 +14,7 @@ Every guide explains **what the kernel does**, **why each value is chosen**, **h
 
 ## Start here (5 minutes)
 
-- **What it is:** eleven guides, and one script per guide, that make a RHEL 8/9 host quiet and predictable for a few latency-critical threads.
+- **What it is:** twelve guides, and one script per guide, that make a RHEL 8/9 host quiet and predictable for a few latency-critical threads.
 - **What you get:** a much shorter tail. p99.9 and max typically drop several-fold, and p50 improves modestly. You measure it on your own workload.
 - **What it costs:** power, throughput, flexibility, and in places security. Read [Read this first](#read-this-first) before applying anything.
 
@@ -75,6 +75,7 @@ Every guide explains **what the kernel does**, **why each value is chosen**, **h
 | 08 | [Kernel bypass (Onload, DPDK)](guides/08-kernel-bypass.md) | [`08-kernel-bypass`](scripts/08-kernel-bypass) | 4 (optional) | DPDK: yes (IOMMU) | ✅ | SR-IOV VF only |
 | 09 | [Measuring latency](guides/09-measuring-latency.md) (first, and after every guide) | [`09-measure-latency`](scripts/09-measure-latency) | 1 | no | ✅ | ✅ (no SMI count) |
 | 10 | [Time synchronization (chrony, PTP)](guides/10-time-sync.md) | [`10-time-sync`](scripts/10-time-sync) | 2 | no | ✅ | chrony / `ptp_kvm` |
+| 11 | [Day-2 operations: keeping a host tuned](guides/11-day2-operations.md) | [`11-day2-operations`](scripts/11-day2-operations) | 1 | no | ✅ | ✅ |
 
 Plus:
 
@@ -115,7 +116,7 @@ sudo vi /etc/lowlat/lowlat.conf              # describe your CPUs, NICs and memo
 
 scripts/apply-all --plan                     # what applies on this host class
 scripts/apply-all --dry-run | less           # every command and file, nothing changed
-sudo scripts/apply-all --apply               # apply 00-08 and 10 + install lowlat-runtime.service
+sudo scripts/apply-all --apply               # apply 00-08, 10 and 11 + install lowlat-runtime.service
 sudo systemctl reboot
 scripts/verify-tuning                        # PASS/WARN/FAIL for every guide
 ```
@@ -148,7 +149,7 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 .
 ├── README.md  QUICK_START.md  INDEX.md  CHEATSHEET.md  FAQ.md  STYLE.md
 ├── CONTRIBUTING.md  SECURITY.md  CITATION.cff  AGENTS.md
-├── guides/          00..10 step-by-step guides
+├── guides/          00..11 step-by-step guides
 ├── concepts/        6 deep dives
 ├── examples/        use-cases/ (8 stories), Java on a tuned host (+ runnable probe), multi-NIC segmentation
 ├── assets/          diagrams/ (20 hand-written SVGs), social-preview.svg (source of the repository card)
@@ -157,7 +158,7 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 └── scripts/
     ├── lib/common            logging, dry-run, host class, backups, CPU list helpers
     ├── lowlat.conf.example    the host description
-    ├── 00..10-*               one script per guide (--apply / --dry-run / --verify / --rollback)
+    ├── 00..11-*               one script per guide (--apply / --dry-run / --verify / --rollback)
     ├── apply-all              sequencing + step timing
     ├── verify-tuning          read-only report
     ├── plan-layout            propose or check the CPU layout of lowlat.conf

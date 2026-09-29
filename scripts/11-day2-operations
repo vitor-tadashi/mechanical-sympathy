@@ -1,0 +1,154 @@
+#!/usr/bin/env bash
+#
+# 11-day2-operations - keep a tuned host tuned (Guide 11).
+#
+#   install_verify_timer       lowlat-verify.service and lowlat-verify.timer: verify-tuning on
+#                              a schedule and ten minutes after every boot, on the OS CPUs
+#   all_kernel_entries_isolated   every installed kernel entry carries the isolation arguments
+#   verify_day2_operations     timer enabled, last run not failed, kernel entries carry isolcpus
+#
+# DAY2_VERIFY_TIMER (yes or no) and DAY2_VERIFY_SCHEDULE (a systemd OnCalendar expression)
+# come from lowlat.conf. The timer only runs the read-only report: a FAIL makes the unit
+# fail, so drift shows up in `systemctl --failed` and in the journal.
+
+set -Eeuo pipefail
+# shellcheck source=lib/common
+. "$(dirname "${BASH_SOURCE[0]}")/lib/common"
+
+SYSTEMD_UNIT_DIR="${SYSTEMD_UNIT_DIR:-/etc/systemd/system}"
+VERIFY_UNIT=lowlat-verify
+REPORT_DIR="${LOWLAT_STATE_DIR}/reports"
+
+# day2_defaults - lowlat.conf files written before Guide 11 have no DAY2_* keys.
+day2_defaults() {
+	DAY2_VERIFY_TIMER="${DAY2_VERIFY_TIMER:-yes}"
+	DAY2_VERIFY_SCHEDULE="${DAY2_VERIFY_SCHEDULE:-daily}"
+	[[ -n "${OS_CPUS+set}" ]] || OS_CPUS=()
+	return 0
+}
+
+install_verify_timer() {
+	local cpus config
+	day2_defaults
+	log_step "Verification timer (DAY2_VERIFY_TIMER=${DAY2_VERIFY_TIMER})"
+	if [[ "${DAY2_VERIFY_TIMER}" != yes ]]; then
+		log_sub_step "DAY2_VERIFY_TIMER is not yes, not installing the timer"
+		return 0
+	fi
+	require_capability day2_operations || return 0
+	cpus="${OS_CPUS[*]}"
+	config="${LOWLAT_CONFIG}"
+	log_sub_step "Writing ${VERIFY_UNIT}.service (ExecStart=${LOWLAT_SCRIPTS_DIR}/verify-tuning, CPUs: ${cpus:-any})"
+	write_file "${SYSTEMD_UNIT_DIR}/${VERIFY_UNIT}.service" <<EOF
+# Managed by mechanical-sympathy 11-day2-operations
+[Unit]
+Description=Verify the low-latency tuning (read-only report)
+ConditionPathExists=${config}
+
+[Service]
+Type=oneshot
+Environment=LOWLAT_CONFIG=${config}
+ExecStartPre=/usr/bin/mkdir -p ${REPORT_DIR}
+# verify-tuning exits 5 when a check FAILs, which marks this unit as failed.
+ExecStart=${LOWLAT_SCRIPTS_DIR}/verify-tuning --report ${REPORT_DIR}/verify-latest.txt
+SyslogIdentifier=${VERIFY_UNIT}
+Nice=19
+IOSchedulingClass=idle
+${cpus:+CPUAffinity=${cpus}}
+EOF
+	log_sub_step "Writing ${VERIFY_UNIT}.timer (${DAY2_VERIFY_SCHEDULE}, and 10 min after every boot)"
+	write_file "${SYSTEMD_UNIT_DIR}/${VERIFY_UNIT}.timer" <<EOF
+# Managed by mechanical-sympathy 11-day2-operations
+[Unit]
+Description=Verify the low-latency tuning on a schedule
+
+[Timer]
+OnBootSec=10min
+OnCalendar=${DAY2_VERIFY_SCHEDULE}
+Persistent=true
+RandomizedDelaySec=15min
+
+[Install]
+WantedBy=timers.target
+EOF
+	run systemctl daemon-reload
+	run systemctl enable --now "${VERIFY_UNIT}.timer"
+}
+
+# --- verification (read-only) ------------------------------------------------
+
+# all_kernel_entries_isolated - predicate: every installed kernel entry (the rescue entry
+# aside) has isolcpus on its command line. True when grubby is missing or lists nothing.
+all_kernel_entries_isolated() {
+	local entries
+	command -v grubby >/dev/null 2>&1 || return 0
+	entries="$(grubby --info=ALL 2>/dev/null || true)"
+	[[ -n "${entries}" ]] || return 0
+	awk '/^kernel=/ { rescue = ($0 ~ /rescue/) }
+		/^args=/ && !rescue { n++; if ($0 !~ /isolcpus=/) bad++ }
+		END { exit !(n == 0 || bad == 0) }' <<<"${entries}"
+}
+
+verify_day2_operations() {
+	local report written
+	day2_defaults
+	if [[ "${DAY2_VERIFY_TIMER}" == yes ]] && host_allows_apply; then
+		verify_check "${VERIFY_UNIT}.timer is enabled" systemctl is-enabled --quiet "${VERIFY_UNIT}.timer"
+		verify_soft "${VERIFY_UNIT}.timer is active" systemctl is-active --quiet "${VERIFY_UNIT}.timer"
+		verify_soft "the last ${VERIFY_UNIT} run did not fail" not systemctl is-failed --quiet "${VERIFY_UNIT}.service"
+		report="${REPORT_DIR}/verify-latest.txt"
+		if [[ -f "${report}" ]]; then
+			written="$(date -r "${report}" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || true)"
+			verify_info "latest report: ${report}, written ${written:-n/a}"
+		else
+			verify_info "no report yet: the timer has not run"
+		fi
+	else
+		verify_info "verification timer not managed here (DAY2_VERIFY_TIMER=${DAY2_VERIFY_TIMER}, host_class=${HOST_CLASS})"
+	fi
+	if host_is_bare_metal && ((${#ISOLATED_CPUS[@]} > 0)); then
+		verify_soft "every installed kernel entry carries isolcpus (a new kernel would boot untuned otherwise)" all_kernel_entries_isolated
+	fi
+	verify_result
+}
+
+apply_day2_operations() {
+	install_verify_timer
+}
+
+rollback_day2_operations() {
+	day2_defaults
+	log_step "Verification timer"
+	log_sub_step "Disabling ${VERIFY_UNIT}.timer"
+	run_quiet systemctl disable --now "${VERIFY_UNIT}.timer"
+	log_sub_step "Removing the units and the reports"
+	run rm -f "${SYSTEMD_UNIT_DIR}/${VERIFY_UNIT}.service" "${SYSTEMD_UNIT_DIR}/${VERIFY_UNIT}.timer"
+	run rm -rf "${REPORT_DIR}"
+	run systemctl daemon-reload
+}
+
+main() {
+	parse_mode_args "$@" || true
+	case "${MODE}" in
+	apply)
+		require_root
+		load_config
+		apply_day2_operations
+		print_step_timing_table
+		;;
+	verify)
+		load_config
+		verify_day2_operations
+		;;
+	rollback)
+		require_root
+		load_config
+		rollback_day2_operations
+		;;
+	*) print_usage ;;
+	esac
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+	main "$@"
+fi
