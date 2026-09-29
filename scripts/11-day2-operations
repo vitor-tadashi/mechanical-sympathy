@@ -28,7 +28,7 @@ day2_defaults() {
 }
 
 install_verify_timer() {
-	local cpus config
+	local cpus config config_dir dir=.
 	day2_defaults
 	log_step "Verification timer (DAY2_VERIFY_TIMER=${DAY2_VERIFY_TIMER})"
 	if [[ "${DAY2_VERIFY_TIMER}" != yes ]]; then
@@ -38,6 +38,11 @@ install_verify_timer() {
 	require_capability day2_operations || return 0
 	cpus="${OS_CPUS[*]}"
 	config="${LOWLAT_CONFIG}"
+	# systemd ignores a relative ConditionPathExists, and the service starts elsewhere: embed an absolute path.
+	[[ "${config}" == */* ]] && dir="${config%/*}"
+	if config_dir="$(cd "${dir}" 2>/dev/null && pwd -P)"; then
+		config="${config_dir}/${config##*/}"
+	fi
 	log_sub_step "Writing ${VERIFY_UNIT}.service (ExecStart=${LOWLAT_SCRIPTS_DIR}/verify-tuning, CPUs: ${cpus:-any})"
 	write_file "${SYSTEMD_UNIT_DIR}/${VERIFY_UNIT}.service" <<EOF
 # Managed by mechanical-sympathy 11-day2-operations
@@ -78,14 +83,15 @@ EOF
 # --- verification (read-only) ------------------------------------------------
 
 # all_kernel_entries_isolated - predicate: every installed kernel entry (the rescue entry
-# aside) has isolcpus on its command line. True when grubby is missing or lists nothing.
+# aside) has isolcpus, nohz_full and rcu_nocbs on its command line. True when grubby is
+# missing or lists nothing.
 all_kernel_entries_isolated() {
 	local entries
 	command -v grubby >/dev/null 2>&1 || return 0
 	entries="$(grubby --info=ALL 2>/dev/null || true)"
 	[[ -n "${entries}" ]] || return 0
 	awk '/^kernel=/ { rescue = ($0 ~ /rescue/) }
-		/^args=/ && !rescue { n++; if ($0 !~ /isolcpus=/) bad++ }
+		/^args=/ && !rescue { n++; if ($0 !~ /isolcpus=/ || $0 !~ /nohz_full=/ || $0 !~ /rcu_nocbs=/) bad++ }
 		END { exit !(n == 0 || bad == 0) }' <<<"${entries}"
 }
 
@@ -107,7 +113,7 @@ verify_day2_operations() {
 		verify_info "verification timer not managed here (DAY2_VERIFY_TIMER=${DAY2_VERIFY_TIMER}, host_class=${HOST_CLASS})"
 	fi
 	if host_is_bare_metal && ((${#ISOLATED_CPUS[@]} > 0)); then
-		verify_soft "every installed kernel entry carries isolcpus (a new kernel would boot untuned otherwise)" all_kernel_entries_isolated
+		verify_soft "every installed kernel entry carries isolcpus, nohz_full and rcu_nocbs (a new kernel would boot untuned otherwise)" all_kernel_entries_isolated
 	fi
 	verify_result
 }

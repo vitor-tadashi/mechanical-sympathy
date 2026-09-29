@@ -52,8 +52,10 @@ NICS=(
 
 ```bash
 scripts/04-network --dry-run | less
-sudo scripts/04-network --apply                     # installs lowlat-runtime.service: settings survive a reboot
+sudo scripts/04-network --apply                     # applies now. These settings are runtime-only
 ```
+
+`04-network` does not survive a reboot on its own: `lowlat-runtime.service` re-applies it at every boot, and `sudo scripts/apply-all --apply` is what installs that unit ([Guide 04 §8](../../guides/04-network-optimization.md#8-persistence)). If you applied only this guide, run `systemctl is-enabled lowlat-runtime.service` and install the unit before you rely on the result.
 
 Behind that one call, for each critical NIC, in this order ([Guide 04 §5](../../guides/04-network-optimization.md#5-per-nic-settings-tune_nic_low_latency)): queues equal to the number of IRQ CPUs, adaptive coalescing off, coalescing 0, PAUSE off, TSO/GSO/LRO off, rings at maximum, then the IRQs placed. The placement is the part this story is about:
 

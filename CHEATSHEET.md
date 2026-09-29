@@ -109,4 +109,4 @@ Always compare against the baseline you took before tuning.
 |---|---|---|
 | Timer installed | `systemctl list-timers lowlat-verify.timer` | a NEXT time |
 | Last report | `systemctl show -p Result --value lowlat-verify.service` | `success` |
-| Kernel entries keep the arguments | `grubby --info=ALL \| grep -E '^(kernel\|args)='` | `isolcpus=` on every entry but rescue |
+| Kernel entries keep the arguments | `grubby --info=ALL \| grep -E '^(kernel\|args)='` | `isolcpus=`, `nohz_full=` and `rcu_nocbs=` on every entry but rescue |
