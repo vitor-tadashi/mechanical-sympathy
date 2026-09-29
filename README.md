@@ -4,6 +4,8 @@
 
 > *"You don't have to be an engineer to be a racing driver, but you do have to have mechanical sympathy."* — Jackie Stewart
 
+I wrote this for the engineer I was when I started: a fast application, a slow tail, and no idea where the missing microseconds went. The answer was never in one place. It was in the firmware, the kernel, the network card, the memory and, in the end, in my own code, and it only made sense when I saw them together.
+
 A field guide, with working scripts, for turning a Red Hat Enterprise Linux 8/9 server into a **deterministic, low-jitter host** for applications that must answer within microseconds, every time: request/response and RPC services, messaging and IPC layers, stream and event processors, real-time analytics, telemetry and control loops, and packet-processing pipelines. If your problem is the tail (p99.9 and beyond) rather than the average, and a stray interrupt or page fault costs more than it saves, these guides apply.
 
 Every guide explains **what the kernel does**, **why each value is chosen**, **how to verify it**, and **how to undo it**. Every guide ships with a shell script whose functions implement exactly what the guide describes, with a `--dry-run` mode that shows every command and file before anything changes.
@@ -60,7 +62,18 @@ Every guide explains **what the kernel does**, **why each value is chosen**, **h
 - Kernel command-line changes require a reboot, and a mistake can prevent the host from booting. Have out-of-band console access.
 - Measure before and after. A configuration that is verified correct is not the same as a latency improvement you have measured.
 
-**Do not apply** when: the application has not been profiled; several unrelated applications share the host; nobody owns the CPU layout; or the host is a VM and you expect bare-metal isolation.
+**Do not apply** when: the application has not been profiled; several unrelated applications share the host; nobody owns the CPU layout; the application runs hundreds of threads it does not control; or the host is a VM and you expect bare-metal isolation.
+
+## What tuning cannot do for you
+
+Everything here removes noise that comes from outside your application. None of it fixes noise your application makes itself.
+
+- **You need to know your own threads.** Isolation, pinning and busy-spinning assume you can say which threads are critical, what each one waits for and who writes to what. If you cannot, start there.
+- **Your data structures set the ceiling.** Cache lines, false sharing, single-writer designs and queues that never block matter more than any setting. A quiet host still loses to a lock, an allocation or a cache miss on the hot path.
+- **Hundreds of threads cannot be tuned.** A pool that grows and shrinks on its own has no one-thread-per-CPU layout to protect, and isolation only leaves CPUs idle. Bring the count down to a few threads whose roles you control, and tune after that.
+- **Measure to learn which case you are in.** A histogram with a comb on it is the host. A slow, wide body is usually the design ([Guide 09 section 7](guides/09-measuring-latency.md#7-reading-the-results)).
+
+If that sounds like your application, fix the application first. These guides will still be here, and they will work far better for it. Start with [caches and coherence](concepts/cpu-isolation.md#5-caches-and-coherence-the-mechanical-sympathy-part), [pinning the application](guides/02-cpu-core-isolation.md#6-pinning-the-application) and the [Java example](examples/hugepages-java-example.md).
 
 ## What is included
 
@@ -169,6 +182,20 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
     ├── fixtures/              lscpu fixtures and golden proposals for plan-layout
     └── systemd/lowlat-runtime.service
 ```
+
+## A note from the author
+
+Nobody hands you this knowledge. You earn it one spike at a time: a histogram with a comb on it, a CPU that should be silent and is not, a host that behaves in the lab and misbehaves the day it matters. Most of it was patient, unglamorous work, and a lot of it was wrong before it was right.
+
+Then, slowly, the layers line up. The firmware stops being a menu and becomes the floor everything else stands on. The kernel stops being a black box and becomes clocks, queues and interrupts you can name. The network card, the memory, the scheduler and your own threads become one machine, and you begin to hear it.
+
+That is the feeling I wanted to hand over. Once you can follow one packet from the wire to your code and say why it waited, you stop applying settings and start understanding systems. You can walk up to almost any application and know where to look first.
+
+It only works because you understand your side too. Threads, memory, data structures: the host can be made quiet, but it cannot make a design fast. If you can control your application, this repository will take you the rest of the way. If you cannot yet, learning to control it is the best tuning there is.
+
+Use what helps, question what does not, and measure everything. If it saves you one night of chasing microseconds, it was worth writing down.
+
+Vitor Tadashi
 
 ## License
 
