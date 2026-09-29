@@ -224,3 +224,28 @@ textarea { font-family: var(--mono); font-size: 13px; min-height: 140px; }
 	font-weight: 600;
 }
 .hidden { display: none; }
+
+/* Buffer simulator */
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+.verdict {
+	border-left: 4px solid var(--mut-line);
+	border-radius: 6px;
+	padding: 12px 16px;
+	margin-bottom: 16px;
+	font-weight: 600;
+	background: var(--mut-bg);
+	color: var(--cell-fg);
+}
+.verdict.good { background: var(--iso-bg); border-color: var(--iso-line); color: #0b2613; }
+.verdict.bad { background: var(--risk-bg); border-color: var(--risk-line); color: #2b0a0a; }
+
+.chart { margin-top: 0; }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart .ct { font: 600 13px var(--font); fill: #1a1a1a; }
+.chart .ca { font: 11px var(--font); fill: #57606a; }
+.chart .cbox { fill: #f6f8fa; stroke: #d0d7de; }
+.chart .cdrop { fill: #ffc9c9; opacity: 0.85; }
+.chart .ccap { stroke: #9b1c1c; stroke-width: 1.5; stroke-dasharray: 5 3; }
+.chart .cline { fill: none; stroke: #1f4e8c; stroke-width: 2.5; }
+.chart .ctick { stroke: #8c959f; stroke-width: 1; }

@@ -7,8 +7,9 @@
 #   2. every relative link and image exists (diagrams are looked up in assets/diagrams),
 #      every #anchor matches an id, and every link into the repository points at a file that exists
 #   3. every image has a non-empty alt text, and every page has a title, a language and a viewport
-#   4. site/layout.js and scripts/plan-layout agree (tools/check-explorer, needs Node 18 or later;
-#      skipped with a warning on a workstation without it, required when CI=true)
+#   4. site/layout.js and scripts/plan-layout agree (tools/check-explorer), and site/buffers.js and
+#      scripts/size-buffers agree (tools/check-buffers). Both need Node 18 or later; they are
+#      skipped with a warning on a workstation without it, and required when CI=true
 #
 # Usage: tools/lint-site            (from anywhere inside the repository)
 
@@ -88,10 +89,11 @@ done
 
 if command -v node >/dev/null 2>&1; then
 	node tools/check-explorer || failures=$((failures + 1))
+	node tools/check-buffers || failures=$((failures + 1))
 elif [[ "${CI:-}" == "true" ]]; then
-	fail "node not found; CI must run tools/check-explorer"
+	fail "node not found; CI must run tools/check-explorer and tools/check-buffers"
 else
-	printf 'lint-site: warning: node not found, site/layout.js not compared with the goldens; CI checks it\n' >&2
+	printf 'lint-site: warning: node not found, site/layout.js and site/buffers.js not compared with the goldens; CI checks it\n' >&2
 fi
 
 if ((failures > 0)); then

@@ -1,0 +1,1 @@
+--stack kernel --ring 512 --burst-mpps 4 --burst-us 1500 --drain-mpps 1.5 --app-mpps 1 --rcvbuf-bytes 212992 --truesize 2304

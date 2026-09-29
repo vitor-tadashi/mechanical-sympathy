@@ -1,0 +1,209 @@
+#!/usr/bin/env bash
+#
+# size-buffers - how long does a burst last, and how big must the queues be to hold it?
+#
+#   size-buffers [--stack kernel|onload|dpdk] [--burst-mpps R] [--burst-us D] [--pre-us T]
+#                [--idle-mpps R] [--ring N] [--drain-mpps R]
+#                [--rcvbuf-bytes B --truesize T | --buffer-packets N] [--app-mpps R]
+#                [--pause-us D] [--pause-at-us T] [--buf-bytes B] [--queues N]
+#
+# The model is two queues in series, as a fluid in 10 microsecond steps (Concept: network
+# buffers, section 3). Packets arrive into a ring. A drain (NAPI, or a poll-mode core) empties the
+# ring into a second buffer (the socket buffer, the stack's packet buffers, or the mempool).
+# A reader empties that one. A packet that does not fit is dropped and counted.
+#
+# The output says how many packets are dropped at each stage, when the first drop happens, and
+# how big the ring and the second buffer must be to lose nothing in that scenario.
+#
+# The numbers are illustrative: they show the shape of a burst, and they are not a measurement.
+# site/buffers.js is a port of this model for the simulator page, and tools/check-size-buffers
+# and tools/check-buffers keep the two in step.
+
+set -Eeuo pipefail
+SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+
+# shellcheck source=lib/common
+. "${SCRIPTS_DIR}/lib/common"
+
+# One awk program runs the model and prints the report. The same rules are written in
+# site/buffers.js, and the output of the two must be identical.
+model_awk() {
+	cat <<'AWK'
+function ceilp(x,    c) { c = int(x); return (c < x - 1e-9) ? c + 1 : c }
+function rnd(x) { return int(x + 0.5) }
+function pad(s) { return sprintf("%-18s", s) }
+function mpps(x) { return sprintf("%.3f", x) }
+function min(a, b) { return (a < b) ? a : b }
+
+# run(cap1, cap2): a negative capacity means unlimited. Results go to the R_* globals.
+function run(cap1, cap2,    t, endBurst, pauseEnd, horizon, q1, q2, d1, d2, p1, p2, f1, f2, a, r2, out1, out2) {
+	endBurst = pre + burst
+	pauseEnd = (pause > 0) ? pauseAt + pause : 0
+	horizon = ((endBurst > pauseEnd) ? endBurst : pauseEnd) + 50000
+	q1 = 0; q2 = 0; d1 = 0; d2 = 0; p1 = 0; p2 = 0; f1 = -1; f2 = -1
+	for (t = 0; ; t += DT) {
+		a = (t >= pre && t < endBurst) ? rate : idle
+		r2 = (pause > 0 && t >= pauseAt && t < pauseAt + pause) ? 0 : app
+		q1 += a * DT
+		out1 = min(q1, drain * DT)
+		q1 -= out1
+		if (cap1 >= 0 && q1 > cap1) {
+			d1 += q1 - cap1
+			q1 = cap1
+			if (f1 < 0) f1 = t
+		}
+		q2 += out1
+		out2 = min(q2, r2 * DT)
+		q2 -= out2
+		if (cap2 >= 0 && q2 > cap2) {
+			d2 += q2 - cap2
+			q2 = cap2
+			if (f2 < 0) f2 = t
+		}
+		if (q1 > p1) p1 = q1
+		if (q2 > p2) p2 = q2
+		if (t >= endBurst && t >= pauseEnd && q1 < 1e-6 && q2 < 1e-6) break
+		if (t >= horizon) break
+	}
+	R_drop1 = d1; R_drop2 = d2; R_peak1 = p1; R_peak2 = p2; R_first1 = f1; R_first2 = f2
+}
+BEGIN {
+	DT = 10
+	idle += 0; pre += 0; rate += 0; burst += 0; ring += 0; drain += 0; app += 0
+	rcvbuf += 0; truesize += 0; packets += 0; pause += 0; pauseAt += 0; buf += 0; queues += 0
+	if (pauseAt < 0) pauseAt = pre
+
+	if (stack == "onload") {
+		one = "VI RX ring (EF_RXQ_SIZE)"; two = "stack packet buffers (EF_MAX_RX_PACKETS)"
+		c1 = "see onload_stackdump"; c2 = "memory_pressure, oflow_drop"
+	} else if (stack == "dpdk") {
+		one = "RX ring"; two = "mempool and application queue"
+		c1 = "imissed"; c2 = "rx_nombuf, then imissed"
+	} else {
+		one = "RX ring"; two = "socket buffer"
+		c1 = "rx_missed_errors"; c2 = "UdpRcvbufErrors"
+	}
+	cap1 = ring
+	cap2 = (packets > 0) ? packets : int(rcvbuf / truesize)
+
+	run(cap1, cap2)
+	drop1 = R_drop1; drop2 = R_drop2; peak1 = R_peak1; peak2 = R_peak2; first1 = R_first1; first2 = R_first2
+	run(-1, -1)
+	need1 = ceilp(R_peak1); need2 = ceilp(R_peak2)
+
+	print "size-buffers: fluid model in " DT " us steps. Illustrative, not a measurement."
+	print pad("stack") stack
+	print pad("arrival") "idle " mpps(idle) " Mpps, burst " mpps(rate) " Mpps for " burst " us from " pre " us"
+	print pad("stage 1") one ": " ring " packets, drained at " mpps(drain) " Mpps"
+	if (packets > 0)
+		print pad("stage 2") two ": " cap2 " packets, read at " mpps(app) " Mpps"
+	else
+		print pad("stage 2") two ": " cap2 " packets (" rcvbuf " B at " truesize " B each), read at " mpps(app) " Mpps"
+	print pad("reader pause") ((pause > 0) ? pause " us from " pauseAt " us" : "none")
+	print ""
+	print pad("dropped, stage 1") rnd(drop1) " packets (" c1 ")"
+	print pad("dropped, stage 2") rnd(drop2) " packets (" c2 ")"
+	first = "none"
+	if (first1 >= 0 && (first2 < 0 || first1 <= first2)) first = "stage 1 at " first1 " us"
+	else if (first2 >= 0) first = "stage 2 at " first2 " us"
+	print pad("first drop") first
+	print pad("peak fill") "stage 1: " rnd(peak1) " of " cap1 ", stage 2: " rnd(peak2) " of " cap2
+	print ""
+	print "To lose nothing in this scenario:"
+	print pad("ring") need1 " packets, " ceilp(need1 * buf / 1024) " KiB per queue at " buf " B"
+	if (packets > 0)
+		print pad("stage 2") need2 " packets"
+	else if (stack != "onload" && stack != "dpdk")
+		print pad("socket buffer") need2 " packets, " need2 * truesize " B, SO_RCVBUF request " ceilp(need2 * truesize / 2 / 1024) " KiB"
+	else
+		print pad("stage 2") need2 " packets, " need2 * truesize " B"
+	ringKiB = ceilp(ring * buf / 1024)
+	print pad("ring memory now") ringKiB " KiB per queue, " ringKiB * queues " KiB for " queues " queue(s)"
+}
+AWK
+}
+
+usage() {
+	cat <<EOF
+Usage: $(basename "$0") [options]
+Options (defaults in brackets):
+  --stack kernel|onload|dpdk   names the stages and counters [kernel]
+  --burst-mpps R               arrival rate during the burst, million packets/s [4]
+  --burst-us D                 length of the burst, microseconds [1500]
+  --pre-us T                   quiet time before the burst, microseconds [500]
+  --idle-mpps R                arrival rate outside the burst [0]
+  --ring N                     ring size, packets [512]
+  --drain-mpps R               rate at which software empties the ring [1.5]
+  --rcvbuf-bytes B             second buffer, bytes [212992]
+  --truesize T                 bytes charged per packet in the second buffer [2304]
+  --buffer-packets N           second buffer, packets (replaces --rcvbuf-bytes and --truesize)
+  --app-mpps R                 rate at which the reader empties the second buffer [1]
+  --pause-us D                 the reader stops for D microseconds [0]
+  --pause-at-us T              when the pause starts [same as --pre-us]
+  --buf-bytes B                bytes per ring slot, for the memory figure [2048]
+  --queues N                   queues, for the memory figure [1]
+Example: the burst of Concept: network buffers section 3
+  $(basename "$0") --ring 512 --burst-mpps 4 --burst-us 1500 --drain-mpps 1.5
+EOF
+}
+
+STACK=kernel IDLE=0 PRE=500 RATE=4 BURST=1500 RING=512 DRAIN=1.5 APP=1
+RCVBUF=212992 TRUESIZE=2304 PACKETS=0 PAUSE=0 PAUSE_AT=-1 BUF=2048 QUEUES=1
+
+is_number() { [[ "$1" =~ ^[0-9]+(\.[0-9]+)?$ ]]; }
+
+# take_number VARIABLE FLAG VALUE - set VARIABLE to VALUE, or stop when it is not a number.
+take_number() {
+	is_number "$3" || die "$2 takes a number" "${EXIT_USAGE}"
+	printf -v "$1" '%s' "$3"
+}
+
+while (($# > 0)); do
+	flag="$1"
+	if [[ "${flag}" != -h && "${flag}" != --help ]]; then
+		(($# >= 2)) || {
+			usage >&2
+			die "${flag} needs a value" "${EXIT_USAGE}"
+		}
+	fi
+	case "${flag}" in
+	-h | --help)
+		usage
+		exit "${EXIT_OK}"
+		;;
+	--stack)
+		case "$2" in
+		kernel | onload | dpdk) STACK="$2" ;;
+		*) die "--stack is kernel, onload or dpdk" "${EXIT_USAGE}" ;;
+		esac
+		;;
+	--idle-mpps) take_number IDLE "${flag}" "$2" ;;
+	--pre-us) take_number PRE "${flag}" "$2" ;;
+	--burst-mpps) take_number RATE "${flag}" "$2" ;;
+	--burst-us) take_number BURST "${flag}" "$2" ;;
+	--ring) take_number RING "${flag}" "$2" ;;
+	--drain-mpps) take_number DRAIN "${flag}" "$2" ;;
+	--app-mpps) take_number APP "${flag}" "$2" ;;
+	--rcvbuf-bytes) take_number RCVBUF "${flag}" "$2" ;;
+	--truesize) take_number TRUESIZE "${flag}" "$2" ;;
+	--buffer-packets) take_number PACKETS "${flag}" "$2" ;;
+	--pause-us) take_number PAUSE "${flag}" "$2" ;;
+	--pause-at-us) take_number PAUSE_AT "${flag}" "$2" ;;
+	--buf-bytes) take_number BUF "${flag}" "$2" ;;
+	--queues) take_number QUEUES "${flag}" "$2" ;;
+	*)
+		usage >&2
+		die "unknown argument: ${flag}" "${EXIT_USAGE}"
+		;;
+	esac
+	shift 2
+done
+
+[[ "${TRUESIZE}" != 0 ]] || die "--truesize must be more than 0" "${EXIT_USAGE}"
+[[ "${BUF}" != 0 ]] || die "--buf-bytes must be more than 0" "${EXIT_USAGE}"
+
+PROGRAM="$(model_awk)"
+awk -v stack="${STACK}" -v idle="${IDLE}" -v pre="${PRE}" -v rate="${RATE}" -v burst="${BURST}" \
+	-v ring="${RING}" -v drain="${DRAIN}" -v app="${APP}" -v rcvbuf="${RCVBUF}" -v truesize="${TRUESIZE}" \
+	-v packets="${PACKETS}" -v pause="${PAUSE}" -v pauseAt="${PAUSE_AT}" -v buf="${BUF}" -v queues="${QUEUES}" \
+	"${PROGRAM}" </dev/null

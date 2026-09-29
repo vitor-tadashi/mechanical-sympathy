@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buffer Simulator</title>
+<meta name="description" content="Change a burst, a ring size and a socket buffer, and see when packets are dropped, at which stage, and how big each queue must be to lose nothing.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+	<div class="wrap">
+		<a class="brand" href="index.html">Mechanical Sympathy</a>
+		<nav aria-label="Main">
+			<a href="index.html#guides">Guides</a>
+			<a href="index.html#use-cases">Use cases</a>
+			<a href="explorer.html">Layout explorer</a>
+			<a href="buffers.html" aria-current="page">Buffer simulator</a>
+			<a href="https://github.com/vitor-tadashi/mechanical-sympathy">GitHub</a>
+		</nav>
+	</div>
+</header>
+
+<main class="wrap">
+	<h1>Buffer simulator</h1>
+	<p class="lead">A burst arrives, a ring holds it, software drains the ring into a second buffer, and a reader empties that one. Change any of them and see where the packets are lost. The model is the one in <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/network-buffers.md#3-burst-math">Concept: network buffers, section 3</a>.</p>
+	<p class="small">It runs in your browser, sends nothing anywhere, and gives the same answer as <code>scripts/size-buffers</code>. The result is <strong>illustrative</strong>: it shows the shape of a burst, and it is not a measurement of your host.</p>
+
+	<div class="explorer sim">
+		<div>
+			<div class="panel">
+				<h2>Start from a scenario</h2>
+				<div class="presets" id="presets"></div>
+				<p class="small" id="preset-text"></p>
+			</div>
+
+			<div class="panel" style="margin-top:16px">
+				<h2>The stack</h2>
+				<div class="field">
+					<label for="stack">Names the stages and counters</label>
+					<select id="stack">
+						<option value="kernel">Kernel stack: RX ring, socket buffer</option>
+						<option value="onload">Onload: VI RX ring, stack packet buffers</option>
+						<option value="dpdk">DPDK: RX ring, mempool</option>
+					</select>
+					<span class="hint">DPDK numbers are not proven in production.</span>
+				</div>
+			</div>
+
+			<div class="panel" style="margin-top:16px">
+				<h2>Arrival</h2>
+				<div id="fields-arrival"></div>
+			</div>
+
+			<div class="panel" style="margin-top:16px">
+				<h2>Queues and drains</h2>
+				<div id="fields-queues"></div>
+			</div>
+		</div>
+
+		<div>
+			<div id="verdict" class="verdict" role="status" aria-live="polite"></div>
+
+			<div class="figure chart" id="chart"></div>
+			<p class="small">Blue is the fill of each queue. The dashed line is its capacity. The red bands mark the time when packets are being dropped.</p>
+
+			<h2 style="margin-top:8px">Report</h2>
+			<div class="codewrap">
+				<button id="copy-report" class="btn secondary copy" type="button">Copy</button>
+				<pre id="report" aria-live="polite"></pre>
+			</div>
+
+			<h2>The same run on the command line</h2>
+			<div class="codewrap">
+				<button id="copy-cmd" class="btn secondary copy" type="button">Copy</button>
+				<pre id="cmd"></pre>
+			</div>
+			<p class="small">Then read <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/examples/use-cases/09-the-two-millisecond-burst.md">use case 9</a> for a burst, or <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/examples/use-cases/10-line-rate-without-the-kernel.md">use case 10</a> for an overload that no buffer can hold.</p>
+		</div>
+	</div>
+</main>
+
+<footer>
+	<div class="wrap">
+		<p>The model lives in <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/site/buffers.js"><code>site/buffers.js</code></a>, a port of <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/scripts/size-buffers"><code>scripts/size-buffers</code></a>. <code>tools/check-buffers</code> holds the two to the same golden files. All figures are illustrative.</p>
+	</div>
+</footer>
+
+<script src="buffers.js"></script>
+<script src="buffers-ui.js"></script>
+</body>
+</html>
