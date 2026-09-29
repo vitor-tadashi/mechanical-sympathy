@@ -18,6 +18,9 @@
 # CPU layout (Guides 01, 02, 05)
 # -----------------------------------------------------------------------------
 
+# Not sure which CPUs to pick? scripts/plan-layout proposes the CPU lists below from
+# your topology (Guide 02, section 3).
+#
 # CPUs dedicated to latency-critical application threads. They are removed from
 # the scheduler (isolcpus), run tickless (nohz_full) and have their RCU callbacks
 # offloaded (rcu_nocbs). Node 1 minus CPU 1, which stays as node-1 housekeeping.

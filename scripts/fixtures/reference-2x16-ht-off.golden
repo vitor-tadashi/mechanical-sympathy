@@ -1,0 +1,11 @@
+# plan-layout: proposed CPU layout
+# host: 2 socket(s), 2 NUMA node(s), 32 CPUs, 32 cores, Hyper-Threading off
+# critical NIC on node 1, critical threads: 6
+# node 1: housekeeping core 1 (CPUs 1), isolated cores: 15 (needed 6, spare 9)
+ISOLATED_CPUS=(3 5 7 9 11 13 15 17 19 21 23 25 27 29 31)
+OS_CPUS=(0 1 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
+WORKQUEUE_CPUS=(0 2)
+HOUSEKEEPING_PIN_CPUS=(4)
+HOUSEKEEPING_SLICE_CPUS=(4 6)
+# critical NIC irq_cpus (third field of its NICS entry): 1
+# kernel arguments (Guide 01): isolcpus=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 nohz_full=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 rcu_nocbs=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31

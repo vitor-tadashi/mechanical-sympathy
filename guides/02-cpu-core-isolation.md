@@ -142,6 +142,21 @@ flowchart TD
 
 `OS_CPUS` must be the exact complement of `ISOLATED_CPUS`. The verify step checks this.
 
+**Let the script propose it.** [`scripts/plan-layout`](../scripts/plan-layout) applies the rules above to your topology. It isolates the critical NIC's node except one housekeeping core, keeps CPU 0 and Hyper-Threading siblings together, and refuses when the node cannot hold your threads plus spares:
+
+```bash
+lscpu -e=CPU,NODE,SOCKET,CORE > topology.txt
+scripts/plan-layout --lscpu topology.txt --nic-node 1 --threads 6
+# prints ISOLATED_CPUS, OS_CPUS, WORKQUEUE_CPUS, HOUSEKEEPING_PIN_CPUS, HOUSEKEEPING_SLICE_CPUS
+# and the isolcpus, nohz_full and rcu_nocbs arguments. On the reference host it prints the layout above.
+
+scripts/plan-layout --nic ens1f0 --threads 6              # reads the node from sysfs, runs lscpu itself
+scripts/plan-layout --nic-node 1 --check /etc/lowlat/lowlat.conf   # PASS, WARN or FAIL for a layout you wrote by hand
+```
+
+> [!NOTE]
+> **Not proven in production.** The proposal is a starting point that applies the rules of this section mechanically. Review it against your application's thread roles before you write it into `lowlat.conf`.
+
 ## 4. Moving the operating system away
 
 ### 4.1 systemd `CPUAffinity` (persistent)

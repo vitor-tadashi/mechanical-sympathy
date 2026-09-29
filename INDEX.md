@@ -82,6 +82,7 @@ flowchart TD
 | Script | Use |
 |---|---|
 | [`lowlat.conf.example`](scripts/lowlat.conf.example) | Describe the host. Copy to `/etc/lowlat/lowlat.conf`. |
+| [`plan-layout`](scripts/plan-layout) `--threads N --nic-node N` | Propose the CPU layout of `lowlat.conf` from `lscpu`, or `--check` one you wrote by hand |
 | `NN-* --dry-run / --apply / --verify / --rollback` | One guide at a time (00–10). `09-measure-latency --run` captures a measurement bundle. |
 | [`apply-all`](scripts/apply-all) `--plan / --dry-run / --apply / --runtime` | All guides in order, with step timing |
 | [`verify-tuning`](scripts/verify-tuning) `[--report FILE]` | Read-only PASS/WARN/FAIL for everything |
