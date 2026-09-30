@@ -415,6 +415,13 @@ coalesce_is() { # coalesce_is <iface> <key> <value>
 	[[ "${actual}" == "$3" ]]
 }
 
+# coalesce_reported <iface> - true when the driver reports coalescing (apply skips it otherwise).
+coalesce_reported() {
+	local actual
+	actual="$(nic_setting "$1" rx_usecs)"
+	[[ -n "${actual}" ]]
+}
+
 queues_are() { # queues_are <iface> <count>
 	local actual
 	actual="$(ethtool_current "$1" -l Combined)"
@@ -481,8 +488,12 @@ verify_network() {
 		[[ "${role}" == mgmt ]] && continue
 		usecs=0
 		[[ "${role}" == bulk ]] && usecs="${NIC_BULK_COALESCE_USECS:-0}"
-		verify_check "${iface} (${role}) rx-usecs=${usecs}" coalesce_is "${iface}" rx-usecs "${usecs}"
-		verify_soft "${iface} (${role}) adaptive RX off" adaptive_rx_off "${iface}"
+		if coalesce_reported "${iface}"; then
+			verify_check "${iface} (${role}) rx-usecs=${usecs}" coalesce_is "${iface}" rx-usecs "${usecs}"
+			verify_soft "${iface} (${role}) adaptive RX off" adaptive_rx_off "${iface}"
+		else
+			verify_info "${iface} (${role}) driver reports no coalescing settings: not tuned, not checked"
+		fi
 		if [[ -n "${cpus}" ]] && ! nic_is_kernel_bypass "${iface}"; then
 			queues="$(ethtool_max "${iface}" -l Combined)"
 			queues="$(nic_queue_count "${cpus}" "${queues}")"

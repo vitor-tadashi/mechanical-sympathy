@@ -256,7 +256,18 @@ network_unsupported() {
 	: >"${LOWLAT_ROOT}/run/fake-ethtool-fail/eth0/-c"
 	expect_status 0 "${REPO}/scripts/04-network" --apply
 	grep -qx rx_usecs=50 "${LOWLAT_ROOT}/run/fake-ethtool/eth0" || fail "unreadable coalescing was changed"
+	host_kernel_sync "${LOWLAT_ROOT}"
+	expect_status 0 "${REPO}/scripts/04-network" --verify
+	grep -q 'INFO eth0 (critical) driver reports no coalescing' "${WORK}/output" || fail "unreadable coalescing was not reported as info"
 	expect_status 0 "${REPO}/scripts/04-network" --rollback
+}
+
+bypass_vm_verify() {
+	setup rhel9-vm-kvm
+	printf 'KERNEL_BYPASS_STACK=dpdk\n' >>"${LOWLAT_ROOT}/etc/lowlat/lowlat.conf"
+	"${REPO}/scripts/08-kernel-bypass" --verify >"${WORK}/output" 2>&1 || true
+	grep -q 'INFO huge pages are not reserved on a VM' "${WORK}/output" || fail "VM verify must not check huge pages"
+	if grep -q 'FAIL huge pages' "${WORK}/output"; then fail "huge pages failed on a VM"; fi
 }
 
 network_missing_state() {
@@ -352,7 +363,7 @@ if [[ "${1:-}" == --case ]]; then
 	"$2"
 	exit 0
 fi
-cases=(missing_system_conf tuned_layout missing_chrony existing_manager missing_chrony_unit console_restore virtio_placement unknown_irq unreadable_irq cpu_rollback cpu_absent_files cpu_lost_backup cpu_no_apply cpu_missing_knob cpu_runtime_only cpu_corrupt_state network_rollback network_missing_interface network_no_apply network_recreated_irqs network_driver_failure network_unsupported network_missing_state os_rollback os_no_apply os_existing_files os_runtime_optins os_missing_state os_restore_failure os_masked_active_service)
+cases=(missing_system_conf tuned_layout missing_chrony existing_manager missing_chrony_unit console_restore virtio_placement unknown_irq unreadable_irq cpu_rollback cpu_absent_files cpu_lost_backup cpu_no_apply cpu_missing_knob cpu_runtime_only cpu_corrupt_state network_rollback network_missing_interface network_no_apply network_recreated_irqs network_driver_failure network_unsupported bypass_vm_verify network_missing_state os_rollback os_no_apply os_existing_files os_runtime_optins os_missing_state os_restore_failure os_masked_active_service)
 for name in "${cases[@]}"; do
 	bash "$0" --case "${name}"
 done
