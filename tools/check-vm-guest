@@ -105,6 +105,8 @@ grub_evidence() {
 		grub2-editenv list 2>&1 || true
 		printf '== options lines of the boot entries\n'
 		grep -H '^options' /boot/loader/entries/*.conf 2>&1 || true
+		printf '== kernelopts in grub.cfg\n'
+		grep -n 'kernelopts' /boot/grub2/grub.cfg 2>&1 || true
 		printf '== /proc/cmdline\n'
 		cat /proc/cmdline
 	} >"$1"
@@ -148,13 +150,23 @@ phase_prepare() {
 # ---------------------------------------------------------------------------------------
 
 # manifest - "checksum size path" for the files that the guides may touch. Left out: what
-# changes at every boot on its own, and grubenv and /etc/kernel/cmdline, which grubby
-# rewrites (the boot arguments are compared through grubby --info).
+# changes at every boot on its own, and the boot entries, grubenv and /etc/kernel/cmdline,
+# which grubby rewrites even when the arguments end up the same: the arguments of every
+# boot entry are compared through grubby --info instead (boot_entries).
 manifest() {
 	find /etc /boot /usr/lib/systemd/hugetlb-reserve-pages -xdev \( -type f -o -type l \) -print0 2>/dev/null |
 		xargs -0 cksum 2>/dev/null |
 		sort -k 3 |
-		grep -v -E ' /etc/(resolv\.conf|mtab|\.pwd\.lock|passwd-|group-|shadow-|gshadow-|ld\.so\.cache|lvm/(archive|backup)/.*)$| /boot/grub2/grubenv$| /etc/kernel/cmdline$' || true
+		grep -v -E ' /etc/(resolv\.conf|mtab|\.pwd\.lock|passwd-|group-|shadow-|gshadow-|ld\.so\.cache|lvm/(archive|backup)/.*)$| /boot/grub2/grubenv$| /boot/loader/entries/| /boot/initramfs-.*kdump\.img$| /etc/kernel/cmdline$' || true
+}
+
+# expand_grubenv - GRUB expands $name in the options of a boot entry from grubenv at boot
+# (RHEL 8 keeps $kernelopts and $tuned_params there), and grubby prints them as written.
+expand_grubenv() {
+	local env
+	env="$(grub2-editenv list 2>/dev/null || true)"
+	GRUBENV="${env}" awk 'BEGIN { n = split(ENVIRON["GRUBENV"], line, "\n"); for (i = 1; i <= n; i++) { k = index(line[i], "="); if (k) value[substr(line[i], 1, k - 1)] = substr(line[i], k + 1) } }
+		{ out = ""; for (i = 1; i <= NF; i++) { word = $i; if (word ~ /^\$/) word = value[substr(word, 2)]; out = out " " word } print substr(out, 2) }'
 }
 
 unit_state() {
@@ -162,7 +174,22 @@ unit_state() {
 }
 
 kernel_args() {
-	grubby --info=DEFAULT 2>/dev/null | awk -F'"' '/^args=/ { print $2 }' | tr ' ' '\n' | sed '/^$/d' | sort
+	grubby --info=DEFAULT 2>/dev/null | awk -F'"' '/^args=/ { print $2 }' | expand_grubenv | tr ' ' '\n' | sed '/^$/d' | sort
+}
+
+# boot_entries - "kernel argument" for every argument of every boot entry, rescue included:
+# grubby --update-kernel=ALL edits them all.
+boot_entries() {
+	local kind value kernel=""
+	grubby --info=ALL 2>/dev/null | awk -F'"' '/^kernel=/ { n = split($2, part, "/"); print "kernel " part[n] } /^args=/ { print "args " $2 }' |
+		while read -r kind value; do
+			if [[ "${kind}" == kernel ]]; then
+				kernel="${value}"
+				continue
+			fi
+			value="$(expand_grubenv <<<"${value}")"
+			tr ' ' '\n' <<<"${value}" | sed -e '/^$/d' -e "s|^|${kernel} |"
+		done | sort
 }
 
 running_args() {
@@ -199,6 +226,7 @@ snapshot() {
 	manifest >"$1/etc"
 	unit_state >"$1/units"
 	kernel_args >"$1/args"
+	boot_entries >"$1/entries"
 	running_args >"$1/cmdline"
 	hugepages >"$1/hugepages"
 	nic_state >"$1/nic"
@@ -322,6 +350,11 @@ expected_warning() {
 check_verify() {
 	local pass="$1" report status=0 line id passes warns fails seen="" lines
 	report="${WORK}/verify-${pass}.txt"
+	# A clock that syncs a minute after boot is not a failure of the guides: give chrony
+	# that minute (the ptp_kvm reference clock polls every 4 s) before verify looks.
+	if ! timeout 90 chronyc waitsync 30 0 0 2 >/dev/null 2>&1; then
+		note "${pass}: chrony not synchronized after 60 s"
+	fi
 	as_pass "${pass}" "${REPO}/scripts/verify-tuning" --report "${report}" >/dev/null 2>&1 || status=$?
 	passes="$(count_lines '^  PASS' "${report}")"
 	warns="$(count_lines '^  WARN' "${report}")"
@@ -361,10 +394,12 @@ phase_after_apply() {
 
 phase_rollback() {
 	local pass="$1" index guide lines
+	grub_evidence "${WORK}/grub-${pass}-before-rollback.txt"
 	for ((index = ${#HOST_APPLY_ORDER[@]} - 1; index >= 0; index--)); do
 		guide="${HOST_APPLY_ORDER[index]}"
 		check "${pass}: ${guide} --rollback" as_pass "${pass}" "${REPO}/scripts/${guide}" --rollback
 	done
+	grub_evidence "${WORK}/grub-${pass}-after-rollback-before-reboot.txt"
 	# Runtime state that the next boot resets anyway, but that a rollback should undo now.
 	nic_state >"${WORK}/${pass}-rolled-back-nic"
 	lines="$(diff_lines nic "${WORK}/${pass}-before/nic" "${WORK}/${pass}-rolled-back-nic" | sed 's/^nic \(missing\|extra\) nic /nic \1 /')"
@@ -380,12 +415,13 @@ phase_after_rollback() {
 	report_leftovers "${pass}: rollback left files" "${lines}"
 	lines="$(diff "${before}/units" "${after}/units" | awk '/^>/ { print "unit " substr($0, 3) }' || true)"
 	report_leftovers "${pass}: rollback left unit state" "${lines}"
-	lines="$(diff_lines cmdline "${before}/args" "${after}/args")"
-	report_leftovers "${pass}: rollback left kernel arguments" "${lines}"
+	lines="$(diff_lines "boot entry" "${before}/entries" "${after}/entries")"
+	report_leftovers "${pass}: rollback left boot entry arguments" "${lines}"
 	lines="$(diff_lines "running cmdline" "${before}/cmdline" "${after}/cmdline")"
 	report_leftovers "${pass}: rollback left the running kernel" "${lines}"
 	lines="$(diff_lines hugepages "${before}/hugepages" "${after}/hugepages")"
 	report_leftovers "${pass}: rollback left huge pages" "${lines}"
+	grub_evidence "${WORK}/grub-${pass}-rolled-back.txt"
 }
 
 # phase_report <events> - the events of every phase of every pass, collected by the host.
@@ -400,7 +436,9 @@ phase_report() {
 	failed="$(count_lines '^fail ' "${events}")"
 	report_known_issues
 	printf 'summary checks=%d failed=%d known=%d\n' "${checks}" "${failed}" "${#OBSERVED[@]}"
-	((failed == 0))
+	if ((failed > 0)); then
+		exit 1
+	fi
 }
 
 main() {
