@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Mutable mounts, firewall rules, and selected modules for rollback regressions.
+# shellcheck source=tools/stubs/lib/fake
+. "$(dirname "${BASH_SOURCE[0]}")/lib/fake"
+
+mounts="${LOWLAT_ROOT}/run/fake-mounts"
+[[ ! -f "${LOWLAT_ROOT}/run/fake-fail-${FAKE_NAME}" ]] || fake_fail 1 "injected restoration failure"
+case "${FAKE_NAME}" in
+findmnt)
+	if [[ "$*" == *--target* ]]; then
+		target="${!#}"
+		target="${target#"${LOWLAT_ROOT}"}"
+		awk -v t="${target}" '$1==t {print $3; found=1} END {exit !found}' "${mounts}"
+	else
+		awk '$2=="xfs" || $2=="ext4" {print $3}' "${mounts}"
+	fi
+	;;
+mount)
+	fake_record "$@"
+	[[ "${1:-}" == -o && "${2:-}" == remount,* ]] || fake_fail 1 "unsupported mount arguments"
+	options="${2#remount,}"
+	target="${3#"${LOWLAT_ROOT}"}"
+	awk -v t="${target}" -v o="${options}" '
+		$1==t {
+			found=1
+			if (o=="noatime") {gsub(/relatime|strictatime/, "noatime", $3)}
+			else {$3=o}
+		}
+		{print}
+		END {exit !found}' "${mounts}" >"${mounts}.new"
+	mv "${mounts}.new" "${mounts}"
+	;;
+nft)
+	state="${LOWLAT_ROOT}/run/fake-nft-rules"
+	case "$*" in
+	'list ruleset') [[ ! -f "${state}" ]] || cat "${state}" ;;
+	'list tables') [[ ! -f "${state}" ]] || grep '^table ' "${state}" ;;
+	'flush ruleset') fake_record "$@"; : >"${state}" ;;
+	'-f -') fake_record "$@"; cat >"${state}" ;;
+	*) fake_fail 1 "unsupported nft arguments" ;;
+	esac
+	;;
+iptables* | ip6tables*)
+	family="${FAKE_NAME%%-*}"
+	state="${LOWLAT_ROOT}/run/fake-${family}-rules"
+	case "${FAKE_NAME}" in
+	*-save) [[ ! -f "${state}" ]] || cat "${state}" ;;
+	*-restore) fake_record "$@"; cat >"${state}" ;;
+	*)
+		if [[ "${1:-}" == -S ]]; then
+			[[ ! -f "${state}" ]] || cat "${state}"
+		else
+			fake_record "$@"
+			: >"${state}"
+		fi
+		;;
+	esac
+	;;
+modprobe)
+	fake_record "$@"
+	module="${!#}"
+	case "${module}" in
+	ip_tables | ip6_tables | nf_* | ipt_* | iptable_* | ip6t_* | xt_*)
+		if [[ "${1:-}" == -r ]]; then
+			sed -i "/^${module} /d" "${LOWLAT_ROOT}/proc/modules"
+		elif ! grep -q "^${module} " "${LOWLAT_ROOT}/proc/modules"; then
+			printf '%s 32768 0 - Live 0x0\n' "${module}" >>"${LOWLAT_ROOT}/proc/modules"
+		fi
+		;;
+	*) ;;
+	esac
+	;;
+*) fake_fail 1 "unsupported fake command" ;;
+esac

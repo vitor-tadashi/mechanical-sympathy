@@ -728,10 +728,13 @@ A /etc/systemd/system/lowlat-verify.service
 A /etc/systemd/system/lowlat-verify.timer
 A /etc/systemd/system/phc2sys.service.d/10-lowlat-time-sync.conf
 A /etc/systemd/system/ptp4l.service.d/10-lowlat-time-sync.conf
+A /etc/tuned/bootcmdline
 A /etc/tuned/low-latency/tuned.conf
+A /etc/tuned/profile_mode
 A /run/fake-systemd/active/lowlat-verify.timer
 A /var/lib/fake-systemd/enabled/lowlat-runtime.service
 A /var/lib/fake-systemd/enabled/lowlat-verify.timer
+A /var/lib/lowlat/factory-settings/.values/*/complete
 A /var/lib/lowlat/factory-settings/.values/*/eth0/adaptive_rx
 A /var/lib/lowlat/factory-settings/.values/*/eth0/adaptive_tx
 A /var/lib/lowlat/factory-settings/.values/*/eth0/combined
@@ -751,7 +754,44 @@ A /var/lib/lowlat/factory-settings/.values/*/eth0/tx_csum
 A /var/lib/lowlat/factory-settings/.values/*/eth0/tx_ring
 A /var/lib/lowlat/factory-settings/.values/*/eth0/tx_usecs
 A /var/lib/lowlat/factory-settings/.values/*/eth0/txqueuelen
+A /var/lib/lowlat/factory-settings/.values/*/files
+A /var/lib/lowlat/factory-settings/.values/*/mount-options/boot/options
+A /var/lib/lowlat/factory-settings/.values/*/mount-options/options
+A /var/lib/lowlat/factory-settings/.values/*/mounts
+A /var/lib/lowlat/factory-settings/.values/*/services
+A /var/lib/lowlat/factory-settings/.values/*/tuned-profile
+A /var/lib/lowlat/factory-settings/.values/files/etc/fstab
+A /var/lib/lowlat/factory-settings/.values/files/etc/security/limits.d/90-lowlat.conf
+A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/active_profile
+A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/bootcmdline
+A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/low-latency/tuned.conf
+A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/profile_mode
+A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/tuned-main.conf
+A /var/lib/lowlat/factory-settings/.values/services/auth-rpcgss-module
+A /var/lib/lowlat/factory-settings/.values/services/cpufreqd
+A /var/lib/lowlat/factory-settings/.values/services/cpupower
+A /var/lib/lowlat/factory-settings/.values/services/cpuspeed
+A /var/lib/lowlat/factory-settings/.values/services/crond
+A /var/lib/lowlat/factory-settings/.values/services/nfs-client.target
+A /var/lib/lowlat/factory-settings/.values/services/pcscd
+A /var/lib/lowlat/factory-settings/.values/services/plymouth-quit
+A /var/lib/lowlat/factory-settings/.values/services/plymouth-quit-wait
+A /var/lib/lowlat/factory-settings/.values/services/plymouth-read-write
+A /var/lib/lowlat/factory-settings/.values/services/plymouth-start
+A /var/lib/lowlat/factory-settings/.values/services/powerd
+A /var/lib/lowlat/factory-settings/.values/services/remote-fs-pre.target
+A /var/lib/lowlat/factory-settings/.values/services/rpc-statd-notify
+A /var/lib/lowlat/factory-settings/.values/services/rpc_pipefs.target
+A /var/lib/lowlat/factory-settings/.values/services/rpcbind.service
+A /var/lib/lowlat/factory-settings/.values/services/rpcbind.socket
+A /var/lib/lowlat/factory-settings/.values/services/rpcbind.target
+A /var/lib/lowlat/factory-settings/.values/services/rsyslog
+A /var/lib/lowlat/factory-settings/.values/services/sysstat-collect.timer
+A /var/lib/lowlat/factory-settings/.values/services/sysstat-summary.timer
+A /var/lib/lowlat/factory-settings/.values/services/tuned
 A /var/lib/lowlat/factory-settings/etc/fstab
+A /var/lib/lowlat/factory-settings/etc/tuned/active_profile
+A /var/lib/lowlat/factory-settings/etc/tuned/tuned-main.conf
 D /run/fake-systemd/active/crond.service
 D /var/lib/fake-systemd/enabled/crond.service
 M /boot/loader/entries/0f1e2d3c4b5a69788796a5b4c3d2e1f0-0-rescue.conf
@@ -802,6 +842,7 @@ M /proc/sys/vm/dirty_ratio
 M /proc/sys/vm/min_free_kbytes
 M /proc/sys/vm/stat_interval
 M /run/fake-ethtool/eth0
+M /run/fake-mounts
 
 ==== reboot
 lowlat-runtime.service: /opt/lowlat/scripts/apply-all --runtime
@@ -1033,16 +1074,8 @@ LOW-LATENCY TUNING VERIFICATION
 ---- exit 0
 
 ==== 07-os-hygiene --rollback
-Usage: 07-os-hygiene [--apply | --dry-run | --verify | --rollback] [--config FILE]
 
-  --apply      apply this guide's tuning (root)
-  --dry-run    print every command/file that --apply would run/write
-  --verify     read-only check of this guide's tuning
-  --rollback   undo this guide's tuning (when supported)
-  --runtime    re-apply only the non-persistent part (used at boot by lowlat-runtime.service)
-  --config     configuration file (default: /etc/lowlat/lowlat.conf)
-
-Host class: virtual_machine (override with LOWLAT_HOST_CLASS=bare_metal|virtual_machine)
+01. Restoring OS hygiene baseline
 ---- exit 0
 
 ==== 06-kernel-sysctl --rollback
@@ -1149,11 +1182,10 @@ lowlat-runtime.service: /opt/lowlat/scripts/apply-all --runtime
   +------+----------------------------------------------------------+------------+
 
 ==== left behind by rollback (compared with the host before apply)
-A /etc/security/limits.d/90-lowlat.conf
 A /etc/systemd/system/lowlat-runtime.service
-A /etc/tuned/low-latency/tuned.conf
 A /run/fake-systemd/active/lowlat-runtime.service
 A /var/lib/fake-systemd/enabled/lowlat-runtime.service
+A /var/lib/lowlat/factory-settings/.values/*/complete
 A /var/lib/lowlat/factory-settings/.values/*/eth0/adaptive_rx
 A /var/lib/lowlat/factory-settings/.values/*/eth0/adaptive_tx
 A /var/lib/lowlat/factory-settings/.values/*/eth0/combined
@@ -1173,11 +1205,44 @@ A /var/lib/lowlat/factory-settings/.values/*/eth0/tx_csum
 A /var/lib/lowlat/factory-settings/.values/*/eth0/tx_ring
 A /var/lib/lowlat/factory-settings/.values/*/eth0/tx_usecs
 A /var/lib/lowlat/factory-settings/.values/*/eth0/txqueuelen
+A /var/lib/lowlat/factory-settings/.values/*/files
+A /var/lib/lowlat/factory-settings/.values/*/mount-options/boot/options
+A /var/lib/lowlat/factory-settings/.values/*/mount-options/options
+A /var/lib/lowlat/factory-settings/.values/*/mounts
+A /var/lib/lowlat/factory-settings/.values/*/services
+A /var/lib/lowlat/factory-settings/.values/*/tuned-profile
+A /var/lib/lowlat/factory-settings/.values/files/etc/fstab
+A /var/lib/lowlat/factory-settings/.values/files/etc/security/limits.d/90-lowlat.conf
+A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/active_profile
+A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/bootcmdline
+A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/low-latency/tuned.conf
+A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/profile_mode
+A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/tuned-main.conf
+A /var/lib/lowlat/factory-settings/.values/services/auth-rpcgss-module
+A /var/lib/lowlat/factory-settings/.values/services/cpufreqd
+A /var/lib/lowlat/factory-settings/.values/services/cpupower
+A /var/lib/lowlat/factory-settings/.values/services/cpuspeed
+A /var/lib/lowlat/factory-settings/.values/services/crond
+A /var/lib/lowlat/factory-settings/.values/services/nfs-client.target
+A /var/lib/lowlat/factory-settings/.values/services/pcscd
+A /var/lib/lowlat/factory-settings/.values/services/plymouth-quit
+A /var/lib/lowlat/factory-settings/.values/services/plymouth-quit-wait
+A /var/lib/lowlat/factory-settings/.values/services/plymouth-read-write
+A /var/lib/lowlat/factory-settings/.values/services/plymouth-start
+A /var/lib/lowlat/factory-settings/.values/services/powerd
+A /var/lib/lowlat/factory-settings/.values/services/remote-fs-pre.target
+A /var/lib/lowlat/factory-settings/.values/services/rpc-statd-notify
+A /var/lib/lowlat/factory-settings/.values/services/rpc_pipefs.target
+A /var/lib/lowlat/factory-settings/.values/services/rpcbind.service
+A /var/lib/lowlat/factory-settings/.values/services/rpcbind.socket
+A /var/lib/lowlat/factory-settings/.values/services/rpcbind.target
+A /var/lib/lowlat/factory-settings/.values/services/rsyslog
+A /var/lib/lowlat/factory-settings/.values/services/sysstat-collect.timer
+A /var/lib/lowlat/factory-settings/.values/services/sysstat-summary.timer
+A /var/lib/lowlat/factory-settings/.values/services/tuned
 A /var/lib/lowlat/factory-settings/etc/fstab
-D /run/fake-systemd/active/crond.service
-D /var/lib/fake-systemd/enabled/crond.service
-M /etc/fstab
-M /etc/tuned/active_profile
+A /var/lib/lowlat/factory-settings/etc/tuned/active_profile
+A /var/lib/lowlat/factory-settings/etc/tuned/tuned-main.conf
 M /proc/irq/*/effective_affinity_list (4)
 M /proc/irq/*/smp_affinity_list (4)
 M /run/fake-ethtool/eth0
@@ -1185,5 +1250,3 @@ M /run/fake-ethtool/eth0
 ==== /proc/cmdline differences
 
 ==== process differences
-2d1
-< crond                cpus 0-3

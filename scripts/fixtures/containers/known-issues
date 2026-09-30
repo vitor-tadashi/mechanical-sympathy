@@ -6,5 +6,4 @@
 # that the check finds the bug in code. A bug that is observed and not listed fails the run.
 # So does a listed bug that is no longer observed on an image it applies to: delete its line in the
 # change that fixes it.
-no-rollback-07	limits\.d/90-lowlat|/etc/tuned/	07-os-hygiene has no --rollback: limits, tuned profile and tuned state stay
 runtime-unit-left-enabled	lowlat-runtime\.service	apply-all has no --rollback: lowlat-runtime.service stays installed and enabled

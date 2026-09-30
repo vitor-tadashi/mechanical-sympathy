@@ -53,6 +53,7 @@ unit_setting() {
 start_unit() {
 	local unit="$1" affinity comm pid type
 	require_unit "${unit}"
+	[[ ! -e "${MASKED_DIR}/${unit}" ]] || fake_fail 1 "Unit ${unit} is masked."
 	mkdir -p "${ACTIVE_DIR}" "${PID_DIR}"
 	[[ -e "${ACTIVE_DIR}/${unit}" ]] && return 0
 	: >"${ACTIVE_DIR}/${unit}"

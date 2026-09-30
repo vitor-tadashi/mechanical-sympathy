@@ -218,12 +218,50 @@ flowchart TD
 
 ## 11. Rollback
 
-- [ ] Services, as needed: `sudo systemctl enable --now crond sysstat-collect.timer sysstat-summary.timer`
-- [ ] Limits: `sudo rm -f /etc/security/limits.d/90-lowlat.conf`
-- [ ] tuned back to the RHEL server default: `sudo tuned-adm profile throughput-performance`
-- [ ] After switching profiles, remove the generated `low-latency/tuned.conf` from the directory for your RHEL version, or restore a preexisting file from its factory backup. Check `tuned-adm active` shows your restored profile.
-- [ ] fstab: `sudo cp /var/lib/lowlat/factory-settings/etc/fstab /etc/fstab`, then `sudo mount -o remount` each filesystem, or reboot
-- [ ] Firewall, if it was disabled: `sudo systemctl enable --now firewalld`
+Stop boot reapplication, then restore the first-apply baseline:
+
+```bash
+sudo systemctl disable --now lowlat-runtime.service
+sudo scripts/07-os-hygiene --rollback
+```
+
+The script restores existing limits, fstab, tuned configuration and profile
+selection files, and removes files that were absent before apply. It restores
+the original selected tuned profile and each affected service's enabled and
+running state, including rsyslog and optional firewalld changes. It retains
+factory backups under `/var/lib/lowlat/factory-settings`; repeated apply,
+runtime reapplication, and rollback preserve that baseline. Use the same
+configuration and path overrides used for apply. Without an earlier apply,
+rollback does nothing.
+
+Mount options are captured from the mounted filesystems before the fstab edit
+and restored immediately with a remount. New login limits take effect in new
+sessions; already running applications retain their existing limits. Verify
+with `findmnt -rn -t xfs,ext4 -o TARGET,OPTIONS`, compare `/etc/fstab` and the
+limits file with the saved originals, and inspect `tuned-adm active` plus
+`systemctl is-enabled` and `systemctl is-active` for the affected services.
+The guide's `--verify` checks the tuned state, so it may fail after rollback.
+
+Before any selected firewall or module removal, the script saves the complete
+nftables and IPv4/IPv6 iptables rules and the selected modules that were loaded.
+This requires `nft`, `iptables-save`, `ip6tables-save`, `iptables-restore`, and
+`ip6tables-restore`; missing commands or failed snapshots stop apply before
+those changes. Rollback reloads the saved modules before restoring rules, then
+restores service state. Inspect `nft list ruleset`, `iptables-save`,
+`ip6tables-save`, and `/proc/modules` against the saved files. A firewall manager
+may change rules when restarted; verify the resulting policy as well as its
+service state.
+
+Missing or invalid saved state, a failed remount, or a rejected restore command
+is an error. Keep the baseline, correct the reported problem, and rerun
+rollback. Reboot if a mount cannot be remounted safely, then check its options
+against the restored fstab. Reapply with `sudo scripts/07-os-hygiene --apply`
+when needed. Automated restoration has harness coverage and is not yet proven
+in production for every filesystem, tuned plugin, or firewall backend.
+
+Rollback cannot recreate lost connections, expired conntrack entries, or
+work interrupted when services stopped. It restores configuration and
+supported runtime settings, not that transient application state.
 
 ## 12. Key takeaways
 

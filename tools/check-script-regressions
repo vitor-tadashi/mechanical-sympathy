@@ -266,11 +266,93 @@ network_missing_state() {
 	expect_status 1 "${REPO}/scripts/04-network" --rollback
 }
 
+os_rollback() {
+	setup rhel9-2s-ref
+	cp "${LOWLAT_ROOT}/etc/fstab" "${WORK}/fstab-before"
+	expect_status 0 systemctl disable --now rsyslog
+	expect_status 0 "${REPO}/scripts/07-os-hygiene" --apply
+	expect_status 0 "${REPO}/scripts/07-os-hygiene" --apply
+	expect_status 0 "${REPO}/scripts/07-os-hygiene" --runtime
+	expect_status 0 "${REPO}/scripts/07-os-hygiene" --rollback
+	expect_status 0 diff "${WORK}/fstab-before" "${LOWLAT_ROOT}/etc/fstab"
+	[[ ! -e "${LOWLAT_ROOT}/etc/security/limits.d/90-lowlat.conf" ]] || fail "limits left behind"
+	grep -qx throughput-performance "${LOWLAT_ROOT}/etc/tuned/active_profile" || fail "tuned profile not restored"
+	expect_status 1 systemctl is-enabled --quiet rsyslog
+	expect_status 3 systemctl is-active --quiet rsyslog
+	expect_status 0 "${REPO}/scripts/07-os-hygiene" --rollback
+}
+
+os_no_apply() {
+	setup rhel9-vm-kvm
+	expect_status 0 "${REPO}/scripts/07-os-hygiene" --rollback
+	[[ ! -d "${LOWLAT_ROOT}/var/lib/lowlat/factory-settings" ]] || fail "OS rollback created state without apply"
+}
+
+os_existing_files() {
+	setup rhel10-2s-ref
+	mkdir -p "${LOWLAT_ROOT}/etc/security/limits.d" "${LOWLAT_ROOT}/etc/tuned/profiles/low-latency"
+	printf '# local limits\n' >"${LOWLAT_ROOT}/etc/security/limits.d/90-lowlat.conf"
+	printf '[main]\nsummary=local profile\n' >"${LOWLAT_ROOT}/etc/tuned/profiles/low-latency/tuned.conf"
+	printf 'auto\n' >"${LOWLAT_ROOT}/etc/tuned/profile_mode"
+	printf 'reapply_sysctl = 0\n' >"${LOWLAT_ROOT}/etc/tuned/tuned-main.conf"
+	cp -a "${LOWLAT_ROOT}/etc/tuned" "${WORK}/tuned-before"
+	cp "${LOWLAT_ROOT}/run/fake-mounts" "${WORK}/mounts-before"
+	expect_status 0 "${REPO}/scripts/07-os-hygiene" --apply
+	expect_status 0 "${REPO}/scripts/07-os-hygiene" --rollback
+	expect_status 0 diff -r "${WORK}/tuned-before" "${LOWLAT_ROOT}/etc/tuned"
+	expect_status 0 diff "${WORK}/mounts-before" "${LOWLAT_ROOT}/run/fake-mounts"
+	grep -qx '# local limits' "${LOWLAT_ROOT}/etc/security/limits.d/90-lowlat.conf" || fail "original limits lost"
+}
+
+os_runtime_optins() {
+	setup rhel9-vm-kvm
+	printf '\nFLUSH_FIREWALL_RULES=yes\nREMOVE_NETFILTER_MODULES=yes\n' >>"${LOWLAT_ROOT}/etc/lowlat/lowlat.conf"
+	printf 'table inet fixture { }\n' >"${LOWLAT_ROOT}/run/fake-nft-rules"
+	printf '*filter\n:INPUT DROP [0:0]\nCOMMIT\n' >"${LOWLAT_ROOT}/run/fake-iptables-rules"
+	cp "${LOWLAT_ROOT}/run/fake-nft-rules" "${WORK}/nft-before"
+	cp "${LOWLAT_ROOT}/run/fake-iptables-rules" "${WORK}/iptables-before"
+	expect_status 0 "${REPO}/scripts/07-os-hygiene" --runtime
+	if grep -q '^ip_tables ' "${LOWLAT_ROOT}/proc/modules"; then fail "module was not unloaded"; fi
+	[[ ! -s "${LOWLAT_ROOT}/run/fake-nft-rules" ]] || fail "rules were not flushed"
+	expect_status 0 "${REPO}/scripts/07-os-hygiene" --runtime
+	expect_status 0 "${REPO}/scripts/07-os-hygiene" --rollback
+	expect_status 0 diff "${WORK}/nft-before" "${LOWLAT_ROOT}/run/fake-nft-rules"
+	expect_status 0 diff "${WORK}/iptables-before" "${LOWLAT_ROOT}/run/fake-iptables-rules"
+	grep -q '^ip_tables ' "${LOWLAT_ROOT}/proc/modules" || fail "loaded module baseline lost"
+	[[ ! -e "${LOWLAT_ROOT}/etc/security/limits.d/90-lowlat.conf" ]] || fail "runtime-only rollback changed persistent tuning"
+	expect_status 0 "${REPO}/scripts/07-os-hygiene" --rollback
+}
+
+os_missing_state() {
+	setup rhel9-vm-kvm
+	expect_status 0 "${REPO}/scripts/07-os-hygiene" --apply
+	rm "${LOWLAT_ROOT}/var/lib/lowlat/factory-settings/.values/07/tuned-profile"
+	expect_status 1 "${REPO}/scripts/07-os-hygiene" --rollback
+	expect_status 1 "${REPO}/scripts/07-os-hygiene" --apply
+}
+
+os_restore_failure() {
+	setup rhel9-vm-kvm
+	expect_status 0 "${REPO}/scripts/07-os-hygiene" --apply
+	: >"${LOWLAT_ROOT}/run/fake-fail-mount"
+	expect_status 1 "${REPO}/scripts/07-os-hygiene" --rollback
+}
+
+os_masked_active_service() {
+	setup rhel9-2s-ref
+	expect_status 0 systemctl mask crond
+	expect_status 0 "${REPO}/scripts/07-os-hygiene" --apply
+	expect_status 0 "${REPO}/scripts/07-os-hygiene" --rollback
+	expect_status 0 systemctl is-active --quiet crond
+	expect_status 1 systemctl is-enabled crond
+	grep -qx masked "${WORK}/output" || fail "original mask lost"
+}
+
 if [[ "${1:-}" == --case ]]; then
 	"$2"
 	exit 0
 fi
-cases=(missing_system_conf tuned_layout missing_chrony existing_manager missing_chrony_unit console_restore virtio_placement unknown_irq unreadable_irq cpu_rollback cpu_absent_files cpu_lost_backup cpu_no_apply cpu_missing_knob cpu_runtime_only cpu_corrupt_state network_rollback network_missing_interface network_no_apply network_recreated_irqs network_driver_failure network_unsupported network_missing_state)
+cases=(missing_system_conf tuned_layout missing_chrony existing_manager missing_chrony_unit console_restore virtio_placement unknown_irq unreadable_irq cpu_rollback cpu_absent_files cpu_lost_backup cpu_no_apply cpu_missing_knob cpu_runtime_only cpu_corrupt_state network_rollback network_missing_interface network_no_apply network_recreated_irqs network_driver_failure network_unsupported network_missing_state os_rollback os_no_apply os_existing_files os_runtime_optins os_missing_state os_restore_failure os_masked_active_service)
 for name in "${cases[@]}"; do
 	bash "$0" --case "${name}"
 done
