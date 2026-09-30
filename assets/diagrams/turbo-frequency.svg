@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" width="760" height="330" role="img" aria-labelledby="t d">
+<title id="t">With turbo the clock follows heat and power limits; with a fixed frequency it stays put</title>
+<desc id="d">Two timelines of the same isolated CPU handling the same messages. With turbo on, the clock starts high and steps down as the chip warms up and reaches its power and thermal limits, so the time per message grows during the run and differs between runs and hosts. With turbo off, or capped at a frequency every core can hold, the clock is lower but flat, so every message takes the same time.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .track { fill: #ffffff; stroke: #d0d7de; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .clk { fill: none; stroke: #1f4e8c; stroke-width: 2.5; }
+  .mark { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .ghz { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1f4e8c; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+  .ev { transform-box: fill-box; transform-origin: center; animation: flash 6s linear infinite; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @keyframes flash {
+    0%, 4%   { transform: scale(1.6); stroke-width: 3; }
+    8%, 100% { transform: scale(1); stroke-width: 1.5; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ev, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="330" rx="8"/>
+
+<!-- Lane 1: turbo on -->
+<rect class="lane" x="10" y="10" width="740" height="150" rx="6"/>
+<text class="cap" x="24" y="34">Turbo on: the clock follows heat and power limits</text>
+<text class="sub" x="24" y="52">Fast while the chip is cool. As it warms up, the clock steps down and every message takes longer.</text>
+<text class="lbl" x="24" y="88">clock</text>
+<path class="clk" d="M150 72 H300 V82 H440 V92 H580 V100 H720"/>
+<text class="ghz" x="156" y="68">3.9 GHz</text>
+<text class="ghz" x="308" y="78">3.6 GHz</text>
+<text class="ghz" x="448" y="88">3.4 GHz</text>
+<text class="ghz" x="588" y="96">3.3 GHz</text>
+<circle class="mark ev" cx="300" cy="77" r="5" style="animation-delay:-4.42s"/>
+<circle class="mark ev" cx="440" cy="87" r="5" style="animation-delay:-2.95s"/>
+<circle class="mark ev" cx="580" cy="96" r="5" style="animation-delay:-1.47s"/>
+<text class="lbl" x="24" y="127">CPU 7</text>
+<rect class="track" x="150" y="110" width="570" height="24" rx="3"/>
+<rect class="app" x="165" y="110" width="31" height="24" rx="2"/>
+<rect class="app" x="235" y="110" width="31" height="24" rx="2"/>
+<rect class="app" x="305" y="110" width="33" height="24" rx="2"/>
+<rect class="app" x="375" y="110" width="33" height="24" rx="2"/>
+<rect class="app" x="445" y="110" width="35" height="24" rx="2"/>
+<rect class="app" x="515" y="110" width="35" height="24" rx="2"/>
+<rect class="app" x="585" y="110" width="36" height="24" rx="2"/>
+<rect class="app" x="655" y="110" width="36" height="24" rx="2"/>
+<text class="axis" x="435" y="152">illustrative clocks · box width: time to handle one message · red: a frequency step</text>
+
+<!-- Lane 2: fixed frequency -->
+<rect class="lane" x="10" y="170" width="740" height="150" rx="6"/>
+<text class="cap" x="24" y="194">Turbo off, or capped at a clock every core can hold</text>
+<text class="sub" x="24" y="212">Slower than turbo at its best, but the same on every message, every run and every host.</text>
+<text class="lbl" x="24" y="248">clock</text>
+<path class="clk" d="M150 244 H720"/>
+<text class="ghz" x="156" y="240">3.0 GHz, flat</text>
+<text class="lbl" x="24" y="287">CPU 7</text>
+<rect class="track" x="150" y="270" width="570" height="24" rx="3"/>
+<rect class="app" x="165" y="270" width="40" height="24" rx="2"/>
+<rect class="app" x="235" y="270" width="40" height="24" rx="2"/>
+<rect class="app" x="305" y="270" width="40" height="24" rx="2"/>
+<rect class="app" x="375" y="270" width="40" height="24" rx="2"/>
+<rect class="app" x="445" y="270" width="40" height="24" rx="2"/>
+<rect class="app" x="515" y="270" width="40" height="24" rx="2"/>
+<rect class="app" x="585" y="270" width="40" height="24" rx="2"/>
+<rect class="app" x="655" y="270" width="40" height="24" rx="2"/>
+<text class="axis" x="435" y="312">no frequency steps: the median depends on the code, not on the room temperature</text>
+
+<line class="head" x1="150" y1="62" x2="150" y2="298"/>
+</svg>

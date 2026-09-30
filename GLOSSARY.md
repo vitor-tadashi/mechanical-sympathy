@@ -302,6 +302,8 @@
 | <a id="tso"></a>**TSO** | **TCP Segmentation Offload.** The NIC cuts one large TCP send into normal-size packets. | Good for throughput, and it batches. [Guide 04 §5.5](guides/04-network-optimization.md#55-segmentation-and-aggregation-offloads-off-ethtool--k-tso-off-gso-off-lro-off) |
 | <a id="tsx"></a>**TSX** | **Transactional Synchronization Extensions.** An Intel CPU feature for hardware transactions. One of its side channels has a mitigation (TAA). | The mitigation costs speed, and it can be switched off. [Guide 01 §5](guides/01-grub-bootloader-tuning.md#5-the-parameters-one-by-one) |
 | <a id="tuned"></a>**tuned** | A Red Hat service that applies named sets of system settings (profiles). | The `network-latency` profile. [Guide 07 §5](guides/07-os-hygiene.md#5-tuned-profile) |
+| <a id="turbo"></a>**turbo** | A CPU feature (Intel Turbo Boost, AMD Core Performance Boost) that runs the cores above their base clock while the chip stays under its power and temperature limits. Fewer busy cores and a cooler chip mean a higher clock. | The clock then changes with heat and load, so the latency does too. Latency hosts decide it by measuring. [Guide 00 §4.3](guides/00-bios-firmware.md#43-turbo-a-measured-decision), [use case 13](examples/use-cases/13-turbo-the-lottery.md) |
+| <a id="turbostat"></a>**turbostat** | A Linux tool (package `kernel-tools`) that reads CPU counters: the real clock of each CPU (`Bzy_MHz`), temperatures, and the count of [SMIs](#smi). | The only OS tool that counts SMIs, and the way to see the clock move with temperature. [Guide 00 §7](guides/00-bios-firmware.md#7-verification) |
 
 ### U
 

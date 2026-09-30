@@ -146,6 +146,17 @@ SMIs come from firmware features, and which features generate them depends on th
 
 With `idle=poll`, every CPU runs at 100 % all the time. Set the fan profile to **maximum cooling**, or a performance fan curve. Otherwise the CPUs reach thermal limits and lower their frequency, which is exactly the variation this guide tries to remove.
 
+Check it while the host warms up under its real load, from a cold start for 20 to 30 minutes:
+
+```bash
+sudo turbostat --quiet --interval 60 --show CPU,Busy%,Bzy_MHz,CoreTmp,PkgTmp
+#    one line per CPU every minute; stop with Ctrl-C
+#    healthy: Bzy_MHz flat while PkgTmp settles
+#    limited: Bzy_MHz steps down while PkgTmp climbs, so the cooling or the power budget sets the clock
+```
+
+If the clock steps down, raise the fan profile first. If it still steps down with maximum cooling, the CPU is at its power limit: turn turbo off, or cap the frequency at a level every core can hold (§4.3).
+
 ## 5. How the settings map to what Linux sees
 
 ```mermaid
