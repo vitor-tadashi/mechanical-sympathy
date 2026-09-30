@@ -177,6 +177,7 @@
 | <a id="lowlat-runtime-service"></a>**lowlat-runtime.service** | The systemd unit that applies all runtime (not persistent) settings again at every boot. | [Guide 11 §2](guides/11-day2-operations.md#2-the-verification-timer) |
 | <a id="lowlat-verify-timer"></a>**lowlat-verify.timer** | The timer that runs `verify-tuning` every day and 10 minutes after each boot. The unit fails when a check fails. | [Guide 11 §2](guides/11-day2-operations.md#2-the-verification-timer) |
 | <a id="lro"></a>**LRO** | **Large Receive Offload.** The NIC joins received packets into one big packet. | It hides packet boundaries and adds delay, so it is off. [Guide 04 §5.5](guides/04-network-optimization.md#55-segmentation-and-aggregation-offloads-off-ethtool--k-tso-off-gso-off-lro-off) |
+| <a id="lychee"></a>**Lychee** | A command-line checker for links and page fragments. | [Documentation health](CONTRIBUTING.md#documentation-health) |
 
 ### M
 
@@ -185,6 +186,7 @@
 | <a id="mbuf"></a>**mbuf** | **Message buffer.** The [DPDK](#dpdk) structure that holds one packet: a small header and a data area. | A DPDK program runs out of packets when it runs out of mbufs. [Guide 08 §6.1](guides/08-kernel-bypass.md#61-how-it-works) |
 | <a id="mempool"></a>**mempool** | **Memory pool.** In [DPDK](#dpdk), a fixed set of [mbufs](#mbuf) created at start-up in huge pages. Receiving takes one out, and finishing with a packet puts it back. | It is sized once. If it is too small, receiving stops. [Guide 08 §6.1](guides/08-kernel-bypass.md#61-how-it-works) |
 | <a id="microburst"></a>**microburst** | A [burst](#burst) so short (microseconds to a few milliseconds) that average-rate graphs do not show it. | It can still overflow a small buffer. [Concept: network tuning](concepts/network-tuning.md) |
+| <a id="misspell"></a>**misspell** | A command-line checker for common spelling mistakes, with an American English mode. | [Documentation health](CONTRIBUTING.md#documentation-health) |
 | <a id="mitigation"></a>**mitigation** | A kernel workaround for a CPU security flaw (Spectre, Meltdown and others). It costs speed. | Some guides switch them off. That removes a security control, so it is a deliberate decision. [Guide 01 §5](guides/01-grub-bootloader-tuning.md#5-the-parameters-one-by-one) |
 | <a id="mpps"></a>**Mpps** | **Million packets per second.** | The unit for packet rate. See [Units](#units-and-quick-numbers). |
 | <a id="msi-x"></a>**MSI-X** | **Message Signaled Interrupts, extended.** A [PCIe](#pcie) device raises an interrupt by writing a message. It can have many vectors, one per queue. | Each NIC queue has its own vector, and you place each on a CPU. [Guide 04 §6](guides/04-network-optimization.md#6-interrupt-affinity-set_nic_irq_affinity) |

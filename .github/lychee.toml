@@ -1,0 +1,13 @@
+# Keep public failures visible; do not add exclusions without owner review.
+include_fragments = "full"
+scheme = ["http", "https", "file"]
+exclude_all_private = true
+timeout = 20
+max_retries = 2
+retry_wait_time = 2
+max_concurrency = 8
+host_concurrency = 2
+cache = false
+insecure = false
+accept_timeouts = false
+no_progress = true

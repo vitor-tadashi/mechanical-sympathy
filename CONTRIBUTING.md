@@ -74,6 +74,20 @@ A Gradle update can fail until its approval list and checksums have been reviewe
 
 To stop version-update PRs, set the affected ecosystem's `open-pull-requests-limit` to `0` in a reviewed PR. Security-update settings remain an owner decision in repository settings.
 
+## Documentation health
+
+### At a glance
+
+- **On PRs and main:** Check local links and fragments, and American spelling.
+- **Weekly:** Check public links on Mondays at 07:23 UTC; the owner can also authorize a manual run.
+- **Tools:** [Lychee](GLOSSARY.md#lychee) 0.24.2 and [misspell](GLOSSARY.md#misspell) 0.8.0, downloaded as release binaries and verified against committed SHA-256 digests before extraction.
+
+[The workflow](.github/workflows/doc-health.yml) checks tracked Markdown and HTML assembled by `make site`. Spelling covers Markdown and HTML text, including image descriptions and accessibility labels. It reports errors without rewriting files. JavaScript and CSS source are not prose inputs. The owner-approved spelling exception `Spectre` preserves the proper name of the CPU vulnerability.
+
+[The link configuration](.github/lychee.toml) checks fragments, allows eight concurrent requests with at most two per host, waits up to 20 seconds, and retries twice. Email and private-network requests are excluded. Broken public links, TLS errors, and timeouts fail the run; no blanket URL exclusions or cached successes hide them.
+
+Read the failed job's output to find the source and target. Correct a real defect, or ask the owner to review a reproducible false positive before adding a narrow exception. A transient public failure can be checked again through an owner-authorized manual run. Tool upgrades require review of the exact upstream release and replacement checksums. To stop scheduled checks, remove the schedule in a reviewed PR; required-check and environment settings remain owner-controlled.
+
 ## Reporting wrong or dangerous advice
 
 Open an issue with the guide and section, what the text says, what you observed, and the kernel and hardware. If the advice can lock a host out or weaken security, read [SECURITY.md](SECURITY.md) first.
