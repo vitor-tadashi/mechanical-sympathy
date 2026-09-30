@@ -221,7 +221,9 @@ rollback_network() {
 			value="${affinities[index]}"
 			[[ "${value}" =~ ^[0-9]+(-[0-9]+)?(,[0-9]+(-[0-9]+)?)*$ ]] || die "invalid saved ${iface} IRQ affinity"
 			[[ -e "${LOWLAT_ROOT}/proc/irq/${irq}/smp_affinity_list" ]] || die "cannot restore missing IRQ ${irq} affinity"
-			sysfs_write "${value}" "${LOWLAT_ROOT}/proc/irq/${irq}/smp_affinity_list"
+			# Kernel-managed IRQs refuse user placement, as they did on apply: warn and go on with the rest.
+			sysfs_write "${value}" "${LOWLAT_ROOT}/proc/irq/${irq}/smp_affinity_list" 2>/dev/null ||
+				log_warn "${iface}: IRQ ${irq} is kernel-managed, affinity not restored"
 			index=$((index + 1))
 		done <<<"${irqs}"
 		((index == ${#affinities[@]})) || die "${iface}: IRQ vector count changed"

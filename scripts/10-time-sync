@@ -132,9 +132,11 @@ apply_time_sync() {
 daemon_pinned() {
 	local want pid allowed found=1
 	want="$(cpu_list_join "${TIME_SYNC_CPUS[@]}")"
+	want="$(cpu_list_expand "${want}")"
 	for pid in $(pgrep -x "$1" || true); do
 		found=0
 		allowed="$(awk '/^Cpus_allowed_list/{print $2}' "${LOWLAT_ROOT}/proc/${pid}/status" 2>/dev/null || true)"
+		allowed="$(cpu_list_expand "${allowed}")"
 		[[ "${allowed}" == "${want}" ]] || return 1
 	done
 	return "${found}"

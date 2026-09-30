@@ -72,13 +72,18 @@ print_plan() {
 }
 
 install_runtime_unit() {
-	local config_dir
+	local config_dir dir=. escaped
 	# Absolute path for the unit file. A dry-run may point at a config that does not exist yet.
-	if config_dir="$(cd "${LOWLAT_CONFIG%/*}" 2>/dev/null && pwd -P)"; then
+	[[ "${LOWLAT_CONFIG}" == */* ]] && dir="${LOWLAT_CONFIG%/*}"
+	if config_dir="$(cd "${dir}" 2>/dev/null && pwd -P)"; then
 		LOWLAT_CONFIG="${config_dir}/${LOWLAT_CONFIG##*/}"
 	fi
+	# Escape the characters that are special in a sed replacement.
+	escaped="${LOWLAT_CONFIG//\\/\\\\}"
+	escaped="${escaped//&/\\&}"
+	escaped="${escaped//|/\\|}"
 	log_sub_step "Installing ${RUNTIME_UNIT} (ExecStart=${SCRIPTS_DIR}/apply-all --runtime)"
-	sed "s|^ExecStart=.*|ExecStart=${SCRIPTS_DIR}/apply-all --runtime|; s|^Environment=LOWLAT_CONFIG=.*|Environment=LOWLAT_CONFIG=${LOWLAT_CONFIG}|; s|^ConditionPathExists=.*|ConditionPathExists=${LOWLAT_CONFIG}|" \
+	sed "s|^ExecStart=.*|ExecStart=${SCRIPTS_DIR}/apply-all --runtime|; s|^Environment=LOWLAT_CONFIG=.*|Environment=LOWLAT_CONFIG=${escaped}|; s|^ConditionPathExists=.*|ConditionPathExists=${escaped}|" \
 		"${SCRIPTS_DIR}/systemd/lowlat-runtime.service" | write_file "${RUNTIME_UNIT}"
 	run systemctl daemon-reload
 	run systemctl enable lowlat-runtime.service
