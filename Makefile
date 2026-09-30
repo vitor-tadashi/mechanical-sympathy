@@ -1,6 +1,6 @@
 # Quality gates for this repository. CI (.github/workflows/lint.yml) runs `make lint`.
 
-.PHONY: help lint lint-scripts lint-docs lint-site lint-java check-scripts check-containers check-vm install-git-hooks site
+.PHONY: help lint lint-scripts lint-docs lint-site lint-java check-scripts check-script-regressions check-containers check-vm install-git-hooks site
 
 PROBE := examples/java-latency-probe
 
@@ -39,6 +39,9 @@ lint-java:
 
 check-scripts:
 	./tools/check-scripts
+
+check-script-regressions:
+	./tools/check-script-regressions
 
 check-containers:
 	./tools/check-containers

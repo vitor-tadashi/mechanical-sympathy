@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# Focused regressions for the guide scripts, using the Level 1 fake hosts.
+# Needs Linux and GNU tools, like tools/check-scripts.
+set -Eeuo pipefail
+export LC_ALL=C
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+STUBS="${REPO}/tools/stubs"
+# shellcheck source=tools/stubs/lib/host
+. "${STUBS}/lib/host"
+
+fail() {
+	printf 'check-script-regressions: %s\n' "$*" >&2
+	[[ ! -f "${WORK}/output" ]] || cat "${WORK}/output" >&2
+	exit 1
+}
+
+expect_status() {
+	local expected="$1" status=0
+	shift
+	"$@" >"${WORK}/output" 2>&1 || status=$?
+	[[ "${status}" == "${expected}" ]] || fail "expected exit ${expected}, got ${status}: $*"
+}
+
+setup() {
+	local name="$1" tool path config="${REPO}/scripts/lowlat.conf.example"
+	WORK="$(mktemp -d)"
+	trap 'rm -rf "${WORK}"' EXIT
+	export LOWLAT_ROOT="${WORK}/root"
+	mkdir -p "${WORK}/bin"
+	for tool in bash sh cat sed gawk grep tr cut sort uniq wc head tail tee find xargs basename dirname readlink mkdir rm cp mv chmod ln touch date diff getconf id printf env mktemp; do
+		path="$(command -v "${tool}")"
+		ln -s "${path}" "${WORK}/bin/${tool}"
+	done
+	ln -s gawk "${WORK}/bin/awk"
+	for path in "${STUBS}"/*; do
+		[[ -f "${path}" ]] || continue
+		printf '#!/bin/sh\nexec %s "$@"\n' "${path}" >"${WORK}/bin/${path##*/}"
+		chmod +x "${WORK}/bin/${path##*/}"
+	done
+	export PATH="${WORK}/bin"
+	[[ ! -f "${REPO}/scripts/fixtures/hosts/${name}/lowlat.conf" ]] || config="${REPO}/scripts/fixtures/hosts/${name}/lowlat.conf"
+	host_build "${LOWLAT_ROOT}" "${REPO}/scripts/fixtures/hosts/${name}/host" "${config}"
+	cp -a "${LOWLAT_ROOT}" "${WORK}/pristine"
+	host_boot "${LOWLAT_ROOT}" "${WORK}/pristine" >"${WORK}/output" 2>&1
+}
+
+missing_system_conf() {
+	setup rhel10-2s-ref
+	[[ ! -e "${LOWLAT_ROOT}/etc/systemd/system.conf" ]] || fail "RHEL 10 fixture must not have a local system.conf"
+	expect_status 0 "${REPO}/scripts/02-cpu-isolation" --apply
+	grep -qx '\[Manager\]' "${LOWLAT_ROOT}/etc/systemd/system.conf" || fail "new system.conf needs [Manager]"
+	grep -q '^CPUAffinity=' "${LOWLAT_ROOT}/etc/systemd/system.conf" || fail "missing CPUAffinity"
+}
+
+tuned_layout() {
+	setup rhel10-2s-ref
+	expect_status 0 "${REPO}/scripts/07-os-hygiene" --apply
+	[[ -f "${LOWLAT_ROOT}/etc/tuned/profiles/low-latency/tuned.conf" ]] || fail "RHEL 10 profile must use profiles directory"
+	expect_status 1 tuned-adm profile nonexistent
+}
+
+missing_chrony() {
+	setup rhel9-vm-kvm
+	rm -f "${WORK}/bin/chronyc"
+	expect_status 3 "${REPO}/scripts/10-time-sync" --apply
+	grep -q 'dnf install chrony' "${WORK}/output" || fail "missing chrony package hint"
+	[[ ! -d "${LOWLAT_ROOT}/etc/systemd/system/chronyd.service.d" ]] || fail "chrony precheck must precede writes"
+	[[ ! -s "${LOWLAT_ROOT}/run/fake-calls" ]] || fail "chrony precheck must precede service changes"
+}
+
+existing_manager() {
+	local count
+	setup rhel9-2s-ref
+	printf 'DefaultTimeoutStartSec=45s\n' >>"${LOWLAT_ROOT}/etc/systemd/system.conf"
+	expect_status 0 "${REPO}/scripts/02-cpu-isolation" --apply
+	expect_status 0 "${REPO}/scripts/02-cpu-isolation" --apply
+	grep -qx 'DefaultTimeoutStartSec=45s' "${LOWLAT_ROOT}/etc/systemd/system.conf" || fail "lost unrelated manager setting"
+	count="$(grep -c '^CPUAffinity=' "${LOWLAT_ROOT}/etc/systemd/system.conf")"
+	[[ "${count}" == 1 ]] || fail "duplicate manager setting"
+}
+
+missing_chrony_unit() {
+	setup rhel9-vm-kvm
+	rm -f "${LOWLAT_ROOT}/usr/lib/systemd/system/chronyd.service"
+	expect_status 3 "${REPO}/scripts/10-time-sync" --apply
+	grep -q 'dnf install chrony' "${WORK}/output" || fail "missing package hint for absent chronyd unit"
+	[[ ! -d "${LOWLAT_ROOT}/etc/systemd/system/chronyd.service.d" ]] || fail "absent-unit precheck must precede writes"
+}
+
+if [[ "${1:-}" == --case ]]; then
+	"$2"
+	exit 0
+fi
+cases=(missing_system_conf tuned_layout missing_chrony existing_manager missing_chrony_unit)
+for name in "${cases[@]}"; do
+	bash "$0" --case "${name}"
+done
+printf 'check-script-regressions: %s cases passed\n' "${#cases[@]}"

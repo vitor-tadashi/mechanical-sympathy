@@ -14,7 +14,5 @@ no-rollback-07	limits\.d/90-lowlat|/etc/tuned/|^M /etc/fstab$|^(boot entry extra
 grub-cfg-left-regenerated	^M /(boot/grub2/grub\.cfg|etc/grub2(-efi)?\.cfg)$	01-grub-bootloader --apply regenerates grub.cfg with grub2-mkconfig, and --rollback leaves the regenerated file (with BLS entries the arguments are not in it, so the next boot is the same)
 runtime-unit-left-enabled	lowlat-runtime\.service	apply-all has no --rollback: lowlat-runtime.service stays installed and enabled
 virtio-irq-false-pass	-	verify-tuning passes the IRQ line of a virtio NIC that no guide placed
-rhel10-no-system-conf	-	02-cpu-isolation --apply fails on RHEL 10: /etc/systemd/system.conf does not exist there (the file is in /usr/lib/systemd)	10
-tuned-profile-dir-rhel10	-	07-os-hygiene writes the low-latency profile to /etc/tuned/low-latency, but tuned on RHEL 10 reads /etc/tuned/profiles: tuned-adm rejects it and apply-all stops	10	tuned
 rhel8-rollback-args-return	^running cmdline extra 	on RHEL 8 the kernel arguments that 01 removed are back on /proc/cmdline after a reboot: GRUB cannot read grubenv (on the cloud image /boot/grub2/grubenv links into /boot/efi) and boots with the kernelopts copy in grub.cfg, which the rollback does not regenerate (guide 01 section 4.1)	8
 coalesce-unsupported-verify-fails	^verify FAIL .*rx-usecs=0$	04-network asks for rx-usecs=0 on the critical NIC, and verify-tuning fails when the driver has no interrupt coalescing (virtio-net on the RHEL 8 kernel)	8

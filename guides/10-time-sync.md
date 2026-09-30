@@ -99,6 +99,14 @@ ethtool -T eno1
 
 The script enables `chronyd`, stops `ptp4l` and `phc2sys` (two daemons steering one clock fight each other), and pins `chronyd`. The server list stays yours: `/etc/chrony.conf` is site-specific.
 
+When `TIME_SYNC_MODE=chrony`, the script requires both `chronyc` and the
+`chronyd.service` unit before writing any drop-ins or changing services.
+If either is absent, it exits with precheck status `3` and asks for
+`dnf install chrony`. Install the package, then retry and verify with
+`systemctl is-active chronyd` and `chronyc tracking`. Set `TIME_SYNC_MODE=""`
+only when another service manages the clock; that choice skips clock tuning.
+A failed precheck changes nothing in Guide 10, so no rollback is needed.
+
 Settings worth checking in `/etc/chrony.conf`:
 
 | Directive | Recommended | Why |

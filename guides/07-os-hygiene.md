@@ -102,7 +102,9 @@ Side effect: tools that rely on atime, such as some mail readers and `tmpwatch` 
 
 ## 5. tuned profile
 
-`tuned` applies a coherent set of power and latency settings, and re-applies them at every boot. The script installs a custom profile, `/etc/tuned/low-latency/tuned.conf`:
+`tuned` applies a coherent set of power and latency settings, and re-applies them at every boot. The script installs a custom profile in `/etc/tuned/low-latency/tuned.conf`
+on RHEL 8/9, or `/etc/tuned/profiles/low-latency/tuned.conf` on RHEL 10.
+`TUNED_PROFILE_DIR` overrides that directory. The profile contents are the same:
 
 ```ini
 [main]
@@ -219,6 +221,7 @@ flowchart TD
 - [ ] Services, as needed: `sudo systemctl enable --now crond sysstat-collect.timer sysstat-summary.timer`
 - [ ] Limits: `sudo rm -f /etc/security/limits.d/90-lowlat.conf`
 - [ ] tuned back to the RHEL server default: `sudo tuned-adm profile throughput-performance`
+- [ ] After switching profiles, remove the generated `low-latency/tuned.conf` from the directory for your RHEL version, or restore a preexisting file from its factory backup. Check `tuned-adm active` shows your restored profile.
 - [ ] fstab: `sudo cp /var/lib/lowlat/factory-settings/etc/fstab /etc/fstab`, then `sudo mount -o remount` each filesystem, or reboot
 - [ ] Firewall, if it was disabled: `sudo systemctl enable --now firewalld`
 

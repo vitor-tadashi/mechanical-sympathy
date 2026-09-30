@@ -133,8 +133,9 @@ seed_userland() {
 	[[ -f "${config}" ]] || config="${REPO}/scripts/lowlat.conf.example"
 	mkdir -p /etc/lowlat /opt
 	cp "${config}" /etc/lowlat/lowlat.conf
-	# Guide 10 stops with an error when the time daemon it enables is not installed. The
-	# image lacks the package, so leave time synchronization alone there.
+	# UBI repositories may lack chrony. Test the absent-package precheck in the
+	# focused regressions; this integration scenario explicitly leaves time sync
+	# unmanaged on those images, rather than pretending it was configured.
 	if ! rpm -q chrony >/dev/null 2>&1; then
 		sed -i 's/^TIME_SYNC_MODE=.*/TIME_SYNC_MODE=""/' /etc/lowlat/lowlat.conf
 	fi
@@ -481,7 +482,7 @@ step_apply_and_roll_back() {
 	snapshot "${before}"
 
 	step_plan_and_dry_run
-	apply_with_workarounds "apply-all --apply" in_host "${REPO}/scripts/apply-all" --apply
+	apply_all
 	snapshot "${applied}"
 	check "lowlat-runtime.service is enabled" systemctl is-enabled --quiet lowlat-runtime.service
 	check "the runtime unit is valid for systemctl cat" systemctl cat lowlat-runtime.service
@@ -510,6 +511,15 @@ step_apply_and_roll_back() {
 	report_state "rollback" "${before}" "${after}"
 }
 
+# apply_all - no recovery workarounds: compatibility regressions must fail the check.
+apply_all() {
+	check "apply-all --apply" in_host "${REPO}/scripts/apply-all" --apply
+}
+
+apply_bare_metal() {
+	HOST_CLASS_OVERRIDE=bare_metal check "$1 --apply on a bare-metal host" in_host "${REPO}/scripts/$1" --apply
+}
+
 # Huge pages, CPU isolation and the graphical console are skipped or absent on a VM, so
 # guides 01, 02 and 03 run on a bare-metal host: their units, arguments and rollbacks.
 step_bare_metal_guides() {
@@ -520,8 +530,7 @@ step_bare_metal_guides() {
 	seed_userland "${UNIT_HOST}"
 	snapshot "${before}"
 	for guide in "${guides[@]}"; do
-		HOST_CLASS_OVERRIDE=bare_metal apply_with_workarounds "${guide} --apply on a bare-metal host" \
-			in_host "${REPO}/scripts/${guide}" --apply
+		apply_bare_metal "${guide}"
 	done
 	snapshot "${applied}"
 	generated="$(generated_units "${before}/etc" "${applied}/etc")"
@@ -549,6 +558,7 @@ main() {
 	mkdir -p "${WORK}"
 	step_packages
 	step_parse
+	check "focused script regressions" bash "${REPO}/tools/check-script-regressions"
 	prepare
 	save_userland
 	step_templates

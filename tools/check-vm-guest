@@ -264,7 +264,7 @@ phase_snapshot() {
 phase_apply() {
 	local pass="$1"
 	check "${pass}: apply-all --plan" as_pass "${pass}" "${REPO}/scripts/apply-all" --plan
-	apply_with_workarounds "${pass}: apply-all --apply" as_pass "${pass}" "${REPO}/scripts/apply-all" --apply
+	check "${pass}: apply-all --apply" as_pass "${pass}" "${REPO}/scripts/apply-all" --apply
 	snapshot "${WORK}/${pass}-applied"
 	grub_evidence "${WORK}/grub-${pass}-applied.txt"
 }

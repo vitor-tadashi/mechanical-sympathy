@@ -25,6 +25,12 @@ SYSTEMD_SYSTEM_CONF="${SYSTEMD_SYSTEM_CONF:-${LOWLAT_ROOT}/etc/systemd/system.co
 configure_systemd_cpu_affinity() {
 	local os_cpus
 	os_cpus="${OS_CPUS[*]}"
+	if [[ ! -f "${SYSTEMD_SYSTEM_CONF}" ]]; then
+		log_sub_step "Creating a local systemd manager configuration"
+		write_file "${SYSTEMD_SYSTEM_CONF}" <<'EOF'
+[Manager]
+EOF
+	fi
 
 	log_sub_step "Restricting systemd and all services to CPUs ${os_cpus} (${SYSTEMD_SYSTEM_CONF})"
 	set_key_value_line "${SYSTEMD_SYSTEM_CONF}" CPUAffinity "${os_cpus}"

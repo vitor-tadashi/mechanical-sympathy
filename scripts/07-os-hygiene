@@ -17,7 +17,12 @@ set -Eeuo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/lib/common"
 
 LIMITS_FILE="${LIMITS_FILE:-${LOWLAT_ROOT}/etc/security/limits.d/90-lowlat.conf}"
-TUNED_PROFILE_DIR="${TUNED_PROFILE_DIR:-${LOWLAT_ROOT}/etc/tuned/low-latency}"
+# RHEL 10 moved both vendor and administrator profiles into profiles/.
+TUNED_PROFILE_BASE="${LOWLAT_ROOT}/etc/tuned"
+if [[ -r "${LOWLAT_ROOT}/etc/os-release" ]] && grep -Eq '^VERSION_ID="?10([."]|$)' "${LOWLAT_ROOT}/etc/os-release"; then
+	TUNED_PROFILE_BASE+="/profiles"
+fi
+TUNED_PROFILE_DIR="${TUNED_PROFILE_DIR:-${TUNED_PROFILE_BASE}/low-latency}"
 FSTAB="${FSTAB:-${LOWLAT_ROOT}/etc/fstab}"
 
 # Netfilter modules unloaded by remove_netfilter_modules, in dependency order.
