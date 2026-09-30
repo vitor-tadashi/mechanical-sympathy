@@ -125,7 +125,7 @@ bind_dpdk_ports() {
 	# On the first apply the IOMMU arguments from 01-grub-bootloader are not active yet:
 	# leave the ports alone, and let lowlat-runtime.service bind them after the reboot.
 	if [[ "${DPDK_DRIVER}" == vfio-pci ]] && ! iommu_translation_enabled && [[ "${DRY_RUN}" -ne 1 ]]; then
-		log_warn "IOMMU translation is off: ports not bound. Reboot (01-grub-bootloader sets intel_iommu=on iommu=pt); lowlat-runtime.service binds them at boot"
+		log_warn "IOMMU translation is off: ports not bound. Reboot to enable it (01-grub-bootloader sets intel_iommu=on iommu=pt on bare metal only; on a VM enable the virtual IOMMU manually); lowlat-runtime.service binds them at boot"
 		return 0
 	fi
 	run modprobe "${DPDK_DRIVER}"
@@ -236,7 +236,11 @@ verify_kernel_bypass() {
 		verify_result
 		return
 	fi
-	verify_check "huge pages reserved (bypass stacks need them for packet buffers)" hugepages_reserved
+	if host_is_bare_metal; then
+		verify_check "huge pages reserved (bypass stacks need them for packet buffers)" hugepages_reserved
+	else
+		verify_info "huge pages are not reserved on a VM (03-huge-pages is bare metal only)"
+	fi
 	case "${KERNEL_BYPASS_STACK}" in
 	onload)
 		verify_check "onload installed" command -v onload
