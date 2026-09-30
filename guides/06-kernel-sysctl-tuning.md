@@ -178,6 +178,12 @@ sysctl net.core.rmem_max net.ipv4.tcp_rmem vm.stat_interval kernel.numa_balancin
 systemd-analyze cat-config sysctl.d | grep -n 'rmem_max'  # who sets it, in which order
 sysctl kernel.printk; cat /proc/consoles                  # 1 4 1 7, and the consoles printk writes to (no tty0 after Guide 01)
 
+# Memory (§8): the watermarks per zone, in 4 KiB pages; they rise with vm.min_free_kbytes
+awk '/^Node/ {zone = $0} /^ +(min|low|high) / && zone ~ /Normal/ {print zone ":", $1, $2}' /proc/zoneinfo
+# Direct reclaim: sample twice, a minute apart; allocstall_* and pgscan_direct rising = threads reclaimed inline
+grep -E '^(allocstall|pgscan_direct|pgscan_kswapd)' /proc/vmstat
+cat /proc/pressure/memory                                  # "some" above 0: tasks waited for memory (PSI)
+
 # Is anything else overriding us? (tuned, other sysctl.d files)
 tuned-adm active; grep -r rmem_max /etc/sysctl.d /usr/lib/sysctl.d /etc/tuned 2>/dev/null
 ```
@@ -201,6 +207,7 @@ flowchart TD
 | UDP receive drops (`UdpRcvbufErrors`) | Application requests more than `rmem_max`, or never sets `SO_RCVBUF` | Check the transport's buffer config; §4 |
 | Connections fail to peers across a lossy WAN | `tcp_syn_retries=1` | Raise to 2–3 for those hosts |
 | Local service on `::1` stopped working | IPv6 disabled | Keep IPv6 on `lo`, or bind to `127.0.0.1` |
+| Millisecond stalls while the page cache is large and `MemFree` is low; `allocstall_*` rising in `/proc/vmstat` | Direct reclaim: free memory fell below the min watermark before `kswapd` caught up | §8: `vm.min_free_kbytes`, and fence the job that fills the page cache in a slice with `MemoryMax` ([Guide 05](05-cgroup-isolation.md)) |
 | OOM on a small host | `vm.min_free_kbytes` too high | Scale it down (§8) |
 | Rare millisecond stalls that line up with kernel messages in `dmesg` | Console log level above 1 (`kernel.printk` reverted), or a graphical console still set | §2; check `cat /proc/consoles`, and remove `console=tty0` ([Guide 01 §5.7](01-grub-bootloader-tuning.md#57-miscellaneous)) |
 

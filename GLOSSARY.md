@@ -76,6 +76,7 @@
 | <a id="dependabot"></a>**Dependabot** | A GitHub service that opens pull requests for newer dependency versions. | It proposes workflow action and Java probe updates for manual review. [Contributing: dependency updates](CONTRIBUTING.md#dependency-updates) |
 | <a id="descriptor"></a>**descriptor** | A small record in a [ring buffer](#ring-buffer) that says where one packet buffer is in memory. The NIC reads a receive descriptor to know where to write the next packet. | A ring with 4096 descriptors can hold 4096 packets. [Concept: ethtool §5](concepts/ethtool.md#5--g---g-ring-sizes) |
 | <a id="dim"></a>**DIM** | **Dynamic Interrupt Moderation.** The kernel code behind [adaptive coalescing](#adaptive-coalescing). | It rewrites your fixed [coalescing](#coalescing) values unless it is off. [Guide 04 §5.2](guides/04-network-optimization.md#52-adaptive-coalescing-off-ethtool--c-adaptive-rx-off-adaptive-tx-off) |
+| <a id="direct-reclaim"></a>**direct reclaim** | Memory reclaim done by the thread that asked for memory, inline, because free memory fell below the min [watermark](#watermark). The thread frees page cache or writes pages back before its allocation can return. | It costs milliseconds on the CPU of the thread that allocates, so latency hosts keep free memory above the min mark. [Guide 06 §8](guides/06-kernel-sysctl-tuning.md#8-virtual-memory), [use case 17](examples/use-cases/17-memory-pressure-on-a-latency-host.md) |
 | <a id="dma"></a>**DMA** | **Direct Memory Access.** A device (the NIC) writes to or reads from main memory by itself, without the CPU copying the data. | This is how packets get into the [ring buffer](#ring-buffer). [Concept: network tuning §2](concepts/network-tuning.md#2-the-receive-path-step-by-step) |
 | <a id="dpdk"></a>**DPDK** | **Data Plane Development Kit.** A library that lets a user-space program drive the NIC directly and poll it, so no interrupt and no system call is needed. | The best-known [kernel bypass](#kernel-bypass) toolkit. [Guide 08 §6](guides/08-kernel-bypass.md#6-dpdk-on-intel-nics-not-field-proven-in-the-reference-setup) |
 | <a id="dram"></a>**DRAM / RAM** | **Dynamic Random-Access Memory,** also called **RAM.** The main memory of the server. About 100 ns away from a CPU, far slower than its cache. | Cache misses go to DRAM. [Guide 02](guides/02-cpu-core-isolation.md) |
@@ -169,6 +170,7 @@
 |---|---|---|
 | <a id="kernel-bypass"></a>**kernel bypass** | The program talks to the NIC directly, from user space. It skips the kernel network stack, the interrupts and the system calls. | Fastest path, and you lose tools like `tcpdump` and the firewall. [Guide 08](guides/08-kernel-bypass.md) |
 | <a id="ksoftirqd"></a>**ksoftirqd** | A kernel thread, one per CPU. It runs [softirq](#softirq) work when there is too much of it to do inside the interrupt. | If it is busy, packets are waiting. [Concept: network tuning §4](concepts/network-tuning.md#4-napi-softirq-budget-and-ksoftirqd) |
+| <a id="kswapd"></a>**kswapd** | The kernel thread (one per NUMA node) that reclaims memory in the background. It wakes when free memory falls below the low [watermark](#watermark) and works until it is above the high one. | When it starts early enough, no application thread has to do [direct reclaim](#direct-reclaim). It runs on the OS CPUs. [Guide 06 §8](guides/06-kernel-sysctl-tuning.md#8-virtual-memory) |
 | <a id="kvm"></a>**KVM** | **Kernel-based Virtual Machine.** The virtual-machine support that is built into Linux. | A KVM guest cannot truly isolate CPUs from its host. [Guide 01 §2](guides/01-grub-bootloader-tuning.md#2-when-to-apply-and-when-not-to) |
 | <a id="kworker"></a>**kworker** | A kernel thread that runs deferred kernel work from a [workqueue](#workqueue). | It can wake up on any CPU unless you restrict it. [Guide 02 §4.2](guides/02-cpu-core-isolation.md#42-unbound-kernel-workqueues-runtime) |
 
@@ -332,6 +334,7 @@
 
 | Term | Means | Why you meet it here |
 |---|---|---|
+| <a id="watermark"></a>**watermark** | One of three free-memory levels per memory zone (min, low, high), in `/proc/zoneinfo`. Below low, [kswapd](#kswapd) wakes. Below min, allocations do [direct reclaim](#direct-reclaim). `vm.min_free_kbytes` sets min, and the other two follow. | Higher watermarks give background reclaim time to work before a thread has to stop. [Guide 06 §8](guides/06-kernel-sysctl-tuning.md#8-virtual-memory) |
 | <a id="workqueue"></a>**workqueue** | A kernel mechanism that runs postponed work in [kworker](#kworker) threads. An "unbound" workqueue may use any CPU that you allow. | Unbound workqueues are restricted to the [housekeeping CPUs](#housekeeping-cpu). [Guide 02 §4.2](guides/02-cpu-core-isolation.md#42-unbound-kernel-workqueues-runtime) |
 
 ### X
