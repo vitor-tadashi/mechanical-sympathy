@@ -172,8 +172,10 @@ expand_grubenv() {
 		{ out = ""; for (i = 1; i <= NF; i++) { word = $i; if (word ~ /^\$/) word = value[substr(word, 2)]; out = out " " word } print substr(out, 2) }'
 }
 
+# unit_state - the enabled state of every unit file. Transient units (systemd-run) are
+# not files, and they are new at every boot.
 unit_state() {
-	systemctl list-unit-files --no-legend --no-pager 2>/dev/null | awk '{ print $1, $2 }' | sort
+	systemctl list-unit-files --no-legend --no-pager 2>/dev/null | awk '$2 != "transient" { print $1, $2 }' | sort
 }
 
 kernel_args() {
