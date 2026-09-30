@@ -5,6 +5,11 @@ name: kvm-spike
 # give the fallback timing. See tools/check-kvm.
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/kvm-spike.yml
+      - tools/check-kvm
   pull_request:
     paths:
       - .github/workflows/kvm-spike.yml

@@ -8,6 +8,12 @@ on:
       - "assets/diagrams/**"
       - "tools/build-site"
       - ".github/workflows/pages.yml"
+  pull_request:
+    paths:
+      - "site/**"
+      - "assets/diagrams/**"
+      - "tools/build-site"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions: {}
