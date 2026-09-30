@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 310" width="760" height="310" role="img" aria-labelledby="t d">
+<title id="t">A burst of kernel messages to a slow console stalls the CPU that prints them</title>
+<desc id="d">Two timelines of housekeeping CPU 1, which serves the critical NIC's interrupts, and of the packets it hands to net.rx. With a high console log level and a graphical or serial console, a burst of kernel warnings makes CPU 1 write every line to the console before it returns, so for milliseconds it serves no interrupt and the packets reach net.rx late, in a clump. With kernel.printk set to 1 and no graphical console, the same messages go only to the kernel ring buffer and the journal in microseconds, and the packets keep flowing.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .track { fill: #ffffff; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .in { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+  .ev { transform-box: fill-box; transform-origin: center; animation: flash 6s linear infinite; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @keyframes flash {
+    0%, 4%   { transform: scaleY(1.3); stroke-width: 3; }
+    8%, 100% { transform: scaleY(1); stroke-width: 1.5; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ev, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="310" rx="8"/>
+
+<!-- Lane 1: synchronous console -->
+<rect class="lane" x="10" y="10" width="740" height="140" rx="6"/>
+<text class="cap" x="24" y="34">Console log level 7, console=tty0 and a serial console</text>
+<text class="sub" x="24" y="52">printk writes each line to every console before it returns. A burst of warnings holds CPU 1 for ms.</text>
+<text class="lbl" x="24" y="84">CPU 1</text>
+<rect class="track" x="150" y="68" width="570" height="22" rx="3"/>
+<rect class="box" x="160" y="68" width="10" height="22" rx="2"/>
+<rect class="box" x="200" y="68" width="10" height="22" rx="2"/>
+<rect class="box" x="240" y="68" width="10" height="22" rx="2"/>
+<rect class="box" x="280" y="68" width="10" height="22" rx="2"/>
+<rect class="wait ev" x="300" y="68" width="220" height="22" rx="2" style="animation-delay:-4.42s"/>
+<text class="in" x="410" y="84">writing a warning to the consoles</text>
+<rect class="box" x="524" y="68" width="8" height="22" rx="2"/>
+<rect class="box" x="535" y="68" width="8" height="22" rx="2"/>
+<rect class="box" x="546" y="68" width="8" height="22" rx="2"/>
+<rect class="box" x="580" y="68" width="10" height="22" rx="2"/>
+<rect class="box" x="620" y="68" width="10" height="22" rx="2"/>
+<rect class="box" x="660" y="68" width="10" height="22" rx="2"/>
+<rect class="box" x="700" y="68" width="10" height="22" rx="2"/>
+<text class="lbl" x="24" y="119">net.rx gets</text>
+<rect class="track" x="150" y="103" width="570" height="22" rx="3"/>
+<rect class="app" x="170" y="103" width="8" height="22" rx="2"/>
+<rect class="app" x="210" y="103" width="8" height="22" rx="2"/>
+<rect class="app" x="250" y="103" width="8" height="22" rx="2"/>
+<rect class="app" x="290" y="103" width="8" height="22" rx="2"/>
+<text class="in" x="410" y="119">nothing: packets wait for CPU 1</text>
+<rect class="wait ev" x="532" y="103" width="30" height="22" rx="2" style="animation-delay:-1.98s"/>
+<rect class="app" x="590" y="103" width="8" height="22" rx="2"/>
+<rect class="app" x="630" y="103" width="8" height="22" rx="2"/>
+<rect class="app" x="670" y="103" width="8" height="22" rx="2"/>
+<rect class="app" x="710" y="103" width="8" height="22" rx="2"/>
+<text class="axis" x="435" y="142">schematic · blue: NIC interrupt served · green: packet delivered · red: stall, then a late clump</text>
+
+<!-- Lane 2: quiet console -->
+<rect class="lane" x="10" y="160" width="740" height="140" rx="6"/>
+<text class="cap" x="24" y="184">kernel.printk = 1 4 1 7, no graphical console</text>
+<text class="sub" x="24" y="202">The same warnings go to the ring buffer and the journal only. Nothing waits for a console.</text>
+<text class="lbl" x="24" y="234">CPU 1</text>
+<rect class="track" x="150" y="218" width="570" height="22" rx="3"/>
+<rect class="box" x="160" y="218" width="10" height="22" rx="2"/>
+<rect class="box" x="200" y="218" width="10" height="22" rx="2"/>
+<rect class="box" x="240" y="218" width="10" height="22" rx="2"/>
+<rect class="box" x="280" y="218" width="10" height="22" rx="2"/>
+<rect class="wait ev" x="300" y="216" width="6" height="26" rx="2" style="animation-delay:-4.42s"/>
+<rect class="box" x="320" y="218" width="10" height="22" rx="2"/>
+<rect class="box" x="360" y="218" width="10" height="22" rx="2"/>
+<rect class="box" x="400" y="218" width="10" height="22" rx="2"/>
+<rect class="box" x="440" y="218" width="10" height="22" rx="2"/>
+<rect class="box" x="480" y="218" width="10" height="22" rx="2"/>
+<rect class="box" x="520" y="218" width="10" height="22" rx="2"/>
+<rect class="box" x="560" y="218" width="10" height="22" rx="2"/>
+<rect class="box" x="600" y="218" width="10" height="22" rx="2"/>
+<rect class="box" x="640" y="218" width="10" height="22" rx="2"/>
+<rect class="box" x="680" y="218" width="10" height="22" rx="2"/>
+<text class="in" x="303" y="213">log: µs</text>
+<text class="lbl" x="24" y="269">net.rx gets</text>
+<rect class="track" x="150" y="253" width="570" height="22" rx="3"/>
+<rect class="app" x="170" y="253" width="8" height="22" rx="2"/>
+<rect class="app" x="210" y="253" width="8" height="22" rx="2"/>
+<rect class="app" x="250" y="253" width="8" height="22" rx="2"/>
+<rect class="app" x="290" y="253" width="8" height="22" rx="2"/>
+<rect class="app" x="330" y="253" width="8" height="22" rx="2"/>
+<rect class="app" x="370" y="253" width="8" height="22" rx="2"/>
+<rect class="app" x="410" y="253" width="8" height="22" rx="2"/>
+<rect class="app" x="450" y="253" width="8" height="22" rx="2"/>
+<rect class="app" x="490" y="253" width="8" height="22" rx="2"/>
+<rect class="app" x="530" y="253" width="8" height="22" rx="2"/>
+<rect class="app" x="570" y="253" width="8" height="22" rx="2"/>
+<rect class="app" x="610" y="253" width="8" height="22" rx="2"/>
+<rect class="app" x="650" y="253" width="8" height="22" rx="2"/>
+<rect class="app" x="690" y="253" width="8" height="22" rx="2"/>
+<text class="axis" x="435" y="292">the messages are still in dmesg and the journal, and the out-of-band console still works</text>
+
+<line class="head" x1="150" y1="62" x2="150" y2="280"/>
+</svg>
