@@ -31,7 +31,6 @@ IMAGE_KIND="${CHECK_IMAGE_KIND:-full}"
 FAKE=/fake
 WORK=/var/tmp/check-container-image
 BIN="${WORK}/bin"
-GUIDE_PACKAGES=(grubby tuned chrony linuxptp irqbalance ethtool iproute kernel-tools)
 # Commands that go real when the image has them. Every other stub keeps the kernel fake.
 REAL_COMMANDS=(systemctl grubby tuned-adm)
 # The VM host is the main run (LOWLAT_HOST_CLASS=virtual_machine). What a VM skips is
@@ -42,98 +41,12 @@ UNIT_DIR=/etc/systemd/system
 
 LOG="${WORK}/commands.log"
 
-checks=0
-failed=0
-OBSERVED=()
 missing=()
 
+# shellcheck source=tools/lib/check
+. "${REPO}/tools/lib/check"
 # shellcheck source=tools/stubs/lib/host
 . "${STUBS}/lib/host"
-
-ok() {
-	checks=$((checks + 1))
-	printf 'ok %s\n' "$1"
-}
-
-fail() {
-	checks=$((checks + 1))
-	failed=$((failed + 1))
-	printf 'fail %s\n' "$1"
-}
-
-note() {
-	printf 'note %s\n' "$1"
-}
-
-# indent - the output of a failed command, under its fail line.
-indent() {
-	sed 's/^/     | /'
-}
-
-# check <title> <command...> - ok when the command succeeds, fail (with its output) when not.
-check() {
-	local title="$1" output status=0
-	shift
-	output="$("$@" 2>&1)" || status=$?
-	{
-		printf '==== %s (exit %s)\n' "${title}" "${status}"
-		printf '%s\n' "${output}"
-	} >>"${LOG}"
-	if ((status == 0)); then
-		ok "${title}"
-		return 0
-	fi
-	fail "${title} (exit ${status})"
-	[[ -z "${output}" ]] || indent <<<"${output}"
-}
-
-# observe <id> - the run reproduced the known bug <id>.
-observe() {
-	local seen
-	for seen in ${OBSERVED[@]+"${OBSERVED[@]}"}; do
-		[[ "${seen}" == "$1" ]] && return 0
-	done
-	OBSERVED+=("$1")
-	printf 'known %s\n' "$1"
-}
-
-# os_major - 8, 9 or 10.
-os_major() {
-	awk -F'"' '/^VERSION_ID=/ { split($2, part, "."); print part[1] }' /etc/os-release
-}
-
-# known_ids - the ids in the known-issues file that this image must show. The optional
-# fourth column lists the OS majors that have the bug ("10" or "8,9"), the fifth a package
-# that the image needs for the bug to show.
-known_ids() {
-	local major id majors package
-	major="$(os_major)"
-	while IFS=$'\t' read -r id _ _ majors package; do
-		[[ -n "${id}" && "${id}" != '#'* ]] || continue
-		[[ -z "${majors}" || ",${majors}," == *",${major},"* ]] || continue
-		[[ -z "${package}" ]] || rpm -q "${package}" >/dev/null 2>&1 || continue
-		printf '%s\n' "${id}"
-	done <"${KNOWN_ISSUES}"
-}
-
-# classify_leftover <line> - the id of the known bug that explains a leftover, if any.
-classify_leftover() {
-	awk -F'\t' -v line="$1" '!/^#/ && NF >= 3 && $2 != "-" && line ~ $2 { print $1; exit }' "${KNOWN_ISSUES}"
-}
-
-# report_leftovers <what> <lines> - known bugs are observed, everything else fails.
-report_leftovers() {
-	local what="$1" line id
-	while IFS= read -r line; do
-		[[ -n "${line}" ]] || continue
-		id="$(classify_leftover "${line}")"
-		if [[ -n "${id}" ]]; then
-			observe "${id}"
-		else
-			fail "${what}: unexpected leftover: ${line}"
-		fi
-	done <<<"$2"
-}
 
 real_command() {
 	PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" command -v "$1" >/dev/null 2>&1
@@ -145,11 +58,11 @@ real_command() {
 
 step_packages() {
 	local package
-	for package in "${GUIDE_PACKAGES[@]}"; do
+	for package in "${CHECK_GUIDE_PACKAGES[@]}"; do
 		rpm -q "${package}" >/dev/null 2>&1 || missing+=("${package}")
 	done
 	if ((${#missing[@]} == 0)); then
-		ok "all guide packages are installed (${GUIDE_PACKAGES[*]})"
+		ok "all guide packages are installed (${CHECK_GUIDE_PACKAGES[*]})"
 		return 0
 	fi
 	if [[ "${IMAGE_KIND}" == ubi ]]; then
@@ -327,15 +240,6 @@ unit_state() {
 # kernel_args - the arguments of the default boot entry, one per line.
 kernel_args() {
 	in_host grubby --info=DEFAULT 2>/dev/null | awk -F'"' '/^args=/ { print $2 }' | tr ' ' '\n' | sort
-}
-
-# changes <before> <after> - A, M and D lines between two manifests.
-changes() {
-	join -1 3 -2 3 -a 1 -a 2 -e - -o 0,1.1,2.1 "$1" "$2" |
-		awk '$2 == "-" { print "A " $1; next }
-			$3 == "-" { print "D " $1; next }
-			$2 != $3 { print "M " $1 }' |
-		grep -v -E '^. /var/lib/lowlat/' || true
 }
 
 # ---------------------------------------------------------------------------------------
@@ -524,11 +428,6 @@ tolerated() {
 	return 1
 }
 
-# count_lines <pattern> <file> - how many lines match; zero is a valid answer.
-count_lines() {
-	grep -c -- "$1" "$2" || true
-}
-
 step_verify() {
 	local log="${WORK}/verify.log" status=0 line moved passes warns fails failed_lines
 	in_host "${REPO}/scripts/verify-tuning" >"${log}" 2>&1 || status=$?
@@ -582,7 +481,7 @@ step_apply_and_roll_back() {
 	snapshot "${before}"
 
 	step_plan_and_dry_run
-	apply_all
+	apply_with_workarounds "apply-all --apply" in_host "${REPO}/scripts/apply-all" --apply
 	snapshot "${applied}"
 	check "lowlat-runtime.service is enabled" systemctl is-enabled --quiet lowlat-runtime.service
 	check "the runtime unit is valid for systemctl cat" systemctl cat lowlat-runtime.service
@@ -611,56 +510,6 @@ step_apply_and_roll_back() {
 	report_state "rollback" "${before}" "${after}"
 }
 
-# apply_all - apply-all --apply on the VM host. On RHEL 10 tuned reads its profiles from
-# /etc/tuned/profiles, and guide 07 writes /etc/tuned/low-latency: tuned rejects the
-# profile and apply-all stops. That is a known bug: the check goes on the way an
-# administrator would, by copying the profile to where tuned looks.
-apply_all() {
-	local output status=0
-	output="$(in_host "${REPO}/scripts/apply-all" --apply 2>&1)" || status=$?
-	{
-		printf '==== apply-all --apply (exit %s)\n' "${status}"
-		printf '%s\n' "${output}"
-	} >>"${LOG}"
-	if ((status == 0)); then
-		ok "apply-all --apply"
-		return 0
-	fi
-	if [[ "${output}" == *"Requested profile 'low-latency' doesn't exist"* && -d /etc/tuned/low-latency && -d /etc/tuned/profiles ]]; then
-		observe tuned-profile-dir-rhel10
-		cp -a /etc/tuned/low-latency /etc/tuned/profiles/low-latency
-		check "apply-all --apply, with the profile copied to /etc/tuned/profiles" in_host "${REPO}/scripts/apply-all" --apply
-		return 0
-	fi
-	fail "apply-all --apply (exit ${status})"
-	indent <<<"${output}"
-}
-
-# apply_bare_metal <guide> - apply one guide on the bare-metal host. Guide 02 fails on a
-# system without /etc/systemd/system.conf (RHEL 10 ships it under /usr/lib/systemd only).
-# That is a known bug: the check goes on the way an administrator would, by creating it.
-apply_bare_metal() {
-	local guide="$1" output status=0
-	output="$(HOST_CLASS_OVERRIDE=bare_metal in_host "${REPO}/scripts/${guide}" --apply 2>&1)" || status=$?
-	{
-		printf '==== %s --apply on a bare-metal host (exit %s)\n' "${guide}" "${status}"
-		printf '%s\n' "${output}"
-	} >>"${LOG}"
-	if ((status == 0)); then
-		ok "${guide} --apply on a bare-metal host"
-		return 0
-	fi
-	if [[ "${guide}" == 02-cpu-isolation && ! -f /etc/systemd/system.conf && -f /usr/lib/systemd/system.conf ]]; then
-		observe rhel10-no-system-conf
-		cp /usr/lib/systemd/system.conf /etc/systemd/system.conf
-		HOST_CLASS_OVERRIDE=bare_metal check "${guide} --apply on a bare-metal host, with /etc/systemd/system.conf created" \
-			in_host "${REPO}/scripts/${guide}" --apply
-		return 0
-	fi
-	fail "${guide} --apply on a bare-metal host (exit ${status})"
-	indent <<<"${output}"
-}
-
 # Huge pages, CPU isolation and the graphical console are skipped or absent on a VM, so
 # guides 01, 02 and 03 run on a bare-metal host: their units, arguments and rollbacks.
 step_bare_metal_guides() {
@@ -671,7 +520,8 @@ step_bare_metal_guides() {
 	seed_userland "${UNIT_HOST}"
 	snapshot "${before}"
 	for guide in "${guides[@]}"; do
-		apply_bare_metal "${guide}"
+		HOST_CLASS_OVERRIDE=bare_metal apply_with_workarounds "${guide} --apply on a bare-metal host" \
+			in_host "${REPO}/scripts/${guide}" --apply
 	done
 	snapshot "${applied}"
 	generated="$(generated_units "${before}/etc" "${applied}/etc")"
@@ -682,19 +532,6 @@ step_bare_metal_guides() {
 	done
 	snapshot "${after}"
 	report_state "bare-metal rollback" "${before}" "${after}"
-}
-
-step_report_known_issues() {
-	local id seen found ids
-	ids="$(known_ids)"
-	while IFS= read -r id; do
-		[[ -n "${id}" ]] || continue
-		found=0
-		for seen in ${OBSERVED[@]+"${OBSERVED[@]}"}; do
-			[[ "${seen}" == "${id}" ]] && found=1
-		done
-		((found == 1)) || fail "known issue ${id} no longer shows up: remove it from scripts/fixtures/containers/known-issues"
-	done <<<"${ids}"
 }
 
 main() {
@@ -721,7 +558,7 @@ main() {
 	restore_userland
 	use_host "${MAIN_HOST}"
 	step_apply_and_roll_back
-	step_report_known_issues
+	report_known_issues
 	printf 'summary checks=%d failed=%d known=%d missing=%s\n' "${checks}" "${failed}" "${#OBSERVED[@]}" "${missing[*]:-none}"
 	if ((failed > 0)); then
 		exit 1

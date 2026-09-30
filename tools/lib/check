@@ -1,0 +1,178 @@
+# shellcheck shell=bash
+#
+# check - what the checks inside a RHEL-family system share: tools/check-container-image
+# (Level 2, a container) and tools/check-vm-guest (Level 3, a virtual machine).
+#
+# Output, one event per line:  ok TEXT | fail TEXT | note TEXT | known ID
+# The caller sets LOG (the file that keeps the output of every command it checks) and
+# KNOWN_ISSUES (its list of known bugs of the guide scripts). The format of that list is
+# described at the top of scripts/fixtures/containers/known-issues.
+
+# The caller sets REPO, LOG and KNOWN_ISSUES; ShellCheck cannot see them.
+# shellcheck disable=SC2154
+
+# The packages that the guides install or configure.
+# shellcheck disable=SC2034
+CHECK_GUIDE_PACKAGES=(grubby tuned chrony linuxptp irqbalance ethtool iproute kernel-tools)
+
+checks=0
+failed=0
+OBSERVED=()
+
+ok() {
+	checks=$((checks + 1))
+	printf 'ok %s\n' "$1"
+}
+
+fail() {
+	checks=$((checks + 1))
+	failed=$((failed + 1))
+	printf 'fail %s\n' "$1"
+}
+
+note() {
+	printf 'note %s\n' "$1"
+}
+
+# indent - the output of a failed command, under its fail line.
+indent() {
+	sed 's/^/     | /'
+}
+
+# log_output <title> <status> <output> - a command and what it printed, in LOG.
+log_output() {
+	{
+		printf '==== %s (exit %s)\n' "$1" "$2"
+		printf '%s\n' "$3"
+	} >>"${LOG}"
+}
+
+# check <title> <command...> - ok when the command succeeds, fail (with its output) when not.
+check() {
+	local title="$1" output status=0
+	shift
+	output="$("$@" 2>&1)" || status=$?
+	log_output "${title}" "${status}" "${output}"
+	if ((status == 0)); then
+		ok "${title}"
+		return 0
+	fi
+	fail "${title} (exit ${status})"
+	[[ -z "${output}" ]] || indent <<<"${output}"
+}
+
+# observe <id> - the run reproduced the known bug <id>.
+observe() {
+	local seen
+	for seen in ${OBSERVED[@]+"${OBSERVED[@]}"}; do
+		[[ "${seen}" == "$1" ]] && return 0
+	done
+	OBSERVED+=("$1")
+	printf 'known %s\n' "$1"
+}
+
+# os_major - 8, 9 or 10.
+os_major() {
+	awk -F'"' '/^VERSION_ID=/ { split($2, part, "."); print part[1] }' /etc/os-release
+}
+
+# known_ids - the ids in KNOWN_ISSUES that this system must show. The optional fourth
+# column lists the OS majors that have the bug ("10" or "8,9"), the fifth a package that
+# the system needs for the bug to show.
+known_ids() {
+	local major id majors package
+	major="$(os_major)"
+	while IFS=$'\t' read -r id _ _ majors package; do
+		[[ -n "${id}" && "${id}" != '#'* ]] || continue
+		[[ -z "${majors}" || ",${majors}," == *",${major},"* ]] || continue
+		[[ -z "${package}" ]] || rpm -q "${package}" >/dev/null 2>&1 || continue
+		printf '%s\n' "${id}"
+	done <"${KNOWN_ISSUES}"
+}
+
+# classify_leftover <line> - the id of the known bug that explains a leftover, if any.
+classify_leftover() {
+	awk -F'\t' -v line="$1" '!/^#/ && NF >= 3 && $2 != "-" && line ~ $2 { print $1; exit }' "${KNOWN_ISSUES}"
+}
+
+# report_leftovers <what> <lines> - known bugs are observed, everything else fails.
+report_leftovers() {
+	local what="$1" line id
+	while IFS= read -r line; do
+		[[ -n "${line}" ]] || continue
+		id="$(classify_leftover "${line}")"
+		if [[ -n "${id}" ]]; then
+			observe "${id}"
+		else
+			fail "${what}: unexpected leftover: ${line}"
+		fi
+	done <<<"$2"
+}
+
+# report_known_issues - a listed bug that this system should show and did not fails:
+# the change that fixed it must delete its line.
+report_known_issues() {
+	local id seen found ids
+	ids="$(known_ids)"
+	while IFS= read -r id; do
+		[[ -n "${id}" ]] || continue
+		found=0
+		for seen in ${OBSERVED[@]+"${OBSERVED[@]}"}; do
+			[[ "${seen}" == "${id}" ]] && found=1
+		done
+		((found == 1)) || fail "known issue ${id} no longer shows up: remove it from ${KNOWN_ISSUES#"${REPO}"/}"
+	done <<<"${ids}"
+}
+
+# count_lines <pattern> <file> - how many lines match; zero is a valid answer.
+count_lines() {
+	grep -c -- "$1" "$2" || true
+}
+
+# changes <before> <after> - A, M and D lines between two "checksum size path" manifests.
+changes() {
+	join -1 3 -2 3 -a 1 -a 2 -e - -o 0,1.1,2.1 "$1" "$2" |
+		awk '$2 == "-" { print "A " $1; next }
+			$3 == "-" { print "D " $1; next }
+			$2 != $3 { print "M " $1 }' |
+		grep -v -E '^. /var/lib/lowlat/' || true
+}
+
+# apply_with_workarounds <title> <command...> - runs an apply command. When it stops on a
+# known bug that has a manual workaround, the bug is observed, the workaround is done the
+# way an administrator would do it, and the command runs again:
+#   rhel10-no-system-conf     02-cpu-isolation needs /etc/systemd/system.conf, which RHEL 10
+#                             ships under /usr/lib/systemd only: copy it
+#   tuned-profile-dir-rhel10  07-os-hygiene writes /etc/tuned/low-latency, tuned on RHEL 10
+#                             reads /etc/tuned/profiles: copy the profile there
+apply_with_workarounds() {
+	local title="$1" output status attempt=1 label
+	shift
+	label="${title}"
+	while :; do
+		status=0
+		output="$("$@" 2>&1)" || status=$?
+		log_output "${label}" "${status}" "${output}"
+		if ((status == 0)); then
+			ok "${label}"
+			return 0
+		fi
+		((attempt < 3)) || break
+		attempt=$((attempt + 1))
+		if [[ "${output}" == */etc/systemd/system.conf* && ! -f /etc/systemd/system.conf && -f /usr/lib/systemd/system.conf ]]; then
+			observe rhel10-no-system-conf
+			cp /usr/lib/systemd/system.conf /etc/systemd/system.conf
+			label="${title}, with /etc/systemd/system.conf created"
+			continue
+		fi
+		if [[ "${output}" == *"Requested profile 'low-latency' doesn't exist"* && -d /etc/tuned/low-latency && -d /etc/tuned/profiles && ! -e /etc/tuned/profiles/low-latency ]]; then
+			observe tuned-profile-dir-rhel10
+			cp -a /etc/tuned/low-latency /etc/tuned/profiles/low-latency
+			label="${title}, with the profile copied to /etc/tuned/profiles"
+			continue
+		fi
+		break
+	done
+	fail "${label} (exit ${status})"
+	indent <<<"${output}"
+}
