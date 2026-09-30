@@ -46,7 +46,7 @@ make site                     # optional: assemble _site/ to preview the site lo
 - **Approval:** The owner approves library and build-tool changes, and every merge.
 - **Verification:** Keep action pins and review Gradle checksums before merging.
 
-[The configuration](.github/dependabot.yml) checks both ecosystems on Mondays at 07:23 UTC and allows three open version-update PRs per ecosystem. GitHub handles security-update PRs separately; [that limit does not cover them](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#open-pull-requests-limit-). Automatic rebasing is disabled. Resolve conflicts by merging main when the owner requests it.
+[The configuration](.github/dependabot.yml) checks both ecosystems on Mondays at 07:23 UTC and allows three open version-update PRs per ecosystem. GitHub handles security-update PRs separately; [that limit does not cover them](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#open-pull-requests-limit). Automatic rebasing is disabled. Resolve conflicts by merging main when the owner requests it.
 
 ### Workflow actions
 
