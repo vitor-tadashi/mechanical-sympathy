@@ -31,7 +31,6 @@ IMAGE_KIND="${CHECK_IMAGE_KIND:-full}"
 FAKE=/fake
 WORK=/var/tmp/check-container-image
 BIN="${WORK}/bin"
-GUIDE_PACKAGES=(grubby tuned chrony linuxptp irqbalance ethtool iproute kernel-tools)
 # Commands that go real when the image has them. Every other stub keeps the kernel fake.
 REAL_COMMANDS=(systemctl grubby tuned-adm)
 # The VM host is the main run (LOWLAT_HOST_CLASS=virtual_machine). What a VM skips is
@@ -42,98 +41,12 @@ UNIT_DIR=/etc/systemd/system
 
 LOG="${WORK}/commands.log"
 
-checks=0
-failed=0
-OBSERVED=()
 missing=()
 
+# shellcheck source=tools/lib/check
+. "${REPO}/tools/lib/check"
 # shellcheck source=tools/stubs/lib/host
 . "${STUBS}/lib/host"
-
-ok() {
-	checks=$((checks + 1))
-	printf 'ok %s\n' "$1"
-}
-
-fail() {
-	checks=$((checks + 1))
-	failed=$((failed + 1))
-	printf 'fail %s\n' "$1"
-}
-
-note() {
-	printf 'note %s\n' "$1"
-}
-
-# indent - the output of a failed command, under its fail line.
-indent() {
-	sed 's/^/     | /'
-}
-
-# check <title> <command...> - ok when the command succeeds, fail (with its output) when not.
-check() {
-	local title="$1" output status=0
-	shift
-	output="$("$@" 2>&1)" || status=$?
-	{
-		printf '==== %s (exit %s)\n' "${title}" "${status}"
-		printf '%s\n' "${output}"
-	} >>"${LOG}"
-	if ((status == 0)); then
-		ok "${title}"
-		return 0
-	fi
-	fail "${title} (exit ${status})"
-	[[ -z "${output}" ]] || indent <<<"${output}"
-}
-
-# observe <id> - the run reproduced the known bug <id>.
-observe() {
-	local seen
-	for seen in ${OBSERVED[@]+"${OBSERVED[@]}"}; do
-		[[ "${seen}" == "$1" ]] && return 0
-	done
-	OBSERVED+=("$1")
-	printf 'known %s\n' "$1"
-}
-
-# os_major - 8, 9 or 10.
-os_major() {
-	awk -F'"' '/^VERSION_ID=/ { split($2, part, "."); print part[1] }' /etc/os-release
-}
-
-# known_ids - the ids in the known-issues file that this image must show. The optional
-# fourth column lists the OS majors that have the bug ("10" or "8,9"), the fifth a package
-# that the image needs for the bug to show.
-known_ids() {
-	local major id majors package
-	major="$(os_major)"
-	while IFS=$'\t' read -r id _ _ majors package; do
-		[[ -n "${id}" && "${id}" != '#'* ]] || continue
-		[[ -z "${majors}" || ",${majors}," == *",${major},"* ]] || continue
-		[[ -z "${package}" ]] || rpm -q "${package}" >/dev/null 2>&1 || continue
-		printf '%s\n' "${id}"
-	done <"${KNOWN_ISSUES}"
-}
-
-# classify_leftover <line> - the id of the known bug that explains a leftover, if any.
-classify_leftover() {
-	awk -F'\t' -v line="$1" '!/^#/ && NF >= 3 && $2 != "-" && line ~ $2 { print $1; exit }' "${KNOWN_ISSUES}"
-}
-
-# report_leftovers <what> <lines> - known bugs are observed, everything else fails.
-report_leftovers() {
-	local what="$1" line id
-	while IFS= read -r line; do
-		[[ -n "${line}" ]] || continue
-		id="$(classify_leftover "${line}")"
-		if [[ -n "${id}" ]]; then
-			observe "${id}"
-		else
-			fail "${what}: unexpected leftover: ${line}"
-		fi
-	done <<<"$2"
-}
 
 real_command() {
 	PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" command -v "$1" >/dev/null 2>&1
@@ -145,11 +58,11 @@ real_command() {
 
 step_packages() {
 	local package
-	for package in "${GUIDE_PACKAGES[@]}"; do
+	for package in "${CHECK_GUIDE_PACKAGES[@]}"; do
 		rpm -q "${package}" >/dev/null 2>&1 || missing+=("${package}")
 	done
 	if ((${#missing[@]} == 0)); then
-		ok "all guide packages are installed (${GUIDE_PACKAGES[*]})"
+		ok "all guide packages are installed (${CHECK_GUIDE_PACKAGES[*]})"
 		return 0
 	fi
 	if [[ "${IMAGE_KIND}" == ubi ]]; then
@@ -328,15 +241,6 @@ unit_state() {
 # kernel_args - the arguments of the default boot entry, one per line.
 kernel_args() {
 	in_host grubby --info=DEFAULT 2>/dev/null | awk -F'"' '/^args=/ { print $2 }' | tr ' ' '\n' | sort
-}
-
-# changes <before> <after> - A, M and D lines between two manifests.
-changes() {
-	join -1 3 -2 3 -a 1 -a 2 -e - -o 0,1.1,2.1 "$1" "$2" |
-		awk '$2 == "-" { print "A " $1; next }
-			$3 == "-" { print "D " $1; next }
-			$2 != $3 { print "M " $1 }' |
-		grep -v -E '^. /var/lib/lowlat/' || true
 }
 
 # ---------------------------------------------------------------------------------------
@@ -525,11 +429,6 @@ tolerated() {
 	return 1
 }
 
-# count_lines <pattern> <file> - how many lines match; zero is a valid answer.
-count_lines() {
-	grep -c -- "$1" "$2" || true
-}
-
 step_verify() {
 	local log="${WORK}/verify.log" status=0 line passes warns fails failed_lines
 	in_host "${REPO}/scripts/verify-tuning" >"${log}" 2>&1 || status=$?
@@ -642,19 +541,6 @@ step_bare_metal_guides() {
 	report_state "bare-metal rollback" "${before}" "${after}"
 }
 
-step_report_known_issues() {
-	local id seen found ids
-	ids="$(known_ids)"
-	while IFS= read -r id; do
-		[[ -n "${id}" ]] || continue
-		found=0
-		for seen in ${OBSERVED[@]+"${OBSERVED[@]}"}; do
-			[[ "${seen}" == "${id}" ]] && found=1
-		done
-		((found == 1)) || fail "known issue ${id} no longer shows up: remove it from scripts/fixtures/containers/known-issues"
-	done <<<"${ids}"
-}
-
 main() {
 	local uid
 	[[ -d /run/systemd/system ]] || {
@@ -680,7 +566,7 @@ main() {
 	restore_userland
 	use_host "${MAIN_HOST}"
 	step_apply_and_roll_back
-	step_report_known_issues
+	report_known_issues
 	printf 'summary checks=%d failed=%d known=%d missing=%s\n' "${checks}" "${failed}" "${#OBSERVED[@]}" "${missing[*]:-none}"
 	if ((failed > 0)); then
 		exit 1

@@ -56,7 +56,7 @@
 | <a id="cfs"></a>**CFS / EEVDF** | **Completely Fair Scheduler** and **Earliest Eligible Virtual Deadline First.** The parts of Linux that choose which thread runs next. EEVDF replaced CFS in kernel 6.6. | [Concept: CPU isolation §2](concepts/cpu-isolation.md#2-the-linux-scheduler-in-one-page) |
 | <a id="cgroup"></a>**cgroup** | **Control group.** A Linux feature that puts processes in a group and limits what the group may use: CPUs, memory, disk. | [Guide 05](guides/05-cgroup-isolation.md) uses cgroups to keep the operating system away from the critical CPUs. |
 | <a id="chrony"></a>**chrony** | A program that keeps the computer clock correct by asking time servers over the network. | [Guide 10 §6](guides/10-time-sync.md#6-chrony) |
-| <a id="cloud-init"></a>**cloud-init** | The program that sets up a cloud image at its first boot: it reads a small configuration (user, files, commands) from a disk or the network. It can also run a script at every boot. | The KVM spike gives a Rocky Linux cloud image its test script through cloud-init. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
+| <a id="cloud-init"></a>**cloud-init** | The program that sets up a cloud image at its first boot: it reads a small configuration (user, files, commands) from a disk or the network. It can also run a script at every boot. | `tools/check-vm` gives each cloud image its SSH key and network setup through cloud-init. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
 | <a id="coalescing"></a>**coalescing** | The NIC waits a short time, or for several packets, before it raises an [interrupt](#irq). One interrupt then serves many packets. | It saves CPU, and it makes the first packet wait. [Guide 04 §5.3](guides/04-network-optimization.md#53-coalescing-0-ethtool--c-rx-usecs-0-tx-usecs-0) |
 | <a id="combined-channel"></a>**combined channel** | One NIC receive queue and one transmit queue that share a single interrupt. `ethtool -l` shows how many there are. | Fewer combined channels mean fewer interrupts to place on CPUs. [Guide 04 §5.1](guides/04-network-optimization.md#51-queues-channels-ethtool--l) |
 | <a id="conntrack"></a>**conntrack** | The kernel table that remembers active network connections for packet filtering and address translation. | Reloading rules does not recreate connections lost while filtering modules were removed. [Guide 07 rollback](guides/07-os-hygiene.md#11-rollback) |
@@ -114,6 +114,7 @@
 | <a id="gc"></a>**GC** | **Garbage collection.** The [JVM](#jvm) frees unused objects by itself, and it may pause the program to do so. | A GC pause is a cause of [tail latency](#tail-latency). [Guide 03](guides/03-huge-pages-configuration.md) |
 | <a id="gro"></a>**GRO** | **Generic Receive Offload.** The kernel joins several received packets of one flow into one big packet before the stack handles them. | It saves CPU, and it only joins packets that arrive in the same poll. [Guide 04 §5.5](guides/04-network-optimization.md#55-segmentation-and-aggregation-offloads-off-ethtool--k-tso-off-gso-off-lro-off) |
 | <a id="grub"></a>**GRUB** | **GRand Unified Bootloader.** The program that loads the Linux kernel and gives it the kernel command line. | [Guide 01](guides/01-grub-bootloader-tuning.md) |
+| <a id="grubenv"></a>**grubenv** | A small file of [GRUB](#grub) variables, `/boot/grub2/grubenv`. On RHEL 8 it holds `kernelopts`, the kernel command line that the boot entries point to. | `grub2-mkconfig` can rewrite it. `tools/check-vm` records it before and after the guides run, to show which tool decides the command line. [Guide 01](guides/01-grub-bootloader-tuning.md) |
 | <a id="gso"></a>**GSO** | **Generic Segmentation Offload.** The kernel builds one big packet and cuts it into normal-size packets late, just before the driver. | Batching that can add delay. [Guide 04 §5.5](guides/04-network-optimization.md#55-segmentation-and-aggregation-offloads-off-ethtool--k-tso-off-gso-off-lro-off) |
 
 ### H
@@ -232,13 +233,15 @@
 | <a id="pre-touch"></a>**pre-touch** | Write to every page of a memory area when the program starts, so that no page fault happens later. | A page fault on the hot path costs microseconds. [Guide 03](guides/03-huge-pages-configuration.md) |
 | <a id="psi"></a>**PSI** | **Pressure Stall Information.** Kernel numbers that show how long tasks waited for CPU, memory or disk. | An early sign that a group is short of a resource. [Concept: cgroups](concepts/cgroups.md#psi-pressure-stall-information) |
 | <a id="ptp"></a>**PTP** | **Precision Time Protocol.** Clock synchronization to within microseconds or better, using network hardware. | [Guide 10 §7](guides/10-time-sync.md#7-ptp-with-linuxptp) |
+| <a id="ptp-kvm"></a>**ptp_kvm** | A kernel module for [KVM](#kvm) guests. It shows the host clock to the guest as a [PTP](#ptp) clock device, `/dev/ptp0`. | `tools/check-vm` points chrony at it, so the guest clock synchronizes with no network time server. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
 
 ### Q
 
 | Term | Means | Why you meet it here |
 |---|---|---|
+| <a id="qcow2"></a>**qcow2** | **QEMU Copy-On-Write, version 2.** The disk image format of [QEMU](#qemu). A qcow2 file can sit on top of another one and store only what changed. | Cloud images ship as qcow2. `tools/check-vm` starts every run from a thin layer on the cached image. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
 | <a id="qdisc"></a>**qdisc** | **Queueing discipline.** The kernel queue in front of the NIC transmit ring. | `txqueuelen` is its length. [Guide 04 §5.8](guides/04-network-optimization.md#58-txqueuelen-bulk-nics) |
-| <a id="qemu"></a>**QEMU** | A program that runs a whole virtual machine. With [KVM](#kvm) it uses the CPU features of the host and is fast. | `tools/check-kvm` boots a RHEL-family cloud image in QEMU with two NUMA nodes. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
+| <a id="qemu"></a>**QEMU** | A program that runs a whole virtual machine. With [KVM](#kvm) it uses the CPU features of the host and is fast. | `tools/check-vm` boots RHEL-family cloud images in QEMU with two NUMA nodes and runs the guides in them. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
 
 ### R
 
@@ -264,6 +267,7 @@
 
 | Term | Means | Why you meet it here |
 |---|---|---|
+| <a id="serial-console"></a>**serial console** | A text console on a serial port. In a [VM](#vm), QEMU writes the guest serial port to a file. | Kernel boot messages land there. `tools/check-vm` keeps it as a log of every boot. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
 | <a id="skmem"></a>**skmem** | The memory line that `ss -m` prints for a socket: `r` bytes queued for the reader, `rb` the limit, `t` and `tb` the same for sending, `d` the datagrams this socket dropped. | The quickest way to see a full receive buffer. [Concept: network buffers §4](concepts/network-buffers.md#4-socket-buffers) |
 | <a id="slice"></a>**slice** | A systemd unit that is a node in the [cgroup](#cgroup) tree. Services are placed in slices. | [Guide 05 §4](guides/05-cgroup-isolation.md#4-design-three-slices) |
 | <a id="smi"></a>**SMI** | **System Management Interrupt.** *S-M-I.* The firmware ([BIOS](#bios)) stops every CPU for a short time to do its own work, for example to check power or to emulate a USB keyboard. The operating system cannot see it and cannot stop it. | It shows up as a latency spike of about 50 µs to several ms, and no log explains it. Count it with `turbostat`. [Guide 00 §4.6](guides/00-bios-firmware.md#46-system-management-interrupts) |
@@ -282,7 +286,8 @@
 | Term | Means | Why you meet it here |
 |---|---|---|
 | <a id="tail-latency"></a>**tail latency** | The slow end of the latency distribution: p99 and above. | Users notice the tail, and interruptions cause it. [Guide 09](guides/09-measuring-latency.md) |
-| <a id="tcg"></a>**TCG** | **Tiny Code Generator.** The software mode of [QEMU](#qemu): it translates the guest CPU instructions one by one, so it needs no [KVM](#kvm). It is many times slower. | It is the fallback when a CI runner has no `/dev/kvm`. The spike measures its boot time. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
+| <a id="tap-device"></a>**tap device** | A virtual network card on the host. What the host writes to it, a program such as [QEMU](#qemu) reads as frames from the wire, and the other way around. With `multi_queue` it has several queues. | `tools/check-vm` backs the critical NIC of the guest with one, so the guest sees a [virtio](#virtio) NIC with 4 queues. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
+| <a id="tcg"></a>**TCG** | **Tiny Code Generator.** The software mode of [QEMU](#qemu): it translates the guest CPU instructions one by one, so it needs no [KVM](#kvm). It is many times slower. | It would be the fallback when a CI runner has no `/dev/kvm`. The hosted runners have KVM, so `tools/check-vm` does not use it. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
 | <a id="tcp"></a>**TCP** | **Transmission Control Protocol.** A reliable, ordered byte stream. A lost packet is sent again after a timeout ([RTO](#rto)). | [Guide 06 §3](guides/06-kernel-sysctl-tuning.md#3-tcp-behavior) |
 | <a id="tcp-nodelay"></a>**TCP_NODELAY** | A socket option that turns [Nagle's algorithm](#nagle) off. | Set it on every latency-critical TCP socket. [Concept: network tuning §6](concepts/network-tuning.md#6-transmit-path) |
 | <a id="thp"></a>**THP** | **Transparent Huge Pages.** The kernel creates and merges huge pages by itself, at times you do not choose. | It can stall a thread while it works, so it is off. [Guide 03 §2](guides/03-huge-pages-configuration.md#2-transparent-vs-explicit-huge-pages-why-thp-is-off) |
@@ -303,6 +308,7 @@
 | <a id="udp"></a>**UDP** | **User Datagram Protocol.** Sends single packets with no connection and no resending. | A lost datagram is gone, so the receive buffer must hold a whole [burst](#burst). [Guide 06 §4](guides/06-kernel-sysctl-tuning.md#4-socket-buffers) |
 | <a id="umem"></a>**UMEM** | **User Memory.** In [AF_XDP](#af-xdp), the block of memory that the program registers, from which the packet buffers are taken. | [Guide 08 §7](guides/08-kernel-bypass.md#7-other-stacks-briefly) |
 | <a id="usb-emulation"></a>**USB emulation** | The firmware makes a USB keyboard look like an old PS/2 device, and it uses [SMIs](#smi) to do it. | Turn it off on servers without a local keyboard. [Guide 00 §4.6](guides/00-bios-firmware.md#46-system-management-interrupts) |
+| <a id="user-mode-networking"></a>**user-mode networking** | The network of [QEMU](#qemu) that needs no host setup (also called SLIRP). QEMU itself plays the router, and can forward a host port into the guest. It has one queue only. | `tools/check-vm` gives the mgmt NIC this network: SSH through a forwarded port, and the internet for `dnf`. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
 
 ### V
 
@@ -311,6 +317,7 @@
 | <a id="vfio"></a>**VFIO** | **Virtual Function I/O.** A Linux framework that gives a user-space program safe access to a PCI device, through the [IOMMU](#iommu). | [DPDK](#dpdk) uses it. [Guide 08 §6.2](guides/08-kernel-bypass.md#62-binding-ports) |
 | <a id="vga"></a>**VGA console** | The screen output of kernel messages. Writing to it (or to a slow serial console) is synchronous, so it can block a CPU for milliseconds. | The guides limit console messages. [Guide 01 §5](guides/01-grub-bootloader-tuning.md#5-the-parameters-one-by-one) |
 | <a id="vi"></a>**VI** | **Virtual Interface.** On Solarflare NICs, one set of hardware queues (receive, transmit and events) that one program owns. | [Onload](#onload) creates VIs for its stacks. [Guide 08 §5.1](guides/08-kernel-bypass.md#51-how-onload-works) |
+| <a id="virtio"></a>**virtio** | The standard family of virtual devices in a [KVM](#kvm) guest: disk, network and more. `virtio-net` is the network card, and it can have several queue pairs. | The guides tune it like a physical NIC, with fewer settings. [Guide 04](guides/04-network-optimization.md) |
 | <a id="vlan"></a>**VLAN** | **Virtual LAN.** A tag in the packet that splits one physical network into several logical ones. | The NIC can filter by VLAN. [Concept: network tuning §2](concepts/network-tuning.md#2-the-receive-path-step-by-step) |
 | <a id="vm"></a>**VM** | **Virtual machine.** | Many tunings are only partly possible in a VM. [Guide 00 §10](guides/00-bios-firmware.md#10-bare-metal-vs-vm) |
 

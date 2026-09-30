@@ -1,0 +1,83 @@
+name: vm
+
+# Level 3 of the validation ladder: boots RHEL-family cloud images in QEMU/KVM, applies
+# the guides on a real kernel, reboots, verifies, rolls back, reboots and compares with
+# the state before apply (tools/check-vm). CentOS Stream runs ahead of RHEL: its job is
+# advisory. Stream 9 is left out while CentOS publishes no checksum for its cloud images.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/**
+      - tools/**
+      - .github/workflows/vm.yml
+  pull_request:
+    paths:
+      - scripts/**
+      - tools/**
+      - .github/workflows/vm.yml
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  vm:
+    name: vm (${{ matrix.name }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    continue-on-error: ${{ !matrix.blocking }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: rocky8, blocking: true}
+          - {name: rocky9, blocking: true}
+          - {name: alma10, blocking: true}
+          - {name: stream10, blocking: false}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Enable the KVM device for every user (udev rule)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install QEMU and cloud-image-utils
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q qemu-system-x86 qemu-utils cloud-image-utils
+      - name: Published checksum of the image (the cache key)
+        id: sum
+        env:
+          IMAGE: ${{ matrix.name }}
+        run: echo "sha256=$(tools/check-vm --print-checksum "${IMAGE}")" >> "${GITHUB_OUTPUT}"
+      - name: Cache the image
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/vm-cache
+          key: vm-${{ matrix.name }}-${{ steps.sum.outputs.sha256 }}
+      - name: Check the guides in a ${{ matrix.name }} VM
+        env:
+          IMAGE: ${{ matrix.name }}
+        run: tools/check-vm --cache ~/vm-cache --work "${RUNNER_TEMP}/vm" "${IMAGE}"
+      - name: Upload the logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: check-vm-${{ matrix.name }}
+          path: |
+            ${{ runner.temp }}/vm/*/serial.log
+            ${{ runner.temp }}/vm/*/qemu.log
+            ${{ runner.temp }}/vm/*/events
+            ${{ runner.temp }}/vm/*/guest-*
+          if-no-files-found: ignore

@@ -1,0 +1,18 @@
+# Known bugs of the guide scripts, found by tools/check-vm-guest (Level 3) and waiting for Phase 1.
+# Same columns and rules as scripts/fixtures/containers/known-issues:
+#   id | pattern | what is wrong | OS majors (optional: "10" or "8,9"; empty means all) | package the system needs (optional)
+# The pattern is an awk regular expression, matched against a leftover line such as
+# "M /etc/fstab", "unit missing crond.service enabled", "rollback failed GUIDE: <line>",
+# "boot entry missing vmlinuz-5.14.0 console=tty0", "nic missing eth1 channels Combined: 4"
+# or "verify FAIL <text>". A dash means that the check
+# finds the bug in code. A bug that is observed and not listed fails the run. So does a listed
+# bug that is no longer observed on an image it applies to: delete its line in the change that
+# fixes it.
+grub-cfg-left-regenerated	^M /(boot/grub2/grub\.cfg|etc/grub2(-efi)?\.cfg)$	01-grub-bootloader --apply regenerates grub.cfg with grub2-mkconfig, and --rollback leaves the regenerated file (with BLS entries the arguments are not in it, so the next boot is the same)
+runtime-unit-left-enabled	lowlat-runtime\.service	apply-all has no --rollback: lowlat-runtime.service stays installed and enabled
+rhel8-rollback-args-return	^running cmdline extra 	on RHEL 8 the kernel arguments that 01 removed are back on /proc/cmdline after a reboot: GRUB cannot read grubenv (on the cloud image /boot/grub2/grubenv links into /boot/efi) and boots with the kernelopts copy in grub.cfg, which the rollback does not regenerate (guide 01 section 4.1)	8
+coalesce-unsupported-verify-fails	^verify FAIL .*rx-usecs=0$	04-network asks for rx-usecs=0 on the critical NIC, and verify-tuning fails when the driver has no interrupt coalescing (virtio-net on the RHEL 8 kernel)	8
+virtio-irq-verify-fails	^verify FAIL .*(\(critical\) IRQs on CPUs |no NIC IRQ effective on an isolated CPU)	after the reboot verify-tuning fails the IRQ placement of the critical virtio-net NIC, although 04 placed every IRQ and lowlat-runtime.service succeeded: the effective affinity stays on other CPUs (Rocky 9), and on Rocky 8 the requested affinity is reset after the runtime unit ran (tools/check-vm keeps the IRQ state and the runtime journal)
+console-restore-drops-serial	^M /etc/(default|sysconfig)/grub$|serial-getty@|^boot entry missing .* console=ttyS[0-9]|^running cmdline missing console=ttyS[0-9]	01-grub-bootloader --rollback on RHEL 10 restores console=tty0 but leaves every boot entry without console=ttyS0,115200n8: the serial console and its getty are gone after the reboot	10
+rollback-07-start-refused	^rollback failed 07-os-hygiene: |limits\.d/90-lowlat|/etc/tuned/|^M /etc/fstab$|^(boot entry extra .* |running cmdline extra )(skew_tick=1|tsc=reliable|rcupdate\.rcu_normal_after_boot=1|rcutree\.nohz_full_patience_delay=1000)$|(crond|rpcbind|nfs-client|remote-fs-pre|plymouth|auth-rpcgss|rpc_pipefs|rpc-statd|sysstat|pcscd|cpupower)	07-os-hygiene --rollback puts an active unit back by starting it, and systemd refuses a manual start of targets such as rpcbind.target and remote-fs-pre.target: the rollback stops with exit 4, and the units, mounts and tuned files after that point keep their applied state
+rollback-04-mangleid-on	^nic (missing|extra) [^ ]+ offload tx-tcp-mangleid-segmentation: 	04-network --rollback turns TSO back on with all its parts, so tx-tcp-mangleid-segmentation ends on although it was off before apply

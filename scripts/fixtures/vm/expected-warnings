@@ -1,0 +1,10 @@
+# WARN lines of verify-tuning that a virtual machine shows, and that are not bugs of the
+# guides. tools/check-vm-guest fails on a WARN that is not listed here, and only prints a
+# note when a listed one does not show up (some depend on the image or on timing).
+# Columns, separated by a tab:
+#   id | pattern | why a VM shows it | pass (optional: virtual_machine or bare_metal; empty means both) | OS majors (optional)
+# The pattern is an awk regular expression, matched against the text after "  WARN ".
+adaptive-rx-virtio	\(critical\) adaptive RX off$	virtio-net has no adaptive interrupt coalescing to turn on
+clocksource-kvm-clock	^clocksource is tsc	a KVM guest runs on kvm-clock: the hypervisor decides whether the TSC is stable
+measure-tools	^(rtla|rt-tests|sysstat|perf|numactl) installed$	the tools of guide 09 (measurement): the check does not run 09-measure-latency
+measure-bundle	^at least one bundle in /var/lib/lowlat/measurements	the check does not run 09-measure-latency --run

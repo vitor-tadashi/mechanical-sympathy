@@ -146,6 +146,38 @@ sequenceDiagram
 > [!IMPORTANT]
 > Editing `GRUB_CMDLINE_LINUX` in `/etc/default/grub` alone is **not enough** on BLS systems. It only affects kernels installed afterwards, or a `grub2-mkconfig` run with `GRUB_ENABLE_BLSCFG=false`. Use `grubby`.
 
+### 4.1 grubby versus grub2-mkconfig on RHEL 8
+
+**Short answer:** keep both. On RHEL 8 `grubby` stores the arguments, and on some hosts only the `grub2-mkconfig` that runs after it makes GRUB see them. The same is true when you take arguments away: after a rollback on RHEL 8, run `grub2-mkconfig` again, or the old arguments come back at the next boot. On RHEL 9 and 10, `grubby` alone decides, and the `grub2-mkconfig` run is harmless.
+
+<details>
+<summary>What the Level 3 check measured, and how to check your own host</summary>
+
+`tools/check-vm` applies this guide in KVM guests of the cloud images, reboots, rolls back and reboots again, and records the GRUB state at each step (`grub-*.txt` in the CI artifacts):
+
+| Image (BIOS boot) | Where the arguments live | After apply and a reboot | After `--rollback` and a reboot |
+|---|---|---|---|
+| Rocky Linux 8.10, grubby 8.40 | [grubenv](../GLOSSARY.md#grubenv) `kernelopts`, and `GRUB_CMDLINE_LINUX` in `/etc/default/grub`: `grubby` writes both. The boot entries say `options $kernelopts $tuned_params` | the arguments are on `/proc/cmdline` | **the arguments are still on `/proc/cmdline`**, although `grubby --info=DEFAULT`, `kernelopts` and `/etc/default/grub` are clean |
+| Rocky Linux 9 | the `options` line of each boot entry; the image has no `/etc/default/grub` | on `/proc/cmdline` | gone |
+| AlmaLinux 10, CentOS Stream 10 | the `options` line of each boot entry, and `GRUB_CMDLINE_LINUX` | on `/proc/cmdline` | gone |
+
+Why RHEL 8 behaves that way on the cloud image: `/boot/grub2/grubenv` is a symbolic link to `../efi/EFI/rocky/grubenv`, a file on the EFI partition. A GRUB that boots through the BIOS reads `/boot/grub2` and cannot follow that link, so it never sees `kernelopts`. It falls back to the copy of `kernelopts` that `grub2-mkconfig` wrote into `grub.cfg`: the kernel boots with exactly that string. At apply time that copy is fresh, because the script runs `grub2-mkconfig` after `grubby`. At rollback it is stale, because the rollback does not run it (a Phase 1 fix, `rhel8-rollback-args-return` in `scripts/fixtures/vm/known-issues`).
+
+A server installed from the RHEL 8 ISO usually has a real `grubenv` file, and then `grubby` alone is enough. Check which case you have:
+
+```bash
+ls -l /boot/grub2/grubenv                            # a link into /boot/efi on a BIOS host: GRUB cannot read it
+sudo grub2-editenv list | grep kernelopts            # what grubby wrote
+grep -F -A1 'if [ -z "${kernelopts}" ]' /boot/grub2/grub.cfg   # the fallback GRUB uses when it cannot read grubenv
+cat /proc/cmdline                                    # what the kernel really got
+```
+
+If the fallback line in `grub.cfg` and `/proc/cmdline` disagree with `grub2-editenv list`, GRUB is not reading `grubenv`. Regenerate `grub.cfg` after every change of kernel arguments, the rollback included: `sudo grub2-mkconfig -o /boot/grub2/grub.cfg`.
+
+> **Not tested yet.** The check shows the stale fallback. It does not yet run `grub2-mkconfig` after the rollback to show that this clears it.
+
+</details>
+
 ## 5. The parameters, one by one
 
 ### 5.1 Latency subset (bare metal **and** VMs)
@@ -342,6 +374,7 @@ flowchart TD
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `/sys/devices/system/cpu/isolated` is empty after reboot | Arguments went into `/etc/default/grub` only, or the wrong `grub.cfg` was regenerated | `grubby --info=DEFAULT` must show the args. Re-apply with `grubby`. On UEFI RHEL 8, regenerate `/boot/efi/EFI/redhat/grub.cfg`. |
+| After `--rollback` and a reboot, RHEL 8 still boots with the removed arguments | GRUB cannot read `grubenv` (for example a link into `/boot/efi` on a BIOS host) and boots with the stale `kernelopts` copy in `grub.cfg` | `sudo grub2-mkconfig -o /boot/grub2/grub.cfg`, then reboot (§4.1) |
 | Application threads are all on CPU 3 | Threads were started with an affinity mask covering several isolated CPUs. Isolated CPUs have **no load balancing**, so the kernel never moves them. | Pin **each** thread to **one** CPU ([Guide 02](02-cpu-core-isolation.md#6-pinning-the-application)). |
 | LOC counter still ticks at HZ on isolated CPU | More than one runnable task on that CPU, or an unbound timer/kworker landed there | `ps -eLo psr,comm | awk '$1==5'`, then fix the workqueue mask ([Guide 02](02-cpu-core-isolation.md)). Try removing `nohz=off` (§5.2). |
 | Interfaces renamed after reboot | `biosdevname` changed | Remove the argument, or update the network profiles to the new names. |
@@ -357,6 +390,7 @@ flowchart TD
 - [ ] Remove every argument this guide manages and restore the original graphical consoles: `sudo scripts/01-grub-bootloader --rollback`
 - [ ] Or remove a single one: `sudo grubby --update-kernel=ALL --remove-args="nohz_full"`
 - [ ] Check every stored line: `sudo grubby --info=ALL`. Entries that originally had `console=tty0` must have it again; serial consoles stay intact.
+- [ ] RHEL 8: regenerate `grub.cfg`, so that GRUB does not boot with a stale copy of the old arguments: `sudo grub2-mkconfig -o /boot/grub2/grub.cfg` (§4.1)
 - [ ] Reboot: `sudo systemctl reboot`
 - [ ] Confirm: `cat /proc/cmdline` no longer shows the arguments, and `cat /sys/devices/system/cpu/isolated` is empty
 
@@ -387,6 +421,7 @@ recorded kernel was removed, inspect the installed entries before retrying.
 - Boot arguments decide the noise floor. `isolcpus`, `nohz_full` and `rcu_nocbs` can't be changed without a reboot.
 - `rcu_nocbs` lists the **isolated** CPUs, the ones whose callbacks move away, not the housekeeping CPUs.
 - Always use `grubby`, and always remove an argument before adding it again.
+- On RHEL 8, run `grub2-mkconfig` after every change of the arguments, a rollback included: GRUB may boot from the copy in `grub.cfg`.
 - VMs get only the latency subset. Real isolation in a VM comes from dedicated physical CPUs on the hypervisor.
 - Mitigations and IOMMU stay on unless security signs off. Verify the tick really stopped, don't assume it.
 
