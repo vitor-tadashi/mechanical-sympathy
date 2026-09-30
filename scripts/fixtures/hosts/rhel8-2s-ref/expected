@@ -1217,10 +1217,24 @@ A /var/lib/lowlat/factory-settings/.values/*/services
 A /var/lib/lowlat/factory-settings/.values/*/tuned-profile
 A /var/lib/lowlat/factory-settings/.values/*/workqueue
 A /var/lib/lowlat/factory-settings/.values/*/writeback
+A /var/lib/lowlat/factory-settings/.values/apply-all/complete
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/00-bios-firmware
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/01-grub-bootloader
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/02-cpu-isolation
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/03-huge-pages
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/04-network
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/05-cgroup-isolation
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/06-kernel-sysctl
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/07-os-hygiene
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/08-kernel-bypass
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/10-time-sync
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/11-day2-operations
+A /var/lib/lowlat/factory-settings/.values/apply-all/started
 A /var/lib/lowlat/factory-settings/.values/files/etc/fstab
 A /var/lib/lowlat/factory-settings/.values/files/etc/security/limits.d/90-lowlat.conf
 A /var/lib/lowlat/factory-settings/.values/files/etc/sysctl.d/91-lowlat-rt.conf
 A /var/lib/lowlat/factory-settings/.values/files/etc/systemd/system.conf
+A /var/lib/lowlat/factory-settings/.values/files/etc/systemd/system/lowlat-runtime.service
 A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/active_profile
 A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/bootcmdline
 A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/low-latency/tuned.conf
@@ -1232,6 +1246,7 @@ A /var/lib/lowlat/factory-settings/.values/services/cpupower
 A /var/lib/lowlat/factory-settings/.values/services/cpuspeed
 A /var/lib/lowlat/factory-settings/.values/services/crond
 A /var/lib/lowlat/factory-settings/.values/services/irqbalance
+A /var/lib/lowlat/factory-settings/.values/services/lowlat-runtime.service
 A /var/lib/lowlat/factory-settings/.values/services/nfs-client.target
 A /var/lib/lowlat/factory-settings/.values/services/pcscd
 A /var/lib/lowlat/factory-settings/.values/services/plymouth-quit
@@ -1718,101 +1733,100 @@ LOW-LATENCY TUNING VERIFICATION
     01.02 Set BIOS_PCIE_ASPM_POLICY="" so that lowlat-runtime.service stops re-applying it
 ---- exit 0
 
+==== apply-all --rollback
+
+01. Stopping boot-time reapplication
+
+02. Rollback 11-day2-operations
+
+01. Verification timer
+    01.01 Disabling lowlat-verify.timer and removing the units
+    01.02 Removing the reports
+
+03. Rollback 08-kernel-bypass
+
+01. Kernel bypass rollback
+    01.01 KERNEL_BYPASS_STACK is empty, nothing to undo
+
+04. Rollback 04-network
+
+01. Restoring NIC settings and IRQ affinity
+
+05. Rollback 05-cgroup-isolation
+
+01. Removing housekeeping slice and drop-ins
+    01.01 Restart the affected services to move them back to system.slice
+
+06. Rollback 10-time-sync
+
+01. Time synchronization
+    01.01 Removing chronyd.service drop-in
+    01.02 Removing ptp4l.service drop-in
+    01.03 Removing phc2sys.service drop-in
+    01.04 Enabling chronyd (the RHEL default)
+
+07. Rollback 07-os-hygiene
+
+01. Restoring OS hygiene baseline
+
+08. Rollback 06-kernel-sysctl
+
+01. Removing /etc/sysctl.d/90-lowlat.conf
+    01.01 Values stay active until reboot (or re-run: sysctl --system)
+
+09. Rollback 03-huge-pages
+
+01. Removing huge page reservation
+    01.01 Releasing reserved pages (pages in use are released when their owner exits)
+
+10. Rollback 02-cpu-isolation
+
+01. Restoring CPU isolation baseline
+    01.01 Reboot required to restore PID 1 and inherited service affinity
+
+11. Rollback 01-grub-bootloader
+
+01. Removing managed kernel arguments from every kernel entry
+    01.01 Removing idle
+    01.02 Removing processor.max_cstate
+    01.03 Removing intel_idle.max_cstate
+    01.04 Removing transparent_hugepage
+    01.05 Removing isolcpus
+    01.06 Removing nohz_full
+    01.07 Removing nohz
+    01.08 Removing rcu_nocbs
+    01.09 Removing rcu_nocb_poll
+    01.10 Removing skew_tick
+    01.11 Removing intel_pstate
+    01.12 Removing nosoftlockup
+    01.13 Removing nmi_watchdog
+    01.14 Removing mce
+    01.15 Removing default_hugepagesz
+    01.16 Removing hugepagesz
+    01.17 Removing intel_iommu
+    01.18 Removing iommu
+    01.19 Removing nospectre_v1
+    01.20 Removing nospectre_v2
+    01.21 Removing pti
+    01.22 Removing mds
+    01.23 Removing tsx_async_abort
+    01.24 Restoring console=tty0 for /vmlinuz-4.18.0-553.el8_10.x86_64
+    01.25 Restoring console=tty0 for /vmlinuz-0-rescue
+    01.26 Reboot required
+
+12. Rollback 00-bios-firmware
+
+01. Firmware settings visible to the OS
+    01.01 No recorded ASPM policy, nothing to restore
+
+13. Restoring the original runtime unit
+
+Reboot to restore boot parameters and inherited service affinity.
+---- exit 0
+
 ==== reboot after rollback
-lowlat-runtime.service: /opt/lowlat/scripts/apply-all --runtime
-  LOW-LATENCY TUNING (runtime)
-    os:         Red Hat Enterprise Linux 8.10
-    kernel:     4.18.0-553.el8_10.x86_64
-    host class: bare_metal
-    config:     /etc/lowlat/lowlat.conf
-    date:       <date>
-  
-  01. Firmware settings visible to the OS
-      01.01 PCIe ASPM policy default -> performance
-  
-  02. Kernel workqueue CPU mask
-      02.01 Unbound workqueues -> CPUs 0 2 (mask 00000005)
-      02.02 Writeback workqueue -> CPUs 0 2 (mask 00000005)
-  
-  03. NIC queues, coalescing, pause frames, offloads and rings
-      03.01 ens1f0: 1 combined queue(s), one per IRQ CPU (1)
-      03.02 ens1f0: adaptive-rx off, adaptive-tx off
-      03.03 ens1f0: rx-usecs 0, tx-usecs 0
-      03.04 ens1f0: pause frames off (ethtool -A autoneg off rx off tx off)
-      03.05 ens1f0: tso off, gso off, lro off
-      03.06 ens1f0: RX ring 4096
-      03.07 ens1f0: TX ring 4096
-      03.08 ens1f1: 1 combined queue(s), one per IRQ CPU (1)
-      03.09 ens1f1: adaptive-rx off, adaptive-tx off
-      03.10 ens1f1: rx-usecs 0, tx-usecs 0
-      03.11 ens1f1: pause frames off (ethtool -A autoneg off rx off tx off)
-      03.12 ens1f1: tso off, gso off, lro off
-      03.13 ens1f1: RX ring 4096
-      03.14 ens1f1: TX ring 4096
-      03.15 eno1: 1 combined queue(s), one per IRQ CPU (0)
-      03.16 eno1: adaptive-rx off, adaptive-tx off
-      03.17 eno1: rx-usecs 0, tx-usecs 0
-      03.18 eno1: pause frames off (ethtool -A autoneg off rx off tx off)
-      03.19 eno1: tso off, gso off, lro off
-      03.20 eno1: RX ring 4096
-      03.21 eno1: TX ring 4096
-      03.22 ens2f0: 1 combined queue(s), one per IRQ CPU (30)
-      03.23 ens2f0: adaptive-rx off, adaptive-tx off
-      03.24 ens2f0: rx-usecs 0, tx-usecs 0
-      03.25 ens2f0: pause frames off (ethtool -A autoneg off rx off tx off)
-      03.26 ens2f0: tso off, gso off, lro off
-      03.27 ens2f0: RX ring 4096
-      03.28 ens2f0: TX ring 4096
-      03.29 ens2f0: txqueuelen 300000
-      03.30 ens2f1: 1 combined queue(s), one per IRQ CPU (30)
-      03.31 ens2f1: adaptive-rx off, adaptive-tx off
-      03.32 ens2f1: rx-usecs 0, tx-usecs 0
-      03.33 ens2f1: pause frames off (ethtool -A autoneg off rx off tx off)
-      03.34 ens2f1: tso off, gso off, lro off
-      03.35 ens2f1: RX ring 4096
-      03.36 ens2f1: TX ring 4096
-      03.37 ens2f1: txqueuelen 300000
-      03.38 eno2 is a management interface, leaving it untouched
-  
-  04. NIC interrupt affinity
-      04.01 ens1f0: routing interrupts to CPUs 1
-      04.02 ens1f0: 8 IRQ(s) placed
-      04.03 ens1f1: routing interrupts to CPUs 1
-      04.04 ens1f1: 8 IRQ(s) placed
-      04.05 eno1: routing interrupts to CPUs 0
-      04.06 eno1: 8 IRQ(s) placed
-      04.07 ens2f0: routing interrupts to CPUs 30
-      04.08 ens2f0: 8 IRQ(s) placed
-      04.09 ens2f1: routing interrupts to CPUs 30
-      04.10 ens2f1: 8 IRQ(s) placed
-      04.11 eno2: routing interrupts to CPUs 0
-      04.12 eno2: 8 IRQ(s) placed
-  
-  05. Pinning housekeeping processes
-      05.01 Pinning edr-agentd pid 1008 (all threads) to CPUs 4
-      05.02 av-scand is not running
-  
-  06. Host packet filtering (opt-in)
-  
-  Step timing summary
-  +------+----------------------------------------------------------+------------+
-  | Step | Description                                              |   Duration |
-  +------+----------------------------------------------------------+------------+
-  | 01   | Firmware settings visible to the OS                      |    0.000 s |
-  | 02   | Kernel workqueue CPU mask                                |    0.000 s |
-  | 03   | NIC queues, coalescing, pause frames, offloads and rings |    0.000 s |
-  | 04   | NIC interrupt affinity                                   |    0.000 s |
-  | 05   | Pinning housekeeping processes                           |    0.000 s |
-  | 06   | Host packet filtering (opt-in)                           |    0.000 s |
-  +------+----------------------------------------------------------+------------+
-  |      | TOTAL                                                    |    0.000 s |
-  +------+----------------------------------------------------------+------------+
 
 ==== left behind by rollback (compared with the host before apply)
-A /etc/systemd/system/lowlat-runtime.service
-A /run/fake-systemd/active/lowlat-runtime.service
-A /var/lib/fake-systemd/enabled/lowlat-runtime.service
-A /var/lib/lowlat/aspm-original-policy
 A /var/lib/lowlat/console-original
 A /var/lib/lowlat/factory-settings/.values/*/complete (2)
 A /var/lib/lowlat/factory-settings/.values/*/eno1/adaptive_rx
@@ -1921,10 +1935,24 @@ A /var/lib/lowlat/factory-settings/.values/*/services
 A /var/lib/lowlat/factory-settings/.values/*/tuned-profile
 A /var/lib/lowlat/factory-settings/.values/*/workqueue
 A /var/lib/lowlat/factory-settings/.values/*/writeback
+A /var/lib/lowlat/factory-settings/.values/apply-all/complete
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/00-bios-firmware
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/01-grub-bootloader
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/02-cpu-isolation
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/03-huge-pages
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/04-network
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/05-cgroup-isolation
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/06-kernel-sysctl
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/07-os-hygiene
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/08-kernel-bypass
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/10-time-sync
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/11-day2-operations
+A /var/lib/lowlat/factory-settings/.values/apply-all/started
 A /var/lib/lowlat/factory-settings/.values/files/etc/fstab
 A /var/lib/lowlat/factory-settings/.values/files/etc/security/limits.d/90-lowlat.conf
 A /var/lib/lowlat/factory-settings/.values/files/etc/sysctl.d/91-lowlat-rt.conf
 A /var/lib/lowlat/factory-settings/.values/files/etc/systemd/system.conf
+A /var/lib/lowlat/factory-settings/.values/files/etc/systemd/system/lowlat-runtime.service
 A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/active_profile
 A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/bootcmdline
 A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/low-latency/tuned.conf
@@ -1936,6 +1964,7 @@ A /var/lib/lowlat/factory-settings/.values/services/cpupower
 A /var/lib/lowlat/factory-settings/.values/services/cpuspeed
 A /var/lib/lowlat/factory-settings/.values/services/crond
 A /var/lib/lowlat/factory-settings/.values/services/irqbalance
+A /var/lib/lowlat/factory-settings/.values/services/lowlat-runtime.service
 A /var/lib/lowlat/factory-settings/.values/services/nfs-client.target
 A /var/lib/lowlat/factory-settings/.values/services/pcscd
 A /var/lib/lowlat/factory-settings/.values/services/plymouth-quit
@@ -1957,23 +1986,7 @@ A /var/lib/lowlat/factory-settings/etc/fstab
 A /var/lib/lowlat/factory-settings/etc/systemd/system.conf
 A /var/lib/lowlat/factory-settings/etc/tuned/active_profile
 A /var/lib/lowlat/factory-settings/etc/tuned/tuned-main.conf
-M /proc/irq/*/effective_affinity_list (32)
-M /proc/irq/*/smp_affinity_list (48)
-M /run/fake-ethtool/eno1
-M /run/fake-ethtool/ens1f0
-M /run/fake-ethtool/ens1f1
-M /run/fake-ethtool/ens2f0
-M /run/fake-ethtool/ens2f1
-M /sys/bus/workqueue/devices/writeback/cpumask
-M /sys/class/net/ens2f0/tx_queue_len
-M /sys/class/net/ens2f1/tx_queue_len
-M /sys/devices/virtual/workqueue/cpumask
-M /sys/module/pcie_aspm/parameters/policy
 
 ==== /proc/cmdline differences
 
 ==== process differences
-3c3
-< edr-agentd           cpus 0-31
----
-> edr-agentd           cpus 4

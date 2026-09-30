@@ -6,6 +6,7 @@
 #   --dry-run   print every command and file, change nothing
 #   --apply     apply everything and install lowlat-runtime.service (root)
 #   --runtime   re-apply only non-persistent state (called at boot by lowlat-runtime.service)
+#   --rollback  stop boot reapplication and undo the applied guides
 #   --verify    run verify-tuning
 #
 # Every guide script can also be run on its own; this wrapper only sequences them and
@@ -89,21 +90,73 @@ install_runtime_unit() {
 	run systemctl enable lowlat-runtime.service
 }
 
+# Capture the runtime unit before any guide can change host state.
+remember_apply_all() {
+	remember_file "${RUNTIME_UNIT}"
+	remember_service lowlat-runtime.service
+	remember_value apply-all/started yes
+	# TuneD and a bypass driver reload can change NIC defaults before Guide 04.
+	remember_network
+}
+
+apply_stage() {
+	local guide="$1"
+	shift
+	remember_value "apply-all/guides/${guide}" yes
+	if [[ "${guide}" == 08-kernel-bypass ]]; then
+		remember_value apply-all/guides/04-network yes
+	fi
+	"$@"
+}
+
+rollback_all() {
+	local guide value complete=no
+	local -a guides=(11-day2-operations 08-kernel-bypass 04-network 05-cgroup-isolation
+		10-time-sync 07-os-hygiene 06-kernel-sysctl 03-huge-pages 02-cpu-isolation
+		01-grub-bootloader 00-bios-firmware)
+	[[ -f "${LOWLAT_FACTORY_DIR}/.values/apply-all/started" ]] || return 0
+	value="$(original_value apply-all/started)"
+	[[ "${value}" == yes ]] || die "invalid saved wrapper apply marker"
+	log_step "Stopping boot-time reapplication"
+	if systemctl cat lowlat-runtime.service >/dev/null 2>&1; then
+		run systemctl stop lowlat-runtime.service
+		run systemctl disable lowlat-runtime.service
+	fi
+	if [[ -f "${LOWLAT_FACTORY_DIR}/.values/apply-all/complete" ]]; then
+		complete="$(original_value apply-all/complete)"
+		[[ "${complete}" == yes ]] || die "invalid saved wrapper completion marker"
+	fi
+	for guide in "${guides[@]}"; do
+		if [[ "${complete}" == no && ! -f "${LOWLAT_FACTORY_DIR}/.values/apply-all/guides/${guide}" ]]; then continue; fi
+		value="$(original_value "apply-all/guides/${guide}")"
+		[[ "${value}" == yes ]] || die "invalid saved apply marker for ${guide}"
+		log_step "Rollback ${guide}"
+		"${SCRIPTS_DIR}/${guide}" --rollback --config "${LOWLAT_CONFIG}"
+	done
+	log_step "Restoring the original runtime unit"
+	restore_file "${RUNTIME_UNIT}"
+	run systemctl daemon-reload
+	restore_service lowlat-runtime.service
+	printf '\nReboot to restore boot parameters and inherited service affinity.\n'
+}
+
 apply_all() {
 	print_header apply
-	apply_bios_firmware                 # 00 (PCIe ASPM; the BIOS setup itself is manual)
-	apply_grub_kernel_parameters        # 01 (reboot)
-	apply_cpu_isolation                 # 02 (reboot for systemd CPUAffinity)
-	apply_huge_pages                    # 03 (reboot for reliable reservation)
-	apply_kernel_sysctl                 # 06
-	apply_os_hygiene                    # 07 (tuned re-applies sysctl.d after its own)
-	apply_time_sync                     # 10 (chrony or ptp4l/phc2sys, pinned)
-	apply_cgroup_isolation              # 05
-	apply_kernel_bypass                 # 08 (before 04: a driver reload resets the NICs)
-	apply_network                       # 04 (runtime)
-	apply_day2_operations               # 11 (verification timer)
+	remember_apply_all
+	apply_stage 00-bios-firmware apply_bios_firmware                 # 00 (PCIe ASPM; the BIOS setup itself is manual)
+	apply_stage 01-grub-bootloader apply_grub_kernel_parameters        # 01 (reboot)
+	apply_stage 02-cpu-isolation apply_cpu_isolation                 # 02 (reboot for systemd CPUAffinity)
+	apply_stage 03-huge-pages apply_huge_pages                    # 03 (reboot for reliable reservation)
+	apply_stage 06-kernel-sysctl apply_kernel_sysctl                 # 06
+	apply_stage 07-os-hygiene apply_os_hygiene                    # 07 (tuned re-applies sysctl.d after its own)
+	apply_stage 10-time-sync apply_time_sync                     # 10 (chrony or ptp4l/phc2sys, pinned)
+	apply_stage 05-cgroup-isolation apply_cgroup_isolation              # 05
+	apply_stage 08-kernel-bypass apply_kernel_bypass                 # 08 (before 04: a driver reload resets the NICs)
+	apply_stage 04-network apply_network                       # 04 (runtime)
+	apply_stage 11-day2-operations apply_day2_operations               # 11 (verification timer)
 	log_step "Boot-time re-application of runtime settings"
 	install_runtime_unit
+	remember_value apply-all/complete yes
 	print_step_timing_table
 	printf '\nReboot required for GRUB, systemd CPUAffinity and huge page reservation.\n'
 	printf 'After the reboot: %s/verify-tuning\n' "${SCRIPTS_DIR}"
@@ -143,6 +196,11 @@ apply_all_main() {
 		require_root
 		load_config
 		apply_all_runtime
+		;;
+	rollback)
+		require_root
+		load_config
+		rollback_all
 		;;
 	verify)
 		exec "${SCRIPTS_DIR}/verify-tuning" "$@"

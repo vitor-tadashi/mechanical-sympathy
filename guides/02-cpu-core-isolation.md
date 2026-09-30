@@ -485,7 +485,7 @@ backups and retry; do not substitute guessed defaults.
 
 A standalone `--runtime` changes only workqueue masks, and its rollback
 restores only those masks. `lowlat-runtime.service` can reapply tuning at
-boot: use `apply-all --rollback` when supported, or disable that unit before
+boot: use `apply-all --rollback`, or disable that unit before
 rebooting during a whole-host rollback.
 
 > [!NOTE]

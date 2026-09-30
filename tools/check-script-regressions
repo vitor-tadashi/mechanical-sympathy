@@ -359,11 +359,72 @@ os_masked_active_service() {
 	grep -qx masked "${WORK}/output" || fail "original mask lost"
 }
 
+wrapper_rollback() {
+	setup rhel9-vm-kvm
+	cp -a "${LOWLAT_ROOT}/run/fake-ethtool" "${WORK}/nic-before"
+	expect_status 0 "${REPO}/scripts/apply-all" --apply
+	expect_status 0 "${REPO}/scripts/apply-all" --runtime
+	: >"${LOWLAT_ROOT}/run/fake-calls"
+	expect_status 0 "${REPO}/scripts/apply-all" --rollback
+	awk '/Rollback [0-9]/ {print $NF}' "${WORK}/output" >"${WORK}/order"
+	printf '%s\n' 11-day2-operations 08-kernel-bypass 04-network 05-cgroup-isolation 10-time-sync 07-os-hygiene 06-kernel-sysctl 03-huge-pages 02-cpu-isolation 01-grub-bootloader 00-bios-firmware >"${WORK}/expected-order"
+	expect_status 0 diff "${WORK}/expected-order" "${WORK}/order"
+	head -n 2 "${LOWLAT_ROOT}/run/fake-calls" >"${WORK}/first-calls"
+	printf 'systemctl stop lowlat-runtime.service\nsystemctl disable lowlat-runtime.service\n' >"${WORK}/expected-calls"
+	expect_status 0 diff "${WORK}/expected-calls" "${WORK}/first-calls"
+	[[ ! -e "${LOWLAT_ROOT}/etc/systemd/system/lowlat-runtime.service" ]] || fail "runtime unit left installed"
+	expect_status 1 systemctl is-enabled --quiet lowlat-runtime.service
+	expect_status 3 systemctl is-active --quiet lowlat-runtime.service
+	expect_status 0 diff -r "${WORK}/nic-before" "${LOWLAT_ROOT}/run/fake-ethtool"
+	expect_status 0 "${REPO}/scripts/apply-all" --rollback
+	host_boot "${LOWLAT_ROOT}" "${WORK}/pristine" >"${WORK}/output" 2>&1
+	expect_status 0 diff -r "${WORK}/nic-before" "${LOWLAT_ROOT}/run/fake-ethtool"
+}
+
+wrapper_existing_unit() {
+	setup rhel9-vm-kvm
+	mkdir -p "${LOWLAT_ROOT}/etc/systemd/system"
+	printf '[Service]\nType=oneshot\nExecStart=/usr/bin/true\n[Install]\nWantedBy=multi-user.target\n' >"${LOWLAT_ROOT}/etc/systemd/system/lowlat-runtime.service"
+	cp "${LOWLAT_ROOT}/etc/systemd/system/lowlat-runtime.service" "${WORK}/unit-before"
+	expect_status 0 systemctl start lowlat-runtime.service
+	expect_status 0 "${REPO}/scripts/apply-all" --apply
+	expect_status 0 "${REPO}/scripts/apply-all" --apply
+	expect_status 0 "${REPO}/scripts/apply-all" --rollback
+	expect_status 0 diff "${WORK}/unit-before" "${LOWLAT_ROOT}/etc/systemd/system/lowlat-runtime.service"
+	expect_status 1 systemctl is-enabled --quiet lowlat-runtime.service
+	expect_status 0 systemctl is-active --quiet lowlat-runtime.service
+}
+
+wrapper_no_apply() {
+	setup rhel9-vm-kvm
+	expect_status 0 "${REPO}/scripts/apply-all" --rollback
+	[[ ! -s "${LOWLAT_ROOT}/run/fake-calls" ]] || fail "wrapper rollback changed an unapplied host"
+	[[ ! -d "${LOWLAT_ROOT}/var/lib/lowlat/factory-settings" ]] || fail "wrapper rollback created state without apply"
+}
+
+wrapper_missing_state() {
+	setup rhel9-vm-kvm
+	expect_status 0 "${REPO}/scripts/apply-all" --apply
+	rm "${LOWLAT_ROOT}/var/lib/lowlat/factory-settings/.values/apply-all/guides/04-network"
+	expect_status 1 "${REPO}/scripts/apply-all" --rollback
+	expect_status 1 systemctl is-enabled --quiet lowlat-runtime.service
+	expect_status 3 systemctl is-active --quiet lowlat-runtime.service
+}
+
+wrapper_partial_apply() {
+	setup rhel9-vm-kvm
+	rm "${WORK}/bin/chronyc"
+	expect_status 3 "${REPO}/scripts/apply-all" --apply
+	expect_status 0 "${REPO}/scripts/apply-all" --rollback
+	if grep -q 'Rollback 11-day2-operations' "${WORK}/output"; then fail "wrapper rolled back a guide it never reached"; fi
+	[[ ! -e "${LOWLAT_ROOT}/etc/security/limits.d/90-lowlat.conf" ]] || fail "partial apply was not restored"
+}
+
 if [[ "${1:-}" == --case ]]; then
 	"$2"
 	exit 0
 fi
-cases=(missing_system_conf tuned_layout missing_chrony existing_manager missing_chrony_unit console_restore virtio_placement unknown_irq unreadable_irq cpu_rollback cpu_absent_files cpu_lost_backup cpu_no_apply cpu_missing_knob cpu_runtime_only cpu_corrupt_state network_rollback network_missing_interface network_no_apply network_recreated_irqs network_driver_failure network_unsupported bypass_vm_verify network_missing_state os_rollback os_no_apply os_existing_files os_runtime_optins os_missing_state os_restore_failure os_masked_active_service)
+cases=(missing_system_conf tuned_layout missing_chrony existing_manager missing_chrony_unit console_restore virtio_placement unknown_irq unreadable_irq cpu_rollback cpu_absent_files cpu_lost_backup cpu_no_apply cpu_missing_knob cpu_runtime_only cpu_corrupt_state network_rollback network_missing_interface network_no_apply network_recreated_irqs network_driver_failure network_unsupported bypass_vm_verify network_missing_state os_rollback os_no_apply os_existing_files os_runtime_optins os_missing_state os_restore_failure os_masked_active_service wrapper_rollback wrapper_existing_unit wrapper_no_apply wrapper_missing_state wrapper_partial_apply)
 for name in "${cases[@]}"; do
 	bash "$0" --case "${name}"
 done

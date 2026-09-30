@@ -169,4 +169,48 @@ flowchart TD
 | JVM fails with large pages | Pool on the wrong node or too small: [Guide 03 §9](guides/03-huge-pages-configuration.md#9-troubleshooting) |
 | Network settings gone after reboot | `systemctl status lowlat-runtime` |
 | Kernel-bypass application falls back to the kernel stack | [Guide 08 §11](guides/08-kernel-bypass.md#11-troubleshooting) |
-| Undo everything | Each guide's rollback section; the original files are in `/var/lib/lowlat/factory-settings/` |
+| Undo everything | `sudo scripts/apply-all --rollback`; read [whole-host rollback](#whole-host-rollback) for verification and manual limits |
+
+
+## Whole-host rollback
+
+```bash
+sudo scripts/apply-all --rollback
+sudo systemctl reboot
+```
+
+Use the same `--config` file and path overrides used for apply. The wrapper
+stops and disables `lowlat-runtime.service` first, then rolls guides back in
+this order: **11, 08, 04, 05, 10, 07, 06, 03, 02, 01, 00**. Guide 08 runs before
+04 because its driver reload can reset restored NIC settings. NIC state is
+saved before the first guide runs. The wrapper removes the runtime unit it
+created, or restores a preexisting unit and its original service state, then
+reloads systemd. A preexisting enabled unit resumes its original behavior.
+
+Original files and first-apply state remain under
+`/var/lib/lowlat/factory-settings/`. Repeated apply and boot reapplication do
+not replace those originals. Rollback without an earlier wrapper apply is a
+no-op. An interrupted apply records which guides it reached; rollback invokes
+those guides. Each guide's rollback limits still apply, including manual BIOS
+settings, application launch settings, and the time-sync service choice
+([Guide 10](guides/10-time-sync.md#11-rollback)).
+
+Check `systemctl is-enabled lowlat-runtime.service` and
+`systemctl is-active lowlat-runtime.service`. If no unit existed before apply,
+both should report it disabled, inactive, or absent, and its generated file
+should be gone. If it existed, compare `systemctl cat` and service state with
+the saved baseline. Verify NIC settings and IRQ placement using
+[Guide 04](guides/04-network-optimization.md#12-rollback), and restored files,
+mounts, and services using [Guide 07](guides/07-os-hygiene.md#11-rollback).
+After reboot, check `/proc/cmdline` and PID 1's `Cpus_allowed_list` against the
+baseline. `verify-tuning` validates the tuned configuration and is expected
+to report failures after tuning has been removed.
+
+A missing backup, invalid recorded state, or failed restoration command stops
+the wrapper with an error. Boot reapplication stays disabled while you correct
+the problem and retry; keep the backups. Some effects require the reboot:
+GRUB arguments, PID 1 and inherited service affinity, and pages still held by
+applications. Lost connections and interrupted work cannot be recreated.
+This rollback path is covered by the harnesses and is not yet proven in
+production across all drivers and tuned profiles. To tune the host again,
+run `sudo scripts/apply-all --apply`, reboot, and verify as above.
