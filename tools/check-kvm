@@ -124,7 +124,18 @@ seen() {
 	((${matches:-0} >= $2))
 }
 
+# scan_markers <seconds> - records the time of every marker that the serial log has by now.
+scan_markers() {
+	if [[ -z "${T_FIRST}" && -s "${WORK}/serial.log" ]]; then T_FIRST="$1"; fi
+	if [[ -z "${T_LOGIN1}" ]] && seen 'login:' 1; then T_LOGIN1="$1"; fi
+	if [[ -z "${T_BEGIN1}" ]] && seen 'SPIKE-BEGIN boot=1' 1; then T_BEGIN1="$1"; fi
+	if [[ -z "${T_LOGIN2}" ]] && seen 'login:' 2; then T_LOGIN2="$1"; fi
+	if [[ -z "${T_BEGIN2}" ]] && seen 'SPIKE-BEGIN boot=2' 1; then T_BEGIN2="$1"; fi
+	if [[ -z "${T_RESULT}" ]] && seen 'SPIKE-RESULT' 1; then T_RESULT="$1"; fi
+}
+
 # wait_for_vm - polls the serial log once a second and records when each marker showed up.
+# After QEMU exits it scans once more: the last markers can arrive between two polls.
 wait_for_vm() {
 	local started="${SECONDS}" elapsed
 	T_FIRST="" T_LOGIN1="" T_BEGIN1="" T_LOGIN2="" T_BEGIN2="" T_RESULT="" T_EXIT=""
@@ -133,17 +144,13 @@ wait_for_vm() {
 		if ((elapsed >= TIMEOUT)); then
 			kill "${QEMU_PID}" 2>/dev/null || true
 			TIMED_OUT=1
-			return 0
+			break
 		fi
-		if [[ -z "${T_FIRST}" && -s "${WORK}/serial.log" ]]; then T_FIRST="${elapsed}"; fi
-		if [[ -z "${T_LOGIN1}" ]] && seen 'login:' 1; then T_LOGIN1="${elapsed}"; fi
-		if [[ -z "${T_BEGIN1}" ]] && seen 'SPIKE-BEGIN boot=1' 1; then T_BEGIN1="${elapsed}"; fi
-		if [[ -z "${T_LOGIN2}" ]] && seen 'login:' 2; then T_LOGIN2="${elapsed}"; fi
-		if [[ -z "${T_BEGIN2}" ]] && seen 'SPIKE-BEGIN boot=2' 1; then T_BEGIN2="${elapsed}"; fi
-		if [[ -z "${T_RESULT}" ]] && seen 'SPIKE-RESULT' 1; then T_RESULT="${elapsed}"; fi
+		scan_markers "${elapsed}"
 		sleep 1
 	done
 	T_EXIT=$((SECONDS - started))
+	scan_markers "${T_EXIT}"
 }
 
 # row <label> <seconds> - a table row: seconds, or n/a when the marker never showed up.
