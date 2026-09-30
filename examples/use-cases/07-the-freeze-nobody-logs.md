@@ -44,7 +44,7 @@ sudo turbostat --quiet --interval 10 --num_iterations 1 --show CPU,Busy%,Bzy_MHz
 # expect: Bzy_MHz steady across runs, and SMI 0 (or a small, constant count)
 # the finding: an SMI count that keeps rising while the host is idle
 
-grep . /sys/devices/system/cpu/cpu0/cpuidle/state*/name     # none with idle=poll; no C6 when disabled in the BIOS
+grep -s . /sys/devices/system/cpu/cpu0/cpuidle/state*/name  # none with idle=poll (-s: the files are gone); no C6 when disabled in the BIOS
 sudo rtla osnoise top -c 3 -d 60s                            # clean: the noise is not in the OS
 ```
 

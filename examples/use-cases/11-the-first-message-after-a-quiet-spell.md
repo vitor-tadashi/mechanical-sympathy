@@ -40,11 +40,11 @@ flowchart LR
 # 1. The idle driver and the states CPU 7 may enter (Guide 01 §7, Guide 00 §7)
 cat /sys/devices/system/cpu/cpuidle/current_driver
 # before: intel_idle        after: none (idle=poll replaces the idle loop)
-grep . /sys/devices/system/cpu/cpu7/cpuidle/state*/name
-# before: POLL, C1, C1E, C6  after: no output
+grep -s . /sys/devices/system/cpu/cpu7/cpuidle/state*/name
+# before: POLL, C1, C1E, C6  after: no output (-s: no error once the states are gone)
 
 # 2. How deep each state is, and how often CPU 7 enters it (Guide 00 §7)
-grep . /sys/devices/system/cpu/cpu7/cpuidle/state*/{latency,usage}
+grep -s . /sys/devices/system/cpu/cpu7/cpuidle/state*/{latency,usage}
 # latency: exit latency in µs, as the driver declares it (C6 is the large one)
 # usage:   entries since boot; sample twice across a quiet spell and C6 grows
 
@@ -67,6 +67,8 @@ Apply the controls from the outside in. Each one covers the case where another i
 | Kernel command line | `idle=poll processor.max_cstate=0 intel_idle.max_cstate=0` ([Guide 01 §5.1](../../guides/01-grub-bootloader-tuning.md#51-latency-subset-bare-metal-and-vms)) | An idle CPU spins instead of halting. The caps keep it shallow if `idle=poll` is ever dropped |
 | tuned | `force_latency` from `network-latency` ([Guide 07 §5](../../guides/07-os-hygiene.md#5-tuned-profile)) | PM QoS: the idle governor may not pick a state slower than the limit |
 | Thread | busy-spin instead of block, on an isolated CPU only ([Guide 02 §6.4](../../guides/02-cpu-core-isolation.md#64-busy-spin-vs-back-off)) | The thread never lets its CPU go idle |
+
+The BIOS layer alone still leaves C1: a CPU that waits pays 1 to 2 µs to wake, instead of up to ~100 µs. Only `idle=poll`, or a thread that spins, removes the wake-up entirely.
 
 The command-line arguments are part of the latency subset that `01-grub-bootloader` always applies. The tuned profile comes from `lowlat.conf`:
 
@@ -105,11 +107,11 @@ The scheduler wake-up of a blocked thread (2 to 50 µs, [Guide 02 §6.4](../../g
 ## 5. Verify and roll back
 
 - [ ] `cat /sys/devices/system/cpu/cpuidle/current_driver` prints `none`
-- [ ] `grep . /sys/devices/system/cpu/cpu7/cpuidle/state*/name` prints nothing
+- [ ] `grep -s . /sys/devices/system/cpu/cpu7/cpuidle/state*/name` prints nothing (the states are gone, so without `-s` grep would report the missing files)
 - [ ] `tuned-adm active` shows `low-latency`, and `tuned-adm verify` passes
 - [ ] The latency of the first message after a quiet spell matches the busy-hour latency ([Guide 09](../../guides/09-measuring-latency.md))
 - [ ] `scripts/verify-tuning` shows PASS for Guides 01 and 07
-- [ ] Roll back: `sudo scripts/01-grub-bootloader --rollback` ([Guide 01 §9](../../guides/01-grub-bootloader-tuning.md#9-rollback)), then `sudo systemctl disable --now lowlat-runtime.service` and `sudo scripts/07-os-hygiene --rollback` ([Guide 07 §11](../../guides/07-os-hygiene.md#11-rollback)), restore the exported BIOS profile ([Guide 00 §9](../../guides/00-bios-firmware.md#9-rollback)), then reboot
+- [ ] Roll back the whole host with `sudo scripts/apply-all --rollback`. To undo only this story's guides: `sudo scripts/01-grub-bootloader --rollback` ([Guide 01 §9](../../guides/01-grub-bootloader-tuning.md#9-rollback)), then `sudo systemctl disable --now lowlat-runtime.service` and `sudo scripts/07-os-hygiene --rollback` ([Guide 07 §11](../../guides/07-os-hygiene.md#11-rollback)). The other guides still need their runtime settings re-applied at boot, so enable the unit again with `sudo systemctl enable lowlat-runtime.service`, after checking that the Guide 07 opt-in keys (`DISABLE_FIREWALLD`, `FLUSH_FIREWALL_RULES`, `REMOVE_NETFILTER_MODULES`) are `no`, since the unit re-applies them. Restore the exported BIOS profile ([Guide 00 §9](../../guides/00-bios-firmware.md#9-rollback)), then reboot
 
 ## 6. Key takeaways
 

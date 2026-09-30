@@ -55,7 +55,7 @@
 
 <!-- Lane 2: idle=poll -->
 <rect class="lane" x="10" y="150" width="740" height="125" rx="6"/>
-<text class="cap" x="24" y="174">idle=poll (or deep C-states off in the BIOS): the CPU never sleeps</text>
+<text class="cap" x="24" y="174">idle=poll: the CPU never sleeps</text>
 <text class="sub" x="24" y="192">The same messages. The first one after the quiet spell is handled as fast as the others.</text>
 <text class="lbl" x="24" y="237">CPU 7</text>
 <rect class="poll" x="150" y="220" width="570" height="26" rx="3"/>

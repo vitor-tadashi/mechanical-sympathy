@@ -203,8 +203,8 @@ scripts/00-bios-firmware --verify
 cat /sys/devices/system/cpu/smt/active                          # 0 = Hyper-Threading off
 numactl --hardware | head -3                                    # at least one node per socket
 cat /sys/devices/system/cpu/cpu0/power/energy_perf_bias         # 0 = performance
-grep . /sys/devices/system/cpu/cpu0/cpuidle/state*/name         # none with idle=poll; no C6 when disabled in BIOS
-grep . /sys/devices/system/cpu/cpu0/cpuidle/state*/{latency,usage}   # exit latency in µs and entries since boot, per state
+grep -s . /sys/devices/system/cpu/cpu0/cpuidle/state*/name      # none with idle=poll (-s: the files are gone); no C6 when disabled in BIOS
+grep -s . /sys/devices/system/cpu/cpu0/cpuidle/state*/{latency,usage}   # exit latency in µs and entries since boot, per state
 cat /sys/module/pcie_aspm/parameters/policy                     # [performance]
 sudo lspci -vv -s <nic-pci-address> | grep -E 'LnkCtl:.*ASPM'   # ASPM Disabled on the NIC's link
 sudo turbostat --quiet --interval 10 --num_iterations 1 --show CPU,Busy%,Bzy_MHz,SMI
