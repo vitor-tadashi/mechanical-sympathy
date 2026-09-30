@@ -48,7 +48,8 @@ sudo turbostat --quiet --interval 60 --show CPU,Busy%,Bzy_MHz,CoreTmp,PkgTmp
 # before: Bzy_MHz steps down (3900, 3600, 3400, 3300) while PkgTmp climbs
 # after:  Bzy_MHz flat at the chosen clock
 
-# 3. The two hosts side by side: capture a bundle on each (Guide 09 §6)
+# 3. The two hosts side by side: capture a bundle on each (Guide 09 §6), with the application
+#    stopped or MEASURE_CPUS set to unused CPUs, because --run puts rtla osnoise on the measured CPUs
 sudo scripts/09-measure-latency --run
 # compare turbostat.txt in the two bundles: host B runs a few hundred MHz lower
 ```
@@ -60,7 +61,7 @@ If the governor is not `performance`, or `scaling_driver` is `intel_pstate` with
 Turbo is a measured decision ([Guide 00 §4.3](../../guides/00-bios-firmware.md#43-turbo-a-measured-decision)), so the change is an experiment with two arms:
 
 1. **Cool first.** Set the fan profile to maximum cooling ([Guide 00 §4.8](../../guides/00-bios-firmware.md#48-cooling)) on both hosts, and repeat the warm-up check. Sometimes that alone makes the clock flat.
-2. **Measure with turbo on.** Warm the host up for 30 minutes under the fixed load, then record the application histogram and a bundle ([Guide 09 §5](../../guides/09-measuring-latency.md#5-a-measurement-protocol)).
+2. **Measure with turbo on.** Warm the host up for 30 minutes under the fixed load, then record the application histogram ([Guide 09 §5](../../guides/09-measuring-latency.md#5-a-measurement-protocol)). Take the bundle separately: `09-measure-latency --run` runs `rtla osnoise` on the measured CPUs, so capture it with the application stopped, or with `MEASURE_CPUS` set to CPUs the application does not use ([Guide 09 §6](../../guides/09-measuring-latency.md#6-using-the-script)). Otherwise its workload lands in the histogram you are comparing.
 3. **Turn turbo off in the BIOS** ("Turbo Boost", "Core Performance Boost" or "Turbo Mode"), reboot, and repeat step 2 exactly.
 4. **Compare** p50, p99.9 and the spread between runs and between hosts, and keep the arm that wins on the tail.
 

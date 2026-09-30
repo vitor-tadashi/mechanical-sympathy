@@ -155,7 +155,7 @@ sudo turbostat --quiet --interval 60 --show CPU,Busy%,Bzy_MHz,CoreTmp,PkgTmp
 #    limited: Bzy_MHz steps down while PkgTmp climbs, so the cooling or the power budget sets the clock
 ```
 
-If the clock steps down, raise the fan profile first. If it still steps down with maximum cooling, the CPU is at its power limit: turn turbo off, or cap the frequency at a level every core can hold (§4.3).
+If the clock steps down, raise the fan profile first. If it still steps down with maximum cooling, the CPU is at a limit the fans do not remove: the package power limit, a current or thermal limit, or a firmware setting. These two columns cannot tell them apart. The BMC's power and thermal event log, and the vendor's documentation of its power limits, usually can. Whatever the limit, taking it out of the latency is the measured decision in §4.3: turbo off, or a clock every core can hold.
 
 ## 5. How the settings map to what Linux sees
 
