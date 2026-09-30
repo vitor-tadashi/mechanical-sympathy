@@ -416,7 +416,7 @@ phase_after_rollback() {
 	snapshot "${after}"
 	lines="$(changes "${before}/etc" "${after}/etc")"
 	report_leftovers "${pass}: rollback left files" "${lines}"
-	lines="$(diff "${before}/units" "${after}/units" | awk '/^>/ { print "unit " substr($0, 3) }' || true)"
+	lines="$(diff_lines unit "${before}/units" "${after}/units")"
 	report_leftovers "${pass}: rollback left unit state" "${lines}"
 	lines="$(diff_lines "boot entry" "${before}/entries" "${after}/entries")"
 	report_leftovers "${pass}: rollback left boot entry arguments" "${lines}"

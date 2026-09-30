@@ -2,7 +2,7 @@
 # Same columns and rules as scripts/fixtures/containers/known-issues:
 #   id | pattern | what is wrong | OS majors (optional: "10" or "8,9"; empty means all) | package the system needs (optional)
 # The pattern is an awk regular expression, matched against a leftover line such as
-# "M /etc/fstab", "unit crond.service enabled", "boot entry missing vmlinuz-5.14.0 console=tty0",
+# "M /etc/fstab", "unit missing crond.service enabled", "boot entry missing vmlinuz-5.14.0 console=tty0",
 # "nic missing eth1 channels Combined: 4" or "verify FAIL <text>". A dash means that the check
 # finds the bug in code. A bug that is observed and not listed fails the run. So does a listed
 # bug that is no longer observed on an image it applies to: delete its line in the change that
