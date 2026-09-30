@@ -148,17 +148,25 @@ host_build_sysctls() {
 # One MSI-X vector per default queue. A virtio NIC's vectors belong to its PCI parent
 # and are named virtioN-input.M in /proc/interrupts, not after the interface.
 host_build_nics() {
-	local root="$1" spec name driver node max ring ptp irq=100 queue queues index=0 dev
+	local root="$1" spec name driver node max ring ptp irq=100 queue queues index=0 dev pci
 	: >"${root}/proc/interrupts"
 	for spec in "${FAKE_NICS[@]}"; do
 		IFS='|' read -r name driver node max ring ptp <<<"${spec}"
 		queues=$((max < 8 ? max : 8))
 		dev="${root}/sys/class/net/${name}"
+		if [[ "${driver}" == virtio_net ]]; then
+			pci="$(printf '0000:%02x:00.0' "$((index + 1))")"
+			mkdir -p "${root}/sys/devices/pci0000:00/${pci}/virtio${index}/net/${name}" "${root}/sys/class/net"
+			ln -s "../../devices/pci0000:00/${pci}/virtio${index}/net/${name}" "${dev}"
+			ln -s ../.. "${dev}/device"
+		fi
 		host_write "${root}" "/sys/class/net/${name}/tx_queue_len" 1000
 		host_write "${root}" "/sys/class/net/${name}/device/numa_node" "${node}"
 		for ((queue = 0; queue < queues; queue++)); do
 			if [[ "${driver}" == virtio_net ]]; then
-				printf ' %s:          0   PCI-MSIX-0000:00:0%s.0 %s-edge      virtio%s-input.%s\n' "${irq}" "${index}" "${queue}" "${index}" "${queue}" >>"${root}/proc/interrupts"
+				printf ' %s:          0   PCI-MSIX-%s %s-edge      virtio%s-input.%s\n' "${irq}" "${pci}" "${queue}" "${index}" "${queue}" >>"${root}/proc/interrupts"
+				mkdir -p "${dev}/device/../msi_irqs"
+				: >"${dev}/device/../msi_irqs/${irq}"
 			else
 				printf ' %s:          0   IR-PCI-MSI-edge      %s-TxRx-%s\n' "${irq}" "${name}" "${queue}" >>"${root}/proc/interrupts"
 				mkdir -p "${dev}/device/msi_irqs"

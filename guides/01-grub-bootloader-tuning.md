@@ -159,7 +159,7 @@ sequenceDiagram
 |---|---|---|---|
 | Rocky Linux 8.10, grubby 8.40 | [grubenv](../GLOSSARY.md#grubenv) `kernelopts`, and `GRUB_CMDLINE_LINUX` in `/etc/default/grub`: `grubby` writes both. The boot entries say `options $kernelopts $tuned_params` | the arguments are on `/proc/cmdline` | **the arguments are still on `/proc/cmdline`**, although `grubby --info=DEFAULT`, `kernelopts` and `/etc/default/grub` are clean |
 | Rocky Linux 9 | the `options` line of each boot entry; the image has no `/etc/default/grub` | on `/proc/cmdline` | gone |
-| AlmaLinux 10, CentOS Stream 10 | the `options` line of each boot entry, and `GRUB_CMDLINE_LINUX` | on `/proc/cmdline` | gone, except `console=tty0` (a known bug of the rollback) |
+| AlmaLinux 10, CentOS Stream 10 | the `options` line of each boot entry, and `GRUB_CMDLINE_LINUX` | on `/proc/cmdline` | gone |
 
 Why RHEL 8 behaves that way on the cloud image: `/boot/grub2/grubenv` is a symbolic link to `../efi/EFI/rocky/grubenv`, a file on the EFI partition. A GRUB that boots through the BIOS reads `/boot/grub2` and cannot follow that link, so it never sees `kernelopts`. It falls back to the copy of `kernelopts` that `grub2-mkconfig` wrote into `grub.cfg`: the kernel boots with exactly that string. At apply time that copy is fresh, because the script runs `grub2-mkconfig` after `grubby`. At rollback it is stale, because the rollback does not run it (a Phase 1 fix, `rhel8-rollback-args-return` in `scripts/fixtures/vm/known-issues`).
 
@@ -387,12 +387,23 @@ flowchart TD
 > [!WARNING]
 > Before applying anything to a production host, make sure the out-of-band console (iLO/iDRAC/IPMI SOL) works. It is the only way to edit the GRUB line if the host does not come back.
 
-- [ ] Remove every argument this guide manages: `sudo scripts/01-grub-bootloader --rollback`
+- [ ] Remove every argument this guide manages and restore the original graphical consoles: `sudo scripts/01-grub-bootloader --rollback`
 - [ ] Or remove a single one: `sudo grubby --update-kernel=ALL --remove-args="nohz_full"`
-- [ ] Check the stored line: `sudo grubby --info=DEFAULT`
+- [ ] Check every stored line: `sudo grubby --info=ALL`. Entries that originally had `console=tty0` must have it again; serial consoles stay intact.
 - [ ] RHEL 8: regenerate `grub.cfg`, so that GRUB does not boot with a stale copy of the old arguments: `sudo grub2-mkconfig -o /boot/grub2/grub.cfg` (§4.1)
 - [ ] Reboot: `sudo systemctl reboot`
 - [ ] Confirm: `cat /proc/cmdline` no longer shows the arguments, and `cat /sys/devices/system/cpu/isolated` is empty
+
+The first bare-metal apply saves each installed kernel's graphical-console
+presence in `/var/lib/lowlat/console-original`. Repeated apply preserves that
+record, and repeated rollback does not duplicate the console argument. A VM
+apply leaves consoles alone. Keep the record for subsequent rollbacks; if a
+recorded kernel was removed, inspect the installed entries before retrying.
+
+> [!NOTE]
+> **Not proven in production.** Console restoration is checked against fake
+> boot entries and real grubby in containers. Verify the running command line
+> after reboot before relying on it for production recovery.
 
 ## 10. Bare metal vs VM summary
 

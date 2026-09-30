@@ -335,12 +335,10 @@ check_irqs() {
 		ok "${pass}: every IRQ of ${nic} is on CPU ${want}"
 		return 0
 	fi
-	# verify-tuning passing its IRQ line while the IRQs are elsewhere is a known bug.
-	if grep -q 'PASS.*IRQs on CPUs' "${log}"; then
-		observe virtio-irq-false-pass
-		return 0
-	fi
 	fail "${pass}: IRQs of ${nic} not on CPU ${want}:${misplaced}"
+	if grep -q 'PASS.*IRQs on CPUs' "${log}"; then
+		fail "${pass}: verify-tuning passes the IRQ line of ${nic} all the same"
+	fi
 }
 
 # expected_warning <pass> <text> - the id of the expected WARN that matches, if any.

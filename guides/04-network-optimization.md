@@ -465,6 +465,15 @@ flowchart TD
 | Latency better but throughput collapsed on bulk NIC | Coalescing 0 + offloads off at a high rate | §5.9 bulk profile |
 | SSH session dropped while applying | `ethtool -L`/`-G` on the management NIC | Mark it `mgmt` in `NICS` |
 
+When verifying a configured IRQ CPU list, the script requires at least one
+IRQ and a readable affinity value for every discovered vector. An empty
+IRQ list is a FAIL. Virtio PCI NICs expose their vectors on the PCI parent
+of the virtio device, rather than directly under the interface's `device`
+directory. The script checks that parent and checks effective affinity when
+the kernel provides it. If verification fails, compare the requested
+`smp_affinity_list` with `effective_affinity_list` under `/proc/irq/<irq>`;
+kernel-managed vectors may reject manual placement.
+
 ## 12. Rollback
 
 **Whole host:**

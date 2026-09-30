@@ -7,12 +7,10 @@
 # finds the bug in code. A bug that is observed and not listed fails the run. So does a listed
 # bug that is no longer observed on an image it applies to: delete its line in the change that
 # fixes it.
-console-tty0-not-restored	^M /etc/(default|sysconfig)/grub$|^boot entry missing .* console=tty0$|^running cmdline missing console=tty0$	01-grub-bootloader --rollback does not put back console=tty0, which --apply removes on bare metal (only the RHEL 10 images have it)	10
 no-rollback-02	^. /etc/(sysctl\.d/91-lowlat-rt\.conf|systemd/system\.conf)|irqbalance	02-cpu-isolation has no --rollback: it prints its usage and changes nothing
 no-rollback-04	^nic 	04-network has no --rollback: NIC settings stay as applied until the next boot
 no-rollback-07	limits\.d/90-lowlat|/etc/tuned/|^M /etc/fstab$|^(boot entry extra .* |running cmdline extra )(skew_tick=1|tsc=reliable|rcupdate\.rcu_normal_after_boot=1|rcutree\.nohz_full_patience_delay=1000)$|(crond|rpcbind|nfs-client|remote-fs-pre|plymouth|auth-rpcgss|rpc_pipefs|rpc-statd|sysstat|pcscd|cpupower)	07-os-hygiene has no --rollback: limits, noatime in /etc/fstab, the tuned profile and state (and the kernel arguments of its tuned profile, through $tuned_params), and the services it disabled stay
 grub-cfg-left-regenerated	^M /(boot/grub2/grub\.cfg|etc/grub2(-efi)?\.cfg)$	01-grub-bootloader --apply regenerates grub.cfg with grub2-mkconfig, and --rollback leaves the regenerated file (with BLS entries the arguments are not in it, so the next boot is the same)
 runtime-unit-left-enabled	lowlat-runtime\.service	apply-all has no --rollback: lowlat-runtime.service stays installed and enabled
-virtio-irq-false-pass	-	verify-tuning passes the IRQ line of a virtio NIC that no guide placed
 rhel8-rollback-args-return	^running cmdline extra 	on RHEL 8 the kernel arguments that 01 removed are back on /proc/cmdline after a reboot: GRUB cannot read grubenv (on the cloud image /boot/grub2/grubenv links into /boot/efi) and boots with the kernelopts copy in grub.cfg, which the rollback does not regenerate (guide 01 section 4.1)	8
 coalesce-unsupported-verify-fails	^verify FAIL .*rx-usecs=0$	04-network asks for rx-usecs=0 on the critical NIC, and verify-tuning fails when the driver has no interrupt coalescing (virtio-net on the RHEL 8 kernel)	8
