@@ -50,7 +50,7 @@ grep -A8 '^NICS=' /etc/lowlat/lowlat.conf
 # 3. Compact state of each NIC, and where the interrupts land (Guide 04 §9)
 . scripts/04-network && show_nic_state ens1f1
 watch -d -n1 "grep -E 'CPU|ens1f1' /proc/interrupts"
-# check that the ens1f1 rows increase only on housekeeping CPU 1, never on an isolated CPU
+# before the change: note which CPU columns increase (wherever the driver put them), and flag any isolated CPU
 ```
 
 `scripts/04-network --verify` passes on this host, because every one of its checks, "no NIC IRQ effective on an isolated CPU" included, walks the `NICS` list. It says nothing about `ens1f1`. That is why step 3 looks at its interrupts by hand: if they land on an isolated CPU, the new NIC also has the problem of [use case 4](04-one-nic-one-queue-one-cpu.md).
@@ -68,6 +68,9 @@ NICS=(
 )
 ```
 
+> [!WARNING]
+> `--apply` does more than coalescing. It sets channels and rings on every configured NIC, and changing channels resets most NICs: the link drops for 1 to 3 s ([Guide 04 §5.1](../../guides/04-network-optimization.md#51-queues-channels-ethtool--l)). Both feeds can stop. Run it in a maintenance window, with out-of-band access in case the management path is affected.
+
 ```bash
 scripts/04-network --dry-run | grep ens1f1      # read the ethtool calls for the new NIC
 sudo scripts/04-network --apply
@@ -82,7 +85,13 @@ What the critical profile changes on `ens1f1` ([Guide 04 §5](../../guides/04-ne
 | IRQ affinity | wherever the driver put it | CPU 1 | Never on an isolated CPU ([§6](../../guides/04-network-optimization.md#6-interrupt-affinity-set_nic_irq_affinity)) |
 | Queues, pause frames, offloads, rings | defaults | the rest of the profile | [§5.1 to §5.7](../../guides/04-network-optimization.md#5-per-nic-settings-tune_nic_low_latency) |
 
-`lowlat-runtime.service` re-applies the same settings at every boot, because `ethtool` settings do not survive a reboot or a driver reload ([Guide 04 §8](../../guides/04-network-optimization.md#8-persistence)).
+`ethtool` settings do not survive a reboot or a driver reload, so something has to re-apply them at boot ([Guide 04 §8](../../guides/04-network-optimization.md#8-persistence)). On a host set up with `apply-all`, that is `lowlat-runtime.service`, and it reads the same `NICS` list. Check that it is there:
+
+```bash
+systemctl is-enabled lowlat-runtime.service     # enabled
+```
+
+If the host was tuned guide by guide, the unit is not installed and `04-network --apply` does not install it. Install it with `sudo scripts/apply-all --apply` in the same maintenance window (it applies every guide), or use the NetworkManager `ethtool.*` properties (option B in Guide 04 §8).
 
 > [!IMPORTANT]
 > `rx-usecs 0` means one interrupt per packet. On a busy link that is a lot of work for CPU 1, which now serves two critical NICs. Watch its load (`mpstat -P 1 1`). If it cannot keep up, give the second NIC its own housekeeping CPU on the same node ([Guide 04 §5.3](../../guides/04-network-optimization.md#53-coalescing-0-ethtool--c-rx-usecs-0-tx-usecs-0)).
@@ -103,7 +112,8 @@ Illustrative:
 - [ ] `ethtool -c ens1f1` shows `Adaptive RX: off  TX: off`, `rx-usecs: 0` and `tx-usecs: 0`
 - [ ] `scripts/04-network --verify` lists `ens1f1` with PASS lines, and "no NIC IRQ effective on an isolated CPU" passes
 - [ ] The two feeds have the same latency at light load ([Guide 04 §9](../../guides/04-network-optimization.md#9-verification) has the sockperf round trip)
-- [ ] After a reboot, `ethtool -c ens1f1` still shows the same values
+- [ ] `watch -d -n1 "grep -E 'CPU|ens1f1' /proc/interrupts"` shows the `ens1f1` rows increasing only in the CPU 1 column
+- [ ] `systemctl is-enabled lowlat-runtime.service` prints `enabled`, and after a reboot `ethtool -c ens1f1` still shows the same values
 - [ ] Roll back: `sudo systemctl disable --now lowlat-runtime.service`, then `sudo scripts/04-network --rollback` restores every NIC to its saved baseline ([Guide 04 §12](../../guides/04-network-optimization.md#12-rollback)). To keep `ens1f0` tuned, remove the `ens1f1` line from `NICS`, run `--apply` again and re-enable `lowlat-runtime.service`
 
 ## 6. Key takeaways
