@@ -30,6 +30,7 @@
 | <a id="adq"></a>**ADQ** | **Application Device Queues.** An Intel feature of some NICs that gives one application its own set of NIC queues, so other traffic cannot get in its way. | One of the alternatives to full [kernel bypass](#kernel-bypass). [Guide 08 §7](guides/08-kernel-bypass.md#7-other-stacks-briefly) |
 | <a id="af-xdp"></a>**AF_XDP** | **Address Family XDP.** A Linux socket type. The NIC driver puts packets straight into memory that the application owns, so most of the kernel network stack is skipped. | A kernel-supported way to bypass most of the stack without a separate driver. [Guide 08 §7](guides/08-kernel-bypass.md#7-other-stacks-briefly) |
 | <a id="affinity"></a>**affinity** | The list of CPUs that a thread or an interrupt is allowed to use. "CPU affinity" is for threads, and "[IRQ](#irq) affinity" is for interrupts. | Most of the tuning is choosing affinities. [Guide 02](guides/02-cpu-core-isolation.md) |
+| <a id="almalinux"></a>**AlmaLinux** | A free rebuild of RHEL. Its packages match RHEL and it needs no subscription. | CI runs the scripts in an AlmaLinux 10 image, where every package of the guides can be installed. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
 | <a id="arp"></a>**ARP** | **Address Resolution Protocol.** How a host learns the hardware (MAC) address that belongs to an IP address on the same network. | ARP is not accelerated by [Onload](#onload), so it still goes through the kernel. [Guide 08 §5.1](guides/08-kernel-bypass.md#51-how-onload-works) |
 | <a id="aspm"></a>**ASPM** | **Active State Power Management.** A [PCIe](#pcie) feature that puts an idle link to sleep. | Waking a sleeping link takes microseconds, so latency hosts turn it off. [Guide 00 §4.7](guides/00-bios-firmware.md#47-pcie-and-devices) |
 
@@ -51,6 +52,7 @@
 | Term | Means | Why you meet it here |
 |---|---|---|
 | <a id="cache-line"></a>**cache line** | The smallest block of memory that a CPU copies between memory and its cache: 64 bytes on x86. | Two threads that write to the same cache line slow each other down ([false sharing](#false-sharing)). [Concept: CPU isolation §5](concepts/cpu-isolation.md#5-caches-and-coherence-the-mechanical-sympathy-part) |
+| <a id="centos-stream"></a>**CentOS Stream** | The public preview of the next RHEL minor release. It is built a little ahead of RHEL. | CI runs the scripts in CentOS Stream 9 and 10 images as an early warning. A failure there does not block a change. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
 | <a id="cfs"></a>**CFS / EEVDF** | **Completely Fair Scheduler** and **Earliest Eligible Virtual Deadline First.** The parts of Linux that choose which thread runs next. EEVDF replaced CFS in kernel 6.6. | [Concept: CPU isolation §2](concepts/cpu-isolation.md#2-the-linux-scheduler-in-one-page) |
 | <a id="cgroup"></a>**cgroup** | **Control group.** A Linux feature that puts processes in a group and limits what the group may use: CPUs, memory, disk. | [Guide 05](guides/05-cgroup-isolation.md) uses cgroups to keep the operating system away from the critical CPUs. |
 | <a id="chrony"></a>**chrony** | A program that keeps the computer clock correct by asking time servers over the network. | [Guide 10 §6](guides/10-time-sync.md#6-chrony) |
@@ -122,6 +124,7 @@
 | <a id="huge-pages"></a>**huge pages** | Memory pages of 2 MiB or 1 GiB, instead of the normal 4 KiB. One [TLB](#tlb) entry then covers much more memory. | Fewer TLB misses and no page faults on the hot path. [Guide 03](guides/03-huge-pages-configuration.md) |
 | <a id="hugetlbfs"></a>**hugetlbfs** | The Linux way to reserve huge pages on purpose, in advance. This is the "explicit" kind, and it is what the guides use. | It is predictable. [THP](#thp) is not. [Guide 03 §2](guides/03-huge-pages-configuration.md#2-transparent-vs-explicit-huge-pages-why-thp-is-off) |
 | <a id="hwp"></a>**HWP** | **Hardware P-states,** also called Speed Shift. The CPU chooses its own frequency, without asking the operating system. | The frequency can then change at times that you cannot see. [Guide 00 §4.1](guides/00-bios-firmware.md#41-power-and-performance-profile) |
+| <a id="hybrid-root"></a>**hybrid root** | A directory used as `LOWLAT_ROOT` in which `/etc`, `/boot`, `/usr` and `/var` are links to the real ones, while `/proc` and `/sys` are a [fake host](#fake-host). | It lets the real `systemctl`, `grubby` and `tuned-adm` see the files that the scripts write, and keeps the kernel fake. Only for a throwaway container. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
 
 ### I
 
@@ -243,6 +246,7 @@
 | <a id="rfs"></a>**RFS** | **Receive Flow Steering.** RPS that sends a flow to the CPU where its application runs. | Off for critical NICs. [Guide 04 §6.3](guides/04-network-optimization.md#63-rps-rfs-and-xps) |
 | <a id="rhel"></a>**RHEL** | **Red Hat Enterprise Linux.** The Linux distribution that these guides target (versions 8 and 9). | Every guide. |
 | <a id="ring-buffer"></a>**ring buffer** | A fixed-size queue in a circle. One side writes at the head, the other reads at the tail, and both wrap around to the start. NICs use them to pass packets to the driver. | When the writer catches the reader, new items are lost. `ethtool -g` shows the size. [Concept: ethtool §5](concepts/ethtool.md#5--g---g-ring-sizes) |
+| <a id="rocky-linux"></a>**Rocky Linux** | A free rebuild of RHEL made from the same source code. Its packages match RHEL and it needs no subscription. | CI runs the scripts in Rocky Linux 8 and 9 images, where every package of the guides can be installed. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
 | <a id="rps"></a>**RPS** | **Receive Packet Steering.** The software version of [RSS](#rss). The kernel picks a CPU for each packet, and it sends an [IPI](#ipi) to it. | It adds a hop, so it is off for critical NICs. [Guide 04 §6.3](guides/04-network-optimization.md#63-rps-rfs-and-xps) |
 | <a id="rss"></a>**RSS** | **Receive-Side Scaling.** The NIC computes a hash of the packet headers and uses it to pick a receive queue. | Packets of one flow always land in the same queue. [Guide 04 §5.1](guides/04-network-optimization.md#51-queues-channels-ethtool--l) |
 | <a id="rt"></a>**RT (real-time)** | A scheduling class where a thread runs before all normal threads, until it sleeps. | It can starve the operating system, so the kernel limits it. [Guide 02 §4.4](guides/02-cpu-core-isolation.md#44-real-time-throttling) |
@@ -268,6 +272,7 @@
 | <a id="sr-iov"></a>**SR-IOV / VF** | **Single Root I/O Virtualization** and **Virtual Function.** A NIC presents itself as several small NICs, and each VF can go to a virtual machine. | The way to run [kernel bypass](#kernel-bypass) or [PTP](#ptp) in a VM. [Guide 08 §10](guides/08-kernel-bypass.md#10-bare-metal-vs-vm) |
 | <a id="ssh"></a>**SSH** | **Secure Shell.** Remote login to a server. | If you change the NIC that your SSH session uses, the session drops. [Guide 04](guides/04-network-optimization.md) |
 | <a id="syn"></a>**SYN** | The first packet of a TCP connection ("synchronize"). | A queue of half-open connections waits on it. [Guide 06 §3](guides/06-kernel-sysctl-tuning.md#3-tcp-behavior) |
+| <a id="systemd-analyze"></a>**systemd-analyze** | A systemd command. `systemd-analyze verify FILE` reads a unit file and reports typos, unknown settings and missing programs without starting anything. | `tools/check-containers` runs it on every unit file that the scripts write, on each RHEL-family image. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
 
 ### T
 

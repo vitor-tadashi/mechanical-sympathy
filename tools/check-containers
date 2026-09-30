@@ -1,0 +1,227 @@
+#!/usr/bin/env bash
+#
+# check-containers - run the guides in RHEL-family containers with systemd as PID 1 (Level 2
+# of the validation ladder), and print one PASS or FAIL line per image.
+#
+# Per image it builds a small derived image (systemd, the tools the check needs, the guide
+# packages that the image can install), starts it with systemd as PID 1, and runs
+# tools/check-container-image inside: real systemctl, grubby and tuned-adm where the
+# package exists, a fake kernel for /proc and /sys. What the check covers is in that script.
+#
+#   tools/check-containers [--platform P] [--log-dir DIR] [--verbose] [IMAGE...]
+#
+# IMAGE is a full reference or a part of a default one (ubi9, rocky8, alma10, stream9).
+# Default images: UBI 8, 9 and 10 (ubi-init), Rocky Linux 8 and 9, AlmaLinux 10, and
+# CentOS Stream 9 and 10. A Stream failure is advisory: Stream runs ahead of RHEL.
+# CONTAINER_RUNTIME=podman|docker overrides the runtime (podman is preferred).
+# --platform defaults to linux/amd64 when CI is set, and to the native one otherwise.
+# It works with bash 3.2 (macOS): only the check inside the container needs bash >= 4.2.
+
+set -Eeuo pipefail
+export LC_ALL=C
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+DEFAULT_IMAGES="registry.access.redhat.com/ubi8/ubi-init registry.access.redhat.com/ubi9/ubi-init
+	registry.access.redhat.com/ubi10/ubi-init docker.io/library/rockylinux:8 docker.io/library/rockylinux:9
+	docker.io/library/almalinux:10 quay.io/centos/centos:stream9 quay.io/centos/centos:stream10"
+# Packages of the guides, and of a server install that a container image leaves out (rsyslog).
+GUIDE_PACKAGES="grubby tuned chrony linuxptp irqbalance ethtool iproute kernel-tools rsyslog"
+
+PLATFORM=""
+LOG_DIR=""
+VERBOSE=0
+IMAGES=""
+RUNTIME=""
+CONTAINER=""
+blocking_failures=0
+
+die() {
+	printf 'check-containers: %s\n' "$*" >&2
+	exit 1
+}
+
+detect_runtime() {
+	if [[ -n "${CONTAINER_RUNTIME:-}" ]]; then
+		command -v "${CONTAINER_RUNTIME}" >/dev/null 2>&1 || die "CONTAINER_RUNTIME=${CONTAINER_RUNTIME} is not installed"
+		RUNTIME="${CONTAINER_RUNTIME}"
+		return 0
+	fi
+	if command -v podman >/dev/null 2>&1; then
+		RUNTIME=podman
+	elif command -v docker >/dev/null 2>&1; then
+		RUNTIME=docker
+	else
+		die "needs podman or docker (macOS: brew install podman && podman machine init && podman machine start)"
+	fi
+}
+
+# expand_image <name> - a default image that contains the name, else the name itself.
+expand_image() {
+	local wanted="$1" image
+	case "${wanted}" in
+	rocky*) wanted="rockylinux:${wanted#rocky}" ;;
+	alma*) wanted="almalinux:${wanted#alma}" ;;
+	*) ;;
+	esac
+	for image in ${DEFAULT_IMAGES}; do
+		case "${image}" in
+		*"${wanted}"*)
+			printf '%s\n' "${image}"
+			return 0
+			;;
+		*) ;;
+		esac
+	done
+	printf '%s\n' "$1"
+}
+
+image_is_ubi() {
+	case "$1" in
+	*/ubi*) return 0 ;;
+	*) return 1 ;;
+	esac
+}
+
+image_is_advisory() {
+	case "$1" in
+	*stream*) return 0 ;;
+	*) return 1 ;;
+	esac
+}
+
+# containerfile <image> - the derived image. Non-init images have no systemd, so every
+# image gets the same treatment. Each guide package is tried on its own: a repository
+# that lacks one (UBI has no grubby or tuned) must not stop the others.
+containerfile() {
+	printf 'FROM %s\n' "$1"
+	printf 'RUN dnf -y -q install systemd procps-ng diffutils gawk findutils shadow-utils util-linux tar \\\n'
+	# The $package is for the shell in the image, not for this one.
+	# shellcheck disable=SC2016
+	printf '\t&& for package in %s; do dnf -y -q install "$package" >/dev/null 2>&1 || true; done \\\n' "${GUIDE_PACKAGES}"
+	printf '\t&& dnf clean all\n'
+	printf 'STOPSIGNAL SIGRTMIN+3\n'
+	printf 'CMD ["/sbin/init"]\n'
+}
+
+build_image() {
+	local image="$1" tag="$2" dir status=0
+	dir="$(mktemp -d)"
+	containerfile "${image}" >"${dir}/Containerfile"
+	# A failed build must not leave an older image under the same tag to be run instead.
+	"${RUNTIME}" rmi -f "${tag}" >/dev/null 2>&1 || true
+	# PLATFORM is empty or two words: it must split. The caller uses this function as a
+	# condition, where errexit is off, so the status is kept by hand.
+	# shellcheck disable=SC2086
+	"${RUNTIME}" build -q ${PLATFORM} -t "${tag}" -f "${dir}/Containerfile" "${dir}" >/dev/null || status=$?
+	rm -rf "${dir}"
+	return "${status}"
+}
+
+run_flags() {
+	if [[ "${RUNTIME}" == docker ]]; then
+		printf '%s\n' "--privileged --cgroupns=host --tmpfs /run --tmpfs /tmp -v /sys/fs/cgroup:/sys/fs/cgroup:rw"
+		return 0
+	fi
+	printf '%s\n' "--systemd=always"
+}
+
+# wait_for_systemd - "running" or "degraded" both mean PID 1 finished booting.
+wait_for_systemd() {
+	local tries=0 state
+	while ((tries < 60)); do
+		state="$("${RUNTIME}" exec "${CONTAINER}" systemctl is-system-running 2>/dev/null || true)"
+		case "${state}" in
+		running | degraded) return 0 ;;
+		*) ;;
+		esac
+		sleep 1
+		tries=$((tries + 1))
+	done
+	return 1
+}
+
+cleanup() {
+	[[ -z "${CONTAINER}" ]] || "${RUNTIME}" rm -f "${CONTAINER}" >/dev/null 2>&1 || true
+	CONTAINER=""
+}
+
+# check_image <image> - prints its PASS/FAIL line; the full log stays in the log directory.
+check_image() {
+	local image="$1" name tag log kind="full" label status=0 summary detail flags
+	name="$(printf '%s' "${image}" | tr -c 'A-Za-z0-9\n' '-')"
+	tag="lowlat-check/${name}:latest"
+	log="${LOG_DIR}/${name}.log"
+	image_is_ubi "${image}" && kind=ubi
+	label=FAIL
+	image_is_advisory "${image}" && label=ADVISORY-FAIL
+
+	if ! build_image "${image}" "${tag}" >"${log}" 2>&1; then
+		printf '%s  %s  (the image could not be built or pulled)\n' "${label}" "${image}"
+		image_is_advisory "${image}" || blocking_failures=$((blocking_failures + 1))
+		return 0
+	fi
+	CONTAINER="lowlat-check-${name}-$$"
+	flags="$(run_flags)"
+	# PLATFORM and flags hold several words: they must split.
+	# shellcheck disable=SC2086
+	"${RUNTIME}" run -d --name "${CONTAINER}" ${PLATFORM} ${flags} -v "${REPO}:/repo:ro,Z" \
+		-e "CHECK_IMAGE_KIND=${kind}" "${tag}" >/dev/null 2>>"${log}" || status=$?
+	if ((status == 0)) && wait_for_systemd; then
+		"${RUNTIME}" exec "${CONTAINER}" bash /repo/tools/check-container-image >>"${log}" 2>&1 || status=$?
+		"${RUNTIME}" exec "${CONTAINER}" cat /var/tmp/check-container-image/commands.log >"${LOG_DIR}/${name}.commands.log" 2>/dev/null || true
+	else
+		printf 'systemd did not reach running or degraded\n' >>"${log}"
+		status=1
+	fi
+	((VERBOSE == 0)) || cat "${log}"
+	cleanup
+
+	summary="$(grep '^summary ' "${log}" | tail -n 1 || true)"
+	detail="$(printf '%s' "${summary}" | sed -E 's/^summary checks=([0-9]+) failed=[0-9]+ known=([0-9]+) missing=(.*)$/\1 checks, \2 known issues, missing: \3/')"
+	if ((status == 0)); then
+		printf 'PASS  %s  (%s)\n' "${image}" "${detail}"
+		return 0
+	fi
+	printf '%s  %s  (%s)\n' "${label}" "${image}" "${detail:-no summary, see the log}"
+	grep -E '^(fail|     \|)' "${log}" | head -n 40 | sed 's/^/      /'
+	printf '      log: %s\n' "${log}"
+	image_is_advisory "${image}" || blocking_failures=$((blocking_failures + 1))
+	return 0
+}
+
+main() {
+	local image
+	while (($# > 0)); do
+		case "$1" in
+		--platform)
+			[[ $# -ge 2 ]] || die "--platform needs a value"
+			PLATFORM="--platform $2"
+			shift
+			;;
+		--log-dir)
+			[[ $# -ge 2 ]] || die "--log-dir needs a directory"
+			LOG_DIR="$2"
+			shift
+			;;
+		--verbose | -v) VERBOSE=1 ;;
+		-*) die "unknown option $1 (usage: tools/check-containers [--platform P] [--log-dir DIR] [--verbose] [IMAGE...])" ;;
+		*) IMAGES="${IMAGES} $(expand_image "$1")" ;;
+		esac
+		shift
+	done
+	[[ -n "${IMAGES}" ]] || IMAGES="${DEFAULT_IMAGES}"
+	if [[ -z "${PLATFORM}" && -n "${CI:-}" ]]; then
+		PLATFORM="--platform linux/amd64"
+	fi
+	detect_runtime
+	[[ -n "${LOG_DIR}" ]] || LOG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/check-containers.XXXXXX")"
+	mkdir -p "${LOG_DIR}"
+	trap cleanup EXIT
+	printf 'check-containers: %s%s, logs in %s\n' "${RUNTIME}" "${PLATFORM:+ (${PLATFORM#--platform })}" "${LOG_DIR}"
+	for image in ${IMAGES}; do
+		check_image "${image}"
+	done
+	((blocking_failures == 0)) || exit 1
+}
+
+main "$@"
