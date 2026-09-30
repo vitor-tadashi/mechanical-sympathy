@@ -80,7 +80,7 @@ To stop version-update PRs, set the affected ecosystem's `open-pull-requests-lim
 
 - **What:** a report of what happened when you ran the scripts or a guide on a real server, or on a VM you own.
 - **Why:** the harnesses in CI run on fake hosts, in containers and in VMs. They cannot show BIOS behavior, physical NIC features or a real workload. Only a report from real hardware can.
-- **Where:** open an issue with the [hardware report form](.github/ISSUE_TEMPLATE/hardware-report.yml).
+- **Where:** [open a hardware report](https://github.com/vitor-tadashi/mechanical-sympathy/issues/new?template=hardware-report.yml). The form itself is `.github/ISSUE_TEMPLATE/hardware-report.yml`.
 
 **What to run:**
 
@@ -89,9 +89,9 @@ uname -r
 sudo scripts/verify-tuning --report verify-report.txt
 ```
 
-The report file starts with a `host:` line that holds your host name: replace it before you paste or attach the file.
+Read the whole report file before you paste or attach it. It starts with a `host:` line that holds your host name, and it also prints the configuration path, the complete kernel command line and the names of configured services and processes. Remove or replace anything private, and when in doubt paste only the FAIL and WARN lines.
 
-**What to leave out:** host names, IP and MAC addresses, serial numbers, asset tags, user names and internal paths. The form has a required box for it. Do not send a report that you cannot sanitize.
+**What to leave out:** host names, IP and MAC addresses, serial numbers, asset tags, user names, internal paths and the names of proprietary software. The form has a required box for it. Do not send a report that you cannot sanitize.
 
 **What a report is, and is not:** it is evidence about one host on one day. It is not a certification, and this project does not issue or claim one. A report of a failure is as useful as a report of a success. Numbers need the tool, the workload and the units, or they are not used.
 

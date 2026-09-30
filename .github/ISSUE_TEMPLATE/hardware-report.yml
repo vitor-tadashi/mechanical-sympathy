@@ -7,7 +7,7 @@ body:
       value: |
         Thank you. A report is evidence, not a certification: it says what happened on your host, on one day. Successes, failures and "it did nothing" are all useful.
 
-        **Before you paste anything**, remove host names, IP and MAC addresses, serial numbers, asset tags, user names and internal paths. Where the text asks for the output of `scripts/verify-tuning`, edit the `host:` line of the report.
+        **Before you paste anything**, remove host names, IP and MAC addresses, serial numbers, asset tags, user names and internal paths. Read the whole `scripts/verify-tuning` report before you paste it: it also prints the configuration path, the complete kernel command line and the names of configured services and processes. When in doubt, paste only the FAIL and WARN lines.
   - type: dropdown
     id: distribution
     attributes:
@@ -62,7 +62,7 @@ body:
     id: result
     attributes:
       label: What happened
-      description: Did apply finish? Did the host reboot cleanly? What does `sudo scripts/verify-tuning --report verify-report.txt` say afterwards? Paste the FAIL and WARN lines, and attach or paste the report once the `host:` line is edited.
+      description: Did apply finish? Did the host reboot cleanly? What does `sudo scripts/verify-tuning --report verify-report.txt` say afterwards? Paste the FAIL and WARN lines. Attach the whole report only after you have read it line by line and removed everything private, starting with the `host:` line, the configuration path and the kernel command line.
     validations:
       required: true
   - type: textarea
