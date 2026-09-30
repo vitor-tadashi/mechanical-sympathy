@@ -857,7 +857,7 @@ LOW-LATENCY TUNING VERIFICATION
   PASS processor.max_cstate=0
   PASS intel_idle.max_cstate=0
   PASS transparent_hugepage=never
-  INFO grubby default entry: root=/dev/mapper/rhel-root ro crashkernel=auto resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet console=tty0 idle=poll processor.max_cstate=0 intel_idle.max_cstate=0 transparent_hugepage=never
+  INFO grubby default entry: ro crashkernel=auto resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet console=tty0 idle=poll processor.max_cstate=0 intel_idle.max_cstate=0 transparent_hugepage=never
 
 == 02 CPU isolation ==
   INFO host_class=virtual_machine: CPU isolation not expected

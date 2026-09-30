@@ -1,7 +1,8 @@
 name: integration
 
 # Runs the tuning scripts end to end on fake hosts (tools/check-scripts), inside the
-# RHEL user space of each supported major release.
+# RHEL user space of each supported major release, and in systemd containers of the
+# RHEL-family images (tools/check-containers).
 
 on:
   push:
@@ -24,3 +25,33 @@ jobs:
       - name: Install diffutils (not in the UBI image)
         run: dnf -y -q install diffutils
       - run: tools/check-scripts
+
+  containers:
+    name: containers (${{ matrix.name }})
+    runs-on: ubuntu-24.04
+    # CentOS Stream runs ahead of RHEL: its failures are advisory.
+    continue-on-error: ${{ !matrix.blocking }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: ubi8, image: registry.access.redhat.com/ubi8/ubi-init, blocking: true}
+          - {name: ubi9, image: registry.access.redhat.com/ubi9/ubi-init, blocking: true}
+          - {name: ubi10, image: registry.access.redhat.com/ubi10/ubi-init, blocking: true}
+          - {name: rocky8, image: "docker.io/library/rockylinux:8", blocking: true}
+          - {name: rocky9, image: "docker.io/library/rockylinux:9", blocking: true}
+          - {name: alma10, image: "docker.io/library/almalinux:10", blocking: true}
+          - {name: stream9, image: "quay.io/centos/centos:stream9", blocking: false}
+          - {name: stream10, image: "quay.io/centos/centos:stream10", blocking: false}
+    steps:
+      - uses: actions/checkout@v4
+      # Rootful podman starts systemd as PID 1 in the container.
+      - name: Check the guides in ${{ matrix.image }}
+        run: sudo tools/check-containers --platform linux/amd64 --log-dir "${RUNNER_TEMP}/check-containers" "${{ matrix.image }}"
+      - name: Upload the logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: check-containers-${{ matrix.name }}
+          path: ${{ runner.temp }}/check-containers
+          if-no-files-found: ignore
