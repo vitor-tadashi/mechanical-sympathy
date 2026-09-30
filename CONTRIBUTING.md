@@ -38,6 +38,42 @@ make site                     # optional: assemble _site/ to preview the site lo
 - Both squash and rebase merges are enabled. A squash merge turns the PR title into the commit title, and a rebase merge keeps every commit, so every commit title and the PR title follow the same rule. Use `type(scope): subject`, imperative and lowercase, at most 72 ASCII characters. `tools/check-commit-title` enforces it, and the full rules are in [AGENTS.md section 8](AGENTS.md#8-git).
 - PR and commit descriptions are plain text: no emojis, no tool attribution footers. `tools/check-description` enforces it.
 
+## Dependency updates
+
+### At a glance
+
+- **What:** [Dependabot](GLOSSARY.md#dependabot) proposes workflow action and Java probe updates weekly.
+- **Approval:** The owner approves library and build-tool changes, and every merge.
+- **Verification:** Keep action pins and review Gradle checksums before merging.
+
+[The configuration](.github/dependabot.yml) checks both ecosystems on Mondays at 07:23 UTC and allows three open version-update PRs per ecosystem. GitHub handles security-update PRs separately; [that limit does not cover them](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#open-pull-requests-limit). Automatic rebasing is disabled. Resolve conflicts by merging main when the owner requests it.
+
+### Workflow actions
+
+Keep every action pinned to a full commit SHA with its release version in a trailing comment. Confirm the commit against the upstream release, run `make lint`, and inspect the workflow's CI run. Titles and descriptions follow [the same rules](AGENTS.md#8-git) as any other PR, including copied release notes.
+
+### Java probe
+
+1. Get the owner's explicit approval for library versions, new transitive libraries, and build-tool or plugin changes. Record that approval even when the bot edits `approvedDependencies`.
+2. Align `approvedDependencies` in `build.gradle.kts` with the approved compile and runtime dependencies. For wrapper changes, review `distributionUrl` and `distributionSha256Sum` and keep the Gradle version in `.sdkmanrc` aligned.
+3. After approval, regenerate verification metadata locally and review every newly trusted artifact in the diff:
+
+   ```bash
+   cd examples/java-latency-probe
+   sdk env
+   ./gradlew --write-verification-metadata sha256 check
+   git diff origin/main -- build.gradle.kts gradle/verification-metadata.xml gradle/wrapper/gradle-wrapper.properties .sdkmanrc
+   ./gradlew check
+   cd ../..
+   make lint
+   ```
+
+4. Commit the reviewed approval-list and checksum changes together, using signed commits. Both Gradle checks and `make lint` must pass; inspect the CI result before requesting a merge.
+
+A Gradle update can fail until its approval list and checksums have been reviewed. Generating checksums does not approve a library. Keep dependency verification enabled; CI runs the ordinary check and never generates trust metadata. All dependency PRs need manual review and an owner-approved merge.
+
+To stop version-update PRs, set the affected ecosystem's `open-pull-requests-limit` to `0` in a reviewed PR. Security-update settings remain an owner decision in repository settings.
+
 ## Reporting wrong or dangerous advice
 
 Open an issue with the guide and section, what the text says, what you observed, and the kernel and hardware. If the advice can lock a host out or weaken security, read [SECURITY.md](SECURITY.md) first.
