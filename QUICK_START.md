@@ -191,9 +191,17 @@ Original files and first-apply state remain under
 `/var/lib/lowlat/factory-settings/`. Repeated apply and boot reapplication do
 not replace those originals. Rollback without an earlier wrapper apply is a
 no-op. An interrupted apply records which guides it reached; rollback invokes
-those guides. Each guide's rollback limits still apply, including manual BIOS
-settings, application launch settings, and the time-sync service choice
-([Guide 10](guides/10-time-sync.md#11-rollback)).
+those guides. A guide that the host class skips is recorded as skipped and is
+not rolled back: on a virtual machine that is Guides 00, 02 and 03, so a huge
+page pool that apply never managed stays as it is. Each guide's rollback limits
+still apply, including manual BIOS settings, application launch settings, and
+the time-sync service choice ([Guide 10](guides/10-time-sync.md#11-rollback)).
+
+A host that an older `apply-all` tuned has the runtime unit but no record, and
+its guides have no saved baseline. The wrapper then stops with an error and
+changes nothing. Run `systemctl disable --now lowlat-runtime.service`, and roll
+the guides back one by one as each guide's rollback section says. Do not apply
+again first: that would record the tuned state as the baseline.
 
 Check `systemctl is-enabled lowlat-runtime.service` and
 `systemctl is-active lowlat-runtime.service`. If no unit existed before apply,

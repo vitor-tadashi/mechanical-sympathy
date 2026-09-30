@@ -1186,18 +1186,10 @@ LOW-LATENCY TUNING VERIFICATION
 
 01. Removing /etc/sysctl.d/90-lowlat.conf
     01.01 Values stay active until reboot (or re-run: sysctl --system)
+    08.01 Skipping 03-huge-pages: apply-all did not apply it on this host
+    08.02 Skipping 02-cpu-isolation: apply-all did not apply it on this host
 
-09. Rollback 03-huge-pages
-
-01. Removing huge page reservation
-    01.01 Releasing reserved pages (pages in use are released when their owner exits)
-
-10. Rollback 02-cpu-isolation
-
-01. Restoring CPU isolation baseline
-    01.01 No saved CPU isolation baseline, nothing to restore
-
-11. Rollback 01-grub-bootloader
+09. Rollback 01-grub-bootloader
 
 01. Removing managed kernel arguments from every kernel entry
     01.01 Removing idle
@@ -1224,13 +1216,9 @@ LOW-LATENCY TUNING VERIFICATION
     01.22 Removing mds
     01.23 Removing tsx_async_abort
     01.24 Reboot required
+    09.01 Skipping 00-bios-firmware: apply-all did not apply it on this host
 
-12. Rollback 00-bios-firmware
-
-01. Firmware settings visible to the OS
-    01.01 No recorded ASPM policy, nothing to restore
-
-13. Restoring the original runtime unit
+10. Restoring the original runtime unit
 
 Reboot to restore boot parameters and inherited service affinity.
 ---- exit 0
