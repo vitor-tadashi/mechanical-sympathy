@@ -204,11 +204,73 @@ cpu_corrupt_state() {
 	expect_status 1 "${REPO}/scripts/02-cpu-isolation" --rollback
 }
 
+network_rollback() {
+	setup rhel9-vm-kvm
+	cp -a "${LOWLAT_ROOT}/run/fake-ethtool" "${WORK}/nic-before"
+	printf '1200\n' >"${LOWLAT_ROOT}/sys/class/net/eth0/tx_queue_len"
+	sed -i 's/eth0|critical|1|0/eth0|critical|1|3000/' "${LOWLAT_ROOT}/etc/lowlat/lowlat.conf"
+	expect_status 0 "${REPO}/scripts/04-network" --apply
+	expect_status 0 "${REPO}/scripts/04-network" --runtime
+	expect_status 0 "${REPO}/scripts/04-network" --rollback
+	expect_status 0 diff -r "${WORK}/nic-before" "${LOWLAT_ROOT}/run/fake-ethtool"
+	grep -qx 1200 "${LOWLAT_ROOT}/sys/class/net/eth0/tx_queue_len" || fail "transmit queue baseline lost"
+	grep -qx 0-3 "${LOWLAT_ROOT}/proc/irq/100/smp_affinity_list" || fail "IRQ baseline lost"
+	expect_status 0 "${REPO}/scripts/04-network" --rollback
+}
+
+network_missing_interface() {
+	setup rhel9-vm-kvm
+	expect_status 0 "${REPO}/scripts/04-network" --apply
+	rm "${LOWLAT_ROOT}/sys/class/net/eth0"
+	expect_status 1 "${REPO}/scripts/04-network" --rollback
+}
+
+network_no_apply() {
+	setup rhel9-vm-kvm
+	expect_status 0 "${REPO}/scripts/04-network" --rollback
+	[[ ! -d "${LOWLAT_ROOT}/var/lib/lowlat/factory-settings" ]] || fail "network rollback created state without apply"
+}
+
+network_recreated_irqs() {
+	setup rhel9-vm-kvm
+	mkdir -p "${LOWLAT_ROOT}/run/fake-ethtool-irqs"
+	printf '400\n' >"${LOWLAT_ROOT}/run/fake-ethtool-irqs/eth0"
+	expect_status 0 "${REPO}/scripts/04-network" --apply
+	[[ ! -e "${LOWLAT_ROOT}/proc/irq/100" ]] || fail "driver did not recreate IRQs"
+	grep -qx 1 "${LOWLAT_ROOT}/proc/irq/400/smp_affinity_list" || fail "new IRQ not placed"
+	expect_status 0 "${REPO}/scripts/04-network" --rollback
+	grep -qx 0-3 "${LOWLAT_ROOT}/proc/irq/403/smp_affinity_list" || fail "channels must be restored before IRQ discovery"
+}
+
+network_driver_failure() {
+	setup rhel9-vm-kvm
+	expect_status 0 "${REPO}/scripts/04-network" --apply
+	mkdir -p "${LOWLAT_ROOT}/run/fake-ethtool-fail/eth0"
+	: >"${LOWLAT_ROOT}/run/fake-ethtool-fail/eth0/-C"
+	expect_status 1 "${REPO}/scripts/04-network" --rollback
+}
+
+network_unsupported() {
+	setup rhel9-vm-kvm
+	mkdir -p "${LOWLAT_ROOT}/run/fake-ethtool-fail/eth0"
+	: >"${LOWLAT_ROOT}/run/fake-ethtool-fail/eth0/-c"
+	expect_status 0 "${REPO}/scripts/04-network" --apply
+	grep -qx rx_usecs=50 "${LOWLAT_ROOT}/run/fake-ethtool/eth0" || fail "unreadable coalescing was changed"
+	expect_status 0 "${REPO}/scripts/04-network" --rollback
+}
+
+network_missing_state() {
+	setup rhel9-vm-kvm
+	expect_status 0 "${REPO}/scripts/04-network" --apply
+	rm "${LOWLAT_ROOT}/var/lib/lowlat/factory-settings/.values/04/eth0/combined"
+	expect_status 1 "${REPO}/scripts/04-network" --rollback
+}
+
 if [[ "${1:-}" == --case ]]; then
 	"$2"
 	exit 0
 fi
-cases=(missing_system_conf tuned_layout missing_chrony existing_manager missing_chrony_unit console_restore virtio_placement unknown_irq unreadable_irq cpu_rollback cpu_absent_files cpu_lost_backup cpu_no_apply cpu_missing_knob cpu_runtime_only cpu_corrupt_state)
+cases=(missing_system_conf tuned_layout missing_chrony existing_manager missing_chrony_unit console_restore virtio_placement unknown_irq unreadable_irq cpu_rollback cpu_absent_files cpu_lost_backup cpu_no_apply cpu_missing_knob cpu_runtime_only cpu_corrupt_state network_rollback network_missing_interface network_no_apply network_recreated_irqs network_driver_failure network_unsupported network_missing_state)
 for name in "${cases[@]}"; do
 	bash "$0" --case "${name}"
 done
