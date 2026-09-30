@@ -1153,6 +1153,7 @@ A /var/lib/fake-systemd/enabled/hugetlb-reserve-pages.service
 A /var/lib/fake-systemd/enabled/lowlat-runtime.service
 A /var/lib/fake-systemd/enabled/lowlat-verify.timer
 A /var/lib/lowlat/aspm-original-policy
+A /var/lib/lowlat/console-original
 A /var/lib/lowlat/factory-settings/etc/fstab
 A /var/lib/lowlat/factory-settings/etc/systemd/system.conf
 D /run/fake-systemd/active/crond.service
@@ -1632,7 +1633,9 @@ Host class: bare_metal (override with LOWLAT_HOST_CLASS=bare_metal|virtual_machi
     01.21 Removing pti
     01.22 Removing mds
     01.23 Removing tsx_async_abort
-    01.24 Reboot required
+    01.24 Restoring console=tty0 for /vmlinuz-6.12.0-55.9.1.el10_0.x86_64
+    01.25 Restoring console=tty0 for /vmlinuz-0-rescue
+    01.26 Reboot required
 ---- exit 0
 
 ==== 00-bios-firmware --rollback
@@ -1741,18 +1744,16 @@ A /etc/tuned/profiles/low-latency/tuned.conf
 A /run/fake-systemd/active/lowlat-runtime.service
 A /var/lib/fake-systemd/enabled/lowlat-runtime.service
 A /var/lib/lowlat/aspm-original-policy
+A /var/lib/lowlat/console-original
 A /var/lib/lowlat/factory-settings/etc/fstab
 A /var/lib/lowlat/factory-settings/etc/systemd/system.conf
 D /run/fake-systemd/active/crond.service
 D /run/fake-systemd/active/irqbalance.service
 D /var/lib/fake-systemd/enabled/crond.service
 D /var/lib/fake-systemd/enabled/irqbalance.service
-M /boot/loader/entries/0f1e2d3c4b5a69788796a5b4c3d2e1f0-0-rescue.conf
-M /boot/loader/entries/0f1e2d3c4b5a69788796a5b4c3d2e1f0-6.12.0-55.9.1.el10_0.x86_64.conf
 M /etc/fstab
 M /etc/tuned/active_profile
 M /proc/*/status
-M /proc/cmdline
 M /proc/irq/*/effective_affinity_list (32)
 M /proc/irq/*/smp_affinity_list (48)
 M /proc/sys/kernel/sched_rt_runtime_us
@@ -1770,8 +1771,6 @@ M /sys/devices/virtual/workqueue/cpumask
 M /sys/module/pcie_aspm/parameters/policy
 
 ==== /proc/cmdline differences
-10d9
-< console=tty0
 
 ==== process differences
 1,10c1,8

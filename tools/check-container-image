@@ -531,7 +531,7 @@ count_lines() {
 }
 
 step_verify() {
-	local log="${WORK}/verify.log" status=0 line moved passes warns fails failed_lines
+	local log="${WORK}/verify.log" status=0 line passes warns fails failed_lines
 	in_host "${REPO}/scripts/verify-tuning" >"${log}" 2>&1 || status=$?
 	passes="$(count_lines '^  PASS' "${log}")"
 	warns="$(count_lines '^  WARN' "${log}")"
@@ -552,11 +552,9 @@ step_verify() {
 		fi
 		fail "verify-tuning: ${line#  }"
 	done <<<"${failed_lines}"
-	# The guides place a virtio NIC's IRQs nowhere, yet verify passes on its IRQ line.
-	moved="$(grep -L -x '0-3' "${FAKE}"/proc/irq/*/smp_affinity_list 2>/dev/null || true)"
-	if grep -q 'IRQs on CPUs' "${log}" && [[ -z "${moved}" ]]; then
-		observe virtio-irq-false-pass
-	fi
+	check "virtio IRQ placement is observable" grep -qx 1 "${FAKE}/proc/irq/100/smp_affinity_list"
+	check "virtio IRQ verification reports PASS" grep -q '^  PASS eth0 (critical) IRQs on CPUs 1$' "${log}"
+
 }
 
 # snapshot <dir> - what a run may change: files, unit state and boot arguments.

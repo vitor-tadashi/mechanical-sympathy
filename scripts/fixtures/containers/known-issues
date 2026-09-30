@@ -6,9 +6,7 @@
 # that the check finds the bug in code. A bug that is observed and not listed fails the run.
 # So does a listed bug that is no longer observed on an image it applies to: delete its line in the
 # change that fixes it.
-console-tty0-not-restored	^M /boot/loader/entries/|cmdline missing console=tty0	01-grub-bootloader --rollback does not put back console=tty0, which --apply removes on bare metal
 no-rollback-02	^. /etc/(sysctl\.d/91-lowlat-rt\.conf|systemd/system\.conf)|irqbalance	02-cpu-isolation has no --rollback: it prints its usage and changes nothing
 no-rollback-04	/run/fake-ethtool/	04-network has no --rollback: NIC settings stay as applied until the next boot
 no-rollback-07	limits\.d/90-lowlat|/etc/tuned/	07-os-hygiene has no --rollback: limits, tuned profile and tuned state stay
 runtime-unit-left-enabled	lowlat-runtime\.service	apply-all has no --rollback: lowlat-runtime.service stays installed and enabled
-virtio-irq-false-pass	-	verify-tuning passes the IRQ line of a virtio NIC that no guide placed

@@ -104,7 +104,18 @@ boot() {
 
 # manifest <tree> - "checksum size path" for every file and link, sorted by path.
 manifest() {
-	(cd "$1" && find . \( -type f -o -type l \) -print0 | xargs -0 cksum | sort -k 3)
+	local file target sum links
+	(
+		cd "$1"
+		find . -type f -print0 | xargs -0 cksum
+		links="$(find . -type l -print)"
+		while IFS= read -r file; do
+			[[ -n "${file}" ]] || continue
+			target="$(readlink "${file}")"
+			sum="$(printf '%s' "${target}" | cksum)"
+			printf '%s %s\n' "${sum}" "${file}"
+		done <<<"${links}"
+	) | sort -k 3
 }
 
 # changed_files <before> <after> - A(dded), M(odified) and D(eleted) files. Left out:

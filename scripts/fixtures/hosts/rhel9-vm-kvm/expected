@@ -416,7 +416,11 @@ LOW-LATENCY TUNING (apply)
 23. NIC interrupt affinity
     WARN: irqbalance is running on this VM and will move these IRQs again
     23.01 eth0: routing interrupts to CPUs 1
-    23.02 eth0: 0 IRQ(s) placed
+           [dry-run] echo 1 > /proc/irq/100/smp_affinity_list
+           [dry-run] echo 1 > /proc/irq/101/smp_affinity_list
+           [dry-run] echo 1 > /proc/irq/102/smp_affinity_list
+           [dry-run] echo 1 > /proc/irq/103/smp_affinity_list
+    23.02 eth0: 4 IRQ(s) placed
 
 24. Verification timer (DAY2_VERIFY_TIMER=yes)
     24.01 Writing lowlat-verify.service (ExecStart=/opt/lowlat/scripts/verify-tuning, CPUs: 0 1)
@@ -630,7 +634,7 @@ LOW-LATENCY TUNING (apply)
 23. NIC interrupt affinity
     WARN: irqbalance is running on this VM and will move these IRQs again
     23.01 eth0: routing interrupts to CPUs 1
-    23.02 eth0: 0 IRQ(s) placed
+    23.02 eth0: 4 IRQ(s) placed
 
 24. Verification timer (DAY2_VERIFY_TIMER=yes)
     24.01 Writing lowlat-verify.service (ExecStart=/opt/lowlat/scripts/verify-tuning, CPUs: 0 1)
@@ -735,6 +739,7 @@ M /boot/loader/entries/0f1e2d3c4b5a69788796a5b4c3d2e1f0-0-rescue.conf
 M /boot/loader/entries/0f1e2d3c4b5a69788796a5b4c3d2e1f0-5.14.0-570.12.1.el9_6.x86_64.conf
 M /etc/fstab
 M /etc/tuned/active_profile
+M /proc/irq/*/smp_affinity_list (4)
 M /proc/sys/fs/file-max
 M /proc/sys/kernel/printk
 M /proc/sys/net/core/bpf_jit_enable
@@ -807,7 +812,7 @@ lowlat-runtime.service: /opt/lowlat/scripts/apply-all --runtime
   04. NIC interrupt affinity
       WARN: irqbalance is running on this VM and will move these IRQs again
       04.01 eth0: routing interrupts to CPUs 1
-      04.02 eth0: 0 IRQ(s) placed
+      04.02 eth0: 4 IRQ(s) placed
   
   05. Pinning housekeeping processes
       05.01 edr-agentd is not running
@@ -1117,7 +1122,7 @@ lowlat-runtime.service: /opt/lowlat/scripts/apply-all --runtime
   04. NIC interrupt affinity
       WARN: irqbalance is running on this VM and will move these IRQs again
       04.01 eth0: routing interrupts to CPUs 1
-      04.02 eth0: 0 IRQ(s) placed
+      04.02 eth0: 4 IRQ(s) placed
   
   05. Pinning housekeeping processes
       05.01 edr-agentd is not running
@@ -1150,6 +1155,8 @@ D /run/fake-systemd/active/crond.service
 D /var/lib/fake-systemd/enabled/crond.service
 M /etc/fstab
 M /etc/tuned/active_profile
+M /proc/irq/*/effective_affinity_list (4)
+M /proc/irq/*/smp_affinity_list (4)
 M /run/fake-ethtool/eth0
 
 ==== /proc/cmdline differences
