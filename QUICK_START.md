@@ -38,6 +38,7 @@ flowchart TD
 
 | Step | Guide | What you do | Reboot |
 |---|---|---|---|
+| 0 | [09](guides/09-measuring-latency.md) | Baseline: latency percentiles of your workload, plus a host bundle (`sudo scripts/09-measure-latency --apply && sudo scripts/09-measure-latency --run`). Compare against it after step 10. | |
 | 1 | — | Design the CPU layout: NIC NUMA node, isolated CPUs, housekeeping CPUs ([Guide 02 §3](guides/02-cpu-core-isolation.md#3-designing-the-cpu-layout), or let `scripts/plan-layout` propose it) and write `/etc/lowlat/lowlat.conf` | |
 | 2 | [00](guides/00-bios-firmware.md) | BIOS: maximum-performance profile, C1E and deep C-states off, OS-controlled P-states, Hyper-Threading off, NUMA per socket, SMI sources off | ✔ (BIOS) |
 | 3 | [01](guides/01-grub-bootloader-tuning.md) | Kernel command line: isolation + latency set. Decide on mitigations with security. | ✔ |
@@ -56,9 +57,11 @@ sudo scripts/apply-all --apply && sudo systemctl reboot
 scripts/verify-tuning
 ```
 
+`apply-all` runs the guides in a different order than the table: 00, 01, 02, 03, 06, 07, 10, 05, 08 (only with a bypass stack), 04, 11. It puts 08 before 04 because a driver reload resets the NICs, and it never runs Guide 09. If you apply the guides one by one, follow the table.
+
 **Also, on every host:** time synchronization with chrony, or PTP on the timing NIC, with the daemons pinned to a housekeeping CPU ([Guide 10](guides/10-time-sync.md)). `apply-all` runs it after Guide 07. It also installs the [verification timer of Guide 11](guides/11-day2-operations.md), so the host reports its own drift.
 
-**Time:** half a day for the first host, including the reboot and verification. Subsequent hosts with the same hardware take minutes (same `lowlat.conf`).
+**Time:** about half a day for the first host, including the reboot and verification. The next hosts with the same hardware take minutes (same `lowlat.conf`).
 
 ```mermaid
 gantt
@@ -89,6 +92,7 @@ gantt
 
 | Step | Guide | What applies |
 |---|---|---|
+| 0 | [09](guides/09-measuring-latency.md) | **Baseline:** latency percentiles and a host bundle, before any change |
 | 1 | [01](guides/01-grub-bootloader-tuning.md) | **Latency subset only:** `idle=poll`, C-state caps, `transparent_hugepage=never` (agree `idle=poll` with the hypervisor owner) |
 | 2 | [06](guides/06-kernel-sysctl-tuning.md) | sysctl profile (scale `vm.min_free_kbytes` down) |
 | 3 | [07](guides/07-os-hygiene.md) | Services, limits, noatime, tuned profile (its PM QoS is the main C-state control in a VM) |
@@ -108,6 +112,7 @@ The scripts skip isolation, huge-page reservation, irqbalance and RT throttling 
 
 | Step | Guide | What applies |
 |---|---|---|
+| 0 | [09](guides/09-measuring-latency.md) | **Baseline** of the critical tenant, and of the neighbors while it runs, before any change |
 | 1 | [01](guides/01-grub-bootloader-tuning.md) | Latency subset. Isolation only for the CPUs of the one application that pins its threads (small `ISOLATED_CPUS`). |
 | 2 | [05](guides/05-cgroup-isolation.md) | **One slice per tenant**: `AllowedCPUs`, `MemoryMax`, `IOWeight`. This is the main tool here. |
 | 3 | [03](guides/03-huge-pages-configuration.md) | Per-node pool sized only for the latency-critical tenant |

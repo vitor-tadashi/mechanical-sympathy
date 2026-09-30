@@ -56,8 +56,9 @@ cd examples/java-latency-probe
 APP_NUMA_NODE=1 bin/launch
 
 # Same host, untuned JVM for comparison: no pinning, no large pages
-sed -i 's/^affinity.enable=true/affinity.enable=false/' conf/application.properties
+perl -pi -e 's/^affinity.enable=true/affinity.enable=false/' conf/application.properties   # same on Linux and macOS
 bin/launch
+git checkout conf/application.properties   # restore the tuned setting
 ```
 
 ## 4. What the launcher does
@@ -184,17 +185,20 @@ flowchart TD
 The two threads exchange a sequence number through two `PaddedSequence` objects. Each has one writer and sits on its own cache line, so the round trip measures exactly one cache-line transfer in each direction:
 
 ```java
-for (long i = 0; i < total; i++) {
+for (long i = 0; i < total; i++) {                    // total = warmup + iterations
     long t0 = System.nanoTime();
     ping.set(i);                                       // release store
     while (pong.get() != i) { idle.idle(0); }          // acquire load, PAUSE while waiting
+    idle.idle(1);                                      // work done: a backoff strategy restarts its wait
     long t1 = System.nanoTime();
     for (int h = 0; h < hops; h++) {
         index = (int) table[index];                    // dependent random reads over 1 GiB
     }
     long t2 = System.nanoTime();
-    rtt.recordValue(t1 - t0);
-    walk.recordValue(t2 - t1);
+    if (i >= warmup) {                                 // warm-up samples are not recorded
+        rtt.recordValue(Math.min(t1 - t0, HIGHEST_TRACKABLE_NS));
+        walk.recordValue(Math.min(t2 - t1, HIGHEST_TRACKABLE_NS));
+    }
 }
 ```
 
@@ -273,4 +277,4 @@ Record results before and after each guide. The combination of this probe and `r
 | `conf/jvm.options` | Heap size (keep ≤ the node's pool), collector, logging |
 | `bin/launch` | Host classification, NUMA binding, bypass prefix, extra flags per environment |
 | `IdleStrategy` | Spin/backoff thresholds |
-| `build.gradle.kts` | Dependencies. Only `approvedDependencies` may resolve, and every artifact's checksum is pinned in `gradle/verification-metadata.xml` (regenerate with `./gradlew --write-verification-metadata sha256 build` after an approved change). |
+| `build.gradle.kts` | Dependencies. Only `approvedDependencies` may resolve, and every artifact's checksum is pinned in `gradle/verification-metadata.xml` (regenerate with `./gradlew --write-verification-metadata sha256 check` after an approved change). |

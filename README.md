@@ -6,7 +6,7 @@
 
 I wrote this for the engineer I was when I started: a fast application, a slow tail, and no idea where the missing microseconds went. The answer was never in one place. It was in the firmware, the kernel, the network card, the memory and, in the end, in my own code, and it only made sense when I saw them together.
 
-A field guide, with working scripts, for turning a Red Hat Enterprise Linux 8/9 server into a **deterministic, low-jitter host** for applications that must answer within microseconds, every time: request/response and RPC services, messaging and IPC layers, stream and event processors, real-time analytics, telemetry and control loops, and packet-processing pipelines. If your problem is the tail (p99.9 and beyond) rather than the average, and a stray interrupt or page fault costs more than it saves, these guides apply.
+A field guide, with working scripts, for turning a Red Hat Enterprise Linux 8, 9 or 10 server into a **deterministic, low-jitter host** for applications that must answer within microseconds, every time: request/response and RPC services, messaging and IPC layers, stream and event processors, real-time analytics, telemetry and control loops, and packet-processing pipelines. If your problem is the tail (p99.9 and beyond) rather than the average, and a stray interrupt or page fault costs more than it saves, these guides apply.
 
 Every guide explains **what the kernel does**, **why each value is chosen**, **how to verify it**, and **how to undo it**. Every guide ships with a shell script whose functions implement exactly what the guide describes, with a `--dry-run` mode that shows every command and file before anything changes.
 
@@ -16,7 +16,7 @@ Every guide explains **what the kernel does**, **why each value is chosen**, **h
 
 ## Start here (5 minutes)
 
-- **What it is:** twelve guides, and one script per guide, that make a RHEL 8/9 host quiet and predictable for a few latency-critical threads.
+- **What it is:** twelve guides, and one script per guide, that make a RHEL 8, 9 or 10 host quiet and predictable for a few latency-critical threads.
 - **What you get:** a much shorter tail. p99.9 and max typically drop several-fold, and p50 improves modestly. You measure it on your own workload.
 - **What it costs:** power, throughput, flexibility, and in places security. Read [Read this first](#read-this-first) before applying anything.
 
@@ -155,11 +155,14 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 
 | | Design target |
 |---|---|
-| OS | RHEL 8.x, RHEL 9.x and rebuilds (Rocky, Alma, Oracle Linux) |
-| Kernel | Stock RHEL kernels (4.18 / 5.14). Notes where newer kernels differ. |
+| OS | RHEL 8.x, 9.x and 10.x, and rebuilds (Rocky, Alma, Oracle Linux). RHEL 10 support is not yet proven on production hardware (see the note below). |
+| Kernel | Stock RHEL kernels (4.18 / 5.14 / 6.12). Notes where newer kernels differ. |
 | CPUs | Intel Xeon (most examples). AMD EPYC notes where parameters differ. |
 | Shell | bash ≥ 4.4. Scripts are `shellcheck`-clean. |
 | Java | JDK 25 (ZGC, FFM API for thread affinity). Example built with Gradle; no third-party affinity library. |
+
+> [!NOTE]
+> **What CI covers.** Every guide script runs end to end (apply, reboot, verify, rollback) on fake hosts for RHEL 8, 9 and 10, and in systemd containers of UBI 8, 9 and 10, Rocky Linux 8 and 9, and AlmaLinux 10. CentOS Stream 9 and 10 run as advisory jobs. This proves the logic of the scripts. It does **not** prove the latency effect on real RHEL 10 hardware: **not proven in production**, so measure on your own host ([Guide 09](guides/09-measuring-latency.md)).
 
 ## Repository layout
 

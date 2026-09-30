@@ -1,6 +1,6 @@
 name: Wrong or unsafe advice
 description: A guide, script or example says something incorrect, outdated or dangerous.
-labels: ["accuracy"]
+labels: ["bug", "documentation"]
 body:
   - type: input
     id: where
