@@ -35,7 +35,7 @@ if [[ ! -f "${glossary}" ]]; then
 fi
 
 errors="$(LC_ALL=C awk '
-/^## / { in_az = ($0 ~ /^## A.Z$/); letter = ""; next }
+/^## / { in_az = (index($0, "## A") == 1 && $0 ~ /Z$/); letter = ""; next }
 !in_az { next }
 /^### / { letter = tolower(substr($0, 5, 1)); prev = ""; next }
 /^\| / {
@@ -44,7 +44,7 @@ errors="$(LC_ALL=C awk '
 		printf "%s:%d: entry row does not start with <a id=\"...\"></a>\n", FILENAME, FNR
 		next
 	}
-	id = substr($0, RSTART + 10, RLENGTH - 15)
+	id = substr($0, RSTART + 9, RLENGTH - 15)
 	if (id in seen) printf "%s:%d: duplicate id %s (first at line %d)\n", FILENAME, FNR, id, seen[id]
 	seen[id] = FNR
 	if (letter == "" || substr(id, 1, 1) != letter)
