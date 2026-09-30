@@ -26,11 +26,11 @@ export LC_ALL=C
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 HOSTS="${REPO}/scripts/fixtures/hosts"
 STUBS="${REPO}/tools/stubs"
-# Guides in the order apply-all applies them; rollback walks the list backwards.
-APPLY_ORDER=(00-bios-firmware 01-grub-bootloader 02-cpu-isolation 03-huge-pages 06-kernel-sysctl
-	07-os-hygiene 10-time-sync 05-cgroup-isolation 08-kernel-bypass 04-network 11-day2-operations)
 CORE_UTILITIES=(bash sh cat sed gawk grep tr cut sort uniq wc head tail tee find xargs basename
 	dirname readlink mkdir rm cp mv chmod ln touch date diff getconf id printf env mktemp)
+
+# shellcheck source=tools/stubs/lib/host
+. "${STUBS}/lib/host"
 
 UPDATE=0
 NAMES=()
@@ -135,8 +135,6 @@ processes() {
 # transcript <name> - the whole run for one fixture, not yet normalized.
 transcript() {
 	local name="$1" guide index
-	# shellcheck source=tools/stubs/lib/host
-	. "${STUBS}/lib/host"
 	local config="${HOSTS}/${name}/lowlat.conf"
 	[[ -f "${config}" ]] || config="${REPO}/scripts/lowlat.conf.example"
 	host_build "${ROOT}" "${HOSTS}/${name}/host" "${config}"
@@ -159,8 +157,8 @@ transcript() {
 	processes "${ROOT}"
 	step "verify-tuning" "${REPO}/scripts/verify-tuning"
 
-	for ((index = ${#APPLY_ORDER[@]} - 1; index >= 0; index--)); do
-		guide="${APPLY_ORDER[index]}"
+	for ((index = ${#HOST_APPLY_ORDER[@]} - 1; index >= 0; index--)); do
+		guide="${HOST_APPLY_ORDER[index]}"
 		step "${guide} --rollback" "${REPO}/scripts/${guide}" --rollback
 	done
 	boot "reboot after rollback"

@@ -53,13 +53,21 @@ has_option() { # has_option <file> <argument>
 	[[ "${options}" == *" $2 "* ]]
 }
 
+# info <entry file...> - like the real grubby, root= is not part of args=, it has a line of its own.
 info() {
-	local file index=0 kernel args title
+	local file index=0 kernel args root token title
 	for file in "$@"; do
 		kernel="$(entry_value "${file}" linux)"
-		args="$(entry_value "${file}" options)"
+		args="" root=""
+		for token in $(entry_value "${file}" options); do
+			if [[ -z "${root}" && "${token}" == root=* ]]; then
+				root="${token#root=}"
+				continue
+			fi
+			args+="${args:+ }${token}"
+		done
 		title="$(entry_value "${file}" title)"
-		printf 'index=%s\nkernel="%s"\nargs="%s"\ntitle="%s"\n' "${index}" "${kernel}" "${args}" "${title}"
+		printf 'index=%s\nkernel="%s"\nargs="%s"\nroot="%s"\ntitle="%s"\n' "${index}" "${kernel}" "${args}" "${root}" "${title}"
 		index=$((index + 1))
 	done
 }

@@ -1,9 +1,14 @@
 # shellcheck shell=bash
 #
 # host - builds a fake RHEL-like host tree from a host description, and simulates what
-# the kernel and systemd do with that tree at boot. Sourced by tools/check-scripts.
+# the kernel and systemd do with that tree at boot. Sourced by tools/check-scripts
+# (Level 1, whole fake host) and tools/check-container-image (Level 2, kernel half only).
 #
 #   host_build <root> <host file> <lowlat.conf>   create the tree (kernel defaults, not booted)
+#   host_build_kernel <root>                      only /proc, /sys and /run (host file sourced first)
+#   host_build_userland <root> <lowlat.conf>      only /etc, /usr, /var and /boot
+#   host_hybrid_root <root>                       a root whose /etc, /boot, /usr and /var are
+#                                                 the real ones, for real systemctl and grubby
 #   host_boot <root> <pristine tree>              reboot: volatile state back to the pristine
 #                                                 tree, then kernel command line, PID 1,
 #                                                 systemd-sysctl, enabled units, tuned
@@ -20,6 +25,24 @@
 
 HOST_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../scripts" && pwd -P)"
 HOST_FAKE_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)/fake"
+
+# The guides in the order apply-all applies them; rollback walks the list backwards.
+# Read by tools/check-scripts and tools/check-container-image, which source this file.
+# shellcheck disable=SC2034
+HOST_APPLY_ORDER=(00-bios-firmware 01-grub-bootloader 02-cpu-isolation 03-huge-pages 06-kernel-sysctl
+	07-os-hygiene 10-time-sync 05-cgroup-isolation 08-kernel-bypass 04-network 11-day2-operations)
+
+# host_hybrid_root <root> - an empty root whose /etc, /boot, /usr and /var are links to
+# the real ones. A real systemctl or grubby, which know nothing of LOWLAT_ROOT, then see
+# the files that the scripts write below it. /proc, /sys and /run stay the fake kernel.
+# Only for a disposable container: the scripts change the real /etc and /boot.
+host_hybrid_root() {
+	local dir
+	mkdir -p "$1"
+	for dir in etc boot usr var; do
+		ln -sfn "/${dir}" "$1/${dir}"
+	done
+}
 
 # host_write <root> <path> <content> - one file, parent directories included.
 host_write() {
@@ -175,20 +198,15 @@ host_build_boot() {
 	mkdir -p "${root}/boot/grub2"
 }
 
-host_build() {
-	local root="$1" host_file="$2" config="$3" vendor="Example Systems" product="Reference Server 2S"
-	# shellcheck source=/dev/null
-	. "${host_file}"
+# host_build_kernel <root> - the kernel's view: /proc, /sys and the volatile /run state
+# of the fakes. Needs the variables of the host file.
+host_build_kernel() {
+	local root="$1" vendor="Example Systems" product="Reference Server 2S"
 	if [[ "${VIRTUAL}" == yes ]]; then
 		vendor=QEMU
 		product="Standard PC (Q35 + ICH9, 2009)"
 	fi
-	mkdir -p "${root}"/{proc,run,var/lib}
-	host_write "${root}" /etc/os-release "$(printf 'NAME="%s"\nVERSION_ID="%s"\nPRETTY_NAME="%s %s"' "${OS_PRETTY_NAME}" "${OS_VERSION}" "${OS_PRETTY_NAME}" "${OS_VERSION}")"
-	host_write "${root}" /etc/fstab "$(printf '/dev/mapper/rhel-root  /      xfs   defaults  0 0\nUUID=0000-boot         /boot  xfs   defaults  0 0\n/dev/mapper/rhel-swap  none   swap  defaults  0 0')"
-	host_write "${root}" /etc/group "$(printf 'root:x:0:\napp-user:x:1001:')"
-	host_write "${root}" /etc/sysctl.conf "# System default settings live in /usr/lib/sysctl.d/00-system.conf."
-	host_write "${root}" /etc/lowlat/lowlat.conf "$(<"${config}")"
+	mkdir -p "${root}"/{proc,run}
 	host_write "${root}" /proc/modules "$(printf 'ip_tables 32768 0 - Live 0x0\nnf_conntrack 180224 0 - Live 0x0')"
 	host_write "${root}" /proc/loadavg "0.00 0.01 0.05 1/300 1000"
 	host_write "${root}" /sys/class/dmi/id/sys_vendor "${vendor}"
@@ -201,11 +219,30 @@ host_build() {
 	host_build_memory "${root}"
 	host_build_sysctls "${root}"
 	host_build_nics "${root}"
-	host_build_systemd "${root}"
-	host_build_boot "${root}"
 	host_write "${root}" /proc/1/comm systemd
 	host_write "${root}" /proc/1/status "$(printf 'Name:\tsystemd\nPid:\t1\nCpus_allowed_list:\t0-%s' "$((CPUS - 1))")"
 	host_write "${root}" /run/fake-processes "$(printf '%s\n' "${PROCESSES[@]}")"
+}
+
+# host_build_userland <root> <lowlat.conf> - the installed system: /etc, /usr, /var, /boot.
+host_build_userland() {
+	local root="$1" config="$2"
+	mkdir -p "${root}/var/lib"
+	host_write "${root}" /etc/os-release "$(printf 'NAME="%s"\nVERSION_ID="%s"\nPRETTY_NAME="%s %s"' "${OS_PRETTY_NAME}" "${OS_VERSION}" "${OS_PRETTY_NAME}" "${OS_VERSION}")"
+	host_write "${root}" /etc/fstab "$(printf '/dev/mapper/rhel-root  /      xfs   defaults  0 0\nUUID=0000-boot         /boot  xfs   defaults  0 0\n/dev/mapper/rhel-swap  none   swap  defaults  0 0')"
+	host_write "${root}" /etc/group "$(printf 'root:x:0:\napp-user:x:1001:')"
+	host_write "${root}" /etc/sysctl.conf "# System default settings live in /usr/lib/sysctl.d/00-system.conf."
+	host_write "${root}" /etc/lowlat/lowlat.conf "$(<"${config}")"
+	host_build_systemd "${root}"
+	host_build_boot "${root}"
+}
+
+# host_build <root> <host file> <lowlat.conf> - a whole fake host: kernel and userland.
+host_build() {
+	# shellcheck source=/dev/null
+	. "$2"
+	host_build_kernel "$1"
+	host_build_userland "$1" "$3"
 }
 
 # host_cmdline_value <cmdline> <name> - the value of name= on a command line.
@@ -219,11 +256,12 @@ host_cmdline_value() {
 
 # host_kernel_boot <root> - what the kernel makes of its command line.
 host_kernel_boot() {
-	local root="$1" cmdline value entry kernel
+	local root="$1" cmdline value entry kernel device
 	kernel="$(<"${root}/proc/sys/kernel/osrelease")"
 	entry="$(LOWLAT_ROOT="${root}" grubby --info=DEFAULT)"
+	device="$(awk -F'"' '/^root=/ {print $2}' <<<"${entry}")"
 	entry="$(awk -F'"' '/^args=/ {print $2}' <<<"${entry}")"
-	cmdline="BOOT_IMAGE=(hd0,gpt2)/vmlinuz-${kernel} ${entry}"
+	cmdline="BOOT_IMAGE=(hd0,gpt2)/vmlinuz-${kernel} ${device:+root=${device} }${entry}"
 	printf '%s\n' "${cmdline}" >"${root}/proc/cmdline"
 	value="$(host_cmdline_value "${cmdline}" isolcpus)"
 	[[ -n "${value}" ]] && printf '%s\n' "${value}" >"${root}/sys/devices/system/cpu/isolated"
@@ -243,6 +281,8 @@ host_kernel_boot() {
 # host_pid1_affinity <root> - PID 1 reads CPUAffinity= from system.conf at boot.
 host_pid1_affinity() {
 	local root="$1" value
+	# RHEL 10 has no /etc/systemd/system.conf until someone creates it.
+	[[ -f "${root}/etc/systemd/system.conf" ]] || return 0
 	value="$(awk -F= '$1 == "CPUAffinity" { v = $2 } END { print v }' "${root}/etc/systemd/system.conf")"
 	[[ -n "${value}" ]] || return 0
 	value="$(tr -s ' ' ',' <<<"${value}")"

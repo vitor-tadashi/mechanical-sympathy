@@ -1359,7 +1359,7 @@ LOW-LATENCY TUNING VERIFICATION
   PASS default_hugepagesz=2M
   INFO kernel isolated CPUs: 3,5,7,9,11,13,15,17,19,21,23,25,27,29,31
   INFO kernel nohz_full CPUs: 3,5,7,9,11,13,15,17,19,21,23,25,27,29,31
-  INFO grubby default entry: root=/dev/mapper/rhel-root ro crashkernel=auto resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet idle=poll processor.max_cstate=0 intel_idle.max_cstate=0 transparent_hugepage=never isolcpus=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 nohz_full=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 nohz=off rcu_nocbs=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 rcu_nocb_poll skew_tick=1 intel_pstate=disable nosoftlockup nmi_watchdog=0 mce=ignore_ce default_hugepagesz=2M hugepagesz=2M intel_iommu=off iommu=off nospectre_v1 nospectre_v2 pti=off mds=off tsx_async_abort=off
+  INFO grubby default entry: ro crashkernel=auto resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet idle=poll processor.max_cstate=0 intel_idle.max_cstate=0 transparent_hugepage=never isolcpus=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 nohz_full=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 nohz=off rcu_nocbs=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 rcu_nocb_poll skew_tick=1 intel_pstate=disable nosoftlockup nmi_watchdog=0 mce=ignore_ce default_hugepagesz=2M hugepagesz=2M intel_iommu=off iommu=off nospectre_v1 nospectre_v2 pti=off mds=off tsx_async_abort=off
 
 == 02 CPU isolation ==
   PASS PID 1 (systemd) affinity is OS_CPUS (0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30)

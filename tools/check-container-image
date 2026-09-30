@@ -1,0 +1,731 @@
+#!/usr/bin/env bash
+#
+# check-container-image - Level 2 of the validation ladder, inside one container.
+#
+# tools/check-containers starts it in a RHEL-family image with systemd as PID 1. It runs
+# the guides with the real systemctl, grubby and tuned-adm (where the package is in the
+# image) on a hybrid root: /etc, /boot, /usr and /var are the container's own, and
+# /proc and /sys are the fake kernel of a fixture host (tools/stubs/lib/host). The
+# container is disposable: the scripts change its real /etc and /boot.
+#
+# Output, one event per line:  ok TEXT | fail TEXT | note TEXT | known ID
+# The last line is  summary checks=N failed=N known=N missing=PACKAGES
+# Known bugs of the scripts are listed in scripts/fixtures/containers/known-issues. A
+# bug that shows up and is not listed fails the run, and so does a listed bug that no
+# longer shows up: Phase 1 fixes remove lines from that file.
+#
+# Environment: CHECK_IMAGE_KIND=ubi|full (UBI repositories lack some packages: missing
+# ones are reported, not failed).
+
+set -Eeuo pipefail
+export LC_ALL=C
+# Not inside $( ): its output would end up in the captured text.
+trap '[[ "${BASHPID}" != "$$" ]] || printf "fail internal error: line %s of tools/check-container-image\n" "${LINENO}"' ERR
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+STUBS="${REPO}/tools/stubs"
+FIXTURES="${REPO}/scripts/fixtures/hosts"
+KNOWN_ISSUES="${REPO}/scripts/fixtures/containers/known-issues"
+IMAGE_KIND="${CHECK_IMAGE_KIND:-full}"
+
+FAKE=/fake
+WORK=/var/tmp/check-container-image
+BIN="${WORK}/bin"
+GUIDE_PACKAGES=(grubby tuned chrony linuxptp irqbalance ethtool iproute kernel-tools)
+# Commands that go real when the image has them. Every other stub keeps the kernel fake.
+REAL_COMMANDS=(systemctl grubby tuned-adm)
+# The VM host is the main run (LOWLAT_HOST_CLASS=virtual_machine). What a VM skips is
+# checked on a bare-metal host: see step_bare_metal_guides.
+MAIN_HOST=rhel9-vm-kvm
+UNIT_HOST=rhel9-2s-ref
+UNIT_DIR=/etc/systemd/system
+
+LOG="${WORK}/commands.log"
+
+checks=0
+failed=0
+OBSERVED=()
+missing=()
+
+# shellcheck source=tools/stubs/lib/host
+. "${STUBS}/lib/host"
+
+ok() {
+	checks=$((checks + 1))
+	printf 'ok %s\n' "$1"
+}
+
+fail() {
+	checks=$((checks + 1))
+	failed=$((failed + 1))
+	printf 'fail %s\n' "$1"
+}
+
+note() {
+	printf 'note %s\n' "$1"
+}
+
+# indent - the output of a failed command, under its fail line.
+indent() {
+	sed 's/^/     | /'
+}
+
+# check <title> <command...> - ok when the command succeeds, fail (with its output) when not.
+check() {
+	local title="$1" output status=0
+	shift
+	output="$("$@" 2>&1)" || status=$?
+	{
+		printf '==== %s (exit %s)\n' "${title}" "${status}"
+		printf '%s\n' "${output}"
+	} >>"${LOG}"
+	if ((status == 0)); then
+		ok "${title}"
+		return 0
+	fi
+	fail "${title} (exit ${status})"
+	[[ -z "${output}" ]] || indent <<<"${output}"
+}
+
+# observe <id> - the run reproduced the known bug <id>.
+observe() {
+	local seen
+	for seen in ${OBSERVED[@]+"${OBSERVED[@]}"}; do
+		[[ "${seen}" == "$1" ]] && return 0
+	done
+	OBSERVED+=("$1")
+	printf 'known %s\n' "$1"
+}
+
+# os_major - 8, 9 or 10.
+os_major() {
+	awk -F'"' '/^VERSION_ID=/ { split($2, part, "."); print part[1] }' /etc/os-release
+}
+
+# known_ids - the ids in the known-issues file that this image must show. The optional
+# fourth column lists the OS majors that have the bug ("10" or "8,9"), the fifth a package
+# that the image needs for the bug to show.
+known_ids() {
+	local major id majors package
+	major="$(os_major)"
+	while IFS=$'\t' read -r id _ _ majors package; do
+		[[ -n "${id}" && "${id}" != '#'* ]] || continue
+		[[ -z "${majors}" || ",${majors}," == *",${major},"* ]] || continue
+		[[ -z "${package}" ]] || rpm -q "${package}" >/dev/null 2>&1 || continue
+		printf '%s\n' "${id}"
+	done <"${KNOWN_ISSUES}"
+}
+
+# classify_leftover <line> - the id of the known bug that explains a leftover, if any.
+classify_leftover() {
+	awk -F'\t' -v line="$1" '!/^#/ && NF >= 3 && $2 != "-" && line ~ $2 { print $1; exit }' "${KNOWN_ISSUES}"
+}
+
+# report_leftovers <what> <lines> - known bugs are observed, everything else fails.
+report_leftovers() {
+	local what="$1" line id
+	while IFS= read -r line; do
+		[[ -n "${line}" ]] || continue
+		id="$(classify_leftover "${line}")"
+		if [[ -n "${id}" ]]; then
+			observe "${id}"
+		else
+			fail "${what}: unexpected leftover: ${line}"
+		fi
+	done <<<"$2"
+}
+
+real_command() {
+	PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" command -v "$1" >/dev/null 2>&1
+}
+
+# ---------------------------------------------------------------------------------------
+# The image
+# ---------------------------------------------------------------------------------------
+
+step_packages() {
+	local package
+	for package in "${GUIDE_PACKAGES[@]}"; do
+		rpm -q "${package}" >/dev/null 2>&1 || missing+=("${package}")
+	done
+	if ((${#missing[@]} == 0)); then
+		ok "all guide packages are installed (${GUIDE_PACKAGES[*]})"
+		return 0
+	fi
+	if [[ "${IMAGE_KIND}" == ubi ]]; then
+		note "missing packages (not in the UBI repositories): ${missing[*]}"
+		return 0
+	fi
+	fail "packages missing from a full distribution image: ${missing[*]}"
+}
+
+step_parse() {
+	local file
+	for file in "${REPO}"/scripts/[0-9a-z]*-* "${REPO}/scripts/apply-all" "${REPO}/scripts/verify-tuning" "${REPO}/scripts/lib/common"; do
+		[[ -f "${file}" ]] || continue
+		check "bash -n ${file#"${REPO}"/}" bash -n "${file}"
+	done
+}
+
+# ---------------------------------------------------------------------------------------
+# The hybrid host
+# ---------------------------------------------------------------------------------------
+
+# make_bin - the PATH of the scripts: a wrapper for every fake, except the commands that
+# go real. A wrapper, not a link: a fake finds its library next to its own path.
+make_bin() {
+	local stub name command path
+	rm -rf "${BIN}"
+	mkdir -p "${BIN}"
+	for stub in "${STUBS}"/*; do
+		name="${stub##*/}"
+		[[ -f "${stub}" ]] || continue
+		for command in "${REAL_COMMANDS[@]}"; do
+			if [[ "${name}" == "${command}" ]] && real_command "${name}"; then
+				continue 2
+			fi
+		done
+		printf '#!/bin/sh\nexec %s "$@"\n' "${stub}" >"${BIN}/${name}"
+		chmod +x "${BIN}/${name}"
+	done
+	for command in "${REAL_COMMANDS[@]}"; do
+		if real_command "${command}"; then
+			path="$(command -v "${command}")"
+			note "real ${command}: ${path}"
+		else
+			note "fake ${command}: the package is not in this image"
+		fi
+	done
+}
+
+# use_host <name> - the fake kernel of a fixture host, as the pristine copy and as /fake.
+use_host() {
+	local root="${WORK}/kernel-$1" dir
+	rm -rf "${root}"
+	mkdir -p "${root}"
+	# The host file sets the variables that host_build_kernel reads.
+	# shellcheck source=/dev/null
+	. "${FIXTURES}/$1/host"
+	host_build_kernel "${root}"
+	for dir in proc sys run; do
+		rm -rf "${FAKE:?}/${dir}"
+		cp -a "${root}/${dir}" "${FAKE}/${dir}"
+	done
+	HOST_PRISTINE="${root}"
+}
+
+# seed_userland <host> - what an installed server has and the container lacks.
+seed_userland() {
+	local config="${FIXTURES}/$1/lowlat.conf"
+	[[ -f "${config}" ]] || config="${REPO}/scripts/lowlat.conf.example"
+	mkdir -p /etc/lowlat /opt
+	cp "${config}" /etc/lowlat/lowlat.conf
+	# Guide 10 stops with an error when the time daemon it enables is not installed. The
+	# image lacks the package, so leave time synchronization alone there.
+	if ! rpm -q chrony >/dev/null 2>&1; then
+		sed -i 's/^TIME_SYNC_MODE=.*/TIME_SYNC_MODE=""/' /etc/lowlat/lowlat.conf
+	fi
+	ln -sfn "${REPO}" /opt/lowlat
+	getent group app-user >/dev/null || groupadd -g 1001 app-user
+	# Boot entries of an installed kernel, when the image has none: the fixture's own.
+	if ! compgen -G '/boot/loader/entries/*.conf' >/dev/null; then
+		host_build_boot "${FAKE}"
+		command -v grub2-editenv >/dev/null 2>&1 && grub2-editenv /boot/grub2/grubenv create
+	fi
+	return 0
+}
+
+prepare() {
+	host_hybrid_root "${FAKE}"
+	make_bin
+	use_host "${MAIN_HOST}"
+	seed_userland "${MAIN_HOST}"
+	# Real systemd runs lowlat-runtime.service against the fake kernel. /run/systemd/system
+	# is volatile, so the drop-in is not a change to /etc.
+	mkdir -p /run/systemd/system/lowlat-runtime.service.d
+	{
+		printf '[Service]\n'
+		printf 'Environment=LOWLAT_ROOT=%s\nEnvironment=LOWLAT_HOST_CLASS=virtual_machine\n' "${FAKE}"
+		printf 'Environment=PATH=%s:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin\n' "${BIN}"
+	} >/run/systemd/system/lowlat-runtime.service.d/10-check.conf
+	systemctl daemon-reload
+}
+
+# The userland that a scenario may change: files, and the services that run.
+PRISTINE_TAR="${WORK}/userland.tar"
+PRISTINE_FILES="${WORK}/userland.files"
+PRISTINE_ACTIVE="${WORK}/userland.active"
+
+userland_files() {
+	# Some of the paths do not exist yet: find says so with its status, which is not an error here.
+	{ find /etc /boot /var/lib/lowlat /usr/lib/systemd/hugetlb-reserve-pages -xdev \( -type f -o -type l \) 2>/dev/null || true; } | sort
+}
+
+active_services() {
+	systemctl list-units --no-legend --no-pager --state=active --type=service 2>/dev/null | awk '{ print $1 }' | sort
+}
+
+# save_userland - the container as prepared, before any scenario changes it.
+save_userland() {
+	userland_files >"${PRISTINE_FILES}"
+	active_services >"${PRISTINE_ACTIVE}"
+	tar -cpf "${PRISTINE_TAR}" --files-from="${PRISTINE_FILES}" 2>/dev/null
+}
+
+# restore_userland - every scenario starts from the same userland, whatever an earlier
+# rollback left behind: files added are removed, files changed are put back, and services
+# that a guide stopped or started go back to what they were.
+restore_userland() {
+	local file service now added stopped started
+	now="$(userland_files)"
+	added="$(comm -13 "${PRISTINE_FILES}" <(printf '%s\n' "${now}"))"
+	while IFS= read -r file; do
+		[[ -z "${file}" ]] || rm -f -- "${file}"
+	done <<<"${added}"
+	tar -xpf "${PRISTINE_TAR}" -C / --exclude=etc/hosts --exclude=etc/resolv.conf --exclude=etc/hostname 2>/dev/null || true
+	systemctl daemon-reload
+	now="$(active_services)"
+	stopped="$(comm -13 "${PRISTINE_ACTIVE}" <(printf '%s\n' "${now}"))"
+	started="$(comm -23 "${PRISTINE_ACTIVE}" <(printf '%s\n' "${now}"))"
+	while IFS= read -r service; do
+		[[ -z "${service}" ]] || systemctl stop "${service}" >/dev/null 2>&1 || true
+	done <<<"${stopped}"
+	while IFS= read -r service; do
+		[[ -z "${service}" ]] || systemctl start "${service}" >/dev/null 2>&1 || true
+	done <<<"${started}"
+}
+
+# in_host <command...> - a script or command as the tuning scripts see the host.
+in_host() {
+	(
+		cd /
+		export LOWLAT_ROOT="${FAKE}" LOWLAT_HOST_CLASS="${HOST_CLASS_OVERRIDE:-virtual_machine}"
+		export PATH="${BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+		"$@"
+	)
+}
+
+# ---------------------------------------------------------------------------------------
+# State: what a run may change
+# ---------------------------------------------------------------------------------------
+
+# manifest - "checksum size path" for the files that the guides may touch. Left out: files
+# that the container runtime owns, and grubenv and /etc/kernel/cmdline, which grubby
+# creates or rewrites on its own (the boot arguments are compared through grubby --info).
+manifest() {
+	find /etc /boot /usr/lib/systemd/hugetlb-reserve-pages -xdev \( -type f -o -type l \) -print0 2>/dev/null |
+		xargs -0 cksum 2>/dev/null |
+		sort -k 3 |
+		grep -v -E ' /etc/(hostname|hosts|resolv\.conf|mtab|machine-id|\.pwd\.lock|passwd-|group-|shadow-|gshadow-)$| /boot/grub2/grubenv$| /etc/kernel/cmdline$' || true
+}
+
+# unit_state - the enabled state of every unit file, as systemd reports it.
+unit_state() {
+	systemctl list-unit-files --no-legend --no-pager 2>/dev/null | awk '{ print $1, $2 }' | sort
+}
+
+# kernel_args - the arguments of the default boot entry, one per line.
+kernel_args() {
+	in_host grubby --info=DEFAULT 2>/dev/null | awk -F'"' '/^args=/ { print $2 }' | tr ' ' '\n' | sort
+}
+
+# changes <before> <after> - A, M and D lines between two manifests.
+changes() {
+	join -1 3 -2 3 -a 1 -a 2 -e - -o 0,1.1,2.1 "$1" "$2" |
+		awk '$2 == "-" { print "A " $1; next }
+			$3 == "-" { print "D " $1; next }
+			$2 != $3 { print "M " $1 }' |
+		grep -v -E '^. /var/lib/lowlat/' || true
+}
+
+# ---------------------------------------------------------------------------------------
+# Checks
+# ---------------------------------------------------------------------------------------
+
+# verify_unit <title> <argument> - systemd-analyze verify. A minimal container has no man
+# pages and a few odd symlinks, so the check ignores those two kinds of line and fails on
+# everything else.
+verify_unit() {
+	local title="$1" output rest status=0
+	output="$(timeout 60 systemd-analyze verify "$2" 2>&1)" || status=$?
+	{
+		printf '==== %s (exit %s)\n' "${title}" "${status}"
+		printf '%s\n' "${output}"
+	} >>"${LOG}"
+	# 124 is a timeout, 125 and above are a command that did not run or was killed.
+	if ((status >= 124)); then
+		fail "${title} (exit ${status}: the command did not finish)"
+		indent <<<"${output}"
+		return 0
+	fi
+	rest="$(grep -v -E "^Suspicious symlink |[Cc]ommand 'man |man .* command failed" <<<"${output}" || true)"
+	if [[ -z "${rest}" ]]; then
+		ok "${title}"
+		return 0
+	fi
+	fail "${title} (exit ${status})"
+	indent <<<"${rest:-${output}}"
+}
+
+# analyze <unit file...> - systemd-analyze verify, one check per file.
+analyze() {
+	local file
+	for file in "$@"; do
+		verify_unit "systemd-analyze verify ${file}" "${file}"
+	done
+}
+
+step_templates() {
+	local unit
+	for unit in "${REPO}"/scripts/systemd/*; do
+		[[ -f "${unit}" ]] && analyze "${unit}"
+	done
+}
+
+# Fake fidelity: the fake grubby and the real one must agree on the same boot entries,
+# in both directions. Compares index, kernel and args, which the scripts read.
+grubby_fields() {
+	awk '/^(index|kernel|args)=/' | sort
+}
+
+step_grubby() {
+	local real fake
+	if ! real_command grubby; then
+		note "grubby: fidelity check skipped, the real package is not in this image"
+		return 0
+	fi
+	real="$(grubby --info=ALL 2>/dev/null | grubby_fields)"
+	fake="$(LOWLAT_ROOT="${FAKE}" "${STUBS}/grubby" --info=ALL | grubby_fields)"
+	if [[ "${real}" == "${fake}" && -n "${real}" ]]; then
+		ok "fake grubby reads the boot entries as the real one does"
+	else
+		fail "fake grubby and real grubby disagree on --info=ALL"
+		diff <(printf '%s\n' "${real}") <(printf '%s\n' "${fake}") | indent || true
+	fi
+	grubby --update-kernel=ALL --args="check_probe=1 check_flag" >/dev/null 2>&1 || true
+	fake="$(LOWLAT_ROOT="${FAKE}" "${STUBS}/grubby" --info=ALL | grubby_fields)"
+	real="$(grubby --info=ALL 2>/dev/null | grubby_fields)"
+	if [[ "${real}" == "${fake}" && "${real}" == *check_probe=1* ]]; then
+		ok "fake grubby reads what the real one wrote (--update-kernel --args)"
+	else
+		fail "fake grubby does not see the arguments the real grubby wrote"
+		diff <(printf '%s\n' "${real}") <(printf '%s\n' "${fake}") | indent || true
+	fi
+	LOWLAT_ROOT="${FAKE}" "${STUBS}/grubby" --update-kernel=ALL --remove-args="check_probe check_flag"
+	real="$(grubby --info=ALL 2>/dev/null | grubby_fields)"
+	if [[ "${real}" != *check_probe* ]]; then
+		ok "real grubby reads what the fake one wrote (--remove-args)"
+	else
+		fail "real grubby still sees arguments that the fake grubby removed"
+	fi
+}
+
+step_tuned_before() {
+	local list
+	real_command tuned-adm || return 0
+	list="$(timeout 60 tuned-adm list 2>&1)" || true
+	if [[ "${list}" == *"- network-latency"* && "${list}" == *"- latency-performance"* ]]; then
+		ok "tuned lists network-latency and latency-performance (the base of the low-latency profile)"
+	else
+		fail "tuned does not list network-latency and latency-performance"
+		indent <<<"${list}"
+	fi
+}
+
+step_tuned_after() {
+	local info
+	real_command tuned-adm || return 0
+	check "tuned resolves the generated low-latency profile" timeout 60 tuned-adm profile_info low-latency
+	info="$(timeout 60 tuned-adm active 2>&1)" || true
+	if [[ "${info}" == *low-latency* ]]; then
+		ok "tuned-adm active: low-latency"
+	else
+		fail "tuned-adm active does not report low-latency"
+		indent <<<"${info}"
+	fi
+	# A container has no real sysfs to verify, so the verdict is recorded, not asserted.
+	info="$(timeout 120 tuned-adm verify 2>&1 | tail -n 1)" || true
+	note "tuned-adm verify: ${info:-no output}"
+}
+
+# generated_units <before> <after> - unit files that the guides wrote or changed.
+generated_units() {
+	changes "$1" "$2" | awk -v dir="${UNIT_DIR}" '$1 != "D" && index($2, dir "/") == 1 && index($2, ".wants/") == 0 { print $2 }'
+}
+
+# verify_generated <files> - a unit file, or the unit that a drop-in belongs to.
+verify_generated() {
+	local file unit
+	for file in $1; do
+		case "${file}" in
+		*.d/*.conf)
+			unit="${file%%.d/*}"
+			unit="${unit##*/}"
+			if systemctl cat "${unit}" >/dev/null 2>&1; then
+				verify_unit "systemd-analyze verify ${unit} with the drop-in ${file##*/}" "${unit}"
+			else
+				note "drop-in ${file} not verified: ${unit} is not installed"
+			fi
+			;;
+		*.service | *.timer | *.slice) analyze "${file}" ;;
+		*) ;;
+		esac
+	done
+}
+
+step_plan_and_dry_run() {
+	local before after
+	check "apply-all --plan" in_host "${REPO}/scripts/apply-all" --plan
+	manifest >"${WORK}/before-dry-run"
+	check "apply-all --dry-run" in_host "${REPO}/scripts/apply-all" --dry-run
+	manifest >"${WORK}/after-dry-run"
+	before="$(<"${WORK}/before-dry-run")"
+	after="$(<"${WORK}/after-dry-run")"
+	if [[ "${before}" == "${after}" ]]; then
+		ok "the dry run changed nothing in /etc or /boot"
+	else
+		fail "the dry run changed files"
+		changes "${WORK}/before-dry-run" "${WORK}/after-dry-run" | indent
+	fi
+}
+
+# boot - a simulated reboot of the fake host. The kernel model goes back to its pristine
+# state, the kernel command line comes from the real boot entries, and real systemd
+# starts lowlat-runtime.service.
+boot() {
+	local dir
+	for dir in proc sys run; do
+		rm -rf "${FAKE:?}/${dir}"
+		cp -a "${HOST_PRISTINE}/${dir}" "${FAKE}/${dir}"
+	done
+	in_host host_kernel_boot "${FAKE}"
+	in_host host_pid1_affinity "${FAKE}"
+	in_host sysctl --system >/dev/null 2>&1 || note "systemd-sysctl: some keys failed"
+	host_kernel_sync "${FAKE}"
+	if systemctl is-enabled --quiet lowlat-runtime.service 2>/dev/null; then
+		check "systemctl restart lowlat-runtime.service (real systemd)" systemctl restart lowlat-runtime.service
+		host_kernel_sync "${FAKE}"
+	fi
+	rm -f "${FAKE}/run/fake-calls"
+}
+
+# tolerated <verify FAIL line> - an image or container gap that is not a bug of the guides.
+tolerated() {
+	case "$1" in
+	"  FAIL rsyslog running")
+		rpm -q rsyslog >/dev/null 2>&1 || return 0
+		;;
+	"  FAIL chronyd running" | "  FAIL chrony synchronized"*)
+		# A container has no CAP_SYS_TIME to step the clock and no time source to follow.
+		return 0
+		;;
+	*) ;;
+	esac
+	return 1
+}
+
+# count_lines <pattern> <file> - how many lines match; zero is a valid answer.
+count_lines() {
+	grep -c -- "$1" "$2" || true
+}
+
+step_verify() {
+	local log="${WORK}/verify.log" status=0 line moved passes warns fails failed_lines
+	in_host "${REPO}/scripts/verify-tuning" >"${log}" 2>&1 || status=$?
+	passes="$(count_lines '^  PASS' "${log}")"
+	warns="$(count_lines '^  WARN' "${log}")"
+	fails="$(count_lines '^  FAIL' "${log}")"
+	note "verify-tuning exit ${status}: ${passes} PASS, ${warns} WARN, ${fails} FAIL"
+	# 5 is the exit status for FAIL lines. Any other status is a crash of the script, and
+	# 5 without a FAIL line means that the report is not what it claims.
+	if ((status != 0 && status != 5)) || ((status == 5 && fails == 0)); then
+		fail "verify-tuning exited ${status} without reporting a failed check"
+		tail -n 5 "${log}" | indent
+	fi
+	failed_lines="$(grep '^  FAIL' "${log}" || true)"
+	while IFS= read -r line; do
+		[[ -n "${line}" ]] || continue
+		if tolerated "${line}"; then
+			note "verify-tuning: ${line#  } ignored, a container cannot show it"
+			continue
+		fi
+		fail "verify-tuning: ${line#  }"
+	done <<<"${failed_lines}"
+	# The guides place a virtio NIC's IRQs nowhere, yet verify passes on its IRQ line.
+	moved="$(grep -L -x '0-3' "${FAKE}"/proc/irq/*/smp_affinity_list 2>/dev/null || true)"
+	if grep -q 'IRQs on CPUs' "${log}" && [[ -z "${moved}" ]]; then
+		observe virtio-irq-false-pass
+	fi
+}
+
+# snapshot <dir> - what a run may change: files, unit state and boot arguments.
+snapshot() {
+	mkdir -p "$1"
+	manifest >"$1/etc"
+	unit_state >"$1/units"
+	kernel_args >"$1/args"
+}
+
+# report_state <what> <before dir> <after dir> - what a rollback left behind.
+report_state() {
+	local files units args
+	files="$(changes "$2/etc" "$3/etc")"
+	units="$(diff "$2/units" "$3/units" | awk '/^>/ { print "unit " substr($0, 3) }' || true)"
+	args="$(diff "$2/args" "$3/args" | awk '/^</ { print "cmdline missing " substr($0, 3) } /^>/ { print "cmdline extra " substr($0, 3) }' || true)"
+	report_leftovers "${1} left files" "${files}"
+	report_leftovers "${1} left unit state" "${units}"
+	report_leftovers "${1} left kernel arguments" "${args}"
+}
+
+step_apply_and_roll_back() {
+	local guide index before_args generated nic before="${WORK}/main-before" applied="${WORK}/main-applied" after="${WORK}/main-after"
+	snapshot "${before}"
+
+	step_plan_and_dry_run
+	apply_all
+	snapshot "${applied}"
+	check "lowlat-runtime.service is enabled" systemctl is-enabled --quiet lowlat-runtime.service
+	check "the runtime unit is valid for systemctl cat" systemctl cat lowlat-runtime.service
+	before_args="$(<"${applied}/args")"
+	if [[ "${before_args}" == *idle=poll* ]]; then
+		ok "real grubby: the default entry has idle=poll"
+	else
+		fail "real grubby: idle=poll missing from the default entry"
+	fi
+	generated="$(generated_units "${before}/etc" "${applied}/etc")"
+	verify_generated "${generated}"
+	step_tuned_after
+
+	boot
+	step_verify
+
+	for ((index = ${#HOST_APPLY_ORDER[@]} - 1; index >= 0; index--)); do
+		guide="${HOST_APPLY_ORDER[index]}"
+		check "${guide} --rollback" in_host "${REPO}/scripts/${guide}" --rollback
+	done
+	# Runtime state that a reboot would reset, but that a rollback should already undo.
+	nic="$(diff -rq "${HOST_PRISTINE}/run/fake-ethtool" "${FAKE}/run/fake-ethtool" | sed -E 's|^Files .*/run/fake-ethtool/([^ ]*) and .*|M /run/fake-ethtool/\1|' || true)"
+	report_leftovers "rollback left runtime NIC state" "${nic}"
+	boot
+	snapshot "${after}"
+	report_state "rollback" "${before}" "${after}"
+}
+
+# apply_all - apply-all --apply on the VM host. On RHEL 10 tuned reads its profiles from
+# /etc/tuned/profiles, and guide 07 writes /etc/tuned/low-latency: tuned rejects the
+# profile and apply-all stops. That is a known bug: the check goes on the way an
+# administrator would, by copying the profile to where tuned looks.
+apply_all() {
+	local output status=0
+	output="$(in_host "${REPO}/scripts/apply-all" --apply 2>&1)" || status=$?
+	{
+		printf '==== apply-all --apply (exit %s)\n' "${status}"
+		printf '%s\n' "${output}"
+	} >>"${LOG}"
+	if ((status == 0)); then
+		ok "apply-all --apply"
+		return 0
+	fi
+	if [[ "${output}" == *"Requested profile 'low-latency' doesn't exist"* && -d /etc/tuned/low-latency && -d /etc/tuned/profiles ]]; then
+		observe tuned-profile-dir-rhel10
+		cp -a /etc/tuned/low-latency /etc/tuned/profiles/low-latency
+		check "apply-all --apply, with the profile copied to /etc/tuned/profiles" in_host "${REPO}/scripts/apply-all" --apply
+		return 0
+	fi
+	fail "apply-all --apply (exit ${status})"
+	indent <<<"${output}"
+}
+
+# apply_bare_metal <guide> - apply one guide on the bare-metal host. Guide 02 fails on a
+# system without /etc/systemd/system.conf (RHEL 10 ships it under /usr/lib/systemd only).
+# That is a known bug: the check goes on the way an administrator would, by creating it.
+apply_bare_metal() {
+	local guide="$1" output status=0
+	output="$(HOST_CLASS_OVERRIDE=bare_metal in_host "${REPO}/scripts/${guide}" --apply 2>&1)" || status=$?
+	{
+		printf '==== %s --apply on a bare-metal host (exit %s)\n' "${guide}" "${status}"
+		printf '%s\n' "${output}"
+	} >>"${LOG}"
+	if ((status == 0)); then
+		ok "${guide} --apply on a bare-metal host"
+		return 0
+	fi
+	if [[ "${guide}" == 02-cpu-isolation && ! -f /etc/systemd/system.conf && -f /usr/lib/systemd/system.conf ]]; then
+		observe rhel10-no-system-conf
+		cp /usr/lib/systemd/system.conf /etc/systemd/system.conf
+		HOST_CLASS_OVERRIDE=bare_metal check "${guide} --apply on a bare-metal host, with /etc/systemd/system.conf created" \
+			in_host "${REPO}/scripts/${guide}" --apply
+		return 0
+	fi
+	fail "${guide} --apply on a bare-metal host (exit ${status})"
+	indent <<<"${output}"
+}
+
+# Huge pages, CPU isolation and the graphical console are skipped or absent on a VM, so
+# guides 01, 02 and 03 run on a bare-metal host: their units, arguments and rollbacks.
+step_bare_metal_guides() {
+	local guide index generated before="${WORK}/bm-before" applied="${WORK}/bm-applied" after="${WORK}/bm-after"
+	local guides=(01-grub-bootloader 02-cpu-isolation 03-huge-pages)
+	restore_userland
+	use_host "${UNIT_HOST}"
+	seed_userland "${UNIT_HOST}"
+	snapshot "${before}"
+	for guide in "${guides[@]}"; do
+		apply_bare_metal "${guide}"
+	done
+	snapshot "${applied}"
+	generated="$(generated_units "${before}/etc" "${applied}/etc")"
+	verify_generated "${generated}"
+	for ((index = ${#guides[@]} - 1; index >= 0; index--)); do
+		guide="${guides[index]}"
+		HOST_CLASS_OVERRIDE=bare_metal check "${guide} --rollback on a bare-metal host" in_host "${REPO}/scripts/${guide}" --rollback
+	done
+	snapshot "${after}"
+	report_state "bare-metal rollback" "${before}" "${after}"
+}
+
+step_report_known_issues() {
+	local id seen found ids
+	ids="$(known_ids)"
+	while IFS= read -r id; do
+		[[ -n "${id}" ]] || continue
+		found=0
+		for seen in ${OBSERVED[@]+"${OBSERVED[@]}"}; do
+			[[ "${seen}" == "${id}" ]] && found=1
+		done
+		((found == 1)) || fail "known issue ${id} no longer shows up: remove it from scripts/fixtures/containers/known-issues"
+	done <<<"${ids}"
+}
+
+main() {
+	local uid
+	[[ -d /run/systemd/system ]] || {
+		printf 'check-container-image: systemd is not PID 1: run it through tools/check-containers\n' >&2
+		exit 2
+	}
+	uid="$(id -u)"
+	[[ "${uid}" == 0 ]] || {
+		printf 'check-container-image: needs root, and a disposable container\n' >&2
+		exit 2
+	}
+	rm -rf "${WORK}"
+	mkdir -p "${WORK}"
+	step_packages
+	step_parse
+	prepare
+	save_userland
+	step_templates
+	step_grubby
+	step_tuned_before
+	step_bare_metal_guides
+	restore_userland
+	use_host "${MAIN_HOST}"
+	step_apply_and_roll_back
+	step_report_known_issues
+	printf 'summary checks=%d failed=%d known=%d missing=%s\n' "${checks}" "${failed}" "${#OBSERVED[@]}" "${missing[*]:-none}"
+	if ((failed > 0)); then
+		exit 1
+	fi
+}
+
+main "$@"

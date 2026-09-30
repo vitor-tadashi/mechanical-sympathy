@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
-# uname (fake) - "uname -r" is the fake kernel's osrelease; "uname -s" is Linux.
+# uname (fake) - "uname -r" is the fake kernel's osrelease; "uname -s" is Linux; "uname -m"
+# is the real machine type (the real grubby asks for it).
 
 # shellcheck source=tools/stubs/lib/fake
 . "$(dirname "${BASH_SOURCE[0]}")/lib/fake"
@@ -8,5 +9,6 @@
 case "${1:-}" in
 -r) cat "${LOWLAT_ROOT}/proc/sys/kernel/osrelease" ;;
 -s | "") printf 'Linux\n' ;;
+-m) exec /usr/bin/uname -m ;;
 *) fake_fail 1 "unsupported arguments: $*" ;;
 esac
