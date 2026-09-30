@@ -114,7 +114,7 @@ Illustrative:
 - [ ] Option A: `cat /sys/devices/system/cpu/smt/active` prints `0`, and `scripts/plan-layout --check /etc/lowlat/lowlat.conf --nic-node 1` passes
 - [ ] Option B: `show_affinity` lists no two critical threads whose CPUs share a `CORE` in `lscpu -e`
 - [ ] The time per message no longer changes with `worker.2`'s batches ([Guide 09](../../guides/09-measuring-latency.md))
-- [ ] `scripts/verify-tuning` shows PASS for Guides 00 to 02 (on this host, the Guide 00 SMT check is a WARN until HT is off)
+- [ ] `scripts/verify-tuning` reports no FAIL for Guides 00 to 02. With option B, `WARN Hyper-Threading (SMT) off` from Guide 00 stays, and it is expected: the run passes with warnings
 - [ ] Roll back option B: restore the old affinity file and restart the application
 - [ ] Roll back option A: restore the exported BIOS profile ([Guide 00 §9](../../guides/00-bios-firmware.md#9-rollback)), restore the previous `lowlat.conf`, run `sudo scripts/01-grub-bootloader --apply`, then reboot
 
