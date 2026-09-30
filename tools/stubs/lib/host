@@ -179,13 +179,19 @@ host_build_nics() {
 
 host_build_systemd() {
 	local root="$1" service
-	host_write "${root}" /etc/systemd/system.conf "$(printf '[Manager]\n#CPUAffinity=\n#DefaultLimitRTPRIO=\n#DefaultLimitNICE=')"
+	local system_conf=/etc/systemd/system.conf tuned_dir=/usr/lib/tuned
+	if [[ "${OS_VERSION%%.*}" == 10 ]]; then
+		system_conf=/usr/lib/systemd/system.conf
+		tuned_dir=/usr/lib/tuned/profiles
+		mkdir -p "${root}/etc/tuned/profiles"
+	fi
+	host_write "${root}" "${system_conf}" "$(printf '[Manager]\n#CPUAffinity=\n#DefaultLimitRTPRIO=\n#DefaultLimitNICE=')"
 	for service in "${SERVICES[@]}"; do
 		host_write "${root}" "/usr/lib/systemd/system/${service}.service" "$(printf '[Unit]\nDescription=%s\n\n[Service]\nExecStart=/usr/sbin/%s\n\n[Install]\nWantedBy=multi-user.target' "${service}" "${service}")"
 		mkdir -p "${root}/var/lib/fake-systemd/enabled"
 		: >"${root}/var/lib/fake-systemd/enabled/${service}.service"
 	done
-	host_write "${root}" /usr/lib/tuned/network-latency/tuned.conf "$(printf '[main]\nsummary=Optimize for deterministic performance at the cost of increased power consumption\ninclude=latency-performance')"
+	host_write "${root}" "${tuned_dir}/network-latency/tuned.conf" "$(printf '[main]\nsummary=Optimize for deterministic performance at the cost of increased power consumption\ninclude=latency-performance')"
 	host_write "${root}" /etc/tuned/tuned-main.conf "reapply_sysctl = 1"
 	host_write "${root}" /etc/tuned/active_profile throughput-performance
 }

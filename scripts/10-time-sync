@@ -60,7 +60,6 @@ EOF
 }
 
 configure_chrony() {
-	require_commands chronyc
 	log_sub_step "Stopping ptp4l and phc2sys (they would fight chronyd over the system clock)"
 	run_quiet systemctl disable --now phc2sys
 	run_quiet systemctl disable --now ptp4l
@@ -114,6 +113,11 @@ apply_time_sync() {
 	*) die "TIME_SYNC_MODE=${TIME_SYNC_MODE}: use chrony, ptp or empty" "${EXIT_PRECHECK}" ;;
 	esac
 	require_capability time_sync || return 0
+	if [[ "${TIME_SYNC_MODE}" == chrony && "${DRY_RUN}" -ne 1 ]]; then
+		if ! command -v chronyc >/dev/null 2>&1 || ! systemctl cat chronyd.service >/dev/null 2>&1; then
+			die "TIME_SYNC_MODE=chrony requires chrony (dnf install chrony)" "${EXIT_PRECHECK}"
+		fi
+	fi
 	pin_time_daemons
 	if [[ "${TIME_SYNC_MODE}" == ptp ]]; then
 		configure_ptp

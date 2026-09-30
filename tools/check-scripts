@@ -203,6 +203,7 @@ main() {
 		shift
 	done
 	preflight
+	bash "${REPO}/tools/check-script-regressions"
 	if ((${#NAMES[@]} == 0)); then
 		for host in "${HOSTS}"/*/host; do
 			host="${host%/host}"
