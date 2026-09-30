@@ -200,6 +200,7 @@ host_build_systemd() {
 		: >"${root}/var/lib/fake-systemd/enabled/${service}.service"
 	done
 	host_write "${root}" "${tuned_dir}/network-latency/tuned.conf" "$(printf '[main]\nsummary=Optimize for deterministic performance at the cost of increased power consumption\ninclude=latency-performance')"
+	host_write "${root}" "${tuned_dir}/throughput-performance/tuned.conf" "[main]"
 	host_write "${root}" /etc/tuned/tuned-main.conf "reapply_sysctl = 1"
 	host_write "${root}" /etc/tuned/active_profile throughput-performance
 }
@@ -233,6 +234,7 @@ host_build_kernel() {
 	host_build_memory "${root}"
 	host_build_sysctls "${root}"
 	host_build_nics "${root}"
+	host_write "${root}" /run/fake-mounts "$(printf '/ xfs rw,relatime\n/boot xfs rw,relatime')"
 	host_write "${root}" /proc/1/comm systemd
 	host_write "${root}" /proc/1/status "$(printf 'Name:\tsystemd\nPid:\t1\nCpus_allowed_list:\t0-%s' "$((CPUS - 1))")"
 	host_write "${root}" /run/fake-processes "$(printf '%s\n' "${PROCESSES[@]}")"
@@ -269,8 +271,29 @@ host_cmdline_value() {
 }
 
 # host_kernel_boot <root> - what the kernel makes of its command line.
+# Persistent fstab options take effect again when the fake kernel boots.
+host_mount_fstab() {
+	local root="$1" mounts="$1/run/fake-mounts"
+	[[ -f "${root}/etc/fstab" && -f "${mounts}" ]] || return 0
+	awk '
+		FILENAME==ARGV[1] {
+			if ($0 !~ /^[[:space:]]*#/ && ($3=="xfs" || $3=="ext4" || $3=="ext3")) options[$2]=$4
+			next
+		}
+		{
+			if ($1 in options) {
+				$3=options[$1]
+				gsub(/defaults/, "rw,relatime", $3)
+				if ($3 ~ /noatime/) gsub(/relatime,/, "", $3)
+			}
+			print
+		}' "${root}/etc/fstab" "${mounts}" >"${mounts}.new"
+	mv "${mounts}.new" "${mounts}"
+}
+
 host_kernel_boot() {
 	local root="$1" cmdline value entry kernel device
+	host_mount_fstab "${root}"
 	kernel="$(<"${root}/proc/sys/kernel/osrelease")"
 	entry="$(LOWLAT_ROOT="${root}" grubby --info=DEFAULT)"
 	device="$(awk -F'"' '/^root=/ {print $2}' <<<"${entry}")"

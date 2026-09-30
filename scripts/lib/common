@@ -327,19 +327,20 @@ restore_service() {
 	*) die "invalid saved enabled state for ${unit}" ;; esac
 	case "${active}" in active | inactive | failed) ;;
 	*) die "invalid saved active state for ${unit}" ;; esac
-	if [[ "${enabled}" != masked ]]; then
-		run systemctl unmask "${unit}"
-	fi
+	run systemctl unmask "${unit}"
 	case "${enabled}" in
 	enabled) run systemctl enable "${unit}" ;;
 	disabled) run systemctl disable "${unit}" ;;
-	masked) run systemctl mask "${unit}" ;;
+	masked) ;;
 	*) ;;
 	esac
 	if [[ "${active}" == active ]]; then
 		run systemctl start "${unit}"
 	else
 		run systemctl stop "${unit}"
+	fi
+	if [[ "${enabled}" == masked ]]; then
+		run systemctl mask "${unit}"
 	fi
 }
 
