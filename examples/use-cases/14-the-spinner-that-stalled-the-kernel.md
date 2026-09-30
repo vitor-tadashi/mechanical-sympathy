@@ -113,7 +113,7 @@ Illustrative:
 ## 5. Verify and roll back
 
 - [ ] `ps -eLo psr,tid,cls,rtprio,stat,comm | awk '$3 == "FF" || $3 == "RR"'` lists no application thread
-- [ ] `ps -eLo psr,tid,cls,rtprio,stat,comm | awk '$1 == 3'` shows `net.rx` in state R and every kernel thread asleep (S)
+- [ ] `ps -eLo psr,tid,cls,rtprio,stat,comm | awk '$1 == 3'` shows `net.rx` in state R and no kernel thread in R: sleeping kernel threads show S, and idle kworkers show I
 - [ ] The NIC receive row no longer increases in the CPU 3 column of `/proc/interrupts`
 - [ ] `scripts/verify-tuning` shows PASS for Guides 02 and 04
 - [ ] Roll back: restore the old launch command, and for the tuning follow [Guide 02 §10](../../guides/02-cpu-core-isolation.md#10-rollback) and [Guide 04 §12](../../guides/04-network-optimization.md#12-rollback)
