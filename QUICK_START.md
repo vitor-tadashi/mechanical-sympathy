@@ -197,6 +197,8 @@ page pool that apply never managed stays as it is. Each guide's rollback limits
 still apply, including manual BIOS settings, application launch settings, and
 the time-sync service choice ([Guide 10](guides/10-time-sync.md#11-rollback)).
 
+If the rollback of one guide fails, the wrapper goes on with the other guides, restores the runtime unit, and then stops with an error that names the failed guide. Fix the cause and run it again. A unit that systemd starts only as a dependency, such as `rpcbind.target`, is not started by hand: it comes back when something needs it, or at the next boot.
+
 A host that an older `apply-all` tuned has the runtime unit but no record, and
 its guides have no saved baseline. The wrapper then stops with an error and
 changes nothing. Run `systemctl disable --now lowlat-runtime.service`, and roll

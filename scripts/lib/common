@@ -319,7 +319,7 @@ remember_service() {
 }
 
 restore_service() {
-	local unit="$1" state enabled active
+	local unit="$1" state enabled active refuse
 	state="$(original_value "services/${unit}")"
 	[[ "${state}" != absent ]] || return 0
 	read -r enabled active <<<"${state}"
@@ -335,7 +335,13 @@ restore_service() {
 	*) ;;
 	esac
 	if [[ "${active}" == active ]]; then
-		run systemctl start "${unit}"
+		refuse="$(systemctl show -p RefuseManualStart --value "${unit}" 2>/dev/null || true)"
+		if [[ "${refuse}" == yes ]]; then
+			# Targets such as rpcbind.target start only as a dependency of another unit.
+			log_sub_step "${unit} refuses a manual start: systemd starts it when a unit needs it, or at the next boot"
+		else
+			run systemctl start "${unit}"
+		fi
 	else
 		run systemctl stop "${unit}"
 	fi

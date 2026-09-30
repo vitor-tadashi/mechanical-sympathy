@@ -160,6 +160,7 @@ apply_stage() {
 
 rollback_all() {
 	local guide value complete=no
+	local -a failed=()
 	local -a guides=(11-day2-operations 08-kernel-bypass 04-network 05-cgroup-isolation
 		10-time-sync 07-os-hygiene 06-kernel-sysctl 03-huge-pages 02-cpu-isolation
 		01-grub-bootloader 00-bios-firmware)
@@ -191,12 +192,19 @@ rollback_all() {
 		fi
 		[[ "${value}" == yes ]] || die "invalid saved apply marker for ${guide}"
 		log_step "Rollback ${guide}"
-		"${SCRIPTS_DIR}/${guide}" --rollback --config "${LOWLAT_CONFIG}"
+		# A failed guide must not leave the guides after it, and the runtime unit, half restored.
+		if ! "${SCRIPTS_DIR}/${guide}" --rollback --config "${LOWLAT_CONFIG}"; then
+			failed+=("${guide}")
+			log_warn "Rollback of ${guide} failed: going on with the other guides"
+		fi
 	done
 	log_step "Restoring the original runtime unit"
 	restore_file "${RUNTIME_UNIT}"
 	run systemctl daemon-reload
 	restore_service lowlat-runtime.service
+	if ((${#failed[@]} > 0)); then
+		die "rollback of ${failed[*]} failed and the other guides were rolled back. Read the errors above, fix the cause, and run apply-all --rollback again" "${EXIT_APPLY}"
+	fi
 	printf '\nReboot to restore boot parameters and inherited service affinity.\n'
 }
 

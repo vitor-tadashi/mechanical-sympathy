@@ -51,9 +51,14 @@ unit_setting() {
 }
 
 start_unit() {
-	local unit="$1" affinity comm pid type
+	local unit="$1" affinity comm pid type refuse
 	require_unit "${unit}"
 	[[ ! -e "${MASKED_DIR}/${unit}" ]] || fake_fail 1 "Unit ${unit} is masked."
+	# systemd starts such a unit as a dependency (FAKE_DEPENDENCY_START=1), never on request.
+	refuse="$(unit_setting "${unit}" RefuseManualStart)"
+	if [[ "${FAKE_DEPENDENCY_START:-}" != 1 && "${refuse}" == yes ]]; then
+		fake_fail 1 "Failed to start ${unit}: Operation refused, unit ${unit} may be requested by dependency only (it is configured to refuse manual start/stop)."
+	fi
 	mkdir -p "${ACTIVE_DIR}" "${PID_DIR}"
 	[[ -e "${ACTIVE_DIR}/${unit}" ]] && return 0
 	: >"${ACTIVE_DIR}/${unit}"
