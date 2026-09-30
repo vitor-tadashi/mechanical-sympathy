@@ -56,6 +56,7 @@
 | <a id="cfs"></a>**CFS / EEVDF** | **Completely Fair Scheduler** and **Earliest Eligible Virtual Deadline First.** The parts of Linux that choose which thread runs next. EEVDF replaced CFS in kernel 6.6. | [Concept: CPU isolation §2](concepts/cpu-isolation.md#2-the-linux-scheduler-in-one-page) |
 | <a id="cgroup"></a>**cgroup** | **Control group.** A Linux feature that puts processes in a group and limits what the group may use: CPUs, memory, disk. | [Guide 05](guides/05-cgroup-isolation.md) uses cgroups to keep the operating system away from the critical CPUs. |
 | <a id="chrony"></a>**chrony** | A program that keeps the computer clock correct by asking time servers over the network. | [Guide 10 §6](guides/10-time-sync.md#6-chrony) |
+| <a id="cloud-init"></a>**cloud-init** | The program that sets up a cloud image at its first boot: it reads a small configuration (user, files, commands) from a disk or the network. It can also run a script at every boot. | The KVM spike gives a Rocky Linux cloud image its test script through cloud-init. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
 | <a id="coalescing"></a>**coalescing** | The NIC waits a short time, or for several packets, before it raises an [interrupt](#irq). One interrupt then serves many packets. | It saves CPU, and it makes the first packet wait. [Guide 04 §5.3](guides/04-network-optimization.md#53-coalescing-0-ethtool--c-rx-usecs-0-tx-usecs-0) |
 | <a id="combined-channel"></a>**combined channel** | One NIC receive queue and one transmit queue that share a single interrupt. `ethtool -l` shows how many there are. | Fewer combined channels mean fewer interrupts to place on CPUs. [Guide 04 §5.1](guides/04-network-optimization.md#51-queues-channels-ethtool--l) |
 | <a id="coordinated-omission"></a>**coordinated omission** | A mistake in measuring. When a system stalls, the load generator also waits, so it never sends the requests that would have been slow. The report then looks better than the truth. | It makes tail latency look small. [Guide 09 §3.3](guides/09-measuring-latency.md#33-coordinated-omission) |
@@ -234,6 +235,7 @@
 | Term | Means | Why you meet it here |
 |---|---|---|
 | <a id="qdisc"></a>**qdisc** | **Queueing discipline.** The kernel queue in front of the NIC transmit ring. | `txqueuelen` is its length. [Guide 04 §5.8](guides/04-network-optimization.md#58-txqueuelen-bulk-nics) |
+| <a id="qemu"></a>**QEMU** | A program that runs a whole virtual machine. With [KVM](#kvm) it uses the CPU features of the host and is fast. | `tools/check-kvm` boots a RHEL-family cloud image in QEMU with two NUMA nodes. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
 
 ### R
 
@@ -277,6 +279,7 @@
 | Term | Means | Why you meet it here |
 |---|---|---|
 | <a id="tail-latency"></a>**tail latency** | The slow end of the latency distribution: p99 and above. | Users notice the tail, and interruptions cause it. [Guide 09](guides/09-measuring-latency.md) |
+| <a id="tcg"></a>**TCG** | **Tiny Code Generator.** The software mode of [QEMU](#qemu): it translates the guest CPU instructions one by one, so it needs no [KVM](#kvm). It is many times slower. | It is the fallback when a CI runner has no `/dev/kvm`. The spike measures its boot time. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
 | <a id="tcp"></a>**TCP** | **Transmission Control Protocol.** A reliable, ordered byte stream. A lost packet is sent again after a timeout ([RTO](#rto)). | [Guide 06 §3](guides/06-kernel-sysctl-tuning.md#3-tcp-behavior) |
 | <a id="tcp-nodelay"></a>**TCP_NODELAY** | A socket option that turns [Nagle's algorithm](#nagle) off. | Set it on every latency-critical TCP socket. [Concept: network tuning §6](concepts/network-tuning.md#6-transmit-path) |
 | <a id="thp"></a>**THP** | **Transparent Huge Pages.** The kernel creates and merges huge pages by itself, at times you do not choose. | It can stall a thread while it works, so it is off. [Guide 03 §2](guides/03-huge-pages-configuration.md#2-transparent-vs-explicit-huge-pages-why-thp-is-off) |
