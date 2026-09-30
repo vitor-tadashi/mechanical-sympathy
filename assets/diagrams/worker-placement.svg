@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 310" width="760" height="310" role="img" aria-labelledby="t d">
+<title id="t">A new thread with no pin spins on the OS CPUs; pinned to a spare isolated CPU it runs alone</title>
+<desc id="d">Two timelines for a release that adds a busy-spinning worker.2 thread. Without a line in the affinity file, worker.2 inherits the OS CPU mask: the scheduler moves it between OS CPUs, it takes a whole CPU from the operating system and the agents, and their work waits. With one line that pins it to the spare isolated CPU 15, it runs there alone, the OS CPUs keep their capacity, and no reboot is needed.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .track { fill: #ffffff; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .muted { fill: #eeeeee; stroke: #777777; stroke-dasharray: 4 3; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .in { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+  .ev { transform-box: fill-box; transform-origin: center; animation: flash 6s linear infinite; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @keyframes flash {
+    0%, 4%   { transform: scale(1.4); stroke-width: 3; }
+    8%, 100% { transform: scale(1); stroke-width: 1.5; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ev, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="310" rx="8"/>
+
+<!-- Lane 1: no affinity line -->
+<rect class="lane" x="10" y="10" width="740" height="140" rx="6"/>
+<text class="cap" x="24" y="34">worker.2 with no line in affinity.properties: it inherits the OS CPUs</text>
+<text class="sub" x="24" y="52">It spins on one OS CPU after another. The OS and the agents lose a whole CPU, and their work waits.</text>
+<text class="lbl" x="24" y="72">CPU 8</text>
+<rect class="track" x="150" y="62" width="570" height="16" rx="3"/>
+<rect class="app" x="150" y="62" width="110" height="16" rx="2"/>
+<text class="in" x="205" y="74">worker.2</text>
+<rect class="box" x="300" y="62" width="30" height="16" rx="2"/>
+<rect class="box" x="600" y="62" width="30" height="16" rx="2"/>
+<text class="lbl" x="24" y="92">CPU 10</text>
+<rect class="track" x="150" y="82" width="570" height="16" rx="3"/>
+<rect class="box" x="200" y="82" width="30" height="16" rx="2"/>
+<rect class="app" x="400" y="82" width="160" height="16" rx="2"/>
+<text class="in" x="515" y="94">worker.2</text>
+<rect class="wait" x="440" y="82" width="30" height="16" rx="2"/>
+<text class="lbl" x="24" y="112">CPU 12</text>
+<rect class="track" x="150" y="102" width="570" height="16" rx="3"/>
+<rect class="app" x="260" y="102" width="140" height="16" rx="2"/>
+<text class="in" x="292" y="114">worker.2</text>
+<rect class="wait" x="330" y="102" width="30" height="16" rx="2"/>
+<rect class="app" x="560" y="102" width="160" height="16" rx="2"/>
+<text class="in" x="640" y="114">worker.2</text>
+<rect class="box" x="480" y="102" width="30" height="16" rx="2"/>
+<circle class="wait ev" cx="260" cy="110" r="5" style="animation-delay:-4.84s"/>
+<circle class="wait ev" cx="400" cy="90" r="5" style="animation-delay:-3.37s"/>
+<circle class="wait ev" cx="560" cy="110" r="5" style="animation-delay:-1.68s"/>
+<text class="lbl" x="24" y="136">CPU 15</text>
+<rect class="muted" x="150" y="124" width="570" height="16" rx="3"/>
+<text class="in" x="435" y="136">spare isolated CPU: unused</text>
+
+<!-- Lane 2: pinned to the spare -->
+<rect class="lane" x="10" y="160" width="740" height="140" rx="6"/>
+<text class="cap" x="24" y="184">One line: worker.2.cpu.affinity=15, then restart the application</text>
+<text class="sub" x="24" y="202">worker.2 spins alone on the spare isolated CPU. The OS CPUs keep their capacity. No reboot.</text>
+<text class="lbl" x="24" y="222">CPU 8</text>
+<rect class="track" x="150" y="212" width="570" height="16" rx="3"/>
+<rect class="box" x="300" y="212" width="30" height="16" rx="2"/>
+<rect class="box" x="600" y="212" width="30" height="16" rx="2"/>
+<text class="lbl" x="24" y="242">CPU 10</text>
+<rect class="track" x="150" y="232" width="570" height="16" rx="3"/>
+<rect class="box" x="200" y="232" width="30" height="16" rx="2"/>
+<rect class="box" x="440" y="232" width="30" height="16" rx="2"/>
+<text class="lbl" x="24" y="262">CPU 12</text>
+<rect class="track" x="150" y="252" width="570" height="16" rx="3"/>
+<rect class="box" x="330" y="252" width="30" height="16" rx="2"/>
+<rect class="box" x="480" y="252" width="30" height="16" rx="2"/>
+<text class="lbl" x="24" y="286">CPU 15</text>
+<rect class="app" x="150" y="274" width="570" height="16" rx="2"/>
+<text class="in" x="435" y="286">worker.2, pinned, alone on an isolated CPU</text>
+
+<text class="axis" x="380" y="304">schematic · green: worker.2 · blue: OS and agent work · red: work that waits, or a migration</text>
+<line class="head" x1="150" y1="58" x2="150" y2="292"/>
+</svg>
