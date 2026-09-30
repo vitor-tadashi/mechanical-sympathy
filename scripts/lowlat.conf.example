@@ -52,11 +52,11 @@ BIOS_PCIE_ASPM_POLICY=performance
 
 # yes: disable CPU vulnerability mitigations (nospectre_v1/v2, pti=off, mds=off,
 # tsx_async_abort=off). Only on single-tenant hosts in a trusted network.
-GRUB_DISABLE_MITIGATIONS=yes
+GRUB_DISABLE_MITIGATIONS=no
 
 # yes: intel_iommu=off iommu=off. Must be "no" if you use VFIO/SR-IOV/DPDK with IOMMU.
 # Ignored when KERNEL_BYPASS_STACK=dpdk with vfio-pci: 01 sets intel_iommu=on iommu=pt instead.
-GRUB_DISABLE_IOMMU=yes
+GRUB_DISABLE_IOMMU=no
 
 # 0 / 1 / empty. biosdevname=0 CHANGES INTERFACE NAMES (em1 -> eno1 ...).
 # Leave empty to keep whatever naming the host already uses.

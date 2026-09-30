@@ -160,10 +160,13 @@ reserve_pages 12288 node1
 ```ini
 [Unit]
 Description=Reserve 2M huge pages per NUMA node
-DefaultDependencies=no                  # do not wait for basic.target: run as early as possible
-Before=dev-hugepages.mount              # pool is ready before hugetlbfs is mounted and apps start
+# do not wait for basic.target: run as early as possible
+DefaultDependencies=no
+# pool is ready before hugetlbfs is mounted and apps start
+Before=dev-hugepages.mount
 ConditionPathExists=/sys/devices/system/node
-ConditionKernelCommandLine=hugepagesz=2M   # only on hosts where Guide 01 was applied
+# only on hosts where Guide 01 was applied
+ConditionKernelCommandLine=hugepagesz=2M
 
 [Service]
 Type=oneshot
