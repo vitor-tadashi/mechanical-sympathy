@@ -1047,16 +1047,9 @@ Host class: virtual_machine (override with LOWLAT_HOST_CLASS=bare_metal|virtual_
 ---- exit 0
 
 ==== 02-cpu-isolation --rollback
-Usage: 02-cpu-isolation [--apply | --dry-run | --verify | --rollback] [--config FILE]
 
-  --apply      apply this guide's tuning (root)
-  --dry-run    print every command/file that --apply would run/write
-  --verify     read-only check of this guide's tuning
-  --rollback   undo this guide's tuning (when supported)
-  --runtime    re-apply only the non-persistent part (used at boot by lowlat-runtime.service)
-  --config     configuration file (default: /etc/lowlat/lowlat.conf)
-
-Host class: virtual_machine (override with LOWLAT_HOST_CLASS=bare_metal|virtual_machine)
+01. Restoring CPU isolation baseline
+    01.01 No saved CPU isolation baseline, nothing to restore
 ---- exit 0
 
 ==== 01-grub-bootloader --rollback

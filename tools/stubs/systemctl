@@ -13,6 +13,7 @@
 ACTIVE_DIR="${LOWLAT_ROOT}/run/fake-systemd/active"
 PID_DIR="${LOWLAT_ROOT}/run/fake-systemd/pid"
 ENABLED_DIR="${LOWLAT_ROOT}/var/lib/fake-systemd/enabled"
+MASKED_DIR="${LOWLAT_ROOT}/var/lib/fake-systemd/masked"
 
 unit_name() {
 	case "$1" in
@@ -144,12 +145,23 @@ main() {
 		return 3
 		;;
 	is-enabled)
+		if [[ -e "${MASKED_DIR}/${units[0]}" ]]; then
+			((quiet == 1)) || printf 'masked\n'
+			return 1
+		fi
 		if [[ -e "${ENABLED_DIR}/${units[0]}" ]]; then
 			((quiet == 1)) || printf 'enabled\n'
 			return 0
 		fi
 		((quiet == 1)) || printf 'disabled\n'
 		return 1
+		;;
+	mask)
+		mkdir -p "${MASKED_DIR}"
+		for unit in "${units[@]}"; do : >"${MASKED_DIR}/${unit}"; done
+		;;
+	unmask)
+		for unit in "${units[@]}"; do rm -f "${MASKED_DIR}/${unit}"; done
 		;;
 	is-failed)
 		((quiet == 1)) || printf 'inactive\n'
