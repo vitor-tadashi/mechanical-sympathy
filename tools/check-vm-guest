@@ -11,7 +11,7 @@
 #   check-vm-guest apply PASS              apply-all --apply
 #   check-vm-guest after-apply PASS        after the reboot: kernel command line, huge
 #                                          pages, the runtime unit, IRQs, verify-tuning
-#   check-vm-guest rollback PASS           every guide's --rollback, in reverse order
+#   check-vm-guest rollback PASS           apply-all --rollback: the whole host, guides in reverse order
 #   check-vm-guest after-rollback PASS     after the reboot: compare with the snapshot
 #   check-vm-guest report EVENTS           known issues that did not show up, the summary
 #
@@ -40,8 +40,6 @@ HOST_CLASS_DROPIN=/etc/systemd/system.conf.d/90-check-host-class.conf
 
 # shellcheck source=tools/lib/check
 . "${REPO}/tools/lib/check"
-# shellcheck source=tools/stubs/lib/host
-. "${REPO}/tools/stubs/lib/host"
 
 # as_pass <pass> <command...> - a script or command as the tuning scripts see the host.
 as_pass() {
@@ -378,7 +376,7 @@ phase_after_apply() {
 	journalctl -b -u lowlat-runtime.service --no-pager >"${WORK}/${pass}-runtime-journal.txt" 2>&1 || true
 }
 
-# rollback_guide <pass> <guide> - one --rollback. A rollback that fails is a finding like a
+# rollback_guide <pass> <script> - one --rollback of a guide script or of apply-all. A rollback that fails is a finding like a
 # leftover: "rollback failed GUIDE: LINE" for each line that says what failed, matched
 # against the known issues.
 rollback_guide() {
@@ -395,12 +393,11 @@ rollback_guide() {
 }
 
 phase_rollback() {
-	local pass="$1" index guide lines
+	local pass="$1" lines
 	grub_evidence "${WORK}/grub-${pass}-before-rollback.txt"
-	for ((index = ${#HOST_APPLY_ORDER[@]} - 1; index >= 0; index--)); do
-		guide="${HOST_APPLY_ORDER[index]}"
-		rollback_guide "${pass}" "${guide}"
-	done
+	# The wrapper rolls the guides back in reverse order and removes the runtime unit that
+	# apply-all installed: a guide-by-guide rollback would leave that unit behind.
+	rollback_guide "${pass}" apply-all
 	grub_evidence "${WORK}/grub-${pass}-after-rollback-before-reboot.txt"
 	# Runtime state that the next boot resets anyway, but that a rollback should undo now.
 	# IRQ numbers and effective CPUs change from boot to boot: they stay in the evidence
