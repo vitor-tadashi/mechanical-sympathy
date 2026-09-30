@@ -253,7 +253,7 @@ done
 is_number() { [[ "$1" =~ ^[0-9]+$ ]]; }
 
 if [[ -n "${NIC_IFACE}" ]]; then
-	NIC_NODE="$(read_value "/sys/class/net/${NIC_IFACE}/device/numa_node" "")"
+	NIC_NODE="$(read_value "${LOWLAT_ROOT}/sys/class/net/${NIC_IFACE}/device/numa_node" "")"
 fi
 is_number "${NIC_NODE}" || die "give the critical NIC's NUMA node with --nic-node N, or --nic IFACE on a host where it reports one" "${EXIT_USAGE}"
 is_number "${SPARES}" || die "--spares takes a number" "${EXIT_USAGE}"
