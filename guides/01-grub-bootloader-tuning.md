@@ -354,11 +354,22 @@ flowchart TD
 > [!WARNING]
 > Before applying anything to a production host, make sure the out-of-band console (iLO/iDRAC/IPMI SOL) works. It is the only way to edit the GRUB line if the host does not come back.
 
-- [ ] Remove every argument this guide manages: `sudo scripts/01-grub-bootloader --rollback`
+- [ ] Remove every argument this guide manages and restore the original graphical consoles: `sudo scripts/01-grub-bootloader --rollback`
 - [ ] Or remove a single one: `sudo grubby --update-kernel=ALL --remove-args="nohz_full"`
-- [ ] Check the stored line: `sudo grubby --info=DEFAULT`
+- [ ] Check every stored line: `sudo grubby --info=ALL`. Entries that originally had `console=tty0` must have it again; serial consoles stay intact.
 - [ ] Reboot: `sudo systemctl reboot`
 - [ ] Confirm: `cat /proc/cmdline` no longer shows the arguments, and `cat /sys/devices/system/cpu/isolated` is empty
+
+The first bare-metal apply saves each installed kernel's graphical-console
+presence in `/var/lib/lowlat/console-original`. Repeated apply preserves that
+record, and repeated rollback does not duplicate the console argument. A VM
+apply leaves consoles alone. Keep the record for subsequent rollbacks; if a
+recorded kernel was removed, inspect the installed entries before retrying.
+
+> [!NOTE]
+> **Not proven in production.** Console restoration is checked against fake
+> boot entries and real grubby in containers. Verify the running command line
+> after reboot before relying on it for production recovery.
 
 ## 10. Bare metal vs VM summary
 

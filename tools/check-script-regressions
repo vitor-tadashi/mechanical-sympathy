@@ -87,11 +87,56 @@ missing_chrony_unit() {
 	[[ ! -d "${LOWLAT_ROOT}/etc/systemd/system/chronyd.service.d" ]] || fail "absent-unit precheck must precede writes"
 }
 
+console_restore() {
+	local entry
+	setup rhel9-2s-ref
+	entry="${LOWLAT_ROOT}/boot/loader/entries/0f1e2d3c4b5a69788796a5b4c3d2e1f0-0-rescue.conf"
+	sed -i 's/ console=tty0/ console=ttyS0,115200n8/' "${entry}"
+	cp -a "${LOWLAT_ROOT}/boot/loader/entries" "${WORK}/before-entries"
+	expect_status 0 "${REPO}/scripts/01-grub-bootloader" --apply
+	expect_status 0 "${REPO}/scripts/01-grub-bootloader" --apply
+	expect_status 0 "${REPO}/scripts/01-grub-bootloader" --rollback
+	expect_status 0 diff -r "${WORK}/before-entries" "${LOWLAT_ROOT}/boot/loader/entries"
+	grep -q 'console=tty0' "${LOWLAT_ROOT}/boot/loader/entries/0f1e2d3c4b5a69788796a5b4c3d2e1f0-${KERNEL}.conf" || fail "console=tty0 not restored"
+	grep -q 'console=ttyS0,115200n8' "${entry}" || fail "lost serial console"
+	if grep -q 'console=tty0' "${entry}"; then fail "invented graphical console on rescue entry"; fi
+	expect_status 0 "${REPO}/scripts/01-grub-bootloader" --rollback
+}
+
+virtio_placement() {
+	setup rhel9-vm-kvm
+	expect_status 0 "${REPO}/scripts/04-network" --apply
+	grep -qx 1 "${LOWLAT_ROOT}/proc/irq/100/smp_affinity_list" || fail "virtio IRQ was not placed"
+	grep -qx 0-3 "${LOWLAT_ROOT}/proc/irq/104/smp_affinity_list" || fail "management IRQ changed"
+}
+
+unknown_irq() {
+	setup rhel9-vm-kvm
+	find "${LOWLAT_ROOT}/sys" -type d -name msi_irqs -exec rm -rf {} +
+	: >"${LOWLAT_ROOT}/proc/interrupts"
+	# The inner shell sources the guide and evaluates its predicate.
+	# shellcheck disable=SC2016
+	expect_status 1 bash -c '. "$1"; irqs_on_cpus eth0 1' _ "${REPO}/scripts/04-network"
+}
+
+unreadable_irq() {
+	setup rhel9-vm-kvm
+	expect_status 0 "${REPO}/scripts/04-network" --apply
+	host_kernel_sync "${LOWLAT_ROOT}"
+	# The predicate must check every discovered vector, not just the first one.
+	# shellcheck disable=SC2016
+	expect_status 0 bash -c '. "$1"; irqs_on_cpus eth0 1' _ "${REPO}/scripts/04-network"
+	rm -f "${LOWLAT_ROOT}/proc/irq/103/smp_affinity_list"
+	# The inner shell evaluates the guide predicate against the missing file.
+	# shellcheck disable=SC2016
+	expect_status 1 bash -c '. "$1"; irqs_on_cpus eth0 1' _ "${REPO}/scripts/04-network"
+}
+
 if [[ "${1:-}" == --case ]]; then
 	"$2"
 	exit 0
 fi
-cases=(missing_system_conf tuned_layout missing_chrony existing_manager missing_chrony_unit)
+cases=(missing_system_conf tuned_layout missing_chrony existing_manager missing_chrony_unit console_restore virtio_placement unknown_irq unreadable_irq)
 for name in "${cases[@]}"; do
 	bash "$0" --case "${name}"
 done

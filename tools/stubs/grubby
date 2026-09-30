@@ -73,7 +73,7 @@ info() {
 }
 
 main() {
-	local arg add="" remove="" target="" file argument list files=()
+	local arg add="" remove="" target="" file argument list kernel files=()
 	[[ "$*" == *--info=* || "$*" == *--default-kernel* ]] || fake_record "$@"
 	for arg in "$@"; do
 		case "${arg}" in
@@ -99,9 +99,13 @@ main() {
 		*) fake_fail 1 "unsupported argument ${arg}" ;;
 		esac
 	done
-	[[ "${target}" == ALL ]] || fake_fail 1 "only --update-kernel=ALL is supported"
+	[[ -n "${target}" ]] || fake_fail 1 "--update-kernel is required"
 	list="$(entries)"
 	while read -r file; do
+		kernel="$(entry_value "${file}" linux)"
+		if [[ "${target}" != ALL && "${target}" != "${kernel}" ]]; then
+			continue
+		fi
 		for argument in ${remove}; do
 			edit_options "${file}" remove "${argument}"
 		done

@@ -141,7 +141,11 @@ tune_nic_low_latency() {
 # (exact, no name matching); /proc/interrupts names as a fallback (virtio, bonds, ...).
 nic_irqs() {
 	local iface="$1" dir="${LOWLAT_ROOT}/sys/class/net/$1/device/msi_irqs"
-	local vector found=0
+	local vector found=0 device
+	device="$(readlink -f "${LOWLAT_ROOT}/sys/class/net/${iface}/device" 2>/dev/null || true)"
+	if [[ "${device##*/}" =~ ^virtio[0-9]+$ ]]; then
+		dir="${device%/*}/msi_irqs"
+	fi
 	if [[ -d "${dir}" ]]; then
 		for vector in "${dir}"/*; do
 			[[ -e "${vector}" ]] || continue
@@ -251,16 +255,26 @@ adaptive_rx_off() {
 }
 
 irqs_on_cpus() { # irqs_on_cpus <iface> <cpu list>
-	local irq irqs want actual
+	local irq irqs want actual effective cpu count=0
 	want="$(cpu_list_expand "$2")"
 	irqs="$(nic_irqs "$1")"
 	while read -r irq; do
 		[[ -n "${irq}" ]] || continue
 		actual="$(read_value "${LOWLAT_ROOT}/proc/irq/${irq}/smp_affinity_list" "")"
-		[[ -n "${actual}" ]] || continue
+		[[ -n "${actual}" ]] || return 1
 		actual="$(cpu_list_expand "${actual}")"
 		[[ "${actual}" == "${want}" ]] || return 1
+		if [[ -e "${LOWLAT_ROOT}/proc/irq/${irq}/effective_affinity_list" ]]; then
+			effective="$(read_value "${LOWLAT_ROOT}/proc/irq/${irq}/effective_affinity_list" "")"
+			[[ -n "${effective}" ]] || return 1
+			effective="$(cpu_list_expand "${effective}")"
+			for cpu in ${effective}; do
+				[[ " ${want} " == *" ${cpu} "* ]] || return 1
+			done
+		fi
+		count=$((count + 1))
 	done <<<"${irqs}"
+	((count > 0))
 }
 
 no_nic_irq_on_isolated_cpus() {
