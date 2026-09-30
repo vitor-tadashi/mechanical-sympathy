@@ -60,6 +60,174 @@ nic_queue_count() {
 	printf '%s\n' "${count}"
 }
 
+# Settings are restored after channels/rings, which may reset the other knobs.
+NIC_SETTINGS=(combined rx_ring tx_ring tso gso lro rx_csum tx_csum pause_autoneg pause_rx pause_tx
+	txqueuelen rx_usecs tx_usecs adaptive_rx adaptive_tx)
+
+nic_setting() {
+	local iface="$1" key="$2" output label option
+	case "${key}" in
+	combined) ethtool_current "${iface}" -l Combined; return ;;
+	rx_ring) ethtool_current "${iface}" -g RX; return ;;
+	tx_ring) ethtool_current "${iface}" -g TX; return ;;
+	txqueuelen) read_value "${LOWLAT_ROOT}/sys/class/net/${iface}/tx_queue_len" ""; return ;;
+	adaptive_rx | adaptive_tx | rx_usecs | tx_usecs) option=-c ;;
+	pause_*) option=-a ;;
+	*) option=-k ;;
+	esac
+	# Unsupported driver queries are represented by an empty value, never a default.
+	output="$(ethtool "${option}" "${iface}" 2>/dev/null || true)"
+	case "${key}" in
+	adaptive_rx) awk '/^Adaptive RX:/ {print $3; exit}' <<<"${output}"; return ;;
+	adaptive_tx) awk '/^Adaptive RX:/ {print $5; exit}' <<<"${output}"; return ;;
+	rx_usecs) label=rx-usecs ;;
+	tx_usecs) label=tx-usecs ;;
+	pause_autoneg) label=Autonegotiate ;;
+	pause_rx) label=RX ;;
+	pause_tx) label=TX ;;
+	tso) label=tcp-segmentation-offload ;;
+	gso) label=generic-segmentation-offload ;;
+	lro) label=large-receive-offload ;;
+	rx_csum) label=rx-checksumming ;;
+	tx_csum) label=tx-checksumming ;;
+	*) die "unknown NIC setting: ${key}" ;;
+	esac
+	awk -v k="${label}:" '$1 == k {print $2; exit}' <<<"${output}"
+}
+
+remember_nic() {
+	local iface="$1" tuning="$2" key value irqs irq affinities=""
+	[[ "${DRY_RUN}" -eq 1 ]] && return 0
+	if [[ -f "${LOWLAT_FACTORY_DIR}/.values/04/${iface}/complete" ]]; then
+		value="$(original_value "04/${iface}/irq-affinities")"
+		value="$(original_value "04/${iface}/complete")"
+		case "${value}" in
+		yes)
+			value="$(original_value "04/${iface}/settings-complete")"
+			[[ "${value}" == yes ]] || die "invalid saved ${iface} settings marker"
+			for key in "${NIC_SETTINGS[@]}"; do value="$(original_value "04/${iface}/${key}")"; done
+			;;
+		no) ;;
+		*) die "invalid saved ${iface} apply marker" ;;
+		esac
+	fi
+	if [[ "${tuning}" == yes && ! -f "${LOWLAT_FACTORY_DIR}/.values/04/${iface}/settings-complete" ]]; then
+		for key in "${NIC_SETTINGS[@]}"; do
+			value="$(nic_setting "${iface}" "${key}")"
+			[[ "${value}" != n/a ]] || value=""
+			remember_value "04/${iface}/${key}" "${value:-unavailable}"
+		done
+		remember_value "04/${iface}/settings-complete" yes
+	fi
+	if [[ "${tuning}" == yes && "${NIC_DISABLE_CSUM_OFFLOAD:-no}" == yes ]]; then
+		remember_value "04/${iface}/checksum-managed" yes
+	fi
+	if [[ ! -f "${LOWLAT_FACTORY_DIR}/.values/04/${iface}/irq-affinities" ]]; then
+		irqs="$(nic_irqs "${iface}")"
+		irqs="$(sort -n <<<"${irqs}")"
+		while read -r irq; do
+			[[ -n "${irq}" ]] || continue
+			value="$(read_value "${LOWLAT_ROOT}/proc/irq/${irq}/smp_affinity_list" "")"
+			[[ -n "${value}" ]] || die "cannot save ${iface} IRQ ${irq} affinity" "${EXIT_PRECHECK}"
+			affinities+="${affinities:+$'\n'}${value}"
+		done <<<"${irqs}"
+		remember_value "04/${iface}/irq-affinities" "${affinities:-unavailable}"
+	fi
+	remember_value "04/${iface}/complete" "${tuning}"
+}
+
+remember_network() {
+	local spec iface role cpus tuning
+	for spec in "${NICS[@]}"; do
+		iface="$(nic_field "${spec}" 0)"
+		role="$(nic_field "${spec}" 1)"
+		cpus="$(nic_field "${spec}" 2)"
+		[[ "${role}" != mgmt || -n "${cpus}" ]] || continue
+		nic_exists "${iface}" || continue
+		tuning=yes
+		[[ "${role}" != mgmt ]] || tuning=no
+		remember_nic "${iface}" "${tuning}"
+	done
+}
+
+# Do not change a setting whose original value the driver cannot report.
+change_nic() {
+	local iface="$1" keys="$2" key value
+	shift 2
+	if [[ "${DRY_RUN}" -ne 1 ]]; then
+		for key in ${keys}; do
+			value="$(original_value "04/${iface}/${key}")"
+			if [[ "${value}" == unavailable ]]; then
+				log_warn "${iface}: ${key} is unreadable, leaving it unchanged"
+				return 0
+			fi
+		done
+	fi
+	run_quiet "$@"
+}
+
+restore_nic_setting() {
+	local iface="$1" key="$2" value current argument
+	value="$(original_value "04/${iface}/${key}")"
+	[[ "${value}" != unavailable ]] || return 0
+	case "${key}" in
+	combined | rx_ring | tx_ring | txqueuelen | rx_usecs | tx_usecs)
+		[[ "${value}" =~ ^[0-9]+$ ]] || die "invalid saved ${iface} ${key}" ;;
+	*) [[ "${value}" == on || "${value}" == off ]] || die "invalid saved ${iface} ${key}" ;;
+	esac
+	current="$(nic_setting "${iface}" "${key}")"
+	[[ "${current}" != "${value}" ]] || return 0
+	case "${key}" in
+	combined) run ethtool -L "${iface}" combined "${value}" ;;
+	rx_ring) run ethtool -G "${iface}" rx "${value}" ;;
+	tx_ring) run ethtool -G "${iface}" tx "${value}" ;;
+	adaptive_rx | adaptive_tx | rx_usecs | tx_usecs)
+		argument="${key//_/-}"
+		run ethtool -C "${iface}" "${argument}" "${value}" ;;
+	pause_*) run ethtool -A "${iface}" "${key#pause_}" "${value}" ;;
+	txqueuelen) run ip link set dev "${iface}" txqueuelen "${value}" ;;
+	*) run ethtool -K "${iface}" "${key%_csum}" "${value}" ;;
+	esac
+}
+
+rollback_network() {
+	local state iface key saved irqs irq value index complete
+	local -a affinities
+	log_step "Restoring NIC settings and IRQ affinity"
+	for state in "${LOWLAT_FACTORY_DIR}"/.values/04/*/complete; do
+		[[ -f "${state}" ]] || continue
+		iface="${state%/complete}"
+		iface="${iface##*/}"
+		nic_exists "${iface}" || die "cannot restore missing interface ${iface}"
+		complete="$(original_value "04/${iface}/complete")"
+		[[ "${complete}" == yes || "${complete}" == no ]] || die "invalid saved ${iface} apply marker"
+		if [[ "${complete}" == yes ]]; then
+			value="$(original_value "04/${iface}/settings-complete")"
+			[[ "${value}" == yes ]] || die "invalid saved ${iface} settings marker"
+			for key in "${NIC_SETTINGS[@]}"; do
+				if [[ "${key}" == *_csum && ! -f "${state%/complete}/checksum-managed" ]]; then continue; fi
+				restore_nic_setting "${iface}" "${key}"
+			done
+		fi
+		saved="$(original_value "04/${iface}/irq-affinities")"
+		[[ "${saved}" != unavailable ]] || continue
+		mapfile -t affinities <<<"${saved}"
+		irqs="$(nic_irqs "${iface}")"
+		irqs="$(sort -n <<<"${irqs}")"
+		index=0
+		while read -r irq; do
+			[[ -n "${irq}" ]] || continue
+			((index < ${#affinities[@]})) || die "${iface}: IRQ vector count changed"
+			value="${affinities[index]}"
+			[[ "${value}" =~ ^[0-9]+(-[0-9]+)?(,[0-9]+(-[0-9]+)?)*$ ]] || die "invalid saved ${iface} IRQ affinity"
+			[[ -e "${LOWLAT_ROOT}/proc/irq/${irq}/smp_affinity_list" ]] || die "cannot restore missing IRQ ${irq} affinity"
+			sysfs_write "${value}" "${LOWLAT_ROOT}/proc/irq/${irq}/smp_affinity_list"
+			index=$((index + 1))
+		done <<<"${irqs}"
+		((index == ${#affinities[@]})) || die "${iface}: IRQ vector count changed"
+	done
+}
+
 # tune_nic_low_latency <iface> <role> [txqueuelen] [irq cpus]
 #   role: critical | timing | bulk | mgmt (mgmt interfaces are never touched)
 tune_nic_low_latency() {
@@ -80,7 +248,7 @@ tune_nic_low_latency() {
 	# Kernel stack: one queue per CPU that services the NIC's interrupts.
 	if nic_is_kernel_bypass "${iface}"; then
 		log_sub_step "${iface}: kernel-bypass NIC, 1 combined queue"
-		run_quiet ethtool -L "${iface}" combined 1
+		change_nic "${iface}" combined ethtool -L "${iface}" combined 1
 	else
 		if [[ -z "${irq_cpus}" ]]; then
 			log_sub_step "${iface}: no IRQ CPUs configured, queue count left at the driver default"
@@ -88,34 +256,34 @@ tune_nic_low_latency() {
 			combined="$(ethtool_max "${iface}" -l Combined)"
 			combined="$(nic_queue_count "${irq_cpus}" "${combined}")"
 			log_sub_step "${iface}: ${combined} combined queue(s), one per IRQ CPU (${irq_cpus})"
-			run_quiet ethtool -L "${iface}" combined "${combined}"
+			change_nic "${iface}" combined ethtool -L "${iface}" combined "${combined}"
 		fi
 		# Adaptive coalescing re-tunes rx/tx-usecs on the fly based on load; with it on,
 		# the fixed values below are overwritten within milliseconds.
 		log_sub_step "${iface}: adaptive-rx off, adaptive-tx off"
-		run_quiet ethtool -C "${iface}" adaptive-rx off adaptive-tx off
+		change_nic "${iface}" "adaptive_rx adaptive_tx" ethtool -C "${iface}" adaptive-rx off adaptive-tx off
 	fi
 
 	# Interrupt coalescing: 0 = raise the interrupt as soon as a packet is DMA'd
 	# (no waiting to batch more packets into one interrupt).
 	log_sub_step "${iface}: rx-usecs ${usecs}, tx-usecs ${usecs}"
-	run_quiet ethtool -C "${iface}" rx-usecs "${usecs}"
-	run_quiet ethtool -C "${iface}" tx-usecs "${usecs}"
+	change_nic "${iface}" rx_usecs ethtool -C "${iface}" rx-usecs "${usecs}"
+	change_nic "${iface}" tx_usecs ethtool -C "${iface}" tx-usecs "${usecs}"
 
 	# Ethernet flow control (IEEE 802.3x PAUSE frames). With it on, a congested peer
 	# or switch can pause our transmitter for up to ~3.3 ms at 10G.
 	log_sub_step "${iface}: pause frames off (ethtool -A autoneg off rx off tx off)"
-	run_quiet ethtool -A "${iface}" autoneg off rx off tx off
+	change_nic "${iface}" "pause_autoneg pause_rx pause_tx" ethtool -A "${iface}" autoneg off rx off tx off
 
 	# Segmentation/aggregation offloads batch small packets into large ones (LRO/GRO
 	# on receive, TSO/GSO on transmit). Great for throughput, but a small request
 	# may wait for its batch.
 	log_sub_step "${iface}: tso off, gso off, lro off"
-	run_quiet ethtool -K "${iface}" tso off gso off lro off
+	change_nic "${iface}" "tso gso lro" ethtool -K "${iface}" tso off gso off lro off
 
 	if [[ "${NIC_DISABLE_CSUM_OFFLOAD:-no}" == yes ]]; then
 		log_sub_step "${iface}: rx/tx checksum offload off (NIC_DISABLE_CSUM_OFFLOAD=yes)"
-		run_quiet ethtool -K "${iface}" rx off tx off
+		change_nic "${iface}" "rx_csum tx_csum" ethtool -K "${iface}" rx off tx off
 	fi
 
 	# Rings at the hardware maximum: absorbs bursts (traffic spikes, reconnect storms)
@@ -124,11 +292,11 @@ tune_nic_low_latency() {
 	max_tx="$(ethtool_max "${iface}" -g TX)"
 	if [[ -n "${max_rx}" && "${max_rx}" != n/a ]]; then
 		log_sub_step "${iface}: RX ring ${max_rx}"
-		run_quiet ethtool -G "${iface}" rx "${max_rx}"
+		change_nic "${iface}" rx_ring ethtool -G "${iface}" rx "${max_rx}"
 	fi
 	if [[ -n "${max_tx}" && "${max_tx}" != n/a ]]; then
 		log_sub_step "${iface}: TX ring ${max_tx}"
-		run_quiet ethtool -G "${iface}" tx "${max_tx}"
+		change_nic "${iface}" tx_ring ethtool -G "${iface}" tx "${max_tx}"
 	fi
 
 	if [[ "${txqueuelen}" != 0 ]]; then
@@ -209,6 +377,7 @@ show_nic_state() {
 
 apply_network() {
 	local spec iface role cpus txq
+	remember_network
 	log_step "NIC queues, coalescing, pause frames, offloads and rings"
 	if require_capability nic_tuning; then
 		require_commands ethtool ip
@@ -251,7 +420,9 @@ queues_are() { # queues_are <iface> <count>
 }
 
 adaptive_rx_off() {
-	ethtool -c "$1" 2>/dev/null | grep -q '^Adaptive RX: off'
+	local output
+	output="$(ethtool -c "$1" 2>/dev/null)" || return 1
+	grep -q '^Adaptive RX: off' <<<"${output}"
 }
 
 irqs_on_cpus() { # irqs_on_cpus <iface> <cpu list>
@@ -332,6 +503,11 @@ main() {
 		require_root
 		load_config
 		apply_network
+		;;
+	rollback)
+		require_root
+		load_config
+		rollback_network
 		;;
 	verify)
 		load_config

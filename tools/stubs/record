@@ -2,8 +2,7 @@
 #
 # record (fake) - records the call and succeeds without output. The commands whose
 # effect the scripts never read back are symbolic links to it: grub2-mkconfig, dnf,
-# modprobe, mount, nft, iptables, ip6tables, onload_tool, journalctl, timedatectl
-# and findmnt.
+# onload_tool, journalctl and timedatectl.
 
 # shellcheck source=tools/stubs/lib/fake
 . "$(dirname "${BASH_SOURCE[0]}")/lib/fake"

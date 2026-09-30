@@ -476,20 +476,43 @@ kernel-managed vectors may reject manual placement.
 
 ## 12. Rollback
 
-**Whole host:**
+Stop boot reapplication before restoring the NICs:
 
-- [ ] Stop re-applying at boot: `sudo systemctl disable lowlat-runtime.service`
-- [ ] Re-enable irqbalance: `sudo systemctl enable --now irqbalance`
-- [ ] Reboot, so the drivers load with their defaults: `sudo systemctl reboot`
+```bash
+sudo systemctl disable --now lowlat-runtime.service
+sudo scripts/04-network --rollback
+```
 
-**One interface, without a reboot:**
+The script restores the first-apply baseline retained under
+`/var/lib/lowlat/factory-settings`: combined channels, rings, coalescing,
+adaptive coalescing, PAUSE, managed offloads, transmit queue length, and IRQ
+CPU lists. Repeated apply, runtime reapplication, and rollback retain this
+baseline. A rollback without a saved apply does nothing. Management NICs
+without an explicit IRQ CPU list remain untouched.
 
-- [ ] Adaptive coalescing on: `sudo ethtool -C ens1f0 adaptive-rx on adaptive-tx on`
-- [ ] Offloads on: `sudo ethtool -K ens1f0 tso on gso on`
-- [ ] PAUSE on: `sudo ethtool -A ens1f0 autoneg on rx on tx on`
-- [ ] Queue count back to the "Current" value you saved in §4 (resets the link): `sudo ethtool -L ens1f0 combined <n>`
-- [ ] RSS indirection back to the driver default: `sudo ethtool -X ens1f0 default`
-- [ ] Every ntuple rule listed by `ethtool -n`: `sudo ethtool -N ens1f0 delete <rule id>`
+Channels are restored first because changing them may recreate IRQ vectors.
+The script rediscovers vectors and restores CPU lists in numeric vector order;
+IRQ numbers can change. A different vector count, missing interface, missing
+saved state, or rejected restoration command fails visibly. Inspect the error
+and the saved baseline before retrying; do not replace it with assumed driver
+defaults. Unsupported settings that the driver cannot report are left unchanged
+on apply. Channel and ring changes can interrupt traffic: use a maintenance
+window. This automatic restoration has harness coverage and has not been
+proven in production across every supported driver.
+
+Verify with `ethtool -l`, `-g`, `-c`, `-a`, `-k`,
+`ip link show dev <iface>`, and the discovered IRQs' `smp_affinity_list` and
+`effective_affinity_list`; compare them with the saved baseline and the output
+from §4. `--verify` checks the tuned configuration, so it is expected to fail
+after rollback. Reboot once boot reapplication is disabled to check the
+untuned boot behavior; driver boot defaults may differ from the saved runtime
+baseline. Reapply with `sudo scripts/04-network --apply` if desired.
+
+For a whole host, restore Guide 08 before Guide 04 so a driver reload does not
+replace the restored settings. Restore irqbalance through Guide 02. RSS
+indirection and manually added ntuple rules from the optional examples are
+outside the script's managed settings; undo them using the original output
+from §4 (`ethtool -X` and `ethtool -N`).
 
 ## 13. Key takeaways
 

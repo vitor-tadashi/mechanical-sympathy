@@ -41,6 +41,33 @@ set_pairs() {
 	done
 }
 
+# Some drivers recreate MSI vectors when the channel count changes. A regression
+# can request this behavior and a new IRQ base through run/fake-ethtool-irqs/IFACE.
+resize_irqs() {
+	local iface="$1" marker="${LOWLAT_ROOT}/run/fake-ethtool-irqs/$1" device dir vector base queue irq cpus
+	[[ -f "${marker}" ]] || return 0
+	device="$(readlink -f "${LOWLAT_ROOT}/sys/class/net/${iface}/device")"
+	dir="${device}/msi_irqs"
+	[[ "${device##*/}" != virtio* ]] || dir="${device%/*}/msi_irqs"
+	for vector in "${dir}"/*; do
+		[[ -e "${vector}" ]] || continue
+		irq="${vector##*/}"
+		rm -rf "${LOWLAT_ROOT}/proc/irq/${irq}"
+		sed -i "/^[[:space:]]*${irq}:/d" "${LOWLAT_ROOT}/proc/interrupts"
+		rm "${vector}"
+	done
+	base="$(cat "${marker}")"
+	cpus="$(cat "${LOWLAT_ROOT}/sys/devices/system/cpu/online")"
+	for ((queue = 0; queue < NIC[combined]; queue++)); do
+		irq=$((base + queue))
+		: >"${dir}/${irq}"
+		mkdir -p "${LOWLAT_ROOT}/proc/irq/${irq}"
+		printf '%s\n' "${cpus}" >"${LOWLAT_ROOT}/proc/irq/${irq}/smp_affinity_list"
+		printf '0\n' >"${LOWLAT_ROOT}/proc/irq/${irq}/effective_affinity_list"
+		printf ' %s: 0 PCI-MSI %s-TxRx-%s\n' "${irq}" "${iface}" "${queue}" >>"${LOWLAT_ROOT}/proc/interrupts"
+	done
+}
+
 show_channels() {
 	printf 'Channel parameters for %s:\nPre-set maximums:\nRX:\t\tn/a\nTX:\t\tn/a\nOther:\t\t1\nCombined:\t%s\n' "$1" "${NIC[combined_max]}"
 	printf 'Current hardware settings:\nRX:\t\tn/a\nTX:\t\tn/a\nOther:\t\t1\nCombined:\t%s\n' "${NIC[combined]}"
@@ -80,6 +107,7 @@ main() {
 	[[ "${option}" == -[LCAKG] ]] && fake_record "$@"
 	STATE="${LOWLAT_ROOT}/run/fake-ethtool/${iface}"
 	[[ -n "${iface}" && -f "${STATE}" ]] || fake_fail 71 "Cannot get device settings: No such device"
+	[[ ! -f "${LOWLAT_ROOT}/run/fake-ethtool-fail/${iface}/${option}" ]] || fake_fail 1 "driver rejected ${option}"
 	load_state
 	shift 2
 	case "${option}" in
@@ -89,6 +117,7 @@ main() {
 		set_pairs combined:combined "$@"
 		((NIC[combined] >= 1 && NIC[combined] <= NIC[combined_max])) ||
 			fake_fail 1 "Cannot set device channel parameters: Invalid argument"
+		resize_irqs "${iface}"
 		;;
 	-g) show_rings "${iface}" ;;
 	-G)
@@ -105,7 +134,7 @@ main() {
 	-T) show_timestamping "${iface}" ;;
 	*) fake_fail 1 "unsupported option ${option}" ;;
 	esac
-	save_state
+	[[ "${option}" != -[LCAKG] ]] || save_state
 }
 
 main "$@"

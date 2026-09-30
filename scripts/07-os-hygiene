@@ -34,6 +34,167 @@ NETFILTER_MODULES=(
 	ip_tables ip6t_REJECT ip6_tables xt_LOG xt_multiport
 )
 
+# Save all originals before stopping services; firewalld can discard rules on stop.
+remember_os_runtime() {
+	local rules modules="" module key value
+	[[ "${DRY_RUN}" -eq 1 ]] && return 0
+	if [[ "${FLUSH_FIREWALL_RULES:-no}" == yes || "${DISABLE_FIREWALLD:-no}" == yes || "${REMOVE_NETFILTER_MODULES:-no}" == yes ]]; then
+		if [[ -f "${LOWLAT_FACTORY_DIR}/.values/07/firewall" ]]; then
+			for key in nft iptables ip6tables; do value="$(original_value "07/${key}")"; done
+		else
+			require_commands nft iptables-save ip6tables-save iptables-restore ip6tables-restore
+			rules="$(nft list ruleset)"
+			remember_value 07/nft "${rules}"
+			rules="$(iptables-save)"
+			remember_value 07/iptables "${rules}"
+			rules="$(ip6tables-save)"
+			remember_value 07/ip6tables "${rules}"
+			remember_value 07/firewall yes
+		fi
+	fi
+	if [[ "${REMOVE_NETFILTER_MODULES:-no}" == yes ]]; then
+		if [[ -f "${LOWLAT_FACTORY_DIR}/.values/07/modules-complete" ]]; then
+			value="$(original_value 07/modules)"
+		else
+			require_commands modprobe
+			for module in "${NETFILTER_MODULES[@]}"; do
+				if grep -q "^${module} " "${LOWLAT_ROOT}/proc/modules"; then
+					modules+="${modules:+$'\n'}${module}"
+				fi
+			done
+			remember_value 07/modules "${modules}"
+			remember_value 07/modules-complete yes
+		fi
+	fi
+}
+
+remember_os_hygiene() {
+	local file files unit services="" mounts="" mountpoint options profile value
+	[[ "${DRY_RUN}" -eq 1 ]] && return 0
+	remember_os_runtime
+	if [[ -f "${LOWLAT_FACTORY_DIR}/.values/07/complete" ]]; then
+		value="$(original_value 07/complete)"
+		[[ "${value}" == yes ]] || die "invalid saved OS hygiene apply marker"
+		files="$(original_value 07/files)"
+		[[ -n "${files}" ]] || die "empty saved OS hygiene file list"
+		while IFS= read -r file; do remember_file "${file}"; done <<<"${files}"
+		services="$(original_value 07/services)"
+		while IFS= read -r unit; do value="$(original_value "services/${unit}")"; done <<<"${services}"
+		if grep -qx tuned <<<"${services}"; then value="$(original_value 07/tuned-profile)"; fi
+		mounts="$(original_value 07/mounts)"
+		while IFS= read -r mountpoint; do
+			[[ -n "${mountpoint}" ]] || continue
+			value="$(original_value "07/mount-options${mountpoint%/}/options")"
+		done <<<"${mounts}"
+		return 0
+	fi
+	files="${LIMITS_FILE}"$'\n'"${FSTAB}"
+	for unit in "${DISABLE_SERVICES[@]}" rsyslog; do
+		remember_service "${unit}"
+		services+="${services:+$'\n'}${unit}"
+	done
+	if [[ "${DISABLE_FIREWALLD:-no}" == yes ]]; then
+		remember_service firewalld
+		services+=$'\n'firewalld
+	fi
+	if command -v tuned-adm >/dev/null 2>&1; then
+		files+=$'\n'"${TUNED_PROFILE_DIR}/tuned.conf"$'\n'"${LOWLAT_ROOT}/etc/tuned/tuned-main.conf"$'\n'"${LOWLAT_ROOT}/etc/tuned/active_profile"$'\n'"${LOWLAT_ROOT}/etc/tuned/profile_mode"$'\n'"${LOWLAT_ROOT}/etc/tuned/bootcmdline"
+		remember_service tuned
+		services+=$'\n'"tuned"
+		if [[ ! -f "${LOWLAT_FACTORY_DIR}/.values/07/tuned-profile" ]]; then
+			profile="$(tuned-adm active 2>/dev/null || true)"
+			profile="$(sed -n 's/^Current active profile: //p' <<<"${profile}")"
+			remember_value 07/tuned-profile "${profile:-off}"
+		fi
+	fi
+	while IFS= read -r file; do remember_file "${file}"; done <<<"${files}"
+	remember_value 07/files "${files}"
+	remember_value 07/services "${services}"
+	if [[ ! -f "${LOWLAT_FACTORY_DIR}/.values/07/mounts" ]]; then
+		if [[ -r "${FSTAB}" ]]; then
+			mounts="$(awk '!/^[[:space:]]*#/ && ($3=="xfs"||$3=="ext4"||$3=="ext3") && $4 !~ /(^|,)noatime(,|$)/ {print $2}' "${FSTAB}")"
+			while IFS= read -r mountpoint; do
+				[[ -n "${mountpoint}" ]] || continue
+				options="$(findmnt -nro OPTIONS --target "${LOWLAT_ROOT}${mountpoint}")"
+				[[ -n "${options}" && "${options}" != *$'\n'* ]] || die "cannot save mount options for ${mountpoint}" "${EXIT_PRECHECK}"
+				remember_value "07/mount-options${mountpoint%/}/options" "${options}"
+			done <<<"${mounts}"
+		fi
+		remember_value 07/mounts "${mounts}"
+	fi
+	remember_value 07/complete yes
+}
+
+rollback_os_runtime() {
+	local module modules rules
+	if [[ -f "${LOWLAT_FACTORY_DIR}/.values/07/modules-complete" ]]; then
+		modules="$(original_value 07/modules)"
+		# Reload dependencies first, reversing the removal order.
+		local -a loaded
+		mapfile -t loaded <<<"${modules}"
+		for ((module = ${#loaded[@]} - 1; module >= 0; module--)); do
+			[[ -n "${loaded[module]}" ]] || continue
+			[[ " ${NETFILTER_MODULES[*]} " == *" ${loaded[module]} "* ]] || die "invalid saved netfilter module"
+			run modprobe "${loaded[module]}"
+		done
+	fi
+	if [[ -f "${LOWLAT_FACTORY_DIR}/.values/07/firewall" ]]; then
+		rules="$(original_value 07/nft)"
+		# nft's saved listing is a complete ruleset, not an incremental update.
+		run nft flush ruleset
+		printf '%s\n' "${rules}" | nft -f -
+		rules="$(original_value 07/iptables)"
+		printf '%s\n' "${rules}" | iptables-restore
+		rules="$(original_value 07/ip6tables)"
+		printf '%s\n' "${rules}" | ip6tables-restore
+	fi
+}
+
+rollback_os_hygiene() {
+	local complete files services file unit profile mounts mountpoint options
+	log_step "Restoring OS hygiene baseline"
+	if [[ -f "${LOWLAT_FACTORY_DIR}/.values/07/complete" ]]; then
+		complete="$(original_value 07/complete)"
+		[[ "${complete}" == yes ]] || die "invalid saved OS hygiene apply marker"
+		files="$(original_value 07/files)"
+		[[ -n "${files}" ]] || die "empty saved OS hygiene file list"
+		services="$(original_value 07/services)"
+		mounts="$(original_value 07/mounts)"
+		if grep -qx tuned <<<"${services}"; then
+			profile="$(original_value 07/tuned-profile)"
+			[[ "${profile}" =~ ^[a-zA-Z0-9_./+-]+(\ [a-zA-Z0-9_./+-]+)*$ ]] || die "invalid saved tuned profile"
+			run tuned-adm off
+		fi
+		while IFS= read -r file; do
+			[[ -n "${file}" ]] || continue
+			restore_file "${file}"
+		done <<<"${files}"
+		if [[ -n "${profile:-}" && "${profile}" != off ]]; then run tuned-adm profile "${profile}"; fi
+		# Switching profiles also changes tuned's selection files. Restore exact originals.
+		if [[ -n "${profile:-}" ]]; then
+			restore_file "${LOWLAT_ROOT}/etc/tuned/active_profile"
+			restore_file "${LOWLAT_ROOT}/etc/tuned/profile_mode"
+		fi
+		while IFS= read -r mountpoint; do
+			[[ -n "${mountpoint}" ]] || continue
+			options="$(original_value "07/mount-options${mountpoint%/}/options")"
+			[[ -n "${options}" && "${options}" != *$'\n'* ]] || die "invalid saved mount options"
+			run mount -o "remount,${options}" "${LOWLAT_ROOT}${mountpoint}"
+		done <<<"${mounts}"
+		run systemctl daemon-reload
+		rollback_os_runtime
+		while IFS= read -r unit; do
+			[[ -n "${unit}" ]] || continue
+			restore_service "${unit}"
+		done <<<"${services}"
+		if [[ -n "${profile:-}" ]]; then
+			restore_file "${LOWLAT_ROOT}/etc/tuned/bootcmdline"
+		fi
+		return 0
+	fi
+	rollback_os_runtime
+}
+
 disable_unnecessary_services() {
 	local unit
 	for unit in "${DISABLE_SERVICES[@]}"; do
@@ -100,7 +261,7 @@ set_noatime_mounts() {
 	while read -r mountpoint; do
 		[[ -n "${mountpoint}" ]] || continue
 		log_sub_step "Remounting ${mountpoint} with noatime"
-		run_quiet mount -o remount,noatime "${mountpoint}"
+		run_quiet mount -o remount,noatime "${LOWLAT_ROOT}${mountpoint}"
 	done <<<"${mountpoints}"
 }
 
@@ -161,6 +322,7 @@ remove_netfilter_modules() {
 }
 
 apply_os_hygiene() {
+	remember_os_hygiene
 	log_step "Unnecessary services"
 	if require_capability os_hygiene; then
 		disable_unnecessary_services
@@ -195,6 +357,7 @@ apply_os_hygiene() {
 
 # Firewall flush and module removal are not persistent; re-done at boot when opted in.
 apply_os_hygiene_runtime() {
+	remember_os_runtime
 	log_step "Host packet filtering (opt-in)"
 	[[ "${FLUSH_FIREWALL_RULES:-no}" == yes ]] && flush_firewall_rules
 	[[ "${REMOVE_NETFILTER_MODULES:-no}" == yes ]] && remove_netfilter_modules
@@ -232,6 +395,11 @@ main() {
 		require_root
 		load_config
 		apply_os_hygiene_runtime
+		;;
+	rollback)
+		require_root
+		load_config
+		rollback_os_hygiene
 		;;
 	verify)
 		load_config

@@ -216,17 +216,132 @@ factory_copy() {
 # backup_file <path> - the first time a file is touched, keep a pristine copy under
 # factory-settings/ (never overwritten). Every run also keeps a timestamped copy.
 backup_file() {
-	local path="$1" factory backup
-	[[ -f "${path}" ]] || return 0
+	local path="$1" factory backup state
+	[[ -f "${path}" || -L "${path}" ]] || return 0
 	[[ "${DRY_RUN}" -eq 1 ]] && return 0
 	factory="$(factory_copy "${path}")"
 	backup="${LOWLAT_BACKUP_DIR}${path#"${LOWLAT_ROOT}"}"
-	if [[ ! -e "${factory}" ]]; then
+	state="${LOWLAT_FACTORY_DIR}/.values/files${path#"${LOWLAT_ROOT}"}"
+	if [[ ! -e "${factory}" && ! -L "${factory}" ]] && ! grep -qx absent "${state}" 2>/dev/null; then
 		mkdir -p "$(dirname "${factory}")"
 		cp -a "${path}" "${factory}"
 	fi
 	mkdir -p "$(dirname "${backup}")"
 	cp -a "${path}" "${backup}"
+}
+
+# remember_value <key> <value> - first-apply metadata; never source it as shell code.
+remember_value() {
+	local file="${LOWLAT_FACTORY_DIR}/.values/$1"
+	[[ "${DRY_RUN}" -eq 1 || -e "${file}" ]] && return 0
+	mkdir -p "${file%/*}"
+	printf '%s\n' "$2" >"${file}"
+	chmod 0600 "${file}"
+}
+
+original_value() {
+	local file="${LOWLAT_FACTORY_DIR}/.values/$1"
+	[[ -r "${file}" ]] || die "missing saved state: ${file}"
+	cat "${file}"
+}
+
+# Record absence as well as presence; backup_file alone cannot distinguish them.
+remember_file() {
+	local path="$1" factory kind=absent state
+	[[ "${DRY_RUN}" -eq 1 ]] && return 0
+	factory="$(factory_copy "${path}")"
+	state="${LOWLAT_FACTORY_DIR}/.values/files${path#"${LOWLAT_ROOT}"}"
+	if [[ -e "${state}" ]]; then
+		kind="$(original_value "files${path#"${LOWLAT_ROOT}"}")"
+		case "${kind}" in
+		absent) return 0 ;;
+		present)
+			[[ -e "${factory}" || -L "${factory}" ]] || die "missing factory backup: ${factory}" "${EXIT_PRECHECK}"
+			return 0
+			;;
+		*) die "invalid saved file state for ${path}" "${EXIT_PRECHECK}" ;;
+		esac
+	fi
+	if [[ -e "${factory}" || -L "${factory}" || -f "${path}" || -L "${path}" ]]; then
+		kind=present
+		backup_file "${path}"
+	fi
+	remember_value "files${path#"${LOWLAT_ROOT}"}" "${kind}"
+}
+
+restore_file() {
+	local path="$1" factory kind
+	kind="$(original_value "files${path#"${LOWLAT_ROOT}"}")"
+	case "${kind}" in
+	absent) run rm -f "${path}" ;;
+	present)
+		factory="$(factory_copy "${path}")"
+		[[ -e "${factory}" || -L "${factory}" ]] || die "missing factory backup: ${factory}"
+		run mkdir -p "${path%/*}"
+		run cp -a --remove-destination "${factory}" "${path}"
+		;;
+	*) die "invalid saved file state for ${path}" ;;
+	esac
+}
+
+remember_runtime_value() {
+	local value=unavailable
+	if [[ -r "$2" ]]; then
+		value="$(cat "$2")"
+	fi
+	remember_value "$1" "${value}"
+}
+
+restore_runtime_value() {
+	local value pattern="${3:-.+}"
+	value="$(original_value "$1")"
+	[[ "${value}" != unavailable ]] || return 0
+	[[ "${value}" =~ ${pattern} ]] || die "invalid saved runtime state: $1"
+	[[ -e "$2" ]] || die "cannot restore missing runtime setting: $2"
+	sysfs_write "${value}" "$2"
+}
+
+remember_service() {
+	local unit="$1" enabled active
+	[[ "${DRY_RUN}" -eq 1 || -f "${LOWLAT_FACTORY_DIR}/.values/services/${unit}" ]] && return 0
+	# is-enabled and is-active return nonzero for valid disabled/inactive states.
+	enabled="$(systemctl is-enabled "${unit}" 2>/dev/null || true)"
+	if [[ "${enabled}" != masked ]] && ! systemctl cat "${unit}" >/dev/null 2>&1; then
+		remember_value "services/${unit}" absent
+		return 0
+	fi
+	active="$(systemctl is-active "${unit}" 2>/dev/null || true)"
+	case "${enabled}" in enabled | disabled | masked | static | indirect) ;;
+	*) die "unsupported enabled state for ${unit}: ${enabled}" "${EXIT_PRECHECK}" ;; esac
+	case "${active}" in active | inactive | failed) ;;
+	*) die "cannot save transitional service state for ${unit}: ${active}" "${EXIT_PRECHECK}" ;; esac
+	remember_value "services/${unit}" "${enabled} ${active}"
+}
+
+restore_service() {
+	local unit="$1" state enabled active
+	state="$(original_value "services/${unit}")"
+	[[ "${state}" != absent ]] || return 0
+	read -r enabled active <<<"${state}"
+	case "${enabled}" in enabled | disabled | masked | static | indirect) ;;
+	*) die "invalid saved enabled state for ${unit}" ;; esac
+	case "${active}" in active | inactive | failed) ;;
+	*) die "invalid saved active state for ${unit}" ;; esac
+	run systemctl unmask "${unit}"
+	case "${enabled}" in
+	enabled) run systemctl enable "${unit}" ;;
+	disabled) run systemctl disable "${unit}" ;;
+	masked) ;;
+	*) ;;
+	esac
+	if [[ "${active}" == active ]]; then
+		run systemctl start "${unit}"
+	else
+		run systemctl stop "${unit}"
+	fi
+	if [[ "${enabled}" == masked ]]; then
+		run systemctl mask "${unit}"
+	fi
 }
 
 # -----------------------------------------------------------------------------

@@ -378,17 +378,38 @@ phase_after_apply() {
 	journalctl -b -u lowlat-runtime.service --no-pager >"${WORK}/${pass}-runtime-journal.txt" 2>&1 || true
 }
 
+# rollback_guide <pass> <guide> - one --rollback. A rollback that fails is a finding like a
+# leftover: "rollback failed GUIDE: LINE" for each line that says what failed, matched
+# against the known issues.
+rollback_guide() {
+	local pass="$1" guide="$2" output status=0 lines
+	output="$(as_pass "${pass}" "${REPO}/scripts/${guide}" --rollback 2>&1)" || status=$?
+	log_output "${pass}: ${guide} --rollback" "${status}" "${output}"
+	if ((status == 0)); then
+		ok "${pass}: ${guide} --rollback"
+		return 0
+	fi
+	lines="$(grep -i -E 'failed|error' <<<"${output}" | sed -e 's/^[[:space:]]*//' -e "s|^|rollback failed ${guide}: |" || true)"
+	[[ -n "${lines}" ]] || lines="rollback failed ${guide}: exit ${status}"
+	report_leftovers "${pass}: ${guide} --rollback (exit ${status})" "${lines}"
+}
+
 phase_rollback() {
 	local pass="$1" index guide lines
 	grub_evidence "${WORK}/grub-${pass}-before-rollback.txt"
 	for ((index = ${#HOST_APPLY_ORDER[@]} - 1; index >= 0; index--)); do
 		guide="${HOST_APPLY_ORDER[index]}"
-		check "${pass}: ${guide} --rollback" as_pass "${pass}" "${REPO}/scripts/${guide}" --rollback
+		rollback_guide "${pass}" "${guide}"
 	done
 	grub_evidence "${WORK}/grub-${pass}-after-rollback-before-reboot.txt"
 	# Runtime state that the next boot resets anyway, but that a rollback should undo now.
+	# IRQ numbers and effective CPUs change from boot to boot: they stay in the evidence
+	# file and out of the comparison.
 	nic_state >"${WORK}/${pass}-rolled-back-nic"
-	lines="$(diff_lines nic "${WORK}/${pass}-before/nic" "${WORK}/${pass}-rolled-back-nic" | sed 's/^nic \(missing\|extra\) nic /nic \1 /')"
+	grep -v '^nic [^ ]* irq ' "${WORK}/${pass}-before/nic" >"${WORK}/${pass}-before-nic-settings" || true
+	grep -v '^nic [^ ]* irq ' "${WORK}/${pass}-rolled-back-nic" >"${WORK}/${pass}-rolled-back-nic-settings" || true
+	lines="$(diff_lines nic "${WORK}/${pass}-before-nic-settings" "${WORK}/${pass}-rolled-back-nic-settings" |
+		sed 's/^nic \(missing\|extra\) nic /nic \1 /')"
 	report_leftovers "${pass}: rollback left runtime NIC state" "${lines}"
 }
 

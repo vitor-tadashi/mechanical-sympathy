@@ -21,6 +21,13 @@ profile)
 	[[ -f "${LOWLAT_ROOT}${PROFILE_ROOT}/$2/tuned.conf" || -f "${LOWLAT_ROOT}${VENDOR_ROOT}/$2/tuned.conf" ]] ||
 		fake_fail 1 "Requested profile '$2' doesn't exist."
 	printf '%s\n' "$2" >"${ACTIVE}"
+	printf 'manual\n' >"${LOWLAT_ROOT}/etc/tuned/profile_mode"
+	printf 'TUNED_BOOT_CMDLINE=\"\"\n' >"${LOWLAT_ROOT}/etc/tuned/bootcmdline"
+	;;
+off)
+	: >"${ACTIVE}"
+	printf 'manual\n' >"${LOWLAT_ROOT}/etc/tuned/profile_mode"
+	printf 'TUNED_BOOT_CMDLINE=\"\"\n' >"${LOWLAT_ROOT}/etc/tuned/bootcmdline"
 	;;
 active)
 	profile="$(cat "${ACTIVE}" 2>/dev/null || true)"
