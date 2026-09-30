@@ -1154,8 +1154,14 @@ A /var/lib/fake-systemd/enabled/lowlat-runtime.service
 A /var/lib/fake-systemd/enabled/lowlat-verify.timer
 A /var/lib/lowlat/aspm-original-policy
 A /var/lib/lowlat/console-original
+A /var/lib/lowlat/factory-settings/.values/*/complete
+A /var/lib/lowlat/factory-settings/.values/*/rt-runtime
+A /var/lib/lowlat/factory-settings/.values/*/workqueue
+A /var/lib/lowlat/factory-settings/.values/*/writeback
+A /var/lib/lowlat/factory-settings/.values/files/etc/sysctl.d/91-lowlat-rt.conf
+A /var/lib/lowlat/factory-settings/.values/files/etc/systemd/system.conf
+A /var/lib/lowlat/factory-settings/.values/services/irqbalance
 A /var/lib/lowlat/factory-settings/etc/fstab
-A /var/lib/lowlat/factory-settings/etc/systemd/system.conf
 D /run/fake-systemd/active/crond.service
 D /run/fake-systemd/active/irqbalance.service
 D /var/lib/fake-systemd/enabled/crond.service
@@ -1595,16 +1601,9 @@ Host class: bare_metal (override with LOWLAT_HOST_CLASS=bare_metal|virtual_machi
 ---- exit 0
 
 ==== 02-cpu-isolation --rollback
-Usage: 02-cpu-isolation [--apply | --dry-run | --verify | --rollback] [--config FILE]
 
-  --apply      apply this guide's tuning (root)
-  --dry-run    print every command/file that --apply would run/write
-  --verify     read-only check of this guide's tuning
-  --rollback   undo this guide's tuning (when supported)
-  --runtime    re-apply only the non-persistent part (used at boot by lowlat-runtime.service)
-  --config     configuration file (default: /etc/lowlat/lowlat.conf)
-
-Host class: bare_metal (override with LOWLAT_HOST_CLASS=bare_metal|virtual_machine)
+01. Restoring CPU isolation baseline
+    01.01 Reboot required to restore PID 1 and inherited service affinity
 ---- exit 0
 
 ==== 01-grub-bootloader --rollback
@@ -1716,7 +1715,7 @@ lowlat-runtime.service: /opt/lowlat/scripts/apply-all --runtime
       04.12 eno2: 8 IRQ(s) placed
   
   05. Pinning housekeeping processes
-      05.01 Pinning edr-agentd pid 1006 (all threads) to CPUs 4
+      05.01 Pinning edr-agentd pid 1007 (all threads) to CPUs 4
       05.02 av-scand is not running
   
   06. Host packet filtering (opt-in)
@@ -1737,26 +1736,26 @@ lowlat-runtime.service: /opt/lowlat/scripts/apply-all --runtime
 
 ==== left behind by rollback (compared with the host before apply)
 A /etc/security/limits.d/90-lowlat.conf
-A /etc/sysctl.d/91-lowlat-rt.conf
-A /etc/systemd/system.conf
 A /etc/systemd/system/lowlat-runtime.service
 A /etc/tuned/profiles/low-latency/tuned.conf
 A /run/fake-systemd/active/lowlat-runtime.service
 A /var/lib/fake-systemd/enabled/lowlat-runtime.service
 A /var/lib/lowlat/aspm-original-policy
 A /var/lib/lowlat/console-original
+A /var/lib/lowlat/factory-settings/.values/*/complete
+A /var/lib/lowlat/factory-settings/.values/*/rt-runtime
+A /var/lib/lowlat/factory-settings/.values/*/workqueue
+A /var/lib/lowlat/factory-settings/.values/*/writeback
+A /var/lib/lowlat/factory-settings/.values/files/etc/sysctl.d/91-lowlat-rt.conf
+A /var/lib/lowlat/factory-settings/.values/files/etc/systemd/system.conf
+A /var/lib/lowlat/factory-settings/.values/services/irqbalance
 A /var/lib/lowlat/factory-settings/etc/fstab
-A /var/lib/lowlat/factory-settings/etc/systemd/system.conf
 D /run/fake-systemd/active/crond.service
-D /run/fake-systemd/active/irqbalance.service
 D /var/lib/fake-systemd/enabled/crond.service
-D /var/lib/fake-systemd/enabled/irqbalance.service
 M /etc/fstab
 M /etc/tuned/active_profile
-M /proc/*/status
 M /proc/irq/*/effective_affinity_list (32)
 M /proc/irq/*/smp_affinity_list (48)
-M /proc/sys/kernel/sched_rt_runtime_us
 M /run/fake-ethtool/eno1
 M /run/fake-ethtool/ens1f0
 M /run/fake-ethtool/ens1f1
@@ -1773,23 +1772,8 @@ M /sys/module/pcie_aspm/parameters/policy
 ==== /proc/cmdline differences
 
 ==== process differences
-1,10c1,8
-< chronyd              cpus 0-31
+2,3c2
 < crond                cpus 0-31
 < edr-agentd           cpus 0-31
-< firewalld            cpus 0-31
-< irqbalance           cpus 0-31
-< node_exporter        cpus 0-31
-< rsyslog              cpus 0-31
-< sshd                 cpus 0-31
-< systemd              cpus 0-31
-< tuned                cpus 0-31
 ---
-> chronyd              cpus 0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30
 > edr-agentd           cpus 4
-> firewalld            cpus 0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30
-> node_exporter        cpus 0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30
-> rsyslog              cpus 0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30
-> sshd                 cpus 0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30
-> systemd              cpus 0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30
-> tuned                cpus 0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30

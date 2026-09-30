@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Focused regressions for the guide scripts, using the Level 1 fake hosts.
+# Fixture values are illustrative, not measurements.
 # Needs Linux and GNU tools, like tools/check-scripts.
 set -Eeuo pipefail
 export LC_ALL=C
@@ -132,11 +133,82 @@ unreadable_irq() {
 	expect_status 1 bash -c '. "$1"; irqs_on_cpus eth0 1' _ "${REPO}/scripts/04-network"
 }
 
+cpu_rollback() {
+	setup rhel9-2s-ref
+	printf 'DefaultTimeoutStartSec=45s\n' >>"${LOWLAT_ROOT}/etc/systemd/system.conf"
+	cp "${LOWLAT_ROOT}/etc/systemd/system.conf" "${WORK}/manager-before"
+	mkdir -p "${LOWLAT_ROOT}/etc/sysctl.d"
+	printf 'kernel.sched_rt_runtime_us = 800000\n' >"${LOWLAT_ROOT}/etc/sysctl.d/91-lowlat-rt.conf"
+	printf '800000\n' >"${LOWLAT_ROOT}/proc/sys/kernel/sched_rt_runtime_us"
+	printf '0000000f\n' >"${LOWLAT_ROOT}/sys/devices/virtual/workqueue/cpumask"
+	expect_status 0 systemctl disable --now irqbalance
+	expect_status 0 "${REPO}/scripts/02-cpu-isolation" --apply
+	expect_status 0 "${REPO}/scripts/02-cpu-isolation" --apply
+	expect_status 0 "${REPO}/scripts/02-cpu-isolation" --runtime
+	expect_status 0 "${REPO}/scripts/02-cpu-isolation" --rollback
+	expect_status 0 diff "${WORK}/manager-before" "${LOWLAT_ROOT}/etc/systemd/system.conf"
+	grep -qx 800000 "${LOWLAT_ROOT}/proc/sys/kernel/sched_rt_runtime_us" || fail "RT baseline not restored"
+	grep -qx 0000000f "${LOWLAT_ROOT}/sys/devices/virtual/workqueue/cpumask" || fail "workqueue baseline not restored"
+	expect_status 1 systemctl is-enabled --quiet irqbalance
+	expect_status 3 systemctl is-active --quiet irqbalance
+	expect_status 0 "${REPO}/scripts/02-cpu-isolation" --rollback
+}
+
+cpu_absent_files() {
+	setup rhel10-2s-ref
+	expect_status 0 "${REPO}/scripts/02-cpu-isolation" --apply
+	expect_status 0 "${REPO}/scripts/02-cpu-isolation" --rollback
+	[[ ! -e "${LOWLAT_ROOT}/etc/systemd/system.conf" ]] || fail "created manager file left behind"
+	[[ ! -e "${LOWLAT_ROOT}/etc/sysctl.d/91-lowlat-rt.conf" ]] || fail "created RT file left behind"
+	expect_status 0 systemctl is-enabled --quiet irqbalance
+	expect_status 0 systemctl is-active --quiet irqbalance
+}
+
+cpu_lost_backup() {
+	setup rhel9-2s-ref
+	expect_status 0 "${REPO}/scripts/02-cpu-isolation" --apply
+	rm "${LOWLAT_ROOT}/var/lib/lowlat/factory-settings/etc/systemd/system.conf"
+	expect_status 1 "${REPO}/scripts/02-cpu-isolation" --rollback
+	expect_status 3 "${REPO}/scripts/02-cpu-isolation" --apply
+}
+
+cpu_no_apply() {
+	setup rhel9-2s-ref
+	expect_status 0 "${REPO}/scripts/02-cpu-isolation" --rollback
+	[[ ! -d "${LOWLAT_ROOT}/var/lib/lowlat/factory-settings" ]] || fail "rollback without apply created state"
+	expect_status 0 "${REPO}/scripts/02-cpu-isolation" --dry-run
+	[[ ! -d "${LOWLAT_ROOT}/var/lib/lowlat/factory-settings" ]] || fail "dry run created state"
+}
+
+cpu_missing_knob() {
+	setup rhel9-2s-ref
+	expect_status 0 "${REPO}/scripts/02-cpu-isolation" --apply
+	rm "${LOWLAT_ROOT}/sys/devices/virtual/workqueue/cpumask"
+	expect_status 1 "${REPO}/scripts/02-cpu-isolation" --rollback
+}
+
+cpu_runtime_only() {
+	setup rhel9-2s-ref
+	cp "${LOWLAT_ROOT}/etc/systemd/system.conf" "${WORK}/manager-before"
+	expect_status 0 "${REPO}/scripts/02-cpu-isolation" --runtime
+	expect_status 0 "${REPO}/scripts/02-cpu-isolation" --rollback
+	expect_status 0 diff "${WORK}/manager-before" "${LOWLAT_ROOT}/etc/systemd/system.conf"
+	expect_status 0 systemctl is-active --quiet irqbalance
+	grep -qx ffffffff "${LOWLAT_ROOT}/sys/devices/virtual/workqueue/cpumask" || fail "runtime-only baseline not restored"
+}
+
+cpu_corrupt_state() {
+	setup rhel9-2s-ref
+	expect_status 0 "${REPO}/scripts/02-cpu-isolation" --apply
+	printf 'invalid\n' >"${LOWLAT_ROOT}/var/lib/lowlat/factory-settings/.values/02/workqueue"
+	expect_status 1 "${REPO}/scripts/02-cpu-isolation" --rollback
+}
+
 if [[ "${1:-}" == --case ]]; then
 	"$2"
 	exit 0
 fi
-cases=(missing_system_conf tuned_layout missing_chrony existing_manager missing_chrony_unit console_restore virtio_placement unknown_irq unreadable_irq)
+cases=(missing_system_conf tuned_layout missing_chrony existing_manager missing_chrony_unit console_restore virtio_placement unknown_irq unreadable_irq cpu_rollback cpu_absent_files cpu_lost_backup cpu_no_apply cpu_missing_knob cpu_runtime_only cpu_corrupt_state)
 for name in "${cases[@]}"; do
 	bash "$0" --case "${name}"
 done

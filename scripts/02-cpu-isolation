@@ -115,7 +115,43 @@ show_affinity() {
 	done
 }
 
+remember_cpu_runtime() {
+	remember_runtime_value 02/workqueue "${LOWLAT_ROOT}/sys/devices/virtual/workqueue/cpumask"
+	remember_runtime_value 02/writeback "${LOWLAT_ROOT}/sys/bus/workqueue/devices/writeback/cpumask"
+}
+
+remember_cpu_isolation() {
+	remember_cpu_runtime
+	remember_file "${SYSTEMD_SYSTEM_CONF}"
+	remember_file "${LOWLAT_ROOT}/etc/sysctl.d/91-lowlat-rt.conf"
+	remember_runtime_value 02/rt-runtime "${LOWLAT_ROOT}/proc/sys/kernel/sched_rt_runtime_us"
+	remember_service irqbalance
+	remember_value 02/complete yes
+}
+
+rollback_cpu_isolation() {
+	local complete
+	log_step "Restoring CPU isolation baseline"
+	if [[ ! -f "${LOWLAT_FACTORY_DIR}/.values/02/workqueue" && ! -f "${LOWLAT_FACTORY_DIR}/.values/02/complete" ]]; then
+		log_sub_step "No saved CPU isolation baseline, nothing to restore"
+		return 0
+	fi
+	if [[ -f "${LOWLAT_FACTORY_DIR}/.values/02/complete" ]]; then
+		complete="$(original_value 02/complete)"
+		[[ "${complete}" == yes ]] || die "invalid CPU isolation baseline marker"
+		restore_file "${SYSTEMD_SYSTEM_CONF}"
+		restore_file "${LOWLAT_ROOT}/etc/sysctl.d/91-lowlat-rt.conf"
+		restore_runtime_value 02/rt-runtime "${LOWLAT_ROOT}/proc/sys/kernel/sched_rt_runtime_us" '^-?[0-9]+$'
+		run systemctl daemon-reload
+		restore_service irqbalance
+	fi
+	restore_runtime_value 02/workqueue "${LOWLAT_ROOT}/sys/devices/virtual/workqueue/cpumask" '^[[:xdigit:]]+(,[[:xdigit:]]+)*$'
+	restore_runtime_value 02/writeback "${LOWLAT_ROOT}/sys/bus/workqueue/devices/writeback/cpumask" '^[[:xdigit:]]+(,[[:xdigit:]]+)*$'
+	log_sub_step "Reboot required to restore PID 1 and inherited service affinity"
+}
+
 apply_cpu_isolation() {
+	if host_is_bare_metal; then remember_cpu_isolation; fi
 	log_step "systemd CPU affinity and RT limits"
 	if require_capability core_isolation; then
 		configure_systemd_cpu_affinity
@@ -141,6 +177,7 @@ apply_cpu_isolation() {
 
 # Runtime-only part, called at every boot by lowlat-runtime.service.
 apply_cpu_isolation_runtime() {
+	if host_is_bare_metal; then remember_cpu_runtime; fi
 	log_step "Kernel workqueue CPU mask"
 	if require_capability core_isolation; then
 		set_workqueue_affinity
@@ -204,6 +241,11 @@ main() {
 	runtime)
 		load_config
 		apply_cpu_isolation_runtime
+		;;
+	rollback)
+		require_root
+		load_config
+		rollback_cpu_isolation
 		;;
 	verify)
 		load_config

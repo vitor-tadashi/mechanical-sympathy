@@ -463,19 +463,35 @@ flowchart TD
 
 ## 10. Rollback
 
-- [ ] Remove the systemd defaults: `sudo sed -i '/^CPUAffinity=/d;/^DefaultLimitRTPRIO=/d;/^DefaultLimitNICE=/d' /etc/systemd/system.conf`
-- [ ] Restore RT throttling: `sudo rm -f /etc/sysctl.d/91-lowlat-rt.conf && sudo sysctl -w kernel.sched_rt_runtime_us=950000`
-- [ ] Re-enable irqbalance: `sudo systemctl enable --now irqbalance`
-- [ ] Reboot: `sudo systemctl reboot`. This also restores the default workqueue cpumask (all CPUs).
-- [ ] Confirm: `grep Cpus_allowed_list /proc/1/status` lists every CPU
+- [ ] Restore the first-apply baseline: `sudo scripts/02-cpu-isolation --rollback`
+- [ ] Check `/etc/systemd/system.conf` and `/etc/sysctl.d/91-lowlat-rt.conf`: existing files match their factory copies; files created by this guide are absent
+- [ ] Check `cat /sys/devices/virtual/workqueue/cpumask`, `cat /sys/bus/workqueue/devices/writeback/cpumask` and `sysctl kernel.sched_rt_runtime_us`: they match the saved values, which need not be distribution defaults
+- [ ] Check `systemctl is-enabled irqbalance` and `systemctl is-active irqbalance`: each matches its original state, including a previously disabled service
+- [ ] Reboot: `sudo systemctl reboot`. Check `grep Cpus_allowed_list /proc/1/status` against the original manager affinity; running services keep inherited affinity until restarted or rebooted
 
-On RHEL 10, the vendor manager configuration lives under `/usr/lib/systemd`.
-The script creates `/etc/systemd/system.conf` with a `[Manager]` section when
-that local override does not exist; it never edits the vendor file. Check the
-local file after applying. To undo a newly created override, remove it after
-removing the settings above. Keep an existing override and restore its saved copy.
+The script restores files, workqueue masks and RT throttling immediately.
+It records file absence, service state and runtime values under
+`/var/lib/lowlat/factory-settings/`; repeated apply and boot reapplication
+preserve those records. Timestamped file backups remain under
+`/var/lib/lowlat/backup/<timestamp>/`. Keep these directories for subsequent
+rollbacks. Without a saved baseline, rollback does nothing; it cannot
+reconstruct state from an installation made before state recording existed.
 
-Every file the script touched is also saved under `/var/lib/lowlat/factory-settings/` (first-ever copy) and `/var/lib/lowlat/backup/<timestamp>/`.
+On RHEL 10, the script creates a local `[Manager]` configuration when
+`/etc/systemd/system.conf` is absent. Rollback removes that override and
+leaves the vendor file under `/usr/lib/systemd` intact. If restoration
+reports missing or corrupt state, recover the original data from your
+backups and retry; do not substitute guessed defaults.
+
+A standalone `--runtime` changes only workqueue masks, and its rollback
+restores only those masks. `lowlat-runtime.service` can reapply tuning at
+boot: use `apply-all --rollback` when supported, or disable that unit before
+rebooting during a whole-host rollback.
+
+> [!NOTE]
+> **Not proven in production.** Restoration is checked on fake hosts and
+> systemd containers. Verify the saved values and post-reboot affinity on
+> your host before using it for production recovery.
 
 ## 11. Bare metal vs VM
 
