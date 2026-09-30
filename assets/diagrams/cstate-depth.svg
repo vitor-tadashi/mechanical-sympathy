@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 290" width="760" height="290" role="img" aria-labelledby="t d">
+<title id="t">The longer a CPU waits, the deeper it sleeps and the slower it wakes</title>
+<desc id="d">Two timelines for one CPU whose thread blocks between messages. By default the idle governor picks a shallow C-state for short gaps and C6 for a quiet spell, so the first message after the quiet spell waits for a C6 exit of up to about 100 microseconds. With idle=poll the CPU never sleeps, and every message, the first one after the quiet spell included, is handled at once.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .idle { fill: #eeeeee; stroke: #777777; }
+  .poll { fill: #eaf7ec; stroke: #1d6b33; stroke-dasharray: 4 3; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .msg { fill: #8a5a00; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .in { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+  .ev { transform-box: fill-box; transform-origin: center; animation: flash 6s linear infinite; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @keyframes flash {
+    0%, 3%   { transform: scaleY(1.25); stroke-width: 3; }
+    6%, 100% { transform: scaleY(1); stroke-width: 1.5; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ev, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="290" rx="8"/>
+
+<!-- Lane 1: default idle governor -->
+<rect class="lane" x="10" y="10" width="740" height="125" rx="6"/>
+<text class="cap" x="24" y="34">Default: the idle governor picks a deeper state the longer the CPU waits</text>
+<text class="sub" x="24" y="52">Short gaps end in C1, 1 to 2 µs to wake. A quiet spell ends in C6, up to ~100 µs to wake.</text>
+<text class="lbl" x="24" y="97">CPU 7</text>
+<rect class="idle" x="150" y="80" width="570" height="26" rx="3"/>
+<path class="msg" d="M154 64 h12 l-6 9 z M199 64 h12 l-6 9 z M244 64 h12 l-6 9 z M289 64 h12 l-6 9 z M534 64 h12 l-6 9 z M654 64 h12 l-6 9 z M689 64 h12 l-6 9 z"/>
+<rect class="wait ev" x="160" y="78" width="6" height="30" rx="1" style="animation-delay:-5.89s"/>
+<rect class="app" x="166" y="78" width="18" height="30" rx="2"/>
+<rect class="wait ev" x="205" y="78" width="6" height="30" rx="1" style="animation-delay:-5.42s"/>
+<rect class="app" x="211" y="78" width="18" height="30" rx="2"/>
+<rect class="wait ev" x="250" y="78" width="6" height="30" rx="1" style="animation-delay:-4.95s"/>
+<rect class="app" x="256" y="78" width="18" height="30" rx="2"/>
+<rect class="wait ev" x="295" y="78" width="6" height="30" rx="1" style="animation-delay:-4.47s"/>
+<rect class="app" x="301" y="78" width="18" height="30" rx="2"/>
+<text class="axis" x="427" y="97">quiet spell: the CPU drops to C6</text>
+<rect class="wait ev" x="540" y="78" width="72" height="30" rx="2" style="animation-delay:-1.89s"/>
+<text class="in" x="576" y="97">C6 exit</text>
+<rect class="app" x="612" y="78" width="18" height="30" rx="2"/>
+<rect class="wait ev" x="660" y="78" width="6" height="30" rx="1" style="animation-delay:-0.63s"/>
+<rect class="app" x="666" y="78" width="18" height="30" rx="2"/>
+<rect class="wait ev" x="695" y="78" width="6" height="30" rx="1" style="animation-delay:-0.26s"/>
+<rect class="app" x="701" y="78" width="18" height="30" rx="2"/>
+<text class="axis" x="435" y="126">schematic, not to scale · ▼ message arrives · red: wake-up · green: handled</text>
+
+<!-- Lane 2: idle=poll -->
+<rect class="lane" x="10" y="150" width="740" height="125" rx="6"/>
+<text class="cap" x="24" y="174">idle=poll (or deep C-states off in the BIOS): the CPU never sleeps</text>
+<text class="sub" x="24" y="192">The same messages. The first one after the quiet spell is handled as fast as the others.</text>
+<text class="lbl" x="24" y="237">CPU 7</text>
+<rect class="poll" x="150" y="220" width="570" height="26" rx="3"/>
+<path class="msg" d="M154 204 h12 l-6 9 z M199 204 h12 l-6 9 z M244 204 h12 l-6 9 z M289 204 h12 l-6 9 z M534 204 h12 l-6 9 z M654 204 h12 l-6 9 z M689 204 h12 l-6 9 z"/>
+<rect class="app ev" x="160" y="218" width="18" height="30" rx="2" style="animation-delay:-5.89s"/>
+<rect class="app ev" x="205" y="218" width="18" height="30" rx="2" style="animation-delay:-5.42s"/>
+<rect class="app ev" x="250" y="218" width="18" height="30" rx="2" style="animation-delay:-4.95s"/>
+<rect class="app ev" x="295" y="218" width="18" height="30" rx="2" style="animation-delay:-4.47s"/>
+<text class="axis" x="427" y="237">quiet spell: the CPU polls</text>
+<rect class="app ev" x="540" y="218" width="18" height="30" rx="2" style="animation-delay:-1.89s"/>
+<rect class="app ev" x="660" y="218" width="18" height="30" rx="2" style="animation-delay:-0.63s"/>
+<rect class="app ev" x="695" y="218" width="18" height="30" rx="2" style="animation-delay:-0.26s"/>
+<text class="axis" x="435" y="266">no wake-up to pay: the CPU is already running</text>
+
+<line class="head" x1="150" y1="60" x2="150" y2="252"/>
+</svg>
