@@ -220,8 +220,9 @@ seed_userland() {
 	[[ -f "${config}" ]] || config="${REPO}/scripts/lowlat.conf.example"
 	mkdir -p /etc/lowlat /opt
 	cp "${config}" /etc/lowlat/lowlat.conf
-	# Guide 10 stops with an error when the time daemon it enables is not installed. The
-	# image lacks the package, so leave time synchronization alone there.
+	# UBI repositories may lack chrony. Test the absent-package precheck in the
+	# focused regressions; this integration scenario explicitly leaves time sync
+	# unmanaged on those images, rather than pretending it was configured.
 	if ! rpm -q chrony >/dev/null 2>&1; then
 		sed -i 's/^TIME_SYNC_MODE=.*/TIME_SYNC_MODE=""/' /etc/lowlat/lowlat.conf
 	fi
@@ -611,54 +612,13 @@ step_apply_and_roll_back() {
 	report_state "rollback" "${before}" "${after}"
 }
 
-# apply_all - apply-all --apply on the VM host. On RHEL 10 tuned reads its profiles from
-# /etc/tuned/profiles, and guide 07 writes /etc/tuned/low-latency: tuned rejects the
-# profile and apply-all stops. That is a known bug: the check goes on the way an
-# administrator would, by copying the profile to where tuned looks.
+# apply_all - no recovery workarounds: compatibility regressions must fail the check.
 apply_all() {
-	local output status=0
-	output="$(in_host "${REPO}/scripts/apply-all" --apply 2>&1)" || status=$?
-	{
-		printf '==== apply-all --apply (exit %s)\n' "${status}"
-		printf '%s\n' "${output}"
-	} >>"${LOG}"
-	if ((status == 0)); then
-		ok "apply-all --apply"
-		return 0
-	fi
-	if [[ "${output}" == *"Requested profile 'low-latency' doesn't exist"* && -d /etc/tuned/low-latency && -d /etc/tuned/profiles ]]; then
-		observe tuned-profile-dir-rhel10
-		cp -a /etc/tuned/low-latency /etc/tuned/profiles/low-latency
-		check "apply-all --apply, with the profile copied to /etc/tuned/profiles" in_host "${REPO}/scripts/apply-all" --apply
-		return 0
-	fi
-	fail "apply-all --apply (exit ${status})"
-	indent <<<"${output}"
+	check "apply-all --apply" in_host "${REPO}/scripts/apply-all" --apply
 }
 
-# apply_bare_metal <guide> - apply one guide on the bare-metal host. Guide 02 fails on a
-# system without /etc/systemd/system.conf (RHEL 10 ships it under /usr/lib/systemd only).
-# That is a known bug: the check goes on the way an administrator would, by creating it.
 apply_bare_metal() {
-	local guide="$1" output status=0
-	output="$(HOST_CLASS_OVERRIDE=bare_metal in_host "${REPO}/scripts/${guide}" --apply 2>&1)" || status=$?
-	{
-		printf '==== %s --apply on a bare-metal host (exit %s)\n' "${guide}" "${status}"
-		printf '%s\n' "${output}"
-	} >>"${LOG}"
-	if ((status == 0)); then
-		ok "${guide} --apply on a bare-metal host"
-		return 0
-	fi
-	if [[ "${guide}" == 02-cpu-isolation && ! -f /etc/systemd/system.conf && -f /usr/lib/systemd/system.conf ]]; then
-		observe rhel10-no-system-conf
-		cp /usr/lib/systemd/system.conf /etc/systemd/system.conf
-		HOST_CLASS_OVERRIDE=bare_metal check "${guide} --apply on a bare-metal host, with /etc/systemd/system.conf created" \
-			in_host "${REPO}/scripts/${guide}" --apply
-		return 0
-	fi
-	fail "${guide} --apply on a bare-metal host (exit ${status})"
-	indent <<<"${output}"
+	HOST_CLASS_OVERRIDE=bare_metal check "$1 --apply on a bare-metal host" in_host "${REPO}/scripts/$1" --apply
 }
 
 # Huge pages, CPU isolation and the graphical console are skipped or absent on a VM, so
@@ -712,6 +672,7 @@ main() {
 	mkdir -p "${WORK}"
 	step_packages
 	step_parse
+	check "focused script regressions" bash "${REPO}/tools/check-script-regressions"
 	prepare
 	save_userland
 	step_templates

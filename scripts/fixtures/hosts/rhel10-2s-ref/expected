@@ -111,13 +111,16 @@ LOW-LATENCY TUNING (apply)
     04.01 Reboot required: the new command line is used on the next boot
 
 05. systemd CPU affinity and RT limits
-    05.01 Restricting systemd and all services to CPUs 0 1 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 (/etc/systemd/system.conf)
+    05.01 Creating a local systemd manager configuration
+           [dry-run] write /etc/systemd/system.conf (mode 0644):
+             | [Manager]
+    05.02 Restricting systemd and all services to CPUs 0 1 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 (/etc/systemd/system.conf)
            [dry-run] set CPUAffinity=0 1 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 in /etc/systemd/system.conf
-    05.02 Allowing real-time priority up to 99 for services (DefaultLimitRTPRIO)
+    05.03 Allowing real-time priority up to 99 for services (DefaultLimitRTPRIO)
            [dry-run] set DefaultLimitRTPRIO=99 in /etc/systemd/system.conf
-    05.03 Allowing nice down to -20 for services (DefaultLimitNICE=40)
+    05.04 Allowing nice down to -20 for services (DefaultLimitNICE=40)
            [dry-run] set DefaultLimitNICE=40 in /etc/systemd/system.conf
-    05.04 Reboot required for PID 1 to re-read CPUAffinity (daemon-reexec is not enough for running units)
+    05.05 Reboot required for PID 1 to re-read CPUAffinity (daemon-reexec is not enough for running units)
 
 06. Kernel workqueue CPU mask
     06.01 Unbound workqueues -> CPUs 0 2 (mask 00000005)
@@ -446,8 +449,8 @@ LOW-LATENCY TUNING (apply)
            [dry-run] mount -o remount,noatime /boot
 
 15. tuned profile
-    15.01 Writing /etc/tuned/low-latency/tuned.conf (include=network-latency)
-           [dry-run] write /etc/tuned/low-latency/tuned.conf (mode 0644):
+    15.01 Writing /etc/tuned/profiles/low-latency/tuned.conf (include=network-latency)
+           [dry-run] write /etc/tuned/profiles/low-latency/tuned.conf (mode 0644):
              | # Managed by mechanical-sympathy 07-os-hygiene
              | [main]
              | summary=Low latency: network-latency + mechanical-sympathy host settings
@@ -837,10 +840,11 @@ LOW-LATENCY TUNING (apply)
     04.01 Reboot required: the new command line is used on the next boot
 
 05. systemd CPU affinity and RT limits
-    05.01 Restricting systemd and all services to CPUs 0 1 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 (/etc/systemd/system.conf)
-    05.02 Allowing real-time priority up to 99 for services (DefaultLimitRTPRIO)
-    05.03 Allowing nice down to -20 for services (DefaultLimitNICE=40)
-    05.04 Reboot required for PID 1 to re-read CPUAffinity (daemon-reexec is not enough for running units)
+    05.01 Creating a local systemd manager configuration
+    05.02 Restricting systemd and all services to CPUs 0 1 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 (/etc/systemd/system.conf)
+    05.03 Allowing real-time priority up to 99 for services (DefaultLimitRTPRIO)
+    05.04 Allowing nice down to -20 for services (DefaultLimitNICE=40)
+    05.05 Reboot required for PID 1 to re-read CPUAffinity (daemon-reexec is not enough for running units)
 
 06. Kernel workqueue CPU mask
     06.01 Unbound workqueues -> CPUs 0 2 (mask 00000005)
@@ -881,7 +885,7 @@ LOW-LATENCY TUNING (apply)
     14.03 Remounting /boot with noatime
 
 15. tuned profile
-    15.01 Writing /etc/tuned/low-latency/tuned.conf (include=network-latency)
+    15.01 Writing /etc/tuned/profiles/low-latency/tuned.conf (include=network-latency)
     15.02 Making sure tuned re-applies /etc/sysctl.d after its own sysctls
     15.03 Activating tuned profile low-latency
 
@@ -1132,6 +1136,7 @@ A /etc/security/limits.d/90-lowlat.conf
 A /etc/sysctl.d/90-lowlat.conf
 A /etc/sysctl.d/91-lowlat-rt.conf
 A /etc/sysctl.d/92-lowlat-hugepages.conf
+A /etc/systemd/system.conf
 A /etc/systemd/system/chronyd.service.d/10-lowlat-time-sync.conf
 A /etc/systemd/system/housekeeping.slice
 A /etc/systemd/system/hugetlb-reserve-pages.service
@@ -1141,7 +1146,7 @@ A /etc/systemd/system/lowlat-verify.timer
 A /etc/systemd/system/node_exporter.service.d/10-lowlat-housekeeping.conf
 A /etc/systemd/system/phc2sys.service.d/10-lowlat-time-sync.conf
 A /etc/systemd/system/ptp4l.service.d/10-lowlat-time-sync.conf
-A /etc/tuned/low-latency/tuned.conf
+A /etc/tuned/profiles/low-latency/tuned.conf
 A /run/fake-systemd/active/lowlat-verify.timer
 A /usr/lib/systemd/hugetlb-reserve-pages
 A /var/lib/fake-systemd/enabled/hugetlb-reserve-pages.service
@@ -1157,7 +1162,6 @@ D /var/lib/fake-systemd/enabled/irqbalance.service
 M /boot/loader/entries/0f1e2d3c4b5a69788796a5b4c3d2e1f0-0-rescue.conf
 M /boot/loader/entries/0f1e2d3c4b5a69788796a5b4c3d2e1f0-6.12.0-55.9.1.el10_0.x86_64.conf
 M /etc/fstab
-M /etc/systemd/system.conf
 M /etc/tuned/active_profile
 M /proc/irq/*/smp_affinity_list (48)
 M /proc/sys/fs/file-max
@@ -1731,8 +1735,9 @@ lowlat-runtime.service: /opt/lowlat/scripts/apply-all --runtime
 ==== left behind by rollback (compared with the host before apply)
 A /etc/security/limits.d/90-lowlat.conf
 A /etc/sysctl.d/91-lowlat-rt.conf
+A /etc/systemd/system.conf
 A /etc/systemd/system/lowlat-runtime.service
-A /etc/tuned/low-latency/tuned.conf
+A /etc/tuned/profiles/low-latency/tuned.conf
 A /run/fake-systemd/active/lowlat-runtime.service
 A /var/lib/fake-systemd/enabled/lowlat-runtime.service
 A /var/lib/lowlat/aspm-original-policy
@@ -1745,7 +1750,6 @@ D /var/lib/fake-systemd/enabled/irqbalance.service
 M /boot/loader/entries/0f1e2d3c4b5a69788796a5b4c3d2e1f0-0-rescue.conf
 M /boot/loader/entries/0f1e2d3c4b5a69788796a5b4c3d2e1f0-6.12.0-55.9.1.el10_0.x86_64.conf
 M /etc/fstab
-M /etc/systemd/system.conf
 M /etc/tuned/active_profile
 M /proc/*/status
 M /proc/cmdline

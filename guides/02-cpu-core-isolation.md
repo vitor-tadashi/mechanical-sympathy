@@ -469,6 +469,12 @@ flowchart TD
 - [ ] Reboot: `sudo systemctl reboot`. This also restores the default workqueue cpumask (all CPUs).
 - [ ] Confirm: `grep Cpus_allowed_list /proc/1/status` lists every CPU
 
+On RHEL 10, the vendor manager configuration lives under `/usr/lib/systemd`.
+The script creates `/etc/systemd/system.conf` with a `[Manager]` section when
+that local override does not exist; it never edits the vendor file. Check the
+local file after applying. To undo a newly created override, remove it after
+removing the settings above. Keep an existing override and restore its saved copy.
+
 Every file the script touched is also saved under `/var/lib/lowlat/factory-settings/` (first-ever copy) and `/var/lib/lowlat/backup/<timestamp>/`.
 
 ## 11. Bare metal vs VM

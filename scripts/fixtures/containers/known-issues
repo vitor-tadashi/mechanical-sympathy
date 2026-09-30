@@ -12,5 +12,3 @@ no-rollback-04	/run/fake-ethtool/	04-network has no --rollback: NIC settings sta
 no-rollback-07	limits\.d/90-lowlat|/etc/tuned/	07-os-hygiene has no --rollback: limits, tuned profile and tuned state stay
 runtime-unit-left-enabled	lowlat-runtime\.service	apply-all has no --rollback: lowlat-runtime.service stays installed and enabled
 virtio-irq-false-pass	-	verify-tuning passes the IRQ line of a virtio NIC that no guide placed
-rhel10-no-system-conf	-	02-cpu-isolation --apply fails on RHEL 10: /etc/systemd/system.conf does not exist there (the file is in /usr/lib/systemd)	10
-tuned-profile-dir-rhel10	-	07-os-hygiene writes the low-latency profile to /etc/tuned/low-latency, but tuned on RHEL 10 reads /etc/tuned/profiles: tuned-adm rejects it and apply-all stops (the fake tuned-adm has the old layout too)	10	tuned

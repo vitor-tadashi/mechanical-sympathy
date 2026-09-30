@@ -7,11 +7,18 @@
 . "$(dirname "${BASH_SOURCE[0]}")/lib/fake"
 
 ACTIVE="${LOWLAT_ROOT}/etc/tuned/active_profile"
+PROFILE_ROOT=/etc/tuned
+VENDOR_ROOT=/usr/lib/tuned
+major="$(awk -F'"' '/^VERSION_ID=/ { split($2, part, "."); print part[1] }' "${LOWLAT_ROOT}/etc/os-release")"
+if [[ "${major}" == 10 ]]; then
+	PROFILE_ROOT=/etc/tuned/profiles
+	VENDOR_ROOT=/usr/lib/tuned/profiles
+fi
 
 [[ "${1:-}" == active ]] || fake_record "$@"
 case "${1:-}" in
 profile)
-	[[ -f "${LOWLAT_ROOT}/etc/tuned/$2/tuned.conf" || -f "${LOWLAT_ROOT}/usr/lib/tuned/$2/tuned.conf" ]] ||
+	[[ -f "${LOWLAT_ROOT}${PROFILE_ROOT}/$2/tuned.conf" || -f "${LOWLAT_ROOT}${VENDOR_ROOT}/$2/tuned.conf" ]] ||
 		fake_fail 1 "Requested profile '$2' doesn't exist."
 	printf '%s\n' "$2" >"${ACTIVE}"
 	;;
