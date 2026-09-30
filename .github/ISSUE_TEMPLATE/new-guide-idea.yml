@@ -1,6 +1,6 @@
 name: New guide or use case idea
 description: Propose a topic. Say what is in scope and what is not.
-labels: ["idea"]
+labels: ["enhancement"]
 body:
   - type: textarea
     id: goal

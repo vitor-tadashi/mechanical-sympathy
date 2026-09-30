@@ -6,7 +6,7 @@ Pick the lane that matches your role. Each box is one page, read left to right, 
 
 ```mermaid
 flowchart TD
-  subgraph op["Operator: apply the tuning (1-2 h plus a reboot)"]
+  subgraph op["Operator: apply the tuning (about half a day for the first host)"]
     direction LR
     o0["Quick start"] --> o00["00<br/>BIOS"] --> o1["01<br/>GRUB"] --> o2["02<br/>CPUs"] --> o3["03<br/>Huge pages"] --> o4["04<br/>Network"] --> o5["05<br/>cgroups"] --> o6["06<br/>sysctl"] --> o7["07<br/>Hygiene"] --> o10["10 Time<br/>11 Day-2"] --> ov[["verify-tuning"]]
     o7 -.-> o8["08 Bypass<br/>(only with a<br/>bypass stack)"] -.-> o10
@@ -34,7 +34,7 @@ flowchart TD
 
 *Five lanes: the operator walks guides 00 to 07, then 10 and 11 (08 only with kernel bypass), and ends at verify-tuning; the learner follows three use cases and the layout explorer; the developer reads the pinning and Java sections and the Java example; the reviewer reads the risks, with mitigations and firewall highlighted; the network engineer goes from Guide 04 through the network concepts to bypass and segmentation.*
 
-**Operator applying the tuning (1–2 h plus a reboot)**
+**Operator applying the tuning (about half a day for the first host, minutes for the next)**
 [QUICK_START](QUICK_START.md) → [00](guides/00-bios-firmware.md) → [01](guides/01-grub-bootloader-tuning.md) → [02](guides/02-cpu-core-isolation.md) → [03](guides/03-huge-pages-configuration.md) → [04](guides/04-network-optimization.md) → [05](guides/05-cgroup-isolation.md) → [06](guides/06-kernel-sysctl-tuning.md) → [07](guides/07-os-hygiene.md) → ([08](guides/08-kernel-bypass.md), only with a bypass stack) → [10](guides/10-time-sync.md) → [11](guides/11-day2-operations.md) → `scripts/verify-tuning`
 
 **Learner (from stories)**
