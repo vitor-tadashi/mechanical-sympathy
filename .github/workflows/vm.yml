@@ -6,6 +6,12 @@ name: vm
 # are advisory.
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/**
+      - tools/**
+      - .github/workflows/vm.yml
   pull_request:
     paths:
       - scripts/**
