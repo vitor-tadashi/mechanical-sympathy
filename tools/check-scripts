@@ -8,7 +8,7 @@
 #   1. apply-all --plan and --dry-run
 #   2. apply-all --apply, the commands it ran and the files it changed
 #   3. a simulated reboot (lowlat-runtime.service included), then verify-tuning
-#   4. every guide's --rollback, in reverse apply order, and a second reboot
+#   4. standalone guide rollbacks, wrapper rollback, and a second reboot
 #   5. what the rollback left behind: differences from the tree before apply
 # The transcript must equal NAME/expected. Commands run against tools/stubs, with a
 # PATH that holds only those fakes and a fixed set of core utilities, so the result
@@ -172,6 +172,7 @@ transcript() {
 		guide="${HOST_APPLY_ORDER[index]}"
 		step "${guide} --rollback" "${REPO}/scripts/${guide}" --rollback
 	done
+	step "apply-all --rollback" "${REPO}/scripts/apply-all" --rollback
 	boot "reboot after rollback"
 	section "left behind by rollback (compared with the host before apply)"
 	changed_files "${WORK}/before" "${ROOT}"

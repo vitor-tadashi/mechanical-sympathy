@@ -218,7 +218,8 @@ flowchart TD
 
 ## 11. Rollback
 
-Stop boot reapplication, then restore the first-apply baseline:
+For a whole host, use `sudo scripts/apply-all --rollback`. To undo this guide
+alone, stop boot reapplication, then restore the first-apply baseline:
 
 ```bash
 sudo systemctl disable --now lowlat-runtime.service

@@ -364,7 +364,7 @@ host_start_units() {
 	local root="$1" unit process
 	for unit in "${root}"/var/lib/fake-systemd/enabled/*; do
 		[[ -e "${unit}" ]] || continue
-		LOWLAT_ROOT="${root}" systemctl start "${unit##*/}"
+		FAKE_DEPENDENCY_START=1 LOWLAT_ROOT="${root}" systemctl start "${unit##*/}"
 	done
 	while read -r process; do
 		[[ -n "${process}" ]] || continue

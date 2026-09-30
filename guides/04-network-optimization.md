@@ -508,8 +508,8 @@ after rollback. Reboot once boot reapplication is disabled to check the
 untuned boot behavior; driver boot defaults may differ from the saved runtime
 baseline. Reapply with `sudo scripts/04-network --apply` if desired.
 
-For a whole host, restore Guide 08 before Guide 04 so a driver reload does not
-replace the restored settings. Restore irqbalance through Guide 02. RSS
+For a whole host, use `sudo scripts/apply-all --rollback`. It restores Guide
+08 before Guide 04 so a driver reload does not replace the restored settings. Restore irqbalance through Guide 02. RSS
 indirection and manually added ntuple rules from the optional examples are
 outside the script's managed settings; undo them using the original output
 from §4 (`ethtool -X` and `ethtool -N`).

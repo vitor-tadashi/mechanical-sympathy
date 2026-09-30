@@ -6,6 +6,7 @@
 #   --dry-run   print every command and file, change nothing
 #   --apply     apply everything and install lowlat-runtime.service (root)
 #   --runtime   re-apply only non-persistent state (called at boot by lowlat-runtime.service)
+#   --rollback  stop boot reapplication and undo the applied guides
 #   --verify    run verify-tuning
 #
 # Every guide script can also be run on its own; this wrapper only sequences them and
@@ -89,21 +90,141 @@ install_runtime_unit() {
 	run systemctl enable lowlat-runtime.service
 }
 
+# Capture the runtime unit before any guide can change host state.
+remember_apply_all() {
+	remember_file "${RUNTIME_UNIT}"
+	remember_service lowlat-runtime.service
+	remember_value apply-all/started yes
+	# TuneD and a bypass driver reload can change NIC defaults before Guide 04.
+	remember_network
+}
+
+# guide_capabilities <guide> - the capabilities that a guide acts on (see print_plan).
+guide_capabilities() {
+	case "$1" in
+	00-bios-firmware) printf 'bios_firmware\n' ;;
+	01-grub-bootloader) printf 'latency_grub isolation_grub\n' ;;
+	02-cpu-isolation) printf 'core_isolation irqbalance_disable rt_throttling\n' ;;
+	03-huge-pages) printf 'huge_pages\n' ;;
+	04-network) printf 'nic_tuning nic_irq_affinity\n' ;;
+	05-cgroup-isolation) printf 'cgroup_isolation\n' ;;
+	06-kernel-sysctl) printf 'sysctl\n' ;;
+	07-os-hygiene) printf 'os_hygiene\n' ;;
+	08-kernel-bypass) printf 'kernel_bypass\n' ;;
+	10-time-sync) printf 'time_sync\n' ;;
+	11-day2-operations) printf 'day2_operations\n' ;;
+	*) die "no capabilities known for ${1}" ;;
+	esac
+}
+
+# stage_applies <guide> - true when the host class lets at least one capability of the
+# guide apply. A guide that is skipped changes nothing, so a rollback must not touch what
+# it does not manage (a VM with its own huge page pool, say).
+stage_applies() {
+	local capability decision
+	for capability in $(guide_capabilities "$1"); do
+		decision="$(capability_decision "${capability}")"
+		[[ "${decision}" == apply ]] && return 0
+	done
+	return 1
+}
+
+# mark_stage <guide> <yes|no> - what this apply did with the guide. "no" is written once, as
+# a baseline. "yes" always wins: an apply on another host class can apply what an earlier
+# one skipped.
+mark_stage() {
+	local file="${LOWLAT_FACTORY_DIR}/.values/apply-all/guides/$1"
+	[[ "${DRY_RUN}" -eq 1 ]] && return 0
+	if [[ "$2" == no ]]; then
+		remember_value "apply-all/guides/$1" no
+		return 0
+	fi
+	mkdir -p "${file%/*}"
+	printf '%s\n' yes >"${file}"
+	chmod 0600 "${file}"
+}
+
+apply_stage() {
+	local guide="$1"
+	shift
+	if stage_applies "${guide}"; then
+		mark_stage "${guide}" yes
+		if [[ "${guide}" == 08-kernel-bypass ]]; then
+			mark_stage 04-network yes
+		fi
+	else
+		mark_stage "${guide}" no
+	fi
+	"$@"
+}
+
+rollback_all() {
+	local guide value complete=no
+	local -a failed=()
+	local -a guides=(11-day2-operations 08-kernel-bypass 04-network 05-cgroup-isolation
+		10-time-sync 07-os-hygiene 06-kernel-sysctl 03-huge-pages 02-cpu-isolation
+		01-grub-bootloader 00-bios-firmware)
+	if [[ ! -f "${LOWLAT_FACTORY_DIR}/.values/apply-all/started" ]]; then
+		# An apply-all from before this rollback existed left the unit and no record. Its guides
+		# have no saved baseline either, so the wrapper cannot undo them: say so, change nothing.
+		if grep -q '^Description=Low-latency runtime tuning' "${RUNTIME_UNIT}" 2>/dev/null; then
+			die "${RUNTIME_UNIT} was installed by an older apply-all that kept no rollback record. Nothing was changed. Run 'systemctl disable --now lowlat-runtime.service' and roll the guides back one by one, as each guide's rollback section says" "${EXIT_PRECHECK}"
+		fi
+		return 0
+	fi
+	value="$(original_value apply-all/started)"
+	[[ "${value}" == yes ]] || die "invalid saved wrapper apply marker"
+	log_step "Stopping boot-time reapplication"
+	if systemctl cat lowlat-runtime.service >/dev/null 2>&1; then
+		run systemctl stop lowlat-runtime.service
+		run systemctl disable lowlat-runtime.service
+	fi
+	if [[ -f "${LOWLAT_FACTORY_DIR}/.values/apply-all/complete" ]]; then
+		complete="$(original_value apply-all/complete)"
+		[[ "${complete}" == yes ]] || die "invalid saved wrapper completion marker"
+	fi
+	for guide in "${guides[@]}"; do
+		if [[ "${complete}" == no && ! -f "${LOWLAT_FACTORY_DIR}/.values/apply-all/guides/${guide}" ]]; then continue; fi
+		value="$(original_value "apply-all/guides/${guide}")"
+		if [[ "${value}" == no ]]; then
+			log_sub_step "Skipping ${guide}: apply-all did not apply it on this host"
+			continue
+		fi
+		[[ "${value}" == yes ]] || die "invalid saved apply marker for ${guide}"
+		log_step "Rollback ${guide}"
+		# A failed guide must not leave the guides after it, and the runtime unit, half restored.
+		if ! "${SCRIPTS_DIR}/${guide}" --rollback --config "${LOWLAT_CONFIG}"; then
+			failed+=("${guide}")
+			log_warn "Rollback of ${guide} failed: going on with the other guides"
+		fi
+	done
+	log_step "Restoring the original runtime unit"
+	restore_file "${RUNTIME_UNIT}"
+	run systemctl daemon-reload
+	restore_service lowlat-runtime.service
+	if ((${#failed[@]} > 0)); then
+		die "rollback of ${failed[*]} failed and the other guides were rolled back. Read the errors above, fix the cause, and run apply-all --rollback again" "${EXIT_APPLY}"
+	fi
+	printf '\nReboot to restore boot parameters and inherited service affinity.\n'
+}
+
 apply_all() {
 	print_header apply
-	apply_bios_firmware                 # 00 (PCIe ASPM; the BIOS setup itself is manual)
-	apply_grub_kernel_parameters        # 01 (reboot)
-	apply_cpu_isolation                 # 02 (reboot for systemd CPUAffinity)
-	apply_huge_pages                    # 03 (reboot for reliable reservation)
-	apply_kernel_sysctl                 # 06
-	apply_os_hygiene                    # 07 (tuned re-applies sysctl.d after its own)
-	apply_time_sync                     # 10 (chrony or ptp4l/phc2sys, pinned)
-	apply_cgroup_isolation              # 05
-	apply_kernel_bypass                 # 08 (before 04: a driver reload resets the NICs)
-	apply_network                       # 04 (runtime)
-	apply_day2_operations               # 11 (verification timer)
+	remember_apply_all
+	apply_stage 00-bios-firmware apply_bios_firmware                 # 00 (PCIe ASPM; the BIOS setup itself is manual)
+	apply_stage 01-grub-bootloader apply_grub_kernel_parameters        # 01 (reboot)
+	apply_stage 02-cpu-isolation apply_cpu_isolation                 # 02 (reboot for systemd CPUAffinity)
+	apply_stage 03-huge-pages apply_huge_pages                    # 03 (reboot for reliable reservation)
+	apply_stage 06-kernel-sysctl apply_kernel_sysctl                 # 06
+	apply_stage 07-os-hygiene apply_os_hygiene                    # 07 (tuned re-applies sysctl.d after its own)
+	apply_stage 10-time-sync apply_time_sync                     # 10 (chrony or ptp4l/phc2sys, pinned)
+	apply_stage 05-cgroup-isolation apply_cgroup_isolation              # 05
+	apply_stage 08-kernel-bypass apply_kernel_bypass                 # 08 (before 04: a driver reload resets the NICs)
+	apply_stage 04-network apply_network                       # 04 (runtime)
+	apply_stage 11-day2-operations apply_day2_operations               # 11 (verification timer)
 	log_step "Boot-time re-application of runtime settings"
 	install_runtime_unit
+	remember_value apply-all/complete yes
 	print_step_timing_table
 	printf '\nReboot required for GRUB, systemd CPUAffinity and huge page reservation.\n'
 	printf 'After the reboot: %s/verify-tuning\n' "${SCRIPTS_DIR}"
@@ -143,6 +264,11 @@ apply_all_main() {
 		require_root
 		load_config
 		apply_all_runtime
+		;;
+	rollback)
+		require_root
+		load_config
+		rollback_all
 		;;
 	verify)
 		exec "${SCRIPTS_DIR}/verify-tuning" "$@"

@@ -501,6 +501,7 @@ step_apply_and_roll_back() {
 		guide="${HOST_APPLY_ORDER[index]}"
 		check "${guide} --rollback" in_host "${REPO}/scripts/${guide}" --rollback
 	done
+	check "apply-all --rollback" in_host "${REPO}/scripts/apply-all" --rollback
 	# Runtime state that a reboot would reset, but that a rollback should already undo.
 	nic="$(diff -rq "${HOST_PRISTINE}/run/fake-ethtool" "${FAKE}/run/fake-ethtool" | sed -E 's|^Files .*/run/fake-ethtool/([^ ]*) and .*|M /run/fake-ethtool/\1|' || true)"
 	report_leftovers "rollback left runtime NIC state" "${nic}"
