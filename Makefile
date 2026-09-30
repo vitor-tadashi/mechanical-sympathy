@@ -1,6 +1,6 @@
 # Quality gates for this repository. CI (.github/workflows/lint.yml) runs `make lint`.
 
-.PHONY: help lint lint-scripts lint-docs lint-site lint-java check-scripts check-containers install-git-hooks site
+.PHONY: help lint lint-scripts lint-docs lint-site lint-java check-scripts check-containers check-vm install-git-hooks site
 
 PROBE := examples/java-latency-probe
 
@@ -14,6 +14,7 @@ help:
 	@echo "  lint-java          Checkstyle + compile + dependency approval for the Java probe"
 	@echo "  check-scripts      every guide script end to end on fake hosts (Linux only; see tools/check-scripts)"
 	@echo "  check-containers   the guides in systemd containers of RHEL-family images (podman or docker; see tools/check-containers)"
+	@echo "  check-vm           the guides on a real kernel in KVM guests of RHEL-family cloud images (Linux with KVM only; see tools/check-vm)"
 	@echo "  install-git-hooks  opt in to the pre-commit (make lint) and commit-msg (title) hooks"
 
 lint: lint-scripts lint-docs lint-site lint-java
@@ -41,6 +42,9 @@ check-scripts:
 
 check-containers:
 	./tools/check-containers
+
+check-vm:
+	./tools/check-vm
 
 install-git-hooks:
 	./tools/install-git-hooks

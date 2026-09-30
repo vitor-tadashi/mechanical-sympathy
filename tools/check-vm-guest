@@ -1,0 +1,430 @@
+#!/usr/bin/env bash
+#
+# check-vm-guest - Level 3 of the validation ladder, inside one virtual machine.
+#
+# tools/check-vm copies the repository to /opt/lowlat in a RHEL-family cloud image that
+# runs under QEMU/KVM, and calls this script over SSH, one phase at a time. The reboots
+# happen between the phases, so everything a later phase needs is kept in WORK.
+#
+#   check-vm-guest prepare                 packages, ptp_kvm clock, app-user, lowlat.conf
+#   check-vm-guest snapshot PASS           the state before apply
+#   check-vm-guest apply PASS              apply-all --apply
+#   check-vm-guest after-apply PASS        after the reboot: kernel command line, huge
+#                                          pages, the runtime unit, IRQs, verify-tuning
+#   check-vm-guest rollback PASS           every guide's --rollback, in reverse order
+#   check-vm-guest after-rollback PASS     after the reboot: compare with the snapshot
+#   check-vm-guest report EVENTS           known issues that did not show up, the summary
+#
+# PASS is the host class the scripts run with: virtual_machine (what they detect in a
+# VM) or bare_metal (forced, so that the guides that a VM skips run on a real kernel:
+# isolcpus, nohz_full, per-node huge pages, systemd CPUAffinity).
+# Output, one event per line: see tools/lib/check. Known bugs of the scripts are listed
+# in scripts/fixtures/vm/known-issues, and the WARN lines that a VM is expected to show
+# in scripts/fixtures/vm/expected-warnings.
+
+set -Eeuo pipefail
+export LC_ALL=C
+# Not inside $( ): its output would end up in the captured text.
+trap '[[ "${BASHPID}" != "$$" ]] || printf "fail internal error: line %s of tools/check-vm-guest\n" "${LINENO}"' ERR
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+KNOWN_ISSUES="${REPO}/scripts/fixtures/vm/known-issues"
+EXPECTED_WARNINGS="${REPO}/scripts/fixtures/vm/expected-warnings"
+VM_CONFIG="${REPO}/scripts/fixtures/vm/lowlat.conf"
+WORK=/var/tmp/check-vm
+LOG="${WORK}/commands.log"
+# The MAC addresses that tools/check-vm gives the two NICs.
+CRITICAL_MAC=52:54:00:00:00:01
+MGMT_MAC=52:54:00:00:00:02
+HOST_CLASS_DROPIN=/etc/systemd/system.conf.d/90-check-host-class.conf
+
+# shellcheck source=tools/lib/check
+. "${REPO}/tools/lib/check"
+# shellcheck source=tools/stubs/lib/host
+. "${REPO}/tools/stubs/lib/host"
+
+# as_pass <pass> <command...> - a script or command as the tuning scripts see the host.
+as_pass() {
+	local pass="$1"
+	shift
+	(
+		cd /
+		if [[ "${pass}" == bare_metal ]]; then
+			export LOWLAT_HOST_CLASS=bare_metal
+		else
+			unset LOWLAT_HOST_CLASS
+		fi
+		"$@"
+	)
+}
+
+# nic_by_mac <mac> - the name the guest gave the NIC with that address.
+nic_by_mac() {
+	local dir
+	for dir in /sys/class/net/*; do
+		[[ "$(cat "${dir}/address" 2>/dev/null || true)" == "$1" ]] || continue
+		printf '%s\n' "${dir##*/}"
+		return 0
+	done
+	return 1
+}
+
+# nic_irqs <nic> - the MSI-X vectors of a virtio NIC, from its PCI function.
+nic_irqs() {
+	local dir
+	dir="$(readlink -f "/sys/class/net/$1/device")"
+	[[ -d "${dir}/msi_irqs" ]] || dir="${dir%/*}"
+	ls "${dir}/msi_irqs" 2>/dev/null || true
+}
+
+# config_value <name> - one value (arrays joined by spaces) of the installed lowlat.conf.
+config_value() {
+	(
+		# shellcheck source=/dev/null
+		. /etc/lowlat/lowlat.conf
+		local -n value="$1"
+		printf '%s\n' "${value[*]}"
+	)
+}
+
+# ---------------------------------------------------------------------------------------
+# prepare
+# ---------------------------------------------------------------------------------------
+
+# grub_evidence <file> - what decides the kernel command line: the RHEL 8 grubby versus
+# grub2-mkconfig question is answered from these files.
+grub_evidence() {
+	{
+		printf '== rpm\n'
+		rpm -q grubby grub2-tools 2>&1 || true
+		printf '== grubby --info=DEFAULT\n'
+		grubby --info=DEFAULT 2>&1 || true
+		printf '== /etc/default/grub\n'
+		cat /etc/default/grub 2>&1 || true
+		printf '== grub2-editenv list\n'
+		grub2-editenv list 2>&1 || true
+		printf '== options lines of the boot entries\n'
+		grep -H '^options' /boot/loader/entries/*.conf 2>&1 || true
+		printf '== /proc/cmdline\n'
+		cat /proc/cmdline
+	} >"$1"
+}
+
+phase_prepare() {
+	local package missing=() critical mgmt queues kernel os
+	rm -rf "${WORK}"
+	mkdir -p "${WORK}"
+	for package in "${CHECK_GUIDE_PACKAGES[@]}"; do
+		rpm -q "${package}" >/dev/null 2>&1 && continue
+		dnf -y -q install "${package}" >>"${LOG}" 2>&1 || missing+=("${package}")
+	done
+	if ((${#missing[@]} == 0)); then
+		ok "all guide packages are installed (${CHECK_GUIDE_PACKAGES[*]})"
+	else
+		fail "packages that dnf could not install: ${missing[*]}"
+	fi
+	# ptp_kvm gives the guest a PTP clock of the host: chrony syncs to it with no network time.
+	if [[ -c /dev/ptp0 ]]; then
+		ok "ptp_kvm: /dev/ptp0 is the host clock"
+		grep -q '^refclock PHC /dev/ptp0' /etc/chrony.conf || printf 'refclock PHC /dev/ptp0 poll 2\n' >>/etc/chrony.conf
+	else
+		fail "ptp_kvm: no /dev/ptp0"
+	fi
+	getent group app-user >/dev/null || groupadd -g 1001 app-user
+	critical="$(nic_by_mac "${CRITICAL_MAC}")" || fail "no NIC with the critical MAC ${CRITICAL_MAC}"
+	mgmt="$(nic_by_mac "${MGMT_MAC}")" || fail "no NIC with the mgmt MAC ${MGMT_MAC}"
+	mkdir -p /etc/lowlat
+	sed -e "s/@critical@/${critical}/" -e "s/@mgmt@/${mgmt}/" "${VM_CONFIG}" >/etc/lowlat/lowlat.conf
+	queues="$(compgen -G "/sys/class/net/${critical}/queues/rx-*" | wc -l || true)"
+	note "NICs: critical ${critical} (${queues} RX queues), mgmt ${mgmt}"
+	grub_evidence "${WORK}/grub-prepare.txt"
+	kernel="$(uname -r)"
+	os="$(awk -F'"' '/^PRETTY_NAME=/ { print $2 }' /etc/os-release)"
+	note "kernel ${kernel}, ${os}"
+}
+
+# ---------------------------------------------------------------------------------------
+# State: what a run may change
+# ---------------------------------------------------------------------------------------
+
+# manifest - "checksum size path" for the files that the guides may touch. Left out: what
+# changes at every boot on its own, and grubenv and /etc/kernel/cmdline, which grubby
+# rewrites (the boot arguments are compared through grubby --info).
+manifest() {
+	find /etc /boot /usr/lib/systemd/hugetlb-reserve-pages -xdev \( -type f -o -type l \) -print0 2>/dev/null |
+		xargs -0 cksum 2>/dev/null |
+		sort -k 3 |
+		grep -v -E ' /etc/(resolv\.conf|mtab|\.pwd\.lock|passwd-|group-|shadow-|gshadow-|ld\.so\.cache|lvm/(archive|backup)/.*)$| /boot/grub2/grubenv$| /etc/kernel/cmdline$' || true
+}
+
+unit_state() {
+	systemctl list-unit-files --no-legend --no-pager 2>/dev/null | awk '{ print $1, $2 }' | sort
+}
+
+kernel_args() {
+	grubby --info=DEFAULT 2>/dev/null | awk -F'"' '/^args=/ { print $2 }' | tr ' ' '\n' | sed '/^$/d' | sort
+}
+
+running_args() {
+	tr ' ' '\n' </proc/cmdline | sed -e '/^$/d' -e '/^BOOT_IMAGE=/d' | sort
+}
+
+hugepages() {
+	local node count
+	for node in /sys/devices/system/node/node[0-9]*; do
+		count="$(<"${node}/hugepages/hugepages-2048kB/nr_hugepages")"
+		printf '%s %s\n' "${node##*/}" "${count}"
+	done
+}
+
+# nic_state - the runtime settings of the critical NIC: queues, rings, coalescing,
+# offloads and where its IRQs go. A reboot resets them; a rollback should already.
+nic_state() {
+	local nic irq
+	nic="$(nic_by_mac "${CRITICAL_MAC}")"
+	{
+		ethtool -l "${nic}" 2>/dev/null | sed -n '/^Current/,$p' | sed 's/^/channels /' || true
+		ethtool -g "${nic}" 2>/dev/null | sed -n '/^Current/,$p' | sed 's/^/rings /' || true
+		ethtool -c "${nic}" 2>/dev/null | sed '1d' | sed 's/^/coalesce /' || true
+		ethtool -k "${nic}" 2>/dev/null | sed '1d' | grep -v fixed | sed 's/^/offload /' || true
+		for irq in $(nic_irqs "${nic}"); do
+			printf 'irq %s %s\n' "${irq}" "$(cat "/proc/irq/${irq}/smp_affinity_list" 2>/dev/null || true)"
+		done
+	} | tr -s ' \t' ' ' | sed "s/^/nic ${nic} /"
+}
+
+# snapshot <dir> - what a run may change.
+snapshot() {
+	mkdir -p "$1"
+	manifest >"$1/etc"
+	unit_state >"$1/units"
+	kernel_args >"$1/args"
+	running_args >"$1/cmdline"
+	hugepages >"$1/hugepages"
+	nic_state >"$1/nic"
+}
+
+# diff_lines <prefix> <before> <after> - "prefix missing X" and "prefix extra X".
+diff_lines() {
+	diff "$2" "$3" | awk -v prefix="$1" '/^</ { print prefix " missing " substr($0, 3) } /^>/ { print prefix " extra " substr($0, 3) }' || true
+}
+
+# ---------------------------------------------------------------------------------------
+# Phases of one pass
+# ---------------------------------------------------------------------------------------
+
+phase_snapshot() {
+	local pass="$1" files units
+	if [[ "${pass}" == bare_metal ]]; then
+		# Units that systemd starts (lowlat-runtime.service, the verify timer) must see the
+		# forced host class too. Written before the snapshot: it is part of the scaffolding.
+		mkdir -p "${HOST_CLASS_DROPIN%/*}"
+		printf '[Manager]\nDefaultEnvironment=LOWLAT_HOST_CLASS=bare_metal\n' >"${HOST_CLASS_DROPIN}"
+		systemctl daemon-reexec
+	fi
+	snapshot "${WORK}/${pass}-before"
+	files="$(wc -l <"${WORK}/${pass}-before/etc")"
+	units="$(wc -l <"${WORK}/${pass}-before/units")"
+	note "${pass}: snapshot of ${files} files, ${units} unit files"
+}
+
+phase_apply() {
+	local pass="$1"
+	check "${pass}: apply-all --plan" as_pass "${pass}" "${REPO}/scripts/apply-all" --plan
+	apply_with_workarounds "${pass}: apply-all --apply" as_pass "${pass}" "${REPO}/scripts/apply-all" --apply
+	snapshot "${WORK}/${pass}-applied"
+	grub_evidence "${WORK}/grub-${pass}-applied.txt"
+}
+
+# check_cmdline <pass> - the running kernel booted with the arguments of the default
+# boot entry. On RHEL 8 this is where grub2-mkconfig, run after grubby, would show.
+check_cmdline() {
+	local pass="$1" missing
+	running_args >"${WORK}/${pass}-booted-cmdline"
+	missing="$(comm -23 "${WORK}/${pass}-applied/args" "${WORK}/${pass}-booted-cmdline")"
+	if [[ -z "${missing}" ]]; then
+		ok "${pass}: /proc/cmdline has every argument of the default boot entry"
+		return 0
+	fi
+	fail "${pass}: /proc/cmdline lacks arguments of the default boot entry: ${missing//$'\n'/ }"
+	grub_evidence "${WORK}/grub-${pass}-booted.txt"
+	indent <"${WORK}/grub-${pass}-booted.txt"
+}
+
+# check_hugepages <pass> - bare_metal reserves HUGEPAGES_PER_NODE on each node at early
+# boot; a VM skips huge pages, so the counts stay what they were.
+check_hugepages() {
+	local pass="$1" entry node count now before
+	if [[ "${pass}" != bare_metal ]]; then
+		now="$(hugepages)"
+		before="$(<"${WORK}/${pass}-before/hugepages")"
+		if [[ "${now}" == "${before}" ]]; then
+			ok "${pass}: huge pages per node unchanged (the guides skip them in a VM)"
+		else
+			fail "${pass}: huge pages changed in a VM: ${now//$'\n'/, }"
+		fi
+		return 0
+	fi
+	for entry in $(config_value HUGEPAGES_PER_NODE); do
+		node="${entry%%:*}"
+		count="${entry##*:}"
+		now="$(cat "/sys/devices/system/node/${node}/hugepages/hugepages-2048kB/nr_hugepages")"
+		if [[ "${now}" == "${count}" ]]; then
+			ok "${pass}: ${node} has ${count} huge pages of 2 MiB"
+		else
+			fail "${pass}: ${node} has ${now} huge pages of 2 MiB, not ${count}"
+		fi
+	done
+}
+
+check_runtime_unit() {
+	local pass="$1" result status
+	result="$(systemctl show -p Result --value lowlat-runtime.service)"
+	status="$(systemctl show -p ExecMainStatus --value lowlat-runtime.service)"
+	if [[ "${result}" == success && "${status}" == 0 ]] && systemctl is-active --quiet lowlat-runtime.service; then
+		ok "${pass}: lowlat-runtime.service ran at boot and succeeded"
+		return 0
+	fi
+	fail "${pass}: lowlat-runtime.service result=${result} status=${status}"
+	journalctl -b -u lowlat-runtime.service --no-pager 2>&1 | tail -n 20 | indent
+}
+
+# check_irqs <pass> <verify log> - the critical NIC's IRQs are on its irq_cpus.
+check_irqs() {
+	local pass="$1" log="$2" nic want irq now misplaced=""
+	nic="$(nic_by_mac "${CRITICAL_MAC}")"
+	want="$(config_value NICS | tr ' ' '\n' | awk -F'|' -v nic="${nic}" '$1 == nic { print $3 }')"
+	for irq in $(nic_irqs "${nic}"); do
+		now="$(cat "/proc/irq/${irq}/smp_affinity_list" 2>/dev/null || true)"
+		[[ "${now}" == "${want}" ]] || misplaced="${misplaced} ${irq}:${now}"
+	done
+	if [[ -z "${misplaced}" ]]; then
+		ok "${pass}: every IRQ of ${nic} is on CPU ${want}"
+		return 0
+	fi
+	# verify-tuning passing its IRQ line while the IRQs are elsewhere is a known bug.
+	if grep -q 'PASS.*IRQs on CPUs' "${log}"; then
+		observe virtio-irq-false-pass
+		return 0
+	fi
+	fail "${pass}: IRQs of ${nic} not on CPU ${want}:${misplaced}"
+}
+
+# expected_warning <pass> <text> - the id of the expected WARN that matches, if any.
+expected_warning() {
+	local major
+	major="$(os_major)"
+	awk -F'\t' -v pass="$1" -v major="${major}" -v line="$2" '
+		!/^#/ && NF >= 3 && line ~ $2 &&
+		($4 == "" || $4 == pass) && ($5 == "" || index("," $5 ",", "," major ",")) { print $1; exit }' "${EXPECTED_WARNINGS}"
+}
+
+check_verify() {
+	local pass="$1" report status=0 line id passes warns fails seen="" lines
+	report="${WORK}/verify-${pass}.txt"
+	as_pass "${pass}" "${REPO}/scripts/verify-tuning" --report "${report}" >/dev/null 2>&1 || status=$?
+	passes="$(count_lines '^  PASS' "${report}")"
+	warns="$(count_lines '^  WARN' "${report}")"
+	fails="$(count_lines '^  FAIL' "${report}")"
+	note "${pass}: verify-tuning exit ${status}: ${passes} PASS, ${warns} WARN, ${fails} FAIL"
+	if ((status != 0 && status != 5)) || ((status == 5 && fails == 0)) || ((passes == 0)); then
+		fail "${pass}: verify-tuning exited ${status} without a usable report"
+		tail -n 5 "${report}" | indent
+	fi
+	lines="$(sed -n 's/^  FAIL /verify FAIL /p' "${report}")"
+	report_leftovers "${pass}: verify-tuning" "${lines}"
+	lines="$(sed -n 's/^  WARN //p' "${report}")"
+	while IFS= read -r line; do
+		[[ -n "${line}" ]] || continue
+		id="$(expected_warning "${pass}" "${line}")"
+		if [[ -z "${id}" ]]; then
+			fail "${pass}: verify-tuning: unexpected WARN ${line}"
+			continue
+		fi
+		seen="${seen} ${id}"
+	done <<<"${lines}"
+	while IFS=$'\t' read -r id _ _ _ _; do
+		[[ -n "${id}" && "${id}" != '#'* ]] || continue
+		[[ " ${seen} " == *" ${id} "* ]] || note "${pass}: expected WARN ${id} did not show"
+	done <"${EXPECTED_WARNINGS}"
+	check_irqs "${pass}" "${report}"
+}
+
+phase_after_apply() {
+	local pass="$1"
+	check_cmdline "${pass}"
+	check_hugepages "${pass}"
+	check_runtime_unit "${pass}"
+	check_verify "${pass}"
+	grub_evidence "${WORK}/grub-${pass}-booted.txt"
+}
+
+phase_rollback() {
+	local pass="$1" index guide lines
+	for ((index = ${#HOST_APPLY_ORDER[@]} - 1; index >= 0; index--)); do
+		guide="${HOST_APPLY_ORDER[index]}"
+		check "${pass}: ${guide} --rollback" as_pass "${pass}" "${REPO}/scripts/${guide}" --rollback
+	done
+	# Runtime state that the next boot resets anyway, but that a rollback should undo now.
+	nic_state >"${WORK}/${pass}-rolled-back-nic"
+	lines="$(diff_lines nic "${WORK}/${pass}-before/nic" "${WORK}/${pass}-rolled-back-nic" | sed 's/^nic \(missing\|extra\) nic /nic \1 /')"
+	report_leftovers "${pass}: rollback left runtime NIC state" "${lines}"
+}
+
+phase_after_rollback() {
+	local pass="$1" before after lines
+	before="${WORK}/${pass}-before"
+	after="${WORK}/${pass}-after"
+	snapshot "${after}"
+	lines="$(changes "${before}/etc" "${after}/etc")"
+	report_leftovers "${pass}: rollback left files" "${lines}"
+	lines="$(diff "${before}/units" "${after}/units" | awk '/^>/ { print "unit " substr($0, 3) }' || true)"
+	report_leftovers "${pass}: rollback left unit state" "${lines}"
+	lines="$(diff_lines cmdline "${before}/args" "${after}/args")"
+	report_leftovers "${pass}: rollback left kernel arguments" "${lines}"
+	lines="$(diff_lines "running cmdline" "${before}/cmdline" "${after}/cmdline")"
+	report_leftovers "${pass}: rollback left the running kernel" "${lines}"
+	lines="$(diff_lines hugepages "${before}/hugepages" "${after}/hugepages")"
+	report_leftovers "${pass}: rollback left huge pages" "${lines}"
+}
+
+# phase_report <events> - the events of every phase of every pass, collected by the host.
+phase_report() {
+	local events="$1" id ids
+	OBSERVED=()
+	ids="$(awk '$1 == "known" { print $2 }' "${events}" | sort -u || true)"
+	while read -r id; do
+		[[ -n "${id}" ]] && OBSERVED+=("${id}")
+	done <<<"${ids}"
+	checks="$(count_lines '^\(ok\|fail\) ' "${events}")"
+	failed="$(count_lines '^fail ' "${events}")"
+	report_known_issues
+	printf 'summary checks=%d failed=%d known=%d\n' "${checks}" "${failed}" "${#OBSERVED[@]}"
+	((failed == 0))
+}
+
+main() {
+	local phase="${1:-}" pass="${2:-}" uid
+	uid="$(id -u)"
+	[[ "${uid}" == 0 ]] || {
+		printf 'check-vm-guest: needs root, in a disposable VM: run it through tools/check-vm\n' >&2
+		exit 2
+	}
+	case "${phase}" in
+	prepare) phase_prepare ;;
+	snapshot | apply | after-apply | rollback | after-rollback)
+		[[ "${pass}" == virtual_machine || "${pass}" == bare_metal ]] || {
+			printf 'check-vm-guest: %s needs a pass: virtual_machine or bare_metal\n' "${phase}" >&2
+			exit 2
+		}
+		"phase_${phase//-/_}" "${pass}"
+		;;
+	report) phase_report "${pass}" ;;
+	*)
+		printf 'usage: check-vm-guest prepare | {snapshot|apply|after-apply|rollback|after-rollback} PASS | report EVENTS\n' >&2
+		exit 2
+		;;
+	esac
+}
+
+main "$@"

@@ -1,0 +1,422 @@
+#!/usr/bin/env bash
+#
+# check-vm - boot RHEL-family cloud images in QEMU/KVM, apply the guides for real, and
+# print one PASS or FAIL line per image (Level 3 of the validation ladder).
+#
+# Per image:
+#   1. boot the GenericCloud image (checksum-verified, cached), install the guide packages,
+#      the lowlat.conf of scripts/fixtures/vm and the repository in /opt/lowlat; power off
+#   2. twice, from that prepared disk: once with the host class that the scripts detect
+#      (virtual_machine), once forced to bare_metal, so that isolcpus, nohz_full, per-node
+#      huge pages and CPUAffinity run on a real kernel:
+#        snapshot, apply-all --apply, reboot, check /proc/cmdline, huge pages, the runtime
+#        unit, IRQs and verify-tuning --report, roll back every guide in reverse order,
+#        reboot, compare with the snapshot
+#   3. known issues (scripts/fixtures/vm/known-issues) that did not show up fail the run
+# What runs in the VM is tools/check-vm-guest.
+#
+#   tools/check-vm [--work DIR] [--cache DIR] [--timeout SECONDS] [IMAGE...]
+#   tools/check-vm --print-checksum IMAGE
+#
+# IMAGE: rocky8, rocky9, alma10 (blocking), stream9, stream10 (advisory: CentOS Stream runs
+# ahead of RHEL). Default: all five. --print-checksum prints the published SHA-256 of the
+# image, the cache key of CI.
+# The VM: 4 vCPUs on 2 NUMA nodes, 4 GiB, a multiqueue virtio-net NIC on a tap device
+# (role critical, created with sudo) and a user-mode virtio-net NIC (role mgmt: SSH through
+# a forwarded port, and the network for dnf), ptp_kvm, and the serial console in a file.
+# Commands run over SSH: each has its own exit status and output, which the serial
+# console does not give (these images print no login prompt on it either).
+# Needs Linux with a usable /dev/kvm, qemu-system-x86_64, qemu-img, cloud-localds
+# (cloud-image-utils), curl, sha256sum, ssh, ssh-keygen, ip and git.
+
+set -Eeuo pipefail
+export LC_ALL=C
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+DEFAULT_IMAGES="rocky8 rocky9 alma10 stream9 stream10"
+CRITICAL_MAC=52:54:00:00:00:01
+MGMT_MAC=52:54:00:00:00:02
+PASSES="virtual_machine bare_metal"
+
+WORK=""
+CACHE=""
+TIMEOUT=600
+QEMU_PID=""
+TAP=""
+SSH_PORT=""
+blocking_failures=0
+
+die() {
+	printf 'check-vm: %s\n' "$*" >&2
+	exit 1
+}
+
+# image_info <name> - sets IMAGE_URL, CHECKSUM_URL and BLOCKING, or returns 1.
+image_info() {
+	local stream=https://cloud.centos.org/centos
+	case "$1" in
+	rocky8 | rocky9)
+		IMAGE_URL="https://dl.rockylinux.org/pub/rocky/${1#rocky}/images/x86_64/Rocky-${1#rocky}-GenericCloud-Base.latest.x86_64.qcow2"
+		CHECKSUM_URL="${IMAGE_URL}.CHECKSUM"
+		BLOCKING=1
+		;;
+	alma10)
+		IMAGE_URL=https://repo.almalinux.org/almalinux/10/cloud/x86_64/images/AlmaLinux-10-GenericCloud-latest.x86_64.qcow2
+		CHECKSUM_URL="${IMAGE_URL%/*}/CHECKSUM"
+		BLOCKING=1
+		;;
+	stream9 | stream10)
+		IMAGE_URL="${stream}/${1#stream}-stream/x86_64/images/CentOS-Stream-GenericCloud-${1#stream}-latest.x86_64.qcow2"
+		CHECKSUM_URL="${IMAGE_URL}.SHA256SUM"
+		BLOCKING=0
+		;;
+	*) return 1 ;;
+	esac
+}
+
+# published_checksum <name> - the SHA-256 that the distribution publishes for the image.
+# Both formats are in use: "SHA256 (file) = hash" and "hash  file".
+published_checksum() {
+	local file sums hash
+	image_info "$1" || die "unknown image $1 (known: ${DEFAULT_IMAGES})"
+	file="${IMAGE_URL##*/}"
+	sums="$(curl -fsSL --retry 3 "${CHECKSUM_URL}")" || die "cannot fetch ${CHECKSUM_URL}"
+	hash="$(awk -v name="${file}" '($1 == "SHA256" && $2 == "(" name ")") { print $4; exit }
+		($2 == name || $2 == "*" name) { print $1; exit }' <<<"${sums}")"
+	[[ "${hash}" =~ ^[0-9a-f]{64}$ ]] || die "no SHA-256 for ${file} in ${CHECKSUM_URL}"
+	printf '%s\n' "${hash}"
+}
+
+require_host() {
+	local tool os
+	os="$(uname -s)"
+	[[ "${os}" == Linux ]] || die "needs Linux with /dev/kvm: the VMs run in CI (.github/workflows/vm.yml)"
+	[[ -c /dev/kvm && -r /dev/kvm && -w /dev/kvm ]] || die "/dev/kvm is missing or not usable by this user"
+	for tool in qemu-system-x86_64 qemu-img cloud-localds curl sha256sum ssh ssh-keygen ip git; do
+		command -v "${tool}" >/dev/null 2>&1 || die "missing command: ${tool}"
+	done
+}
+
+# as_root <command...> - root for the tap device: directly, or through sudo.
+as_root() {
+	if [[ "${EUID}" == 0 ]]; then
+		"$@"
+		return
+	fi
+	sudo -n "$@"
+}
+
+# fetch_image <name> <dir> - the base image in the cache, checked against the published
+# SHA-256. A cached file is used again when its name and its content match that checksum.
+fetch_image() {
+	local expected actual file
+	expected="$(published_checksum "$1")"
+	file="${CACHE}/$1-${expected}.qcow2"
+	if [[ ! -f "${file}" ]]; then
+		rm -f "${CACHE}/$1-"*.qcow2
+		curl -fsSL --retry 3 -o "${file}.part" "${IMAGE_URL}" || die "cannot download ${IMAGE_URL}"
+		mv "${file}.part" "${file}"
+	fi
+	actual="$(sha256sum "${file}")"
+	actual="${actual%% *}"
+	if [[ "${actual}" != "${expected}" ]]; then
+		rm -f "${file}"
+		die "checksum mismatch for ${IMAGE_URL}: ${actual} instead of ${expected}"
+	fi
+	ln -sfn "${file}" "$2/base.qcow2"
+}
+
+# user_data <public key> - root logs in with the key; ptp_kvm loads at every boot.
+user_data() {
+	printf '#cloud-config\n'
+	printf 'disable_root: false\n'
+	printf 'ssh_pwauth: false\n'
+	printf 'ssh_authorized_keys:\n  - %s\n' "$1"
+	printf 'write_files:\n'
+	printf '  - path: /etc/modules-load.d/ptp_kvm.conf\n'
+	printf '    content: "ptp_kvm\\n"\n'
+	printf 'runcmd:\n  - [modprobe, ptp_kvm]\n'
+}
+
+# network_config - DHCP on mgmt only. The critical NIC is up with no address: the guides
+# tune its queues and IRQs, and no traffic is needed for that.
+network_config() {
+	printf 'version: 2\nethernets:\n'
+	printf '  mgmt:\n    match:\n      macaddress: "%s"\n    dhcp4: true\n' "${MGMT_MAC}"
+	printf '  critical:\n    match:\n      macaddress: "%s"\n    dhcp4: false\n    dhcp6: false\n' "${CRITICAL_MAC}"
+}
+
+# make_seed <dir> - the SSH key and the cloud-init seed of one image.
+make_seed() {
+	rm -f "$1/key" "$1/key.pub"
+	ssh-keygen -q -t ed25519 -N '' -C check-vm -f "$1/key"
+	user_data "$(<"$1/key.pub")" >"$1/user-data"
+	network_config >"$1/network-config"
+	printf 'instance-id: check-vm\nlocal-hostname: check-vm\n' >"$1/meta-data"
+	cloud-localds --network-config="$1/network-config" "$1/seed.iso" "$1/user-data" "$1/meta-data"
+}
+
+make_tap() {
+	local user
+	user="$(id -un)"
+	TAP="lowlat-crit$$"
+	TAP="${TAP:0:15}"
+	as_root ip tuntap add dev "${TAP}" mode tap multi_queue user "${user}" || die "cannot create the tap device ${TAP} (needs root or sudo -n)"
+	as_root ip link set "${TAP}" up
+}
+
+remove_tap() {
+	[[ -z "${TAP}" ]] || as_root ip link delete "${TAP}" >/dev/null 2>&1 || true
+	TAP=""
+}
+
+# start_vm <dir> <disk> - QEMU in the background. The serial console is appended to
+# serial.log, one file for every boot of the image.
+start_vm() {
+	SSH_PORT=$((20000 + RANDOM % 20000))
+	qemu-system-x86_64 -machine q35 -accel kvm -cpu host -smp 4,sockets=2,cores=2,threads=1 -m 4G \
+		-object memory-backend-ram,id=m0,size=2G -object memory-backend-ram,id=m1,size=2G \
+		-numa node,nodeid=0,cpus=0-1,memdev=m0 -numa node,nodeid=1,cpus=2-3,memdev=m1 \
+		-drive "file=$2,if=virtio,format=qcow2" \
+		-drive "file=$1/seed.iso,if=virtio,format=raw,media=cdrom,readonly=on" \
+		-netdev "user,id=mgmt,hostfwd=tcp:127.0.0.1:${SSH_PORT}-:22" \
+		-device "virtio-net-pci,netdev=mgmt,mac=${MGMT_MAC}" \
+		-netdev "tap,id=critical,ifname=${TAP},script=no,downscript=no,queues=4" \
+		-device "virtio-net-pci,netdev=critical,mac=${CRITICAL_MAC},mq=on,vectors=10" \
+		-display none -monitor none -chardev "file,id=serial,path=$1/serial.log,append=on" -serial chardev:serial \
+		>>"$1/qemu.log" 2>&1 &
+	QEMU_PID=$!
+}
+
+stop_vm() {
+	[[ -z "${QEMU_PID}" ]] || kill "${QEMU_PID}" 2>/dev/null || true
+	[[ -z "${QEMU_PID}" ]] || wait "${QEMU_PID}" 2>/dev/null || true
+	QEMU_PID=""
+}
+
+cleanup() {
+	stop_vm
+	remove_tap
+}
+
+# guest <dir> <command...> - a command in the VM, as root.
+guest() {
+	local dir="$1"
+	shift
+	ssh -q -i "${dir}/key" -p "${SSH_PORT}" -o BatchMode=yes -o StrictHostKeyChecking=no \
+		-o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=5 \
+		-o ServerAliveInterval=10 root@127.0.0.1 "$@"
+}
+
+# wait_for_boot <dir> <old boot id> - until SSH answers from a boot other than the old one.
+wait_for_boot() {
+	local dir="$1" old="$2" started="${SECONDS}" id
+	while ((SECONDS - started < TIMEOUT)); do
+		kill -0 "${QEMU_PID}" 2>/dev/null || return 1
+		id="$(guest "${dir}" cat /proc/sys/kernel/random/boot_id 2>/dev/null || true)"
+		if [[ -n "${id}" && "${id}" != "${old}" ]]; then
+			BOOT_ID="${id}"
+			return 0
+		fi
+		sleep 2
+	done
+	return 1
+}
+
+# reboot_guest <dir> - reboot, and wait for the next boot.
+reboot_guest() {
+	guest "$1" systemctl --no-block reboot >/dev/null 2>&1 || true
+	wait_for_boot "$1" "${BOOT_ID}"
+}
+
+# poweroff_guest <dir> - a clean shutdown, so that the disk is consistent.
+poweroff_guest() {
+	local started="${SECONDS}"
+	guest "$1" systemctl --no-block poweroff >/dev/null 2>&1 || true
+	while kill -0 "${QEMU_PID}" 2>/dev/null; do
+		if ((SECONDS - started >= 120)); then
+			stop_vm
+			return 1
+		fi
+		sleep 1
+	done
+	wait "${QEMU_PID}" 2>/dev/null || true
+	QEMU_PID=""
+}
+
+# copy_repo <dir> - the tracked files of the repository to /opt/lowlat in the VM.
+copy_repo() {
+	git -C "${REPO}" ls-files -z --cached --others --exclude-standard |
+		tar -C "${REPO}" --null --ignore-failed-read -T - -cf - 2>/dev/null |
+		guest "$1" 'command -v tar >/dev/null || dnf -y -q install tar >/dev/null; rm -rf /opt/lowlat && mkdir -p /opt/lowlat && tar -xf - -C /opt/lowlat'
+}
+
+# phase <dir> <label> <arguments...> - one phase of tools/check-vm-guest. Its events are
+# kept in events; a phase that exits with an error is a failure too.
+phase() {
+	local dir="$1" label="$2" status=0 started="${SECONDS}"
+	shift 2
+	guest "${dir}" bash /opt/lowlat/tools/check-vm-guest "$@" >"${dir}/phase.out" 2>&1 || status=$?
+	cat "${dir}/phase.out" >>"${dir}/events"
+	if ((status != 0)) && ! grep -q '^fail ' "${dir}/phase.out"; then
+		printf 'fail %s: check-vm-guest %s exited %s\n' "${label}" "$*" "${status}" >>"${dir}/events"
+		tail -n 5 "${dir}/phase.out" | sed 's/^/     | /' >>"${dir}/events"
+	fi
+	timing "${label}" $((SECONDS - started))
+}
+
+# step <dir> <label> <function> <arguments...> - a host step with its time, or a failure.
+step() {
+	local dir="$1" label="$2" started="${SECONDS}"
+	shift 2
+	if ! "$@"; then
+		printf 'fail %s\n' "${label}" >>"${dir}/events"
+		timing "${label}" $((SECONDS - started))
+		return 1
+	fi
+	timing "${label}" $((SECONDS - started))
+}
+
+timing() {
+	TIMINGS="${TIMINGS}| $1 | $2 s |
+"
+}
+
+# run_pass <dir> <pass> - one pass, from a fresh overlay on the prepared disk. Returns 1
+# when the VM stops answering, and leaves it running otherwise.
+run_pass() {
+	local dir="$1" pass="$2"
+	qemu-img create -q -f qcow2 -b "${dir}/prepared.qcow2" -F qcow2 "${dir}/${pass}.qcow2" || return 1
+	start_vm "${dir}" "${dir}/${pass}.qcow2"
+	step "${dir}" "${pass}: boot" wait_for_boot "${dir}" "" || return 1
+	phase "${dir}" "${pass}: snapshot" snapshot "${pass}"
+	phase "${dir}" "${pass}: apply-all --apply" apply "${pass}"
+	step "${dir}" "${pass}: reboot after apply" reboot_guest "${dir}" || return 1
+	phase "${dir}" "${pass}: checks after the reboot and verify-tuning" after-apply "${pass}"
+	phase "${dir}" "${pass}: rollback of every guide" rollback "${pass}"
+	step "${dir}" "${pass}: reboot after rollback" reboot_guest "${dir}" || return 1
+	phase "${dir}" "${pass}: compare with the snapshot" after-rollback "${pass}"
+	mkdir -p "${dir}/guest-${pass}"
+	guest "${dir}" "tar -C /var/tmp/check-vm -cf - ." | tar -C "${dir}/guest-${pass}" -xf - 2>/dev/null || true
+}
+
+# prepare_disk <dir> - the first boot: cloud-init, the repository, the guide packages.
+# The disk is powered off cleanly, and every pass starts from it.
+prepare_disk() {
+	local dir="$1"
+	step "${dir}" "first boot to SSH (cloud-init)" wait_for_boot "${dir}" "" || return 1
+	step "${dir}" "cloud-init done" guest "${dir}" cloud-init status --wait >/dev/null || return 1
+	step "${dir}" "copy the repository" copy_repo "${dir}" || return 1
+	phase "${dir}" "prepare (packages, ptp_kvm, lowlat.conf)" prepare
+	step "${dir}" "power off the prepared disk" poweroff_guest "${dir}"
+}
+
+# report_image <dir> <name> <outcome> <total seconds> - the job summary of one image.
+report_image() {
+	local known
+	known="$(awk '$1 == "known" { print $2 }' "$1/events" | sort -u | tr '\n' ' ' || true)"
+	{
+		printf '### check-vm: %s, %s in %s s\n\n' "$2" "$3" "$4"
+		printf '| Step | Time |\n|---|---|\n%s\n' "${TIMINGS}"
+		if grep -q '^fail ' "$1/events"; then
+			printf 'Failures:\n\n```\n'
+			grep -E '^(fail|     \|)' "$1/events" | head -n 80
+			printf '```\n\n'
+		fi
+		printf 'Known issues: %s\n\n' "${known:-none}"
+	} >>"${GITHUB_STEP_SUMMARY:-/dev/null}"
+}
+
+# check_image <name> - prints its PASS/FAIL line; the logs stay in WORK/<name>.
+check_image() {
+	local name="$1" dir="${WORK}/$1" started="${SECONDS}" started_step label=FAIL pass summary status=0 outcome
+	image_info "${name}" || die "unknown image ${name} (known: ${DEFAULT_IMAGES})"
+	((BLOCKING == 1)) || label=ADVISORY-FAIL
+	rm -rf "${dir}"
+	mkdir -p "${dir}"
+	: >"${dir}/events"
+	TIMINGS=""
+	BOOT_ID=""
+	make_tap
+	started_step="${SECONDS}"
+	fetch_image "${name}" "${dir}"
+	timing "image download or cache, checksum" $((SECONDS - started_step))
+	make_seed "${dir}" >>"${dir}/qemu.log" 2>&1
+	qemu-img create -q -f qcow2 -b "${dir}/base.qcow2" -F qcow2 "${dir}/prepared.qcow2" 20G
+	start_vm "${dir}" "${dir}/prepared.qcow2"
+	if prepare_disk "${dir}"; then
+		for pass in ${PASSES}; do
+			if ! run_pass "${dir}" "${pass}"; then
+				stop_vm
+				continue
+			fi
+			if [[ "${pass}" == "${PASSES##* }" ]]; then
+				guest "${dir}" 'cat >/var/tmp/check-vm/events-all' <"${dir}/events"
+				guest "${dir}" bash /opt/lowlat/tools/check-vm-guest report /var/tmp/check-vm/events-all >>"${dir}/events" 2>&1 || status=$?
+			fi
+			poweroff_guest "${dir}" || true
+		done
+	fi
+	cleanup
+	summary="$(grep '^summary ' "${dir}/events" | tail -n 1 || true)"
+	if [[ -z "${summary}" ]] || grep -q '^fail ' "${dir}/events" || ((status != 0)); then
+		outcome=failed
+	else
+		outcome=passed
+	fi
+	report_image "${dir}" "${name}" "${outcome}" $((SECONDS - started))
+	summary="$(printf '%s' "${summary}" | sed -E 's/^summary checks=([0-9]+) failed=[0-9]+ known=([0-9]+)$/\1 checks, \2 known issues/')"
+	if [[ "${outcome}" == passed ]]; then
+		printf 'PASS  %s  (%s, %s s)\n' "${name}" "${summary}" $((SECONDS - started))
+		return 0
+	fi
+	printf '%s  %s  (%s, %s s)\n' "${label}" "${name}" "${summary:-no summary}" $((SECONDS - started))
+	grep -E '^(fail|     \|)' "${dir}/events" | head -n 40 | sed 's/^/      /'
+	printf '      logs: %s\n' "${dir}"
+	((BLOCKING == 0)) || blocking_failures=$((blocking_failures + 1))
+	return 0
+}
+
+main() {
+	local images="" image
+	while (($# > 0)); do
+		case "$1" in
+		--print-checksum)
+			[[ $# -ge 2 ]] || die "--print-checksum needs an image"
+			published_checksum "$2"
+			return 0
+			;;
+		--work)
+			[[ $# -ge 2 ]] || die "--work needs a directory"
+			WORK="$2"
+			shift
+			;;
+		--cache)
+			[[ $# -ge 2 ]] || die "--cache needs a directory"
+			CACHE="$2"
+			shift
+			;;
+		--timeout)
+			[[ $# -ge 2 ]] || die "--timeout needs a number of seconds"
+			TIMEOUT="$2"
+			shift
+			;;
+		-*) die "unknown option $1 (usage: tools/check-vm [--work DIR] [--cache DIR] [--timeout SECONDS] [IMAGE...])" ;;
+		*) images="${images} $1" ;;
+		esac
+		shift
+	done
+	[[ -n "${images}" ]] || images="${DEFAULT_IMAGES}"
+	require_host
+	[[ -n "${WORK}" ]] || WORK="$(mktemp -d "${TMPDIR:-/tmp}/check-vm.XXXXXX")"
+	[[ -n "${CACHE}" ]] || CACHE="${WORK}/cache"
+	mkdir -p "${WORK}" "${CACHE}"
+	trap cleanup EXIT
+	printf 'check-vm: logs in %s, images cached in %s\n' "${WORK}" "${CACHE}"
+	for image in ${images}; do
+		check_image "${image}"
+	done
+	((blocking_failures == 0)) || exit 1
+}
+
+main "$@"
