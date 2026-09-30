@@ -32,8 +32,8 @@ host_class_detect() {
 	fi
 }
 
-property() { # property <key> - last value of key in application.properties
-	awk -F= -v k="$1" '$1 == k { v = $2 } END { gsub(/[[:space:]]/, "", v); print v }' "${APP_CONFIG}"
+property() { # property <key> - last value of key in application.properties (separator: = or :, spaces allowed)
+	awk -F'[[:space:]]*[=:][[:space:]]*' -v k="$1" '$1 == k { v = $2 } END { gsub(/[[:space:]]/, "", v); print v }' "${APP_CONFIG}"
 }
 
 if [[ "${EUID}" -eq 0 ]]; then
