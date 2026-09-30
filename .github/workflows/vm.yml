@@ -2,8 +2,8 @@ name: vm
 
 # Level 3 of the validation ladder: boots RHEL-family cloud images in QEMU/KVM, applies
 # the guides on a real kernel, reboots, verifies, rolls back, reboots and compares with
-# the state before apply (tools/check-vm). CentOS Stream runs ahead of RHEL: its jobs
-# are advisory.
+# the state before apply (tools/check-vm). CentOS Stream runs ahead of RHEL: its job is
+# advisory. Stream 9 is left out while CentOS publishes no checksum for its cloud images.
 
 on:
   push:
@@ -42,7 +42,6 @@ jobs:
           - {name: rocky8, blocking: true}
           - {name: rocky9, blocking: true}
           - {name: alma10, blocking: true}
-          - {name: stream9, blocking: false}
           - {name: stream10, blocking: false}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0

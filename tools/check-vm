@@ -19,8 +19,9 @@
 #   tools/check-vm --print-checksum IMAGE
 #
 # IMAGE: rocky8, rocky9, alma10 (blocking), stream9, stream10 (advisory: CentOS Stream runs
-# ahead of RHEL). Default: all five. --print-checksum prints the published SHA-256 of the
-# image, the cache key of CI.
+# ahead of RHEL). Default: all but stream9, for which CentOS publishes no checksum at the
+# moment: an image that cannot be checked is not booted. --print-checksum prints the
+# published SHA-256 of the image, the cache key of CI.
 # The VM: 4 vCPUs on 2 NUMA nodes, 4 GiB, a multiqueue virtio-net NIC on a tap device
 # (role critical, created with sudo) and a user-mode virtio-net NIC (role mgmt: SSH through
 # a forwarded port, and the network for dnf), ptp_kvm, and the serial console in a file.
@@ -33,7 +34,7 @@ set -Eeuo pipefail
 export LC_ALL=C
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-DEFAULT_IMAGES="rocky8 rocky9 alma10 stream9 stream10"
+DEFAULT_IMAGES="rocky8 rocky9 alma10 stream10"
 CRITICAL_MAC=52:54:00:00:00:01
 MGMT_MAC=52:54:00:00:00:02
 PASSES="virtual_machine bare_metal"
