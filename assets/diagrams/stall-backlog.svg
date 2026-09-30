@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 340" width="760" height="340" role="img" aria-labelledby="t d">
+<title id="t">During a stall, requests due at a fixed rate pile up and each one is late; a closed-loop client records one slow sample</title>
+<desc id="d">Two timelines of the same 20 ms server stall. The closed-loop client sends a request, waits for the answer, and only then sends the next one, so during the stall it sends nothing and records a single slow sample. An open-loop client keeps sending at the production rate: every request due during the stall waits in a backlog, the first one for the whole stall and each later one a little less, and the backlog takes a moment to drain after the stall ends. Timed from each intended send time, the stall becomes thousands of slow samples, which is what the users see.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .stall { fill: #ffc9c9; fill-opacity: 0.45; stroke: #9b1c1c; stroke-dasharray: 4 3; }
+  .send { stroke: #1f4e8c; stroke-width: 2; }
+  .base { stroke: #57606a; stroke-width: 1; }
+  .bar { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1; }
+  .slow { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .st { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+  .ev { transform-box: fill-box; transform-origin: bottom; animation: flash 6s linear infinite; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @keyframes flash {
+    0%, 4%   { transform: scaleY(1.12); stroke-width: 3; }
+    8%, 100% { transform: scaleY(1); stroke-width: 1.5; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ev, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="340" rx="8"/>
+
+<!-- Lane 1: closed loop -->
+<rect class="lane" x="10" y="10" width="740" height="150" rx="6"/>
+<text class="cap" x="24" y="34">Closed loop: send, wait for the answer, then send the next one</text>
+<text class="sub" x="24" y="52">During the stall the client waits too. It sends nothing, and the stall becomes one slow sample.</text>
+<rect class="stall" x="300" y="60" width="200" height="90"/>
+<text class="st" x="400" y="94">server stall, 20 ms</text>
+<text class="lbl" x="24" y="72">sends</text>
+<path class="send" d="M160 62 v10 M180 62 v10 M200 62 v10 M220 62 v10 M240 62 v10 M260 62 v10 M280 62 v10 M300 62 v10 M510 62 v10 M530 62 v10 M550 62 v10 M570 62 v10 M590 62 v10 M610 62 v10 M630 62 v10 M650 62 v10 M670 62 v10 M690 62 v10 M710 62 v10"/>
+<text class="lbl" x="24" y="122">latency</text>
+<text class="lbl" x="24" y="137">recorded</text>
+<line class="base" x1="150" y1="146" x2="720" y2="146"/>
+<rect class="bar" x="156" y="142" width="8" height="4"/>
+<rect class="bar" x="176" y="142" width="8" height="4"/>
+<rect class="bar" x="196" y="142" width="8" height="4"/>
+<rect class="bar" x="216" y="142" width="8" height="4"/>
+<rect class="bar" x="236" y="142" width="8" height="4"/>
+<rect class="bar" x="256" y="142" width="8" height="4"/>
+<rect class="bar" x="276" y="142" width="8" height="4"/>
+<rect class="slow ev" x="296" y="82" width="8" height="64" style="animation-delay:-4.42s"/>
+<rect class="bar" x="506" y="142" width="8" height="4"/>
+<rect class="bar" x="526" y="142" width="8" height="4"/>
+<rect class="bar" x="546" y="142" width="8" height="4"/>
+<rect class="bar" x="566" y="142" width="8" height="4"/>
+<rect class="bar" x="586" y="142" width="8" height="4"/>
+<rect class="bar" x="606" y="142" width="8" height="4"/>
+<rect class="bar" x="626" y="142" width="8" height="4"/>
+<rect class="bar" x="646" y="142" width="8" height="4"/>
+<rect class="bar" x="666" y="142" width="8" height="4"/>
+<rect class="bar" x="686" y="142" width="8" height="4"/>
+<rect class="bar" x="706" y="142" width="8" height="4"/>
+<text class="axis" x="610" y="94">one sample</text>
+
+<!-- Lane 2: open loop -->
+<rect class="lane" x="10" y="170" width="740" height="150" rx="6"/>
+<text class="cap" x="24" y="194">Open loop at the production rate, timed from each intended send</text>
+<text class="sub" x="24" y="212">Requests keep coming. Each one due during the stall waits in the backlog, and the backlog drains after it.</text>
+<rect class="stall" x="300" y="220" width="200" height="90"/>
+<text class="st" x="400" y="254">server stall, 20 ms</text>
+<text class="lbl" x="24" y="232">sends</text>
+<path class="send" d="M160 222 v10 M180 222 v10 M200 222 v10 M220 222 v10 M240 222 v10 M260 222 v10 M280 222 v10 M300 222 v10 M320 222 v10 M340 222 v10 M360 222 v10 M380 222 v10 M400 222 v10 M420 222 v10 M440 222 v10 M460 222 v10 M480 222 v10 M500 222 v10 M520 222 v10 M540 222 v10 M560 222 v10 M580 222 v10 M600 222 v10 M620 222 v10 M640 222 v10 M660 222 v10 M680 222 v10 M700 222 v10"/>
+<text class="lbl" x="24" y="282">latency</text>
+<text class="lbl" x="24" y="297">recorded</text>
+<line class="base" x1="150" y1="306" x2="720" y2="306"/>
+<rect class="bar" x="156" y="302" width="8" height="4"/>
+<rect class="bar" x="176" y="302" width="8" height="4"/>
+<rect class="bar" x="196" y="302" width="8" height="4"/>
+<rect class="bar" x="216" y="302" width="8" height="4"/>
+<rect class="bar" x="236" y="302" width="8" height="4"/>
+<rect class="bar" x="256" y="302" width="8" height="4"/>
+<rect class="bar" x="276" y="302" width="8" height="4"/>
+<rect class="slow ev" x="296" y="242" width="8" height="64" style="animation-delay:-4.42s"/>
+<rect class="slow" x="316" y="248" width="8" height="58"/>
+<rect class="slow" x="336" y="254" width="8" height="52"/>
+<rect class="slow" x="356" y="260" width="8" height="46"/>
+<rect class="slow" x="376" y="266" width="8" height="40"/>
+<rect class="slow" x="396" y="272" width="8" height="34"/>
+<rect class="slow" x="416" y="278" width="8" height="28"/>
+<rect class="slow" x="436" y="284" width="8" height="22"/>
+<rect class="slow" x="456" y="290" width="8" height="16"/>
+<rect class="slow" x="476" y="296" width="8" height="10"/>
+<rect class="slow" x="496" y="290" width="8" height="16"/>
+<rect class="slow" x="516" y="294" width="8" height="12"/>
+<rect class="slow" x="536" y="298" width="8" height="8"/>
+<rect class="bar" x="556" y="302" width="8" height="4"/>
+<rect class="bar" x="576" y="302" width="8" height="4"/>
+<rect class="bar" x="596" y="302" width="8" height="4"/>
+<rect class="bar" x="616" y="302" width="8" height="4"/>
+<rect class="bar" x="636" y="302" width="8" height="4"/>
+<rect class="bar" x="656" y="302" width="8" height="4"/>
+<rect class="bar" x="676" y="302" width="8" height="4"/>
+<rect class="bar" x="696" y="302" width="8" height="4"/>
+<text class="axis" x="610" y="254">every request late</text>
+
+<text class="axis" x="380" y="334">schematic · blue tick: a request sent · bar: its recorded latency · red: slow</text>
+<line class="head" x1="150" y1="58" x2="150" y2="308"/>
+</svg>
