@@ -1,0 +1,89 @@
+name: Hardware report
+description: You ran the scripts or a guide on a real server or a VM, and want to tell what happened.
+title: "[hardware report] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. A report is evidence, not a certification: it says what happened on your host, on one day. Successes, failures and "it did nothing" are all useful.
+
+        **Before you paste anything**, remove host names, IP and MAC addresses, serial numbers, asset tags, user names and internal paths. Where the text asks for the output of `scripts/verify-tuning`, edit the `host:` line of the report.
+  - type: dropdown
+    id: distribution
+    attributes:
+      label: Distribution and major release
+      options:
+        - RHEL 8
+        - RHEL 9
+        - RHEL 10
+        - Rocky Linux 8
+        - Rocky Linux 9
+        - AlmaLinux 8
+        - AlmaLinux 9
+        - AlmaLinux 10
+        - Other RHEL-family system (say which below)
+    validations:
+      required: true
+  - type: input
+    id: kernel
+    attributes:
+      label: Kernel and exact release
+      description: Output of `uname -r` and the `PRETTY_NAME` line of `/etc/os-release`.
+      placeholder: "5.14.0-427.el9.x86_64, Red Hat Enterprise Linux 9.4"
+    validations:
+      required: true
+  - type: dropdown
+    id: host-class
+    attributes:
+      label: Host class
+      options:
+        - Bare metal
+        - Virtual machine
+    validations:
+      required: true
+  - type: textarea
+    id: hardware
+    attributes:
+      label: CPU, memory and NICs
+      description: CPU model, sockets, cores per socket, SMT on or off, NUMA nodes, RAM, and for each NIC the driver and speed (`ethtool -i` and `ethtool eth0`). For a VM, the hypervisor and its version.
+      placeholder: "2 x 16 cores, SMT off, 2 NUMA nodes, 256 GiB. Critical NIC: ixgbe 10 Gb/s. Timing NIC: igb."
+    validations:
+      required: true
+  - type: checkboxes
+    id: applied
+    attributes:
+      label: What you applied
+      options:
+        - label: "`scripts/apply-all --apply`"
+        - label: "Individual guide scripts (name them below)"
+        - label: "Only the manual steps of the guides"
+        - label: "Only `scripts/verify-tuning`, `scripts/plan-layout` or `scripts/size-buffers`"
+  - type: textarea
+    id: result
+    attributes:
+      label: What happened
+      description: Did apply finish? Did the host reboot cleanly? What does `sudo scripts/verify-tuning --report verify-report.txt` say afterwards? Paste the FAIL and WARN lines, and attach or paste the report once the `host:` line is edited.
+    validations:
+      required: true
+  - type: textarea
+    id: rollback
+    attributes:
+      label: Rollback
+      description: Did you run `scripts/apply-all --rollback`, or the guide rollbacks? Was the host back to how it was, after a reboot? What was left behind?
+  - type: textarea
+    id: latency
+    attributes:
+      label: Latency before and after (optional)
+      description: The tool, the workload, the percentiles and the units. Numbers without a method are not used.
+  - type: textarea
+    id: surprises
+    attributes:
+      label: Anything a guide got wrong, or did not say
+      description: A wrong instruction is also worth its own "Wrong or unsafe advice" issue.
+  - type: checkboxes
+    id: sanitized
+    attributes:
+      label: Privacy
+      options:
+        - label: I removed host names, IP and MAC addresses, serial numbers, asset tags, user names and internal paths from everything above.
+          required: true

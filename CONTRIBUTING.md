@@ -74,6 +74,27 @@ A Gradle update can fail until its approval list and checksums have been reviewe
 
 To stop version-update PRs, set the affected ecosystem's `open-pull-requests-limit` to `0` in a reviewed PR. Security-update settings remain an owner decision in repository settings.
 
+## Reporting a run on real hardware
+
+### At a glance
+
+- **What:** a report of what happened when you ran the scripts or a guide on a real server, or on a VM you own.
+- **Why:** the harnesses in CI run on fake hosts, in containers and in VMs. They cannot show BIOS behavior, physical NIC features or a real workload. Only a report from real hardware can.
+- **Where:** open an issue with the [hardware report form](.github/ISSUE_TEMPLATE/hardware-report.yml).
+
+**What to run:**
+
+```bash
+uname -r
+sudo scripts/verify-tuning --report verify-report.txt
+```
+
+The report file starts with a `host:` line that holds your host name: replace it before you paste or attach the file.
+
+**What to leave out:** host names, IP and MAC addresses, serial numbers, asset tags, user names and internal paths. The form has a required box for it. Do not send a report that you cannot sanitize.
+
+**What a report is, and is not:** it is evidence about one host on one day. It is not a certification, and this project does not issue or claim one. A report of a failure is as useful as a report of a success. Numbers need the tool, the workload and the units, or they are not used.
+
 ## Reporting wrong or dangerous advice
 
 Open an issue with the guide and section, what the text says, what you observed, and the kernel and hardware. If the advice can lock a host out or weaken security, read [SECURITY.md](SECURITY.md) first.
