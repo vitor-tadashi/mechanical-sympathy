@@ -175,15 +175,17 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 ├── examples/        use-cases/ (10 stories), Java on a tuned host (+ runnable probe), multi-NIC segmentation
 ├── assets/          diagrams/ (29 hand-written SVGs), social-preview.svg (source of the repository card)
 ├── site/            the GitHub Pages site, the CPU layout explorer and the buffer simulator (no dependencies)
-├── tools/           lint, fixture tests, site build
+├── tools/           lint, the four checkers (fake hosts, regressions, containers, VMs), site build
+├── .github/         CI workflows (lint, integration, vm, doc-health, pages), issue forms, Dependabot
 └── scripts/
     ├── lib/common            logging, dry-run, host class, backups, CPU list helpers
     ├── lowlat.conf.example    the host description
     ├── 00..11-*               one script per guide (--apply / --dry-run / --verify / --rollback)
-    ├── apply-all              sequencing + step timing
+    ├── apply-all              sequencing + step timing, and the whole-host --rollback
     ├── verify-tuning          read-only report
     ├── plan-layout            propose or check the CPU layout of lowlat.conf
-    ├── fixtures/              lscpu fixtures and golden proposals for plan-layout
+    ├── size-buffers           how long a burst lasts and how big the queues must be
+    ├── fixtures/              lscpu goldens, buffer cases, fake hosts, and the known issues of the container and VM checks
     └── systemd/lowlat-runtime.service
 ```
 
