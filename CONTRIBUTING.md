@@ -46,7 +46,7 @@ make site                     # optional: assemble _site/ to preview the site lo
 - **Approval:** The owner approves library and build-tool changes, and every merge.
 - **Verification:** Keep action pins and review Gradle checksums before merging.
 
-[The configuration](.github/dependabot.yml) checks both ecosystems on Mondays at 07:23 UTC and allows three open version-update PRs per ecosystem. GitHub handles security-update PRs separately; [that limit does not cover them](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#open-pull-requests-limit). Automatic rebasing is disabled. Resolve conflicts by merging main when the owner requests it.
+[The configuration](.github/dependabot.yml) checks both ecosystems on Mondays at 07:23 UTC and allows three open version-update PRs per ecosystem. GitHub handles security-update PRs separately; [that limit does not cover them](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#open-pull-requests-limit-). Automatic rebasing is disabled. Resolve conflicts by merging main when the owner requests it.
 
 ### Workflow actions
 
@@ -73,6 +73,20 @@ Keep every action pinned to a full commit SHA with its release version in a trai
 A Gradle update can fail until its approval list and checksums have been reviewed. Generating checksums does not approve a library. Keep dependency verification enabled; CI runs the ordinary check and never generates trust metadata. All dependency PRs need manual review and an owner-approved merge.
 
 To stop version-update PRs, set the affected ecosystem's `open-pull-requests-limit` to `0` in a reviewed PR. Security-update settings remain an owner decision in repository settings.
+
+## Documentation health
+
+### At a glance
+
+- **On PRs and main:** Check local links and fragments, and American spelling.
+- **Weekly:** Check public links on Mondays at 07:23 UTC; the owner can also authorize a manual run.
+- **Tools:** [Lychee](GLOSSARY.md#lychee) 0.24.2 and [misspell](GLOSSARY.md#misspell) 0.8.0, downloaded as release binaries and verified against committed SHA-256 digests before extraction.
+
+[The workflow](.github/workflows/doc-health.yml) checks tracked Markdown and HTML assembled by `make site`. Spelling covers Markdown and HTML text, including image descriptions and accessibility labels. It reports errors without rewriting files. JavaScript and CSS source are not prose inputs. The owner-approved spelling exception `Spectre` preserves the proper name of the CPU vulnerability.
+
+[The link configuration](.github/lychee.toml) checks fragments, allows eight concurrent requests with at most two per host, waits up to 20 seconds, and retries twice. Email and private-network requests are excluded. Broken public links, TLS errors, and timeouts fail the run; no blanket URL exclusions or cached successes hide them.
+
+Read the failed job's output to find the source and target. Correct a real defect, or ask the owner to review a reproducible false positive before adding a narrow exception. A transient public failure can be checked again through an owner-authorized manual run. Tool upgrades require review of the exact upstream release and replacement checksums. To stop scheduled checks, remove the schedule in a reviewed PR; required-check and environment settings remain owner-controlled.
 
 ## Reporting wrong or dangerous advice
 

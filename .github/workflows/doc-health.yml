@@ -1,0 +1,131 @@
+name: doc-health
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 7 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  documentation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Download and verify Lychee 0.24.2
+        run: |
+          mkdir -p "$RUNNER_TEMP/doc-tools"
+          cd "$RUNNER_TEMP/doc-tools"
+          curl --fail --location --retry 2 --output lychee.tar.gz \
+            https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2/lychee-x86_64-unknown-linux-gnu.tar.gz
+          echo '1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a  lychee.tar.gz' | sha256sum --check --strict
+          tar -xzf lychee.tar.gz lychee
+          echo "$RUNNER_TEMP/doc-tools" >> "$GITHUB_PATH"
+      - name: Download and verify misspell 0.8.0
+        run: |
+          cd "$RUNNER_TEMP/doc-tools"
+          curl --fail --location --retry 2 --output misspell.tar.gz \
+            https://github.com/golangci/misspell/releases/download/v0.8.0/misspell_0.8.0_linux_amd64.tar.gz
+          echo '0a889624797be3eed241eeef4dd2b982adadedd6556723fd00b9c3f721417b51  misspell.tar.gz' | sha256sum --check --strict
+          tar -xzf misspell.tar.gz misspell
+      - name: Assemble site
+        run: make site
+      - name: Check offline links and fragments
+        run: |
+          python3 - <<'PYTHON'
+          import pathlib
+          import subprocess
+
+          markdown = subprocess.check_output(["git", "ls-files", "-z", "*.md"]).decode().split("\0")[:-1]
+          site = sorted(str(path) for path in pathlib.Path("_site").rglob("*.html"))
+          for root, files in [(pathlib.Path.cwd(), markdown), (pathlib.Path.cwd() / "_site", site)]:
+              subprocess.run(["lychee", "--config", ".github/lychee.toml", "--offline",
+                              "--root-dir", str(root), "--", *files], check=True)
+          PYTHON
+      - name: Check American English
+        run: |
+          python3 - <<'PYTHON'
+          import pathlib
+          import subprocess
+          import tempfile
+          from html.parser import HTMLParser
+
+          class SiteText(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.hidden = 0
+                  self.parts = []
+
+              def handle_starttag(self, tag, attrs):
+                  if tag in ("script", "style"):
+                      self.hidden += 1
+                  for key, value in attrs:
+                      if key in ("alt", "title", "aria-label", "placeholder") and value:
+                          self.parts.append(value)
+
+              def handle_endtag(self, tag):
+                  if tag in ("script", "style"):
+                      self.hidden -= 1
+
+              def handle_data(self, data):
+                  if not self.hidden:
+                      self.parts.append(data)
+
+          markdown = subprocess.check_output(["git", "ls-files", "-z", "*.md"]).decode().split("\0")[:-1]
+          # Spectre is the CPU vulnerability name, not a British spelling.
+          subprocess.run(["misspell", "-error", "-locale", "US", "-i", "Spectre", *markdown], check=True)
+          with tempfile.TemporaryDirectory() as directory:
+              for page in sorted(pathlib.Path("_site").rglob("*.html")):
+                  parser = SiteText()
+                  parser.feed(page.read_text())
+                  text = pathlib.Path(directory) / (page.name + ".txt")
+                  text.write_text("\n".join(parser.parts))
+                  print(f"Checking site text: {page}", flush=True)
+                  subprocess.run(["misspell", "-error", "-locale", "US", "-i", "Spectre", str(text)], check=True)
+          PYTHON
+
+  live-links:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Download and verify Lychee 0.24.2
+        run: |
+          mkdir -p "$RUNNER_TEMP/doc-tools"
+          cd "$RUNNER_TEMP/doc-tools"
+          curl --fail --location --retry 2 --output lychee.tar.gz \
+            https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2/lychee-x86_64-unknown-linux-gnu.tar.gz
+          echo '1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a  lychee.tar.gz' | sha256sum --check --strict
+          tar -xzf lychee.tar.gz lychee
+          echo "$RUNNER_TEMP/doc-tools" >> "$GITHUB_PATH"
+      - name: Assemble site
+        run: make site
+      - name: Check live links and fragments
+        run: |
+          python3 - <<'PYTHON'
+          import pathlib
+          import subprocess
+
+          markdown = subprocess.check_output(["git", "ls-files", "-z", "*.md"]).decode().split("\0")[:-1]
+          site = sorted(str(path) for path in pathlib.Path("_site").rglob("*.html"))
+          for root, files in [(pathlib.Path.cwd(), markdown), (pathlib.Path.cwd() / "_site", site)]:
+              subprocess.run(["lychee", "--config", ".github/lychee.toml",
+                              "--root-dir", str(root), "--", *files], check=True)
+          PYTHON
