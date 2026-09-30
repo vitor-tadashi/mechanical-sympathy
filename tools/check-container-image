@@ -251,6 +251,50 @@ prepare() {
 	systemctl daemon-reload
 }
 
+# The userland that a scenario may change: files, and the services that run.
+PRISTINE_TAR="${WORK}/userland.tar"
+PRISTINE_FILES="${WORK}/userland.files"
+PRISTINE_ACTIVE="${WORK}/userland.active"
+
+userland_files() {
+	# Some of the paths do not exist yet: find says so with its status, which is not an error here.
+	{ find /etc /boot /var/lib/lowlat /usr/lib/systemd/hugetlb-reserve-pages -xdev \( -type f -o -type l \) 2>/dev/null || true; } | sort
+}
+
+active_services() {
+	systemctl list-units --no-legend --no-pager --state=active --type=service 2>/dev/null | awk '{ print $1 }' | sort
+}
+
+# save_userland - the container as prepared, before any scenario changes it.
+save_userland() {
+	userland_files >"${PRISTINE_FILES}"
+	active_services >"${PRISTINE_ACTIVE}"
+	tar -cpf "${PRISTINE_TAR}" --files-from="${PRISTINE_FILES}" 2>/dev/null
+}
+
+# restore_userland - every scenario starts from the same userland, whatever an earlier
+# rollback left behind: files added are removed, files changed are put back, and services
+# that a guide stopped or started go back to what they were.
+restore_userland() {
+	local file service now added stopped started
+	now="$(userland_files)"
+	added="$(comm -13 "${PRISTINE_FILES}" <(printf '%s\n' "${now}"))"
+	while IFS= read -r file; do
+		[[ -z "${file}" ]] || rm -f -- "${file}"
+	done <<<"${added}"
+	tar -xpf "${PRISTINE_TAR}" -C / --exclude=etc/hosts --exclude=etc/resolv.conf --exclude=etc/hostname 2>/dev/null || true
+	systemctl daemon-reload
+	now="$(active_services)"
+	stopped="$(comm -13 "${PRISTINE_ACTIVE}" <(printf '%s\n' "${now}"))"
+	started="$(comm -23 "${PRISTINE_ACTIVE}" <(printf '%s\n' "${now}"))"
+	while IFS= read -r service; do
+		[[ -z "${service}" ]] || systemctl stop "${service}" >/dev/null 2>&1 || true
+	done <<<"${stopped}"
+	while IFS= read -r service; do
+		[[ -z "${service}" ]] || systemctl start "${service}" >/dev/null 2>&1 || true
+	done <<<"${started}"
+}
+
 # in_host <command...> - a script or command as the tuning scripts see the host.
 in_host() {
 	(
@@ -266,13 +310,13 @@ in_host() {
 # ---------------------------------------------------------------------------------------
 
 # manifest - "checksum size path" for the files that the guides may touch. Left out: files
-# that the container runtime owns, and grubenv, which grubby rewrites on every update
-# (the boot arguments are compared through grubby --info instead).
+# that the container runtime owns, and grubenv and /etc/kernel/cmdline, which grubby
+# creates or rewrites on its own (the boot arguments are compared through grubby --info).
 manifest() {
 	find /etc /boot /usr/lib/systemd/hugetlb-reserve-pages -xdev \( -type f -o -type l \) -print0 2>/dev/null |
 		xargs -0 cksum 2>/dev/null |
 		sort -k 3 |
-		grep -v -E ' /etc/(hostname|hosts|resolv\.conf|mtab|machine-id|\.pwd\.lock|passwd-|group-|shadow-|gshadow-)$| /boot/grub2/grubenv$' || true
+		grep -v -E ' /etc/(hostname|hosts|resolv\.conf|mtab|machine-id|\.pwd\.lock|passwd-|group-|shadow-|gshadow-)$| /boot/grub2/grubenv$| /etc/kernel/cmdline$' || true
 }
 
 # unit_state - the enabled state of every unit file, as systemd reports it.
@@ -308,6 +352,12 @@ verify_unit() {
 		printf '==== %s (exit %s)\n' "${title}" "${status}"
 		printf '%s\n' "${output}"
 	} >>"${LOG}"
+	# 124 is a timeout, 125 and above are a command that did not run or was killed.
+	if ((status >= 124)); then
+		fail "${title} (exit ${status}: the command did not finish)"
+		indent <<<"${output}"
+		return 0
+	fi
 	rest="$(grep -v -E "^Suspicious symlink |[Cc]ommand 'man |man .* command failed" <<<"${output}" || true)"
 	if [[ -z "${rest}" ]]; then
 		ok "${title}"
@@ -486,6 +536,12 @@ step_verify() {
 	warns="$(count_lines '^  WARN' "${log}")"
 	fails="$(count_lines '^  FAIL' "${log}")"
 	note "verify-tuning exit ${status}: ${passes} PASS, ${warns} WARN, ${fails} FAIL"
+	# 5 is the exit status for FAIL lines. Any other status is a crash of the script, and
+	# 5 without a FAIL line means that the report is not what it claims.
+	if ((status != 0 && status != 5)) || ((status == 5 && fails == 0)); then
+		fail "verify-tuning exited ${status} without reporting a failed check"
+		tail -n 5 "${log}" | indent
+	fi
 	failed_lines="$(grep '^  FAIL' "${log}" || true)"
 	while IFS= read -r line; do
 		[[ -n "${line}" ]] || continue
@@ -610,6 +666,7 @@ apply_bare_metal() {
 step_bare_metal_guides() {
 	local guide index generated before="${WORK}/bm-before" applied="${WORK}/bm-applied" after="${WORK}/bm-after"
 	local guides=(01-grub-bootloader 02-cpu-isolation 03-huge-pages)
+	restore_userland
 	use_host "${UNIT_HOST}"
 	seed_userland "${UNIT_HOST}"
 	snapshot "${before}"
@@ -625,8 +682,6 @@ step_bare_metal_guides() {
 	done
 	snapshot "${after}"
 	report_state "bare-metal rollback" "${before}" "${after}"
-	use_host "${MAIN_HOST}"
-	seed_userland "${MAIN_HOST}"
 }
 
 step_report_known_issues() {
@@ -658,10 +713,13 @@ main() {
 	step_packages
 	step_parse
 	prepare
+	save_userland
 	step_templates
 	step_grubby
 	step_tuned_before
 	step_bare_metal_guides
+	restore_userland
+	use_host "${MAIN_HOST}"
 	step_apply_and_roll_back
 	step_report_known_issues
 	printf 'summary checks=%d failed=%d known=%d missing=%s\n' "${checks}" "${failed}" "${#OBSERVED[@]}" "${missing[*]:-none}"

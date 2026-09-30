@@ -94,7 +94,7 @@ image_is_advisory() {
 # that lacks one (UBI has no grubby or tuned) must not stop the others.
 containerfile() {
 	printf 'FROM %s\n' "$1"
-	printf 'RUN dnf -y -q install systemd procps-ng diffutils gawk findutils shadow-utils util-linux \\\n'
+	printf 'RUN dnf -y -q install systemd procps-ng diffutils gawk findutils shadow-utils util-linux tar \\\n'
 	# The $package is for the shell in the image, not for this one.
 	# shellcheck disable=SC2016
 	printf '\t&& for package in %s; do dnf -y -q install "$package" >/dev/null 2>&1 || true; done \\\n' "${GUIDE_PACKAGES}"
@@ -104,13 +104,17 @@ containerfile() {
 }
 
 build_image() {
-	local image="$1" tag="$2" dir
+	local image="$1" tag="$2" dir status=0
 	dir="$(mktemp -d)"
 	containerfile "${image}" >"${dir}/Containerfile"
-	# PLATFORM is empty or two words: it must split.
+	# A failed build must not leave an older image under the same tag to be run instead.
+	"${RUNTIME}" rmi -f "${tag}" >/dev/null 2>&1 || true
+	# PLATFORM is empty or two words: it must split. The caller uses this function as a
+	# condition, where errexit is off, so the status is kept by hand.
 	# shellcheck disable=SC2086
-	"${RUNTIME}" build -q ${PLATFORM} -t "${tag}" -f "${dir}/Containerfile" "${dir}" >/dev/null
+	"${RUNTIME}" build -q ${PLATFORM} -t "${tag}" -f "${dir}/Containerfile" "${dir}" >/dev/null || status=$?
 	rm -rf "${dir}"
+	return "${status}"
 }
 
 run_flags() {
