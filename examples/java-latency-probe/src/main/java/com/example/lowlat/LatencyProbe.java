@@ -34,6 +34,7 @@ public final class LatencyProbe {
         final int hops = Integer.parseInt(config.get("probe.hops", "4"));
         final String idleName = config.get("idle.strategy", config.enabled() ? "spin" : "backoff");
 
+        IdleStrategy.of(idleName); // fail on a bad name here, not inside a thread
         printEnvironment(config, configFile, idleName);
 
         final PaddedSequence ping = new PaddedSequence(-1);
@@ -68,14 +69,15 @@ public final class LatencyProbe {
                 while (pong.get() != i) {
                     idle.idle(0);
                 }
+                idle.idle(1); // work done: a backoff strategy starts the next wait spinning, not parked
                 final long t1 = System.nanoTime();
                 for (int h = 0; h < hops; h++) {
                     index = (int) table[index]; // dependent load: no prefetching, one TLB lookup each
                 }
                 final long t2 = System.nanoTime();
                 if (i >= warmup) {
-                    rtt.recordValue(t1 - t0);
-                    walk.recordValue(t2 - t1);
+                    rtt.recordValue(Math.min(t1 - t0, HIGHEST_TRACKABLE_NS));
+                    walk.recordValue(Math.min(t2 - t1, HIGHEST_TRACKABLE_NS));
                 }
             }
             if (index == Integer.MIN_VALUE) { // keeps the JIT from removing the walk
@@ -94,12 +96,19 @@ public final class LatencyProbe {
 
     private static Thread pinnedThread(final String name, final int cpu, final Runnable body) {
         final Thread thread = new Thread(() -> {
-            if (cpu >= 0) {
-                ThreadAffinity.pinCurrentThread(cpu); // before touching any data: first-touch on the right node
+            try {
+                if (cpu >= 0) {
+                    ThreadAffinity.pinCurrentThread(cpu); // before touching any data: first-touch on the right node
+                }
+                System.out.printf("thread %-5s requested cpu=%-3s running on cpu=%d affinity=%s%n",
+                        name, cpu >= 0 ? Integer.toString(cpu) : "-", ThreadAffinity.currentCpu(), ThreadAffinity.currentAffinity());
+                body.run();
+            } catch (final Throwable failure) {
+                // The peer thread would spin forever on a dead partner: stop the whole probe.
+                System.err.println("thread " + name + " failed: " + failure);
+                failure.printStackTrace();
+                Runtime.getRuntime().halt(1);
             }
-            System.out.printf("thread %-5s requested cpu=%-3s running on cpu=%d affinity=%s%n",
-                    name, cpu >= 0 ? Integer.toString(cpu) : "-", ThreadAffinity.currentCpu(), ThreadAffinity.currentAffinity());
-            body.run();
         }, name);
         thread.setDaemon(false);
         return thread;

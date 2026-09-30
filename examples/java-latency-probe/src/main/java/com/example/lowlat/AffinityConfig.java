@@ -26,7 +26,7 @@ public final class AffinityConfig {
 
     private AffinityConfig(final Properties properties) {
         this.properties = properties;
-        this.enabled = Boolean.parseBoolean(properties.getProperty("affinity.enable", "false"));
+        this.enabled = Boolean.parseBoolean(properties.getProperty("affinity.enable", "false").trim());
     }
 
     public static AffinityConfig load(final Path file) throws IOException {
@@ -53,6 +53,7 @@ public final class AffinityConfig {
     }
 
     public String get(final String key, final String defaultValue) {
-        return properties.getProperty(key, defaultValue);
+        final String value = properties.getProperty(key);
+        return value == null ? defaultValue : value.trim();
     }
 }
