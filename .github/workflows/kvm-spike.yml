@@ -11,17 +11,24 @@ on:
       - tools/check-kvm
   workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   kvm:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    permissions:
+      contents: read
     outputs:
       kvm: ${{ steps.probe.outputs.kvm }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: Enable the KVM device for every user (udev rule)
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -48,7 +55,7 @@ jobs:
         run: tools/check-kvm --accel kvm --work "${RUNNER_TEMP}/kvm"
       - name: Upload the serial console log
         if: always() && steps.probe.outputs.kvm == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: serial-kvm
           path: ${{ runner.temp }}/kvm/serial.log
@@ -59,8 +66,12 @@ jobs:
     if: needs.kvm.outputs.kvm != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: Install QEMU and cloud-image-utils
         run: |
           sudo apt-get update -q
@@ -69,7 +80,7 @@ jobs:
         run: tools/check-kvm --accel tcg --timeout 4800 --work "${RUNNER_TEMP}/tcg"
       - name: Upload the serial console log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: serial-tcg
           path: ${{ runner.temp }}/tcg/serial.log

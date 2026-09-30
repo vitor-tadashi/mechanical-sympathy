@@ -9,19 +9,27 @@ on:
     branches: [main]
   pull_request:
 
-permissions:
-  contents: read
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   fake-hosts:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         rhel: ["8", "9", "10"]
     container: registry.access.redhat.com/ubi${{ matrix.rhel }}/ubi
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: Install diffutils (not in the UBI image)
         run: dnf -y -q install diffutils
       - run: tools/check-scripts
@@ -29,6 +37,9 @@ jobs:
   containers:
     name: containers (${{ matrix.name }})
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
     # CentOS Stream runs ahead of RHEL: its failures are advisory.
     continue-on-error: ${{ !matrix.blocking }}
     strategy:
@@ -44,13 +55,15 @@ jobs:
           - {name: stream9, image: "quay.io/centos/centos:stream9", blocking: false}
           - {name: stream10, image: "quay.io/centos/centos:stream10", blocking: false}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       # Rootful podman starts systemd as PID 1 in the container.
       - name: Check the guides in ${{ matrix.image }}
         run: sudo tools/check-containers --platform linux/amd64 --log-dir "${RUNNER_TEMP}/check-containers" "${{ matrix.image }}"
       - name: Upload the logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: check-containers-${{ matrix.name }}
           path: ${{ runner.temp }}/check-containers
