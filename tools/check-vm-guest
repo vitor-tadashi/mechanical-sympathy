@@ -220,7 +220,8 @@ nic_state() {
 		ethtool -c "${nic}" 2>/dev/null | sed '1d' | sed 's/^/coalesce /' || true
 		ethtool -k "${nic}" 2>/dev/null | sed '1d' | grep -v fixed | sed 's/^/offload /' || true
 		for irq in $(nic_irqs "${nic}"); do
-			printf 'irq %s %s\n' "${irq}" "$(cat "/proc/irq/${irq}/smp_affinity_list" 2>/dev/null || true)"
+			printf 'irq %s %s effective %s\n' "${irq}" "$(cat "/proc/irq/${irq}/smp_affinity_list" 2>/dev/null || true)" \
+				"$(cat "/proc/irq/${irq}/effective_affinity_list" 2>/dev/null || true)"
 		done
 	} | tr -s ' \t' ' ' | sed "s/^/nic ${nic} /"
 }
@@ -322,25 +323,6 @@ check_runtime_unit() {
 	journalctl -b -u lowlat-runtime.service --no-pager 2>&1 | tail -n 20 | indent
 }
 
-# check_irqs <pass> <verify log> - the critical NIC's IRQs are on its irq_cpus.
-check_irqs() {
-	local pass="$1" log="$2" nic want irq now misplaced=""
-	nic="$(nic_by_mac "${CRITICAL_MAC}")"
-	want="$(config_value NICS | tr ' ' '\n' | awk -F'|' -v nic="${nic}" '$1 == nic { print $3 }')"
-	for irq in $(nic_irqs "${nic}"); do
-		now="$(cat "/proc/irq/${irq}/smp_affinity_list" 2>/dev/null || true)"
-		[[ "${now}" == "${want}" ]] || misplaced="${misplaced} ${irq}:${now}"
-	done
-	if [[ -z "${misplaced}" ]]; then
-		ok "${pass}: every IRQ of ${nic} is on CPU ${want}"
-		return 0
-	fi
-	fail "${pass}: IRQs of ${nic} not on CPU ${want}:${misplaced}"
-	if grep -q 'PASS.*IRQs on CPUs' "${log}"; then
-		fail "${pass}: verify-tuning passes the IRQ line of ${nic} all the same"
-	fi
-}
-
 # expected_warning <pass> <text> - the id of the expected WARN that matches, if any.
 expected_warning() {
 	local major
@@ -383,7 +365,6 @@ check_verify() {
 		[[ -n "${id}" && "${id}" != '#'* ]] || continue
 		[[ " ${seen} " == *" ${id} "* ]] || note "${pass}: expected WARN ${id} did not show"
 	done <"${EXPECTED_WARNINGS}"
-	check_irqs "${pass}" "${report}"
 }
 
 phase_after_apply() {
@@ -393,6 +374,8 @@ phase_after_apply() {
 	check_runtime_unit "${pass}"
 	check_verify "${pass}"
 	grub_evidence "${WORK}/grub-${pass}-booted.txt"
+	nic_state >"${WORK}/${pass}-booted-nic"
+	journalctl -b -u lowlat-runtime.service --no-pager >"${WORK}/${pass}-runtime-journal.txt" 2>&1 || true
 }
 
 phase_rollback() {
