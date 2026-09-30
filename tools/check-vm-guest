@@ -103,6 +103,9 @@ grub_evidence() {
 		cat /etc/default/grub 2>&1 || true
 		printf '== grub2-editenv list\n'
 		grub2-editenv list 2>&1 || true
+		printf '== the grubenv file and the file systems that GRUB reads\n'
+		ls -l /boot/grub2/grubenv 2>&1 || true
+		findmnt -n -o TARGET,SOURCE,FSTYPE /boot /boot/efi / 2>&1 || true
 		printf '== options lines of the boot entries\n'
 		grep -H '^options' /boot/loader/entries/*.conf 2>&1 || true
 		printf '== kernelopts in grub.cfg\n'
