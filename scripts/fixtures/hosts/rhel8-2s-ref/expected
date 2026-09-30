@@ -87,23 +87,7 @@ LOW-LATENCY TUNING (apply)
            [dry-run] grubby --update-kernel=ALL --args=default_hugepagesz=2M
            [dry-run] grubby --update-kernel=ALL --remove-args=hugepagesz
            [dry-run] grubby --update-kernel=ALL --args=hugepagesz=2M
-    03.12 Disabling IOMMU translation (intel_iommu=off iommu=off)
-           [dry-run] grubby --update-kernel=ALL --remove-args=intel_iommu
-           [dry-run] grubby --update-kernel=ALL --args=intel_iommu=off
-           [dry-run] grubby --update-kernel=ALL --remove-args=iommu
-           [dry-run] grubby --update-kernel=ALL --args=iommu=off
-    03.13 Disabling CPU vulnerability mitigations (nospectre_v1 nospectre_v2 pti=off mds=off tsx_async_abort=off)
-           [dry-run] grubby --update-kernel=ALL --remove-args=nospectre_v1
-           [dry-run] grubby --update-kernel=ALL --args=nospectre_v1
-           [dry-run] grubby --update-kernel=ALL --remove-args=nospectre_v2
-           [dry-run] grubby --update-kernel=ALL --args=nospectre_v2
-           [dry-run] grubby --update-kernel=ALL --remove-args=pti
-           [dry-run] grubby --update-kernel=ALL --args=pti=off
-           [dry-run] grubby --update-kernel=ALL --remove-args=mds
-           [dry-run] grubby --update-kernel=ALL --args=mds=off
-           [dry-run] grubby --update-kernel=ALL --remove-args=tsx_async_abort
-           [dry-run] grubby --update-kernel=ALL --args=tsx_async_abort=off
-    03.14 Removing graphical console (console=tty0)
+    03.12 Removing graphical console (console=tty0)
            [dry-run] grubby --update-kernel=ALL --remove-args=console=tty0
 
 04. Regenerating GRUB configuration
@@ -819,9 +803,7 @@ LOW-LATENCY TUNING (apply)
     03.09 Disabling NMI watchdog (nmi_watchdog=0)
     03.10 Ignoring corrected machine-check errors (mce=ignore_ce)
     03.11 Setting huge page size to 2M (default_hugepagesz, hugepagesz)
-    03.12 Disabling IOMMU translation (intel_iommu=off iommu=off)
-    03.13 Disabling CPU vulnerability mitigations (nospectre_v1 nospectre_v2 pti=off mds=off tsx_async_abort=off)
-    03.14 Removing graphical console (console=tty0)
+    03.12 Removing graphical console (console=tty0)
 
 04. Regenerating GRUB configuration
     04.01 Reboot required: the new command line is used on the next boot
@@ -1033,20 +1015,6 @@ grubby --update-kernel=ALL --remove-args=default_hugepagesz
 grubby --update-kernel=ALL --args=default_hugepagesz=2M
 grubby --update-kernel=ALL --remove-args=hugepagesz
 grubby --update-kernel=ALL --args=hugepagesz=2M
-grubby --update-kernel=ALL --remove-args=intel_iommu
-grubby --update-kernel=ALL --args=intel_iommu=off
-grubby --update-kernel=ALL --remove-args=iommu
-grubby --update-kernel=ALL --args=iommu=off
-grubby --update-kernel=ALL --remove-args=nospectre_v1
-grubby --update-kernel=ALL --args=nospectre_v1
-grubby --update-kernel=ALL --remove-args=nospectre_v2
-grubby --update-kernel=ALL --args=nospectre_v2
-grubby --update-kernel=ALL --remove-args=pti
-grubby --update-kernel=ALL --args=pti=off
-grubby --update-kernel=ALL --remove-args=mds
-grubby --update-kernel=ALL --args=mds=off
-grubby --update-kernel=ALL --remove-args=tsx_async_abort
-grubby --update-kernel=ALL --args=tsx_async_abort=off
 grubby --update-kernel=ALL --remove-args=console=tty0
 grub2-mkconfig -o /boot/grub2/grub.cfg
 systemctl stop irqbalance
@@ -1456,7 +1424,7 @@ lowlat-runtime.service: /opt/lowlat/scripts/apply-all --runtime
   +------+----------------------------------------------------------+------------+
 
 ==== /proc/cmdline
-BOOT_IMAGE=(hd0,gpt2)/vmlinuz-4.18.0-553.el8_10.x86_64 root=/dev/mapper/rhel-root ro crashkernel=auto resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet idle=poll processor.max_cstate=0 intel_idle.max_cstate=0 transparent_hugepage=never isolcpus=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 nohz_full=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 nohz=off rcu_nocbs=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 rcu_nocb_poll skew_tick=1 intel_pstate=disable nosoftlockup nmi_watchdog=0 mce=ignore_ce default_hugepagesz=2M hugepagesz=2M intel_iommu=off iommu=off nospectre_v1 nospectre_v2 pti=off mds=off tsx_async_abort=off
+BOOT_IMAGE=(hd0,gpt2)/vmlinuz-4.18.0-553.el8_10.x86_64 root=/dev/mapper/rhel-root ro crashkernel=auto resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet idle=poll processor.max_cstate=0 intel_idle.max_cstate=0 transparent_hugepage=never isolcpus=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 nohz_full=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 nohz=off rcu_nocbs=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 rcu_nocb_poll skew_tick=1 intel_pstate=disable nosoftlockup nmi_watchdog=0 mce=ignore_ce default_hugepagesz=2M hugepagesz=2M
 
 ==== processes
 chronyd              cpus 0
@@ -1504,7 +1472,7 @@ LOW-LATENCY TUNING VERIFICATION
   PASS default_hugepagesz=2M
   INFO kernel isolated CPUs: 3,5,7,9,11,13,15,17,19,21,23,25,27,29,31
   INFO kernel nohz_full CPUs: 3,5,7,9,11,13,15,17,19,21,23,25,27,29,31
-  INFO grubby default entry: ro crashkernel=auto resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet idle=poll processor.max_cstate=0 intel_idle.max_cstate=0 transparent_hugepage=never isolcpus=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 nohz_full=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 nohz=off rcu_nocbs=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 rcu_nocb_poll skew_tick=1 intel_pstate=disable nosoftlockup nmi_watchdog=0 mce=ignore_ce default_hugepagesz=2M hugepagesz=2M intel_iommu=off iommu=off nospectre_v1 nospectre_v2 pti=off mds=off tsx_async_abort=off
+  INFO grubby default entry: ro crashkernel=auto resume=/dev/mapper/rhel-swap rd.lvm.lv=rhel/root rd.lvm.lv=rhel/swap rhgb quiet idle=poll processor.max_cstate=0 intel_idle.max_cstate=0 transparent_hugepage=never isolcpus=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 nohz_full=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 nohz=off rcu_nocbs=3,5,7,9,11,13,15,17,19,21,23,25,27,29,31 rcu_nocb_poll skew_tick=1 intel_pstate=disable nosoftlockup nmi_watchdog=0 mce=ignore_ce default_hugepagesz=2M hugepagesz=2M
 
 == 02 CPU isolation ==
   PASS PID 1 (systemd) affinity is OS_CPUS (0,1,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30)

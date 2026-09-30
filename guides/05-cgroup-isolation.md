@@ -113,11 +113,15 @@ Description=Housekeeping processes (agents, log shippers, monitoring)
 Before=slices.target
 
 [Slice]
-AllowedCPUs=4 6          # cpuset: hard fence, even against sched_setaffinity()
-CPUQuota=150%            # at most 1.5 CPUs of time for the whole slice
-MemoryMax=4G             # OOM inside this slice only
+# cpuset: hard fence, even against sched_setaffinity()
+AllowedCPUs=4 6
+# at most 1.5 CPUs of time for the whole slice
+CPUQuota=150%
+# OOM inside this slice only
+MemoryMax=4G
 MemorySwapMax=0
-IOWeight=50              # default is 100: agents yield on disk contention
+# default is 100: agents yield on disk contention
+IOWeight=50
 ```
 
 Why those CPUs: 4 and 6 are node-0 OS CPUs that serve **no** NIC interrupts (0 does timing/mgmt IRQs, 1 does the critical NIC, 30 does bulk NICs) and no workqueues (0, 2). An agent that spikes to 100 % there hurts nothing that matters.
@@ -131,9 +135,11 @@ A drop-in per unit, `/etc/systemd/system/<unit>.d/10-lowlat-housekeeping.conf`:
 ```ini
 [Service]
 Slice=housekeeping.slice
-CPUAffinity=4 6           # also works on cgroup v1, where the slice has no cpuset
+# also works on cgroup v1, where the slice has no cpuset
+CPUAffinity=4 6
 Nice=10
-IOSchedulingClass=idle    # only gets disk time when nobody else wants it
+# only gets disk time when nobody else wants it
+IOSchedulingClass=idle
 ```
 
 ```bash
@@ -186,7 +192,8 @@ Description=Latency-critical application
 Before=slices.target
 
 [Slice]
-AllowedCPUs=0-31          # everything: non-critical JVM threads on OS CPUs, critical ones pin to isolated CPUs
+# everything: non-critical JVM threads on OS CPUs, critical ones pin to isolated CPUs
+AllowedCPUs=0-31
 IOWeight=1000
 ```
 
@@ -207,13 +214,17 @@ User=app-user
 Group=app-user
 Slice=latency.slice
 WorkingDirectory=/opt/lowlat/app
-ExecStart=/opt/lowlat/app/bin/launch            # the launcher from examples/hugepages-java-example.md
-CPUAffinity=0 1 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30   # start on OS CPUs; critical threads re-pin
+# the launcher from examples/hugepages-java-example.md
+ExecStart=/opt/lowlat/app/bin/launch
+# start on OS CPUs; critical threads re-pin
+CPUAffinity=0 1 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30
 LimitRTPRIO=99
 LimitMEMLOCK=infinity
 LimitNOFILE=65535
-OOMScoreAdjust=-900                              # the OOM killer picks almost anything else first
-Restart=no                                       # fail loudly: a silent restart loses warm caches and pinning
+# the OOM killer picks almost anything else first
+OOMScoreAdjust=-900
+# fail loudly: a silent restart loses warm caches and pinning
+Restart=no
 TimeoutStopSec=60
 
 [Install]

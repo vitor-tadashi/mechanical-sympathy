@@ -67,7 +67,7 @@ The goal of this guide is that a critical packet **never waits** (coalescing 0, 
 
 ## 3. Network segmentation: give each traffic class its own NIC
 
-Latency-critical traffic should never share a NIC, a queue, an IRQ, or a CPU with bulk traffic. A 50 MB log shipment in front of a 200-byte request is head-of-line blocking at every layer. The reference host uses **five roles**:
+Latency-critical traffic should never share a NIC, a queue, an IRQ, or a CPU with bulk traffic. A 50 MB log shipment in front of a 200-byte request is head-of-line blocking at every layer. The reference host uses **four roles on six NICs**:
 
 ```mermaid
 flowchart LR

@@ -226,7 +226,7 @@ tc filter add dev ens3 parent 1: protocol ip prio 1 u32 match ip dport 9000 0xff
 # Bulk: bounded, fair queue in band 2
 tc qdisc add dev ens3 parent 1:3 handle 30: fq_codel
 
-# Mark critical traffic with DSCP EF (46) so the network prioritises it too
+# Mark critical traffic with DSCP EF (46) so the network prioritizes it too
 nft add table inet mangle
 nft add chain inet mangle output '{ type route hook output priority mangle; }'
 nft add rule inet mangle output tcp dport 9000 ip dscp set ef
