@@ -22,6 +22,7 @@ Every guide explains **what the kernel does**, **why each value is chosen**, **h
 
 | I want to… | Go to |
 |---|---|
+| Know whether this is safe to run, and how to undo it | [Safety](SAFETY.md) |
 | Tune a dedicated physical server | [Quick start, Scenario A](QUICK_START.md#scenario-a-dedicated-bare-metal-host-the-full-treatment) |
 | Tune a virtual machine | [Quick start, Scenario B](QUICK_START.md#scenario-b-virtual-machine) |
 | Understand why it works before touching a host | [Reading paths](INDEX.md#reading-paths), then the [concepts](INDEX.md#concepts) |
@@ -55,6 +56,8 @@ Every guide explains **what the kernel does**, **why each value is chosen**, **h
 ---
 
 ## Read this first
+
+Every change is previewed with `--dry-run`, recorded before it is written, and can be undone with `--rollback`. [Safety](SAFETY.md) explains what can go wrong, what stops it and how you get back.
 
 > [!WARNING]
 > These settings are for **dedicated hosts running a small number of well-understood, latency-critical processes that pin their threads**. They trade power, throughput, flexibility, and in places **security** for predictable latency.
@@ -171,7 +174,7 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 ```
 .
 ├── README.md  QUICK_START.md  INDEX.md  CHEATSHEET.md  FAQ.md  STYLE.md
-├── CONTRIBUTING.md  SECURITY.md  CITATION.cff  AGENTS.md
+├── SAFETY.md  CONTRIBUTING.md  SECURITY.md  CITATION.cff  AGENTS.md
 ├── guides/          00..11 step-by-step guides
 ├── concepts/        7 deep dives
 ├── examples/        use-cases/ (19 stories), Java on a tuned host (+ runnable probe), multi-NIC segmentation

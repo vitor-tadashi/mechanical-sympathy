@@ -123,6 +123,8 @@ The scripts skip isolation, huge-page reservation, irqbalance and RT throttling 
 
 ## Pre-flight checklist
 
+New to this? Read [Safety](SAFETY.md) first: what each change can break, and how you undo it.
+
 - [ ] Baseline latency captured, plus a host bundle (`09-measure-latency --run`, [Guide 09](guides/09-measuring-latency.md))
 - [ ] Out-of-band console (iLO/iDRAC/IPMI) tested
 - [ ] BIOS profile set, checked with `00-bios-firmware --verify`, and exported through the BMC ([Guide 00](guides/00-bios-firmware.md))

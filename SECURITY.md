@@ -1,5 +1,7 @@
 # Security policy
 
+This page is about reporting problems. How the scripts protect a host, and how you undo their changes, is in [SAFETY.md](SAFETY.md).
+
 ## What this repository can do to a host
 
 The guides and scripts change kernel arguments, CPU and interrupt affinity, firewall rules and, on request, CPU vulnerability mitigations. A wrong recommendation can lock you out of a host, break boot or remove a security control. Treat a bad instruction here as a security issue.
