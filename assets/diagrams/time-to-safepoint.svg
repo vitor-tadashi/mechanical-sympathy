@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 350" width="760" height="350" role="img" aria-labelledby="t d">
+<title id="t">Every thread waits for the slowest one to reach a safepoint</title>
+<desc id="d">Two timelines of three Java threads during one stop-the-world pause. In the first, worker.0 is in a long loop without a safepoint poll, so net.rx and event.loop stop at once and then wait, doing nothing, until worker.0 reaches a poll; only then does the short pause itself run. In the second, the loop polls often, every thread stops almost at once, and the whole stop is little more than the pause itself. Running time is plain green and labeled runs, waiting is red with diagonal hatching and labeled waits, and the pause is blue and labeled pause.</desc>
+<defs>
+  <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <rect width="6" height="6" fill="#ffc9c9"/>
+    <line x1="0" y1="0" x2="0" y2="6" stroke="#9b1c1c" stroke-width="2"/>
+  </pattern>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .seg { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .segw { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; paint-order: stroke; stroke: #ffc9c9; stroke-width: 3px; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .run { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.2; }
+  .wait { fill: url(#hatch); stroke: #9b1c1c; stroke-width: 1.2; }
+  .vm { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.2; }
+  .req { stroke: #8a5a00; stroke-width: 2.5; transform-box: fill-box; transform-origin: center; animation: pulse 6s linear infinite; }
+  .rtxt { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @keyframes pulse {
+    0%, 4%   { stroke-width: 6; }
+    8%, 100% { stroke-width: 2.5; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .req, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="350" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="160" rx="6"/>
+<text class="cap" x="24" y="34">A long loop without a safepoint poll</text>
+<text class="sub" x="24" y="52">net.rx and event.loop stop at once and wait (hatched) for worker.0. Then the pause runs.</text>
+<text class="lbl" x="24" y="82">net.rx</text>
+<rect class="run" x="150" y="68" width="102" height="18" rx="2"/>
+<text class="seg" x="200" y="81">runs</text>
+<rect class="wait" x="252" y="68" width="178" height="18" rx="2"/>
+<text class="segw" x="341" y="81">waits</text>
+<rect class="vm" x="430" y="68" width="40" height="18" rx="2"/>
+<text class="seg" x="450" y="81">pause</text>
+<rect class="run" x="470" y="68" width="250" height="18" rx="2"/>
+<text class="seg" x="595" y="81">runs again</text>
+<text class="lbl" x="24" y="108">event.loop</text>
+<rect class="run" x="150" y="94" width="106" height="18" rx="2"/>
+<rect class="wait" x="256" y="94" width="174" height="18" rx="2"/>
+<text class="segw" x="343" y="107">waits</text>
+<rect class="vm" x="430" y="94" width="40" height="18" rx="2"/>
+<rect class="run" x="470" y="94" width="250" height="18" rx="2"/>
+<text class="lbl" x="24" y="134">worker.0</text>
+<rect class="run" x="150" y="120" width="280" height="18" rx="2"/>
+<text class="seg" x="360" y="133">runs: still in its loop</text>
+<rect class="vm" x="430" y="120" width="40" height="18" rx="2"/>
+<rect class="run" x="470" y="120" width="250" height="18" rx="2"/>
+<line class="req" x1="250" y1="62" x2="250" y2="146" style="animation-delay:-4.95s"/>
+<text class="rtxt" x="150" y="162">orange line: safepoint requested</text>
+<text class="axis" x="440" y="162">stopped for the slowest thread</text>
+<rect class="lane" x="10" y="180" width="740" height="160" rx="6"/>
+<text class="cap" x="24" y="204">The loop polls often (loop strip mining, the JDK default)</text>
+<text class="sub" x="24" y="222">Every thread reaches a poll within microseconds. The stop is little more than the pause.</text>
+<text class="lbl" x="24" y="252">net.rx</text>
+<rect class="run" x="150" y="238" width="102" height="18" rx="2"/>
+<text class="seg" x="200" y="251">runs</text>
+<rect class="wait" x="252" y="238" width="12" height="18" rx="2"/>
+<rect class="vm" x="264" y="238" width="40" height="18" rx="2"/>
+<text class="seg" x="284" y="251">pause</text>
+<rect class="run" x="304" y="238" width="416" height="18" rx="2"/>
+<text class="seg" x="512" y="251">runs again</text>
+<text class="lbl" x="24" y="278">event.loop</text>
+<rect class="run" x="150" y="264" width="106" height="18" rx="2"/>
+<rect class="wait" x="256" y="264" width="8" height="18" rx="2"/>
+<rect class="vm" x="264" y="264" width="40" height="18" rx="2"/>
+<rect class="run" x="304" y="264" width="416" height="18" rx="2"/>
+<text class="lbl" x="24" y="304">worker.0</text>
+<rect class="run" x="150" y="290" width="112" height="18" rx="2"/>
+<rect class="wait" x="262" y="290" width="2" height="18" rx="2"/>
+<rect class="vm" x="264" y="290" width="40" height="18" rx="2"/>
+<rect class="run" x="304" y="290" width="416" height="18" rx="2"/>
+<line class="req" x1="250" y1="232" x2="250" y2="316" style="animation-delay:-4.95s"/>
+<text class="rtxt" x="150" y="332">orange line: safepoint requested</text>
+<text class="axis" x="440" y="332">stopped for the pause only</text>
+<line class="head" x1="150" y1="62" x2="150" y2="326"/>
+</svg>
