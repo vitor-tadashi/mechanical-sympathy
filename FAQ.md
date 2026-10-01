@@ -10,6 +10,13 @@ Mostly it makes it **more predictable**. The median (p50) usually improves a lit
 </details>
 
 <details>
+<summary><b>Is it safe to run on a production host?</b></summary>
+
+Yes, if you follow the order: `--plan`, `--dry-run`, one canary host with a working out-of-band console, then the fleet. Nothing changes without `--apply`, every original file is saved before the first write, and `apply-all --rollback` restores the host. Only the kernel command line can stop a boot, and the console is the way back. See [Safety](SAFETY.md).
+
+</details>
+
+<details>
 <summary><b>Can I apply this on a virtual machine?</b></summary>
 
 Partly. The scripts detect a VM and apply only what helps there: the latency subset of the boot arguments, sysctls, OS hygiene, cgroups and NIC settings the virtual NIC supports. CPU isolation inside a guest does not isolate anything from the hypervisor. The biggest wins in a VM come from the host: dedicated physical CPUs, huge-page-backed memory, SR-IOV. See [Quick start, Scenario B](QUICK_START.md#scenario-b-virtual-machine).

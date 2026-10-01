@@ -360,6 +360,7 @@ These words are normal English, and they are used in a special way in these guid
 | Word | In these guides it means |
 |---|---|
 | **bypass** | To go around something. "Kernel bypass" goes around the kernel network stack. |
+| **canary host** | One host that gets a change first. If it goes wrong, only that host is affected, and the rest of the fleet waits. |
 | **drain** | To take items out of a queue. A queue drains when the reader is faster than the writer. |
 | **drop** | A packet that is thrown away because there was no room for it. |
 | **hot path** | The code that runs for every message, where a delay is paid every time. |
