@@ -67,11 +67,13 @@ Both settings come from the guides, with nothing to set in `lowlat.conf`:
 
 ```bash
 sudo scripts/06-kernel-sysctl --apply       # kernel.printk, and the rest of Guide 06
-sudo scripts/01-grub-bootloader --apply     # removes console=tty0, keeps the serial console
+sudo scripts/01-grub-bootloader --apply     # bare metal: removes console=tty0, keeps the serial console
 sudo systemctl reboot
 ```
 
 The serial console stays on the command line: it is how the out-of-band console shows boot messages and emergencies. At console level 1 it receives almost nothing during normal operation.
+
+Only bare metal gets the command-line part. On a VM, `01-grub-bootloader` applies the latency subset and leaves the consoles alone ([Guide 01 §9](../../guides/01-grub-bootloader-tuning.md#9-rollback)). There, `kernel.printk` does the work: at console level 1, a graphical console still listed in `/proc/consoles` receives only emergencies. Remove `console=tty0` by hand with `grubby` only if the VM's console must go too.
 
 Also fix what prints the warning. A receive ring that cannot be refilled points at memory pressure: see the watermarks in [Guide 06 §8](../../guides/06-kernel-sysctl-tuning.md#8-virtual-memory).
 
@@ -92,10 +94,13 @@ Illustrative:
 ## 5. Verify and roll back
 
 - [ ] `sysctl kernel.printk` prints `1 4 1 7`
-- [ ] `cat /proc/consoles` lists no `tty0`
+- [ ] Bare metal: `cat /proc/consoles` lists no `tty0` (a VM keeps its consoles, and the console level is the fix there)
 - [ ] A test message at warning level reaches `dmesg` and not the console: `echo '<4>console test' | sudo tee /dev/kmsg`
 - [ ] `scripts/verify-tuning` shows PASS for Guides 01 and 06
 - [ ] Roll back: `sudo scripts/06-kernel-sysctl --rollback` ([Guide 06 §12](../../guides/06-kernel-sysctl-tuning.md#12-rollback)) and `sudo scripts/01-grub-bootloader --rollback`, which restores `console=tty0` ([Guide 01 §9](../../guides/01-grub-bootloader-tuning.md#9-rollback)), then reboot
+
+> [!WARNING]
+> **RHEL 10: check the serial console before that reboot.** The Guide 01 rollback currently restores `console=tty0` but can leave every boot entry without `console=ttyS0,115200n8`, which removes the serial console and its getty. This is a known script bug (`console-restore-drops-serial` in [`scripts/fixtures/vm/known-issues`](../../scripts/fixtures/vm/known-issues)). Run `sudo grubby --info=ALL | grep -E '^(kernel|args)='` and, if the serial console is missing, add it back with `sudo grubby --update-kernel=ALL --args=console=ttyS0,115200n8` before you reboot.
 
 ## 6. Key takeaways
 
