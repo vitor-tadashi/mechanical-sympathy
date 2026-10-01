@@ -25,6 +25,7 @@ Each use case follows one path: the **symptom** you see, how to **diagnose** it 
 | 16 | [The log line that cost five milliseconds](16-the-log-line-that-cost-five-milliseconds.md) | A rare stall that lines up with a kernel warning in dmesg | [01](../../guides/01-grub-bootloader-tuning.md), [06](../../guides/06-kernel-sysctl-tuning.md) | ~15 min + reboot |
 | 17 | [Memory pressure on a latency host](17-memory-pressure-on-a-latency-host.md) | Clean after a reboot, millisecond stalls after a few days of uptime | [06](../../guides/06-kernel-sysctl-tuning.md), [03](../../guides/03-huge-pages-configuration.md) | ~30 min |
 | 18 | [Adding a worker without re-planning](18-adding-a-worker-without-re-planning.md) | After a release, SSH is sluggish and the new worker is slower than the others | [11](../../guides/11-day2-operations.md), [02](../../guides/02-cpu-core-isolation.md) | ~20 min |
+| 19 | [The benchmark that lied](19-the-benchmark-that-lied.md) | The load test's p99.9 is microseconds, production's is milliseconds | [09](../../guides/09-measuring-latency.md) | ~1 h |
 
 <img src="../../assets/diagrams/who-wants-my-cpu.svg" alt="Seven sources of interference on a CPU, each paired with the setting that removes it, leading to an isolated CPU that runs one pinned thread uninterrupted" width="720">
 
