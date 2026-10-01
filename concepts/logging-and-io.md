@@ -79,11 +79,14 @@ A write that reaches an NVMe disk completes with an interrupt. NVMe drivers crea
 | **Log fields, format later.** Put the raw values (IDs, numbers, a template index) in the ring. The logger thread formats them. | No string building and no allocation on the hot path. |
 | **Pin the logger to a housekeeping CPU.** | Its system calls, faults and disk interrupts land on a CPU that can afford them. |
 | **Decide what happens when the ring is full.** Drop and count, or block. | Blocking moves the I/O wait back onto the hot path. A counted drop is visible and bounded. Audit logs may require blocking: then size the ring for the worst burst ([`size-buffers`](../scripts/size-buffers) gives the arithmetic for a queue). |
-| **Batch the `fsync`.** One per N lines or per few ms, on the logger thread. | One disk wait covers many lines. |
+| **Batch the `fsync`.** One per N lines or per few ms, on the logger thread. | One disk wait covers many lines. If a message may be acknowledged only once its record is on disk, see the note below. |
 | **Pre-create the next file.** Allocate (`fallocate`) and pre-touch it before rotation, on the logger thread. | No block allocation or page fault when the file is first written. |
 | **Timestamp with MONOTONIC on the hot path.** Convert to wall-clock time in the logger. | A `CLOCK_MONOTONIC` read is cheap and never jumps ([clocks and time §4](clocks-and-time.md#4-which-clock-to-read)). |
 
-In Java, this is what an asynchronous logger with a preallocated ring does (Log4j 2's asynchronous loggers are one example), and the same structure as the probe's [`PaddedSequence`](../examples/java-latency-probe/src/main/java/com/example/lowlat/PaddedSequence.java) handoff. Whatever the library, check that it does not allocate per call and that its appender thread is pinned.
+> [!IMPORTANT]
+> A handoff changes what is durable when. If the application acknowledges work only after its record is on disk (an order journal, say), the critical thread must not acknowledge on enqueue: it waits for the logger to report that its sequence is synced (group commit), which keeps the `fsync` off the critical thread but not its wait. If it acknowledges at once, the design accepts that a crash loses the records since the last sync. Decide which, and write it down.
+
+In Java, this is what an asynchronous logger with a preallocated ring does ([Log4j 2](../GLOSSARY.md#log4j)'s asynchronous loggers are one example), and the same structure as the probe's [`PaddedSequence`](../examples/java-latency-probe/src/main/java/com/example/lowlat/PaddedSequence.java) handoff. Whatever the library, check that it does not allocate per call and that its appender thread is pinned.
 
 ## 5. The rest of the storage path
 
@@ -132,18 +135,20 @@ Typical orders of magnitude, not measurements.
    grep -E '^(Dirty|Writeback):' /proc/meminfo
    ```
 
-2. On a development box, watch one writer get throttled. Fill the page cache with dirty data in one terminal, and time small writes in another:
+2. On a development box, watch one writer get throttled by another one's dirty data. Neither uses `fsync`, so any wait is in `write()` itself:
 
    ```bash
-   # terminal 1: write 8 GiB without fsync (adjust to about twice dirty_ratio of your RAM)
-   dd if=/dev/zero of=/var/tmp/fill bs=1M count=8192 status=progress
-   # terminal 2: time one small write per second, with fsync, while terminal 1 runs
-   TIMEFORMAT='%R s'; for i in $(seq 10); do time dd if=/dev/zero of=/var/tmp/small bs=4k count=1 conv=fsync status=none; sleep 1; done
-   # a few ms before terminal 1 starts; tens to hundreds of ms while it runs
-   rm -f /var/tmp/fill /var/tmp/small
+   lab="$(mktemp -d /var/tmp/writeback-lab.XXXXXX)"       # a private directory: nothing else is overwritten
+   # a large buffered writer in the background (size it to about twice dirty_ratio of your RAM)
+   dd if=/dev/zero of="$lab/fill" bs=1M count=8192 status=none &
+   # a small buffered writer, timed once a second: 2,560 writes of 4 KiB
+   TIMEFORMAT='%R s'
+   for i in $(seq 10); do time dd if=/dev/zero of="$lab/small" bs=4k count=2560 status=none; grep '^Dirty:' /proc/meminfo; sleep 1; done
+   wait; rm -rf "$lab"
+   # a few ms while Dirty is low; tens to hundreds of ms once Dirty reaches the dirty_ratio limit
    ```
 
-   The small writer did nothing different. It waited for the other process's data.
+   The small writer did nothing different. It was throttled because of the other process's data. `strace -T -e trace=write` on the small `dd` shows the time of each `write()`.
 
 ## 10. Illustrative scenario
 
