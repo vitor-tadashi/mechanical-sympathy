@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" width="760" height="300" role="img" aria-labelledby="t d">
+<title id="t">Mitigations add work to every crossing into the kernel</title>
+<desc id="d">Two timelines of the same small system call. With the default mitigations, the kernel entry and exit add a page-table switch on the way in, a CPU buffer clear and a second page-table switch on the way out, and the call takes several times longer than its useful work. With those mitigations off, the call is the entry, the work and the return. A thread that makes no system calls pays neither.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .seg { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .user { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .kern { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .tax { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: pulse 6s linear infinite; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @keyframes pulse {
+    0%, 5%   { transform: scaleY(1.2); }
+    10%, 100% { transform: scaleY(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tax, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="300" rx="8"/>
+
+<!-- Lane 1: default mitigations -->
+<rect class="lane" x="10" y="10" width="740" height="135" rx="6"/>
+<text class="cap" x="24" y="34">Default: mitigations on</text>
+<text class="sub" x="24" y="52">The useful kernel work is a small part of the call. The rest is protection paid on the way in and out.</text>
+<text class="lbl" x="24" y="99">syscall</text>
+<rect class="user" x="150" y="78" width="40" height="34" rx="3"/><text class="seg" x="170" y="99">user</text>
+<rect class="kern" x="190" y="78" width="40" height="34" rx="3"/><text class="seg" x="210" y="99">entry</text>
+<rect class="tax" x="230" y="78" width="100" height="34" rx="3" style="animation-delay:-5.16s"/><text class="seg" x="280" y="99">page-table switch</text>
+<rect class="kern" x="330" y="78" width="100" height="34" rx="3"/><text class="seg" x="380" y="99">useful work</text>
+<rect class="tax" x="430" y="78" width="110" height="34" rx="3" style="animation-delay:-3.05s"/><text class="seg" x="485" y="99">CPU buffer clear</text>
+<rect class="tax" x="540" y="78" width="100" height="34" rx="3" style="animation-delay:-1.89s"/><text class="seg" x="590" y="99">page-table switch</text>
+<rect class="kern" x="640" y="78" width="40" height="34" rx="3"/><text class="seg" x="660" y="99">return</text>
+<rect class="user" x="680" y="78" width="40" height="34" rx="3"/><text class="seg" x="700" y="99">user</text>
+<text class="axis" x="230" y="130">KPTI in, MDS buffer clear and KPTI out: paid on every syscall and every interrupt</text>
+
+<!-- Lane 2: mitigations off -->
+<rect class="lane" x="10" y="155" width="740" height="135" rx="6"/>
+<text class="cap" x="24" y="179">pti=off, mds=off (opt-in, security cost)</text>
+<text class="sub" x="24" y="197">The same call is the entry, the work and the return.</text>
+<text class="lbl" x="24" y="244">syscall</text>
+<rect class="user" x="150" y="223" width="40" height="34" rx="3"/><text class="seg" x="170" y="244">user</text>
+<rect class="kern" x="190" y="223" width="40" height="34" rx="3"/><text class="seg" x="210" y="244">entry</text>
+<rect class="kern" x="230" y="223" width="100" height="34" rx="3"/><text class="seg" x="280" y="244">useful work</text>
+<rect class="kern" x="330" y="223" width="40" height="34" rx="3"/><text class="seg" x="350" y="244">return</text>
+<rect class="user" x="370" y="223" width="350" height="34" rx="3"/><text class="seg" x="545" y="244">back in user space, sooner</text>
+<text class="axis" x="150" y="275">Widths are illustrative. A thread that spins without system calls pays neither lane.</text>
+
+<line class="head" x1="150" y1="70" x2="150" y2="262"/>
+</svg>

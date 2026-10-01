@@ -54,7 +54,7 @@ THP gets huge pages on a best-effort basis, at fault time or in the background, 
 <details>
 <summary><b>Is it safe to turn CPU vulnerability mitigations off?</b></summary>
 
-Only on single-tenant hosts that run no untrusted code, in a controlled network, with written approval from your security team. It is opt-in and off by default. See [Guide 01 §5.6](guides/01-grub-bootloader-tuning.md#56-iommu-and-cpu-vulnerability-mitigations-security-sensitive).
+Only on single-tenant hosts that run no untrusted code, in a controlled network, with written approval from your security team. It is opt-in and off by default. See [Guide 01 §5.6](guides/01-grub-bootloader-tuning.md#56-iommu-and-cpu-vulnerability-mitigations-security-sensitive). The cost lands on system calls, interrupts and context switches, so a thread that spins without them gains little; measure first ([concept: security mitigations](concepts/security-mitigations.md)).
 
 </details>
 

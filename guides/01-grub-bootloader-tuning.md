@@ -272,7 +272,7 @@ With `KERNEL_BYPASS_STACK=dpdk` and the `vfio-pci` driver, the script does the o
 - it sits in a controlled network segment (colocation cage, private VLAN);
 - your security team has signed off, and it is written down.
 
-Check what the running kernel thinks with `grep . /sys/devices/system/cpu/vulnerabilities/*`.
+Check what the running kernel thinks with `grep . /sys/devices/system/cpu/vulnerabilities/*`. [Concept: security mitigations](../concepts/security-mitigations.md) explains where each cost lands and how to measure it before you opt out.
 
 ### 5.7 Miscellaneous
 
