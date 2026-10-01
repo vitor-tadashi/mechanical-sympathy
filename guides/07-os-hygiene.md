@@ -24,13 +24,15 @@ flowchart LR
   classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
 ```
 
-*Guide 07 is the last step of the standard sequence. Guide 08 applies only with a kernel-bypass stack.*
+*Guide 07 closes the host-wide sequence. Guide 08 applies only with a kernel-bypass stack, and Guides 09 to 12 apply to every host ([QUICK_START](../QUICK_START.md#reading-order-and-run-order) gives the run order).*
 
 ---
 
 ## 1. Why
 
 After Guides 01–06, the isolated CPUs are quiet. This guide reduces what happens **everywhere else**: periodic jobs, idle-time daemons, metadata writes, power management, and packet-filter hooks on the network path. None of these are large on their own. Together they are the background noise that shows up as unexplained p99.9 spikes on the housekeeping CPUs, where your NIC interrupts are served.
+
+> **Picture it.** The isolated CPUs are a quiet room. The housekeeping CPUs are the corridor outside, where the mail (the NIC interrupts) arrives. This guide stops people from holding meetings in the corridor.
 
 ## 2. Services
 
@@ -56,7 +58,7 @@ The reference list, and why each entry is there:
 
 | Service(s) | What it does | Why disable it |
 |---|---|---|
-| `crond` | Periodic jobs | Unplanned work at arbitrary times (package-cache refreshes, report scripts, `sa1`). Move the jobs you need to systemd timers in `housekeeping.slice` ([Guide 05](05-cgroup-isolation.md)). ⚠️ On RHEL 8, **logrotate runs from cron** (`/etc/cron.daily/logrotate`). Enable `logrotate.timer`, or keep a timer for it. On RHEL 9 logrotate is already a systemd timer. |
+| `crond` | Periodic jobs | Unplanned work at arbitrary times (package-cache refreshes, report scripts, `sa1`). Move the jobs you need to systemd timers in `housekeeping.slice` ([Guide 05](05-cgroup-isolation.md)). **On RHEL 8, logrotate runs from cron** (`/etc/cron.daily/logrotate`). Enable `logrotate.timer`, or keep a timer for it. On RHEL 9 logrotate is already a systemd timer. |
 | `plymouth-*` | Boot splash screen | No console to show it on. Pure boot-time and shutdown overhead. |
 | `rpcbind`, `rpc-statd-notify`, `auth-rpcgss-module`, `rpc_pipefs`, `nfs-client.target`, `remote-fs-pre.target` | NFS client plumbing | Not needed unless the host mounts NFS. Also a network-facing service with its own timers. |
 | `sysstat-collect.timer`, `sysstat-summary.timer` | `sar` data collection every 10 min | Periodic `/proc` walks. Keep them if `sar` is your capacity-planning tool, and move them into `housekeeping.slice`. |
@@ -123,7 +125,7 @@ What `network-latency` brings (through `latency-performance`):
 
 | Setting | Effect |
 |---|---|
-| `force_latency` (PM QoS) | Holds `/dev/cpu_dma_latency` open with a very low value, so cpuidle cannot pick deep C-states. This is redundant with `idle=poll` on bare metal, and it is the main C-state control in VMs. |
+| `force_latency` (PM QoS) | Holds `/dev/cpu_dma_latency` open with a very low value (a power-management quality-of-service request, PM QoS), so cpuidle cannot pick deep C-states. This is redundant with `idle=poll` on bare metal, and it is the main C-state control in VMs. |
 | `governor=performance` | Fixed maximum frequency (with `acpi-cpufreq` after `intel_pstate=disable`, [Guide 01](01-grub-bootloader-tuning.md#53-frequency-and-power)) |
 | `transparent_hugepages=never` | Same as the boot argument |
 | `kernel.numa_balancing=0` | Same as [Guide 06](06-kernel-sysctl-tuning.md#2-kernel-logging-and-debug) |
@@ -160,6 +162,10 @@ Removing the filtering takes three steps, and each one has its own switch:
 - [ ] No local service depends on NAT, masquerading, or port forwarding (containers, libvirt).
 - [ ] The out-of-band console works, in case remote access is lost.
 
+<img src="../assets/diagrams/conntrack-path.svg" alt="Animation: three lanes; with connection tracking a packet waits while the conntrack table is looked up and updated, with the critical flow marked notrack it passes without the table work, and with kernel bypass the application polls the NIC and netfilter never sees the packet" width="720">
+
+*Connection tracking adds per-packet table work even with an empty rule set. `notrack` keeps the rules and skips the table; kernel bypass skips netfilter altogether.*
+
 Alternatives with most of the benefit and less risk:
 
 - Keep the firewall, but exempt the critical flows from conntrack with `notrack` rules in the `raw` table. The rules still apply, but there is no per-flow state.
@@ -171,7 +177,7 @@ Module unloading and rule flushing are **not persistent**. When opted in, `lowla
 
 | Seen elsewhere | Why not here |
 |---|---|
-| `rm /dev/random && ln -s /dev/urandom /dev/random` | Since kernel 5.6, and in the RHEL 8 backport, `/dev/random` only blocks until the CRNG is initialized at early boot, so it no longer blocks in normal operation. The symlink is also lost at every boot (devtmpfs). For Java, use `-Djava.security.egd=file:/dev/urandom` (the `file:/dev/./urandom` spelling is a workaround for very old JDKs). |
+| `rm /dev/random && ln -s /dev/urandom /dev/random` | Since kernel 5.6, and in the RHEL 8 backport, `/dev/random` only blocks until the kernel's random number generator (CRNG) is initialized at early boot, so it no longer blocks in normal operation. The symlink is also lost at every boot (devtmpfs). For Java, use `-Djava.security.egd=file:/dev/urandom` (the `file:/dev/./urandom` spelling is a workaround for very old JDKs). |
 | Killing all application processes before tuning | Tuning must be applied **before** the application starts, at boot, by `lowlat-runtime.service`. A tuning script that kills production processes is a hazard. Apply changes in a maintenance window instead. |
 | Re-running the whole tuning script from `rc.local` | No ordering, no status, and it re-does persistent steps (GRUB, file edits) on every boot. Only runtime state is re-applied at boot, by a systemd unit ([`scripts/systemd/lowlat-runtime.service`](../scripts/systemd/lowlat-runtime.service)). |
 
@@ -220,60 +226,48 @@ flowchart TD
 
 ## 11. Rollback
 
-For a whole host, use `sudo scripts/apply-all --rollback`. To undo this guide
-alone, stop boot reapplication, then restore the first-apply baseline:
+- [ ] Stop the boot-time re-apply, then restore the first-apply baseline (for a whole host, use `sudo scripts/apply-all --rollback`):
 
-```bash
-sudo systemctl disable --now lowlat-runtime.service
-sudo scripts/07-os-hygiene --rollback
-```
+  ```bash
+  sudo systemctl disable --now lowlat-runtime.service
+  sudo scripts/07-os-hygiene --rollback
+  ```
 
-The script restores existing limits, fstab, tuned configuration and profile
-selection files, and removes files that were absent before apply. It restores
-the original selected tuned profile and each affected service's enabled and
-running state, including rsyslog and optional firewalld changes. It retains
-factory backups under `/var/lib/lowlat/factory-settings`; repeated apply,
-runtime reapplication, and rollback preserve that baseline. Use the same
-configuration and path overrides used for apply. Without an earlier apply,
-rollback does nothing.
+- [ ] Mounts: `findmnt -rn -t xfs,ext4 -o TARGET,OPTIONS`, and `/etc/fstab` against the saved original.
+- [ ] Limits: the limits file against the saved original. New sessions get the old limits; running applications keep theirs until restarted.
+- [ ] tuned and services: `tuned-adm active`, and `systemctl is-enabled` and `systemctl is-active` for each affected service.
+- [ ] If §6 ran: `nft list ruleset`, `iptables-save`, `ip6tables-save` and `/proc/modules` against the saved files. A firewall manager may change rules when it restarts, so check the resulting policy too.
 
-Mount options are captured from the mounted filesystems before the fstab edit
-and restored immediately with a remount. New login limits take effect in new
-sessions; already running applications retain their existing limits. Verify
-with `findmnt -rn -t xfs,ext4 -o TARGET,OPTIONS`, compare `/etc/fstab` and the
-limits file with the saved originals, and inspect `tuned-adm active` plus
-`systemctl is-enabled` and `systemctl is-active` for the affected services.
-The guide's `--verify` checks the tuned state, so it may fail after rollback.
+What the rollback restores, and when it refuses:
 
-Before any selected firewall or module removal, the script saves the complete
-nftables and IPv4/IPv6 iptables rules and the selected modules that were loaded.
-This requires `nft`, `iptables-save`, `ip6tables-save`, `iptables-restore`, and
-`ip6tables-restore`; missing commands or failed snapshots stop apply before
-those changes. Rollback reloads the saved modules before restoring rules, then
-restores service state. Inspect `nft list ruleset`, `iptables-save`,
-`ip6tables-save`, and `/proc/modules` against the saved files. A firewall manager
-may change rules when restarted; verify the resulting policy as well as its
-service state.
+- **Files and state.** Limits, fstab, the tuned configuration and profile selection, and each affected service's enabled and running state, rsyslog and firewalld included. Files that did not exist before are removed. Mount options are restored at once with a remount.
+- **Its baseline.** Originals live under `/var/lib/lowlat/factory-settings` and survive repeated applies and the boot-time re-apply. Use the same configuration and path overrides as for the apply. Without an earlier apply, rollback does nothing.
+- **Firewall and modules (§6).** Before removing anything, the apply saves the complete nftables and IPv4/IPv6 iptables rules and the loaded modules, and stops if it cannot (it needs `nft`, `iptables-save`, `ip6tables-save`, `iptables-restore` and `ip6tables-restore`). The rollback reloads the modules first, then the rules, then the services.
+- **It stops loudly** on missing or damaged saved state, a failed remount or a refused restore command. Keep the baseline, fix the cause and run it again. If a mount cannot be remounted safely, reboot and check its options against the restored fstab.
+- **What it cannot bring back:** lost connections, expired conntrack entries, and work that stopped with the services.
 
-Missing or invalid saved state, a failed remount, or a rejected restore command
-is an error. Keep the baseline, correct the reported problem, and rerun
-rollback. Reboot if a mount cannot be remounted safely, then check its options
-against the restored fstab. Reapply with `sudo scripts/07-os-hygiene --apply`
-when needed. Automated restoration has harness coverage. Filesystems, tuned
-plugins and firewall backends differ, so check the result on your host.
+`--verify` checks the tuned state, so it may report FAIL lines after a rollback. To tune again, run `sudo scripts/07-os-hygiene --apply`.
 
-Rollback cannot recreate lost connections, expired conntrack entries, or
-work interrupted when services stopped. It restores configuration and
-supported runtime settings, not that transient application state.
+> [!NOTE]
+> **Validate on your hardware.** The automated checks cover this rollback, but filesystems, tuned plugins and firewall backends differ. Check the result on your host.
 
-## 12. Key takeaways
+## 12. Bare metal vs VM
+
+| | Bare metal | VM |
+|---|---|---|
+| Services, limits, `noatime` | ✅ | ✅ |
+| tuned profile | ✅ `idle=poll` already holds the C-states | ✅ Its PM QoS request is the main C-state control in a VM |
+| `performance` governor | ✅ | Usually no frequency control in the guest; tuned skips what is missing |
+| §6 firewall removal | Opt-in, with sign-off | Opt-in, with sign-off; the hypervisor's own filtering still applies |
+
+## 13. Key takeaways
 
 - Disable what the host does not need, move periodic work to timers in `housekeeping.slice`, and never silently disable security agents.
 - Limits go to the application's group only, in `limits.d`. Services take `Limit*=` in their unit.
 - tuned holds frequency and C-states steady at every boot, and `sysctl.d` still wins on conflicts.
 - Removing host packet filtering is opt-in, needs written sign-off, and has lower-risk alternatives (`notrack`, bypass).
 
-## 13. References
+## 14. References
 
 - `man 7 tuned-profiles`, `man 5 tuned-main.conf`, `man 5 limits.conf`, `man 8 mount` (`noatime`)
 - Red Hat — *Monitoring and managing system status and performance*: "Getting started with TuneD"

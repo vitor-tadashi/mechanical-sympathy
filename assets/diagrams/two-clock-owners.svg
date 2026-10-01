@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 360" width="760" height="360" role="img" aria-labelledby="t d">
+<title id="t">Two daemons steering one clock make it zigzag; one owner keeps it flat</title>
+<desc id="d">Two plots of the system clock offset over a few minutes. When chronyd and phc2sys both steer the same clock, each pulls it toward its own source, and the offset zigzags by tens of microseconds. With one owner, phc2sys from PTP or chronyd alone, the offset stays within about a microsecond. The numbers are illustrative.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .mid { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .plot { fill: #ffffff; stroke: #d0d7de; }
+  .zero { stroke: #57606a; stroke-dasharray: 3 3; }
+  .bad { fill: none; stroke: #9b1c1c; stroke-width: 2; }
+  .good { fill: none; stroke: #1d6b33; stroke-width: 2; }
+  .ax { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .tag { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; text-anchor: middle; }
+  .t1 { fill: #1f4e8c; } .t2 { fill: #8a5a00; }
+  .kick { transform-box: fill-box; transform-origin: center; animation: pop 8s linear infinite; }
+  .k1 { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; } .k2 { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  @keyframes pop { 0%, 4% { transform: scale(1.6); } 9%, 100% { transform: scale(1); } }
+  .head { transform: translateX(570px); animation: sweep 8s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .kick, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="360" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="170" rx="6"/>
+<text class="cap" x="24" y="34">Two daemons steer one clock: chronyd and phc2sys</text>
+<text class="sub" x="24" y="52">Each corrects the clock toward its own source, so every correction undoes the last one.</text>
+<rect class="plot" x="150" y="74" width="570" height="80"/><line class="zero" x1="150" y1="114.0" x2="720" y2="114.0"/><text class="ax" x="144" y="80">+50 µs</text><text class="ax" x="144" y="118.0">0</text><text class="ax" x="144" y="154">−50 µs</text>
+<path class="bad" d="M150.0,106.6 L159.8,103.0 L169.6,97.1 L179.3,94.9 L189.1,92.6 L198.9,91.2 L208.7,103.7 L217.7,114.6 L226.7,121.5 L235.7,127.1 L244.7,131.7 L253.7,134.0 L262.7,121.1 L272.0,111.7 L281.4,104.7 L290.8,99.1 L300.2,94.3 L309.6,93.2 L319.0,106.3 L326.4,116.5 L333.9,123.6 L341.4,128.8 L348.8,130.1 L356.3,133.0 L363.8,119.6 L371.5,107.8 L379.2,101.5 L386.9,98.1 L394.6,93.9 L402.3,92.4 L410.0,105.2 L420.1,112.9 L430.2,121.6 L440.2,129.4 L450.3,131.9 L460.3,134.9 L470.4,121.3 L478.8,111.3 L487.3,103.8 L495.8,98.9 L504.3,95.7 L512.7,93.4 L521.2,107.1 L531.3,115.8 L541.3,122.3 L551.4,128.4 L561.4,132.3 L571.5,133.6 L581.5,118.1 L591.7,108.5 L601.9,101.0 L612.1,96.9 L622.3,94.1 L632.5,92.4 L642.7,106.8 L653.3,115.3 L663.9,122.1 L674.5,127.3 L685.1,130.0 L695.7,130.7 L706.3,118.5 L714.0,112.1 L720.0,104.3 L720.0,99.9 L720.0,97.1 L720.0,93.4"/>
+<circle class="kick k2" cx="208.7" cy="66" r="4" style="animation-delay:-7.18s"/>
+<circle class="kick k1" cx="262.7" cy="66" r="4" style="animation-delay:-6.42s"/>
+<circle class="kick k2" cx="319.0" cy="66" r="4" style="animation-delay:-5.63s"/>
+<circle class="kick k1" cx="363.8" cy="66" r="4" style="animation-delay:-5.0s"/>
+<circle class="kick k2" cx="410.0" cy="66" r="4" style="animation-delay:-4.35s"/>
+<circle class="kick k1" cx="470.4" cy="66" r="4" style="animation-delay:-3.5s"/>
+<circle class="kick k2" cx="521.2" cy="66" r="4" style="animation-delay:-2.79s"/>
+<circle class="kick k1" cx="581.5" cy="66" r="4" style="animation-delay:-1.94s"/>
+<circle class="kick k2" cx="642.7" cy="66" r="4" style="animation-delay:-1.09s"/>
+<circle class="kick k1" cx="706.3" cy="66" r="4" style="animation-delay:-0.19s"/>
+<text class="tag t1" x="260" y="170">● chronyd corrects</text><text class="tag t2" x="400" y="170">● phc2sys corrects</text>
+<rect class="lane" x="10" y="190" width="740" height="160" rx="6"/>
+<text class="cap" x="24" y="214">One owner: phc2sys from PTP, or chronyd alone</text>
+<text class="sub" x="24" y="232">Every correction pulls the same way, toward one source. The offset stays within about a microsecond.</text>
+<rect class="plot" x="150" y="246" width="570" height="80"/><line class="zero" x1="150" y1="286.0" x2="720" y2="286.0"/><text class="ax" x="144" y="252">+50 µs</text><text class="ax" x="144" y="290.0">0</text><text class="ax" x="144" y="326">−50 µs</text>
+<path class="good" d="M150.0,286.0 L155.0,286.3 L160.0,286.0 L165.0,287.1 L170.0,285.9 L175.0,286.1 L180.0,285.8 L185.0,286.1 L190.0,286.4 L195.0,285.3 L200.0,285.5 L205.0,286.3 L210.0,285.3 L215.0,286.3 L220.0,286.2 L225.0,285.5 L230.0,285.9 L235.0,285.8 L240.0,285.5 L245.0,285.3 L250.0,285.6 L255.0,286.0 L260.0,284.3 L265.0,285.5 L270.0,286.6 L275.0,286.1 L280.0,285.9 L285.0,285.2 L290.0,285.7 L295.0,286.6 L300.0,286.2 L305.0,285.9 L310.0,285.9 L315.0,286.1 L320.0,287.1 L325.0,286.0 L330.0,285.3 L335.0,285.3 L340.0,285.2 L345.0,286.3 L350.0,285.9 L355.0,286.3 L360.0,286.3 L365.0,285.9 L370.0,285.7 L375.0,286.4 L380.0,288.2 L385.0,285.3 L390.0,285.0 L395.0,287.3 L400.0,286.7 L405.0,285.8 L410.0,286.1 L415.0,286.7 L420.0,286.2 L425.0,285.4 L430.0,285.6 L435.0,285.5 L440.0,284.5 L445.0,286.1 L450.0,286.5 L455.0,286.5 L460.0,286.1 L465.0,285.8 L470.0,286.1 L475.0,285.0 L480.0,285.6 L485.0,286.4 L490.0,285.8 L495.0,287.0 L500.0,286.3 L505.0,286.8 L510.0,286.0 L515.0,286.6 L520.0,286.1 L525.0,286.5 L530.0,287.0 L535.0,285.9 L540.0,286.2 L545.0,286.5 L550.0,285.2 L555.0,286.3 L560.0,286.1 L565.0,286.0 L570.0,286.4 L575.0,286.1 L580.0,286.3 L585.0,286.6 L590.0,285.6 L595.0,286.8 L600.0,285.8 L605.0,286.5 L610.0,286.6 L615.0,286.8 L620.0,285.7 L625.0,286.5 L630.0,285.3 L635.0,287.0 L640.0,286.6 L645.0,287.5 L650.0,285.3 L655.0,286.2 L660.0,286.4 L665.0,286.1 L670.0,285.3 L675.0,287.2 L680.0,286.9 L685.0,285.9 L690.0,286.2 L695.0,287.0 L700.0,285.5 L705.0,285.1 L710.0,286.8 L715.0,286.4 L720.0,286.7"/>
+<text class="note" x="720" y="342">clock offset over a few minutes · illustrative</text>
+<line class="head" x1="150" y1="70" x2="150" y2="330"/>
+</svg>

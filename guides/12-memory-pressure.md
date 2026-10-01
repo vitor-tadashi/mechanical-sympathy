@@ -46,6 +46,12 @@ A RHEL installation creates a swap volume, and nothing in Guides 00 to 11 change
 | What the logs show | Nothing | `Out of memory: Killed process … (name)` |
 | How it ends | When the pressure goes and every swapped page has been touched again | At once |
 
+<img src="../assets/diagrams/swap-thrash.svg" alt="Animation: an agent leaks memory; with swap, event.loop stalls again and again on swap-in faults while nothing is logged; without swap, the OOM killer ends the agent at once, systemd restarts it, and event.loop runs without a stall" width="720">
+
+*With swap, a leak in one agent becomes slow, silent stalls in every process. Without it, the leak ends in one logged kill, and the latency service never notices.*
+
+> **Picture it.** Swap is a storeroom across the street. When the office is full, the clerk moves boxes there, including yours, and every time you need one you wait for someone to walk over and back. Without the storeroom, the manager asks the person who brought too many boxes to leave.
+
 The [swap and OOM concept](../concepts/swap-and-oom.md#6-silent-stalls-versus-a-loud-failure) explains the mechanism. This guide applies the policy: **fail loudly, and choose who fails.**
 
 ## 2. When to apply, and when not
@@ -58,7 +64,7 @@ The [swap and OOM concept](../concepts/swap-and-oom.md#6-silent-stalls-versus-a-
 | Development box or laptop | Skip |
 
 > [!NOTE]
-> **Validate on your hardware.** "No swap" is the common choice for dedicated latency hosts, and it follows the "fail loudly" rule of this repository. It also makes a global OOM more likely on a host that is sized too tightly. Size the host first (§3), and watch `MemAvailable` and PSI for a week before you turn swap off on a host that uses it today.
+> **Validate on your hardware.** "No swap" is the common choice for dedicated latency hosts, and it follows the "fail loudly" rule of this repository. It also makes a global OOM more likely on a host that is sized too tightly. Size the host first (§3), and watch `MemAvailable` and memory pressure ([PSI](../GLOSSARY.md#psi)) for a week before you turn swap off on a host that uses it today.
 
 ## 3. Before you start: is there room?
 
@@ -131,6 +137,10 @@ MemorySwapMax=0          # cgroup v2 only
 | `OOMScoreAdjust=-900` | The kernel kills almost any other process first |
 | Not `-1000` | `-1000` makes the service unkillable. If the service itself leaks, the kernel kills everything else (agents, `sshd`, the journal) and then panics. `-900` keeps it last while the host stays reachable. |
 
+<img src="../assets/diagrams/oom-score-ruler.svg" alt="A ruler of oom_score_adj from -1000 to +1000: the latency service at -900, agents and most services at 0, -1000 never killed, +1000 always first; below, what happens when an agent leaks, when the service leaks at -900, and when it leaks at -1000" width="720">
+
+*The OOM killer takes the highest score first. At -900 the latency service goes last, and the host survives even its own leak. At -1000 it takes the host down with it.*
+
 The agents need no positive score when they are capped: their own `MemoryMax=` in [Guide 05](05-cgroup-isolation.md#4-design-three-slices) ends a leak inside their slice before the host runs out. [Guide 05](05-cgroup-isolation.md#4-design-three-slices) already shows `lowlat-app.service` with `OOMScoreAdjust=-900` and `LimitMEMLOCK=infinity`. This guide writes both, plus `MemorySwapMax=0` on cgroup v2, as a drop-in for every unit you list.
 
 ```bash
@@ -148,6 +158,10 @@ grep -E '^(VmLck|VmRSS|VmSwap):' /proc/$(systemctl show -p MainPID --value lowla
 ```
 
 Pages locked with `mlockall`, and pages in the hugetlb pool, are never swapped and never evicted, which also keeps the service's code out of the major faults of [memory reclaim §7](../concepts/memory-reclaim.md#7-faults-what-a-missing-page-costs).
+
+<img src="../assets/diagrams/fault-kinds.svg" alt="Animation: one read of an address on three timelines; a pre-touched page is read at once, a minor fault allocates and zeroes a page for about a microsecond, a major fault waits for the disk for a tenth of a millisecond to many milliseconds" width="720">
+
+*The same read costs nothing on a locked, pre-touched page, about a microsecond on a minor fault, and up to milliseconds on a major fault from swap.*
 
 ### 4.6 Watching pressure
 

@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 370" width="760" height="370" role="img" aria-labelledby="t d">
+<title id="t">A p99.99 estimate jumps around until about a million samples</title>
+<desc id="d">Three runs of the same benchmark read their p99.99 estimate as samples accumulate, on log scales. With ten thousand samples the percentile is a single sample and the runs disagree by a factor of three. From about a million samples, a hundred samples beyond the percentile, the runs agree within about ten percent, and at ten million within about three percent. The numbers are illustrative.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .mid { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .plot { fill: #ffffff; stroke: #d0d7de; }
+  .grid { stroke: #d0d7de; stroke-dasharray: 3 3; }
+  .truth { stroke: #1d6b33; stroke-width: 2; stroke-dasharray: 6 4; }
+  .run { fill: none; stroke-width: 2.2; }
+  .r0 { stroke: #1f4e8c; } .r1 { stroke: #9b1c1c; } .r2 { stroke: #8a5a00; }
+  .band { fill: #c8f0d0; opacity: 0.6; }
+  .ax { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+  .axr { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .mk { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .pin { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: pop 8s linear infinite; }
+  @keyframes pop { 0%, 4% { transform: scale(1.6); } 9%, 100% { transform: scale(1); } }
+  .head { transform: translateX(570px); animation: sweep 8s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pin, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="370" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="350" rx="6"/>
+<text class="cap" x="24" y="34">Three runs of the same benchmark, p99.99 read after every few samples</text>
+<text class="sub" x="24" y="52">Before about a million samples the estimate jumps by a factor of 3 between runs. After, the runs agree.</text>
+<rect class="plot" x="150" y="100" width="570" height="220"/>
+<rect class="band" x="577.5" y="100" width="142.5" height="220"/>
+<line class="grid" x1="150.0" y1="100" x2="150.0" y2="320"/><text class="ax" x="150.0" y="336">1,000</text>
+<line class="grid" x1="292.5" y1="100" x2="292.5" y2="320"/><text class="ax" x="292.5" y="336">10,000</text>
+<line class="grid" x1="435.0" y1="100" x2="435.0" y2="320"/><text class="ax" x="435.0" y="336">100,000</text>
+<line class="grid" x1="577.5" y1="100" x2="577.5" y2="320"/><text class="ax" x="577.5" y="336">1 million</text>
+<line class="grid" x1="720.0" y1="100" x2="720.0" y2="320"/><text class="ax" x="720.0" y="336">10 million</text>
+<text class="axr" x="144" y="324.0">10 µs</text>
+<text class="axr" x="144" y="214.0">100 µs</text>
+<text class="axr" x="144" y="104.0">1 ms</text>
+<line class="truth" x1="150" y1="210.0" x2="720" y2="210.0"/>
+<path class="run r0" d="M150.0,226.7 L157.1,197.8 L164.2,208.9 L171.4,237.6 L178.5,232.2 L185.6,214.7 L192.7,185.1 L199.9,214.7 L207.0,241.7 L214.1,217.4 L221.2,202.2 L228.4,164.3 L235.5,145.0 L242.6,154.3 L249.8,166.3 L256.9,109.2 L264.0,128.3 L271.1,156.2 L278.2,188.3 L285.4,186.5 L292.5,202.8 L299.6,211.9 L306.7,212.9 L313.9,206.9 L321.0,194.5 L328.1,178.1 L335.2,180.9 L342.4,214.9 L349.5,203.5 L356.6,224.8 L363.8,224.1 L370.9,239.8 L378.0,233.9 L385.1,237.9 L392.2,230.1 L399.4,193.2 L406.5,197.0 L413.6,192.1 L420.8,206.7 L427.9,209.7 L435.0,204.8 L442.1,206.5 L449.2,204.7 L456.4,205.1 L463.5,212.0 L470.6,208.5 L477.8,213.1 L484.9,203.1 L492.0,206.9 L499.1,204.4 L506.2,205.5 L513.4,202.6 L520.5,206.3 L527.6,203.5 L534.8,205.2 L541.9,202.2 L549.0,201.9 L556.1,203.1 L563.2,206.5 L570.4,205.3 L577.5,205.1 L584.6,202.4 L591.8,204.7 L598.9,204.6 L606.0,204.7 L613.1,205.3 L620.3,205.9 L627.4,206.4 L634.5,208.0 L641.6,209.8 L648.8,210.4 L655.9,209.6 L663.0,207.9 L670.1,207.2 L677.2,206.6 L684.4,206.5 L691.5,206.6 L698.6,207.1 L705.8,207.0 L712.9,206.2 L720.0,207.2"/>
+<path class="run r1" d="M150.0,203.3 L157.1,200.7 L164.2,181.3 L171.4,167.1 L178.5,202.5 L185.6,148.2 L192.7,117.7 L199.9,129.5 L207.0,125.9 L214.1,137.7 L221.2,171.6 L228.4,182.1 L235.5,179.6 L242.6,159.9 L249.8,152.8 L256.9,162.2 L264.0,139.4 L271.1,170.2 L278.2,159.5 L285.4,143.0 L292.5,147.7 L299.6,200.0 L306.7,221.1 L313.9,214.2 L321.0,203.4 L328.1,177.3 L335.2,200.6 L342.4,202.4 L349.5,194.2 L356.6,199.6 L363.8,233.1 L370.9,218.4 L378.0,189.4 L385.1,182.2 L392.2,197.4 L399.4,204.0 L406.5,203.1 L413.6,182.3 L420.8,182.6 L427.9,187.1 L435.0,180.0 L442.1,186.5 L449.2,178.7 L456.4,189.2 L463.5,196.1 L470.6,194.8 L477.8,190.3 L484.9,190.9 L492.0,193.3 L499.1,204.7 L506.2,208.7 L513.4,211.4 L520.5,213.1 L527.6,210.4 L534.8,211.5 L541.9,208.7 L549.0,208.7 L556.1,209.9 L563.2,209.6 L570.4,208.6 L577.5,206.9 L584.6,208.5 L591.8,209.3 L598.9,212.2 L606.0,208.7 L613.1,206.4 L620.3,207.4 L627.4,208.7 L634.5,210.8 L641.6,210.4 L648.8,210.0 L655.9,207.3 L663.0,207.5 L670.1,208.9 L677.2,211.7 L684.4,210.0 L691.5,209.8 L698.6,211.3 L705.8,210.9 L712.9,212.0 L720.0,209.0"/>
+<path class="run r2" d="M150.0,150.8 L157.1,163.1 L164.2,220.0 L171.4,220.8 L178.5,255.2 L185.6,233.6 L192.7,279.9 L199.9,290.2 L207.0,248.6 L214.1,203.2 L221.2,231.5 L228.4,263.8 L235.5,234.2 L242.6,209.7 L249.8,232.4 L256.9,244.7 L264.0,255.2 L271.1,275.8 L278.2,281.3 L285.4,240.3 L292.5,223.5 L299.6,174.9 L306.7,183.7 L313.9,191.6 L321.0,213.7 L328.1,215.1 L335.2,236.1 L342.4,259.0 L349.5,239.0 L356.6,212.9 L363.8,201.2 L370.9,186.2 L378.0,187.9 L385.1,200.3 L392.2,201.3 L399.4,206.8 L406.5,217.9 L413.6,231.4 L420.8,239.6 L427.9,233.8 L435.0,228.0 L442.1,227.8 L449.2,214.7 L456.4,212.7 L463.5,208.7 L470.6,202.1 L477.8,208.0 L484.9,218.2 L492.0,213.1 L499.1,215.5 L506.2,208.9 L513.4,207.8 L520.5,204.5 L527.6,202.9 L534.8,211.2 L541.9,208.7 L549.0,211.0 L556.1,212.9 L563.2,213.5 L570.4,210.9 L577.5,208.6 L584.6,206.6 L591.8,210.8 L598.9,211.8 L606.0,215.9 L613.1,214.9 L620.3,212.9 L627.4,213.6 L634.5,212.5 L641.6,211.7 L648.8,210.0 L655.9,211.0 L663.0,211.8 L670.1,212.3 L677.2,210.0 L684.4,208.9 L691.5,209.2 L698.6,209.2 L705.8,209.3 L712.9,209.2 L720.0,209.5"/>
+<circle class="pin" cx="292.5" cy="90" r="5" style="animation-delay:-6.0s"/>
+<text class="mk" x="292.5" y="80">1 sample beyond</text>
+<circle class="pin" cx="577.5" cy="90" r="5" style="animation-delay:-2.0s"/>
+<text class="mk" x="577.5" y="80">100 beyond: ±10 %</text>
+<circle class="pin" cx="720.0" cy="90" r="5" style="animation-delay:0.0s"/>
+<text class="mk" x="700.0" y="80">±3 %</text>
+<text class="lbl" x="24" y="180">p99.99</text><text class="axis" x="24" y="196">estimate</text>
+<text class="ax" x="435.0" y="356">samples so far (log scale) · dashed green: the true p99.99 · shaded: enough to trust</text>
+<text class="note" x="736" y="352">illustrative</text>
+<line class="head" x1="150" y1="94" x2="150" y2="326"/>
+</svg>

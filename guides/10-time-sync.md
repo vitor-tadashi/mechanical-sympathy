@@ -39,6 +39,12 @@ A latency-critical host needs a good clock for three reasons:
 - **Measurement.** A one-way latency between two hosts (host A stamps, host B stamps) is only as accurate as the offset between their clocks. With NTP-level sync (tens of µs to ms), one-way numbers below that are noise.
 - **No surprises.** A clock **step** (a jump) breaks timeouts and makes durations negative. A **slew** (small rate adjustment) does not. Configure the daemon to step only at boot.
 
+<img src="../assets/diagrams/clock-step-vs-slew.svg" alt="Animation: on CLOCK_REALTIME a 2 ms step back in the middle of a 220 µs request makes end minus start equal minus 1.78 ms; on CLOCK_MONOTONIC the clock never jumps and the duration stays 0.22 ms" width="720">
+
+*A step moves the wall clock while a request is running, and the measured duration comes out negative. The monotonic clock is never stepped, which is why durations use it.*
+
+> **Picture it.** Slewing is a driver easing off the gas to match the car ahead. Stepping is the car jumping forward by teleport: the trip computer stops making sense.
+
 The time daemons also matter for **noise**. They wake up periodically, take interrupts for timestamped packets, and must not do that on an isolated CPU.
 
 ## 2. Clocks in Linux, briefly
@@ -99,7 +105,13 @@ ethtool -T eno1
 
 ## 6. chrony
 
-The script enables `chronyd`, stops `ptp4l` and `phc2sys` (two daemons steering one clock fight each other), and pins `chronyd`. The server list stays yours: `/etc/chrony.conf` is site-specific.
+The script enables `chronyd`, stops `ptp4l` and `phc2sys`, and pins `chronyd`. Two daemons must never steer one clock:
+
+<img src="../assets/diagrams/two-clock-owners.svg" alt="Animation: with chronyd and phc2sys both steering the system clock, each correction pulls toward a different source and the offset zigzags by tens of microseconds; with one owner the offset stays within about a microsecond" width="720">
+
+*Two owners pull the clock toward two sources, and every correction undoes the last one. One owner keeps it flat. The numbers are illustrative.*
+
+The server list stays yours: `/etc/chrony.conf` is site-specific.
 
 **Precheck.** In chrony mode, the script checks for `chronyc` and the `chronyd.service` unit before it writes anything. If one is missing, it stops with exit code 3 and changes nothing: run `dnf install chrony` and try again. In PTP mode, the hardware timestamping check runs later, after the CPU drop-ins are written, so after a failed PTP check run `--rollback` ([SAFETY.md](../SAFETY.md)). Set `TIME_SYNC_MODE=""` only when another service manages the clock.
 
@@ -181,7 +193,7 @@ cat /sys/devices/system/clocksource/clocksource0/current_clocksource       # tsc
 ## 10. Troubleshooting
 
 ```mermaid
-flowchart LR
+flowchart TD
   s(["Clock problem"]) --> m{"Mode?"}
   m -- chrony --> c1{"Leap status<br/>Normal?"}
   c1 -- no --> f1["No reachable source:<br/>chronyc sources -v, firewall, DNS"]

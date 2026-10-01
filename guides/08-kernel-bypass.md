@@ -6,12 +6,9 @@
 |---|---|
 | **Risk level** | **4 / 5**. Reloading bypass drivers takes the NIC's links down for a few seconds. Binding a port to DPDK removes it from the kernel entirely, and on the wrong PCI address that is the port you are logged in through. |
 | **Reboot required** | Onload: no (driver reload). DPDK with `vfio-pci`: **yes, once**, to turn the IOMMU on ([Guide 01](01-grub-bootloader-tuning.md#56-iommu-and-cpu-vulnerability-mitigations-security-sensitive)). |
-| **Applies to** | Bare metal. VMs only with an SR-IOV virtual function or a passed-through NIC (§10). |
+| **Applies to** | Bare metal. VMs only with an SR-IOV virtual function or a passed-through NIC (§12). |
 | **Depends on** | [Guide 02](02-cpu-core-isolation.md) (isolated CPUs for the polling threads), [Guide 03](03-huge-pages-configuration.md) (huge pages for packet buffers), [Guide 04](04-network-optimization.md) (the kernel side of the NICs) |
 | **Optional** | Yes. Everything in Guides 01–07 works without it. `apply-all` runs this guide only when `KERNEL_BYPASS_STACK` is set. |
-
-> [!NOTE]
-> **Sources.** Onload (§5) follows the [Onload repository](https://github.com/Xilinx-CNS/onload) and the *Onload User Guide*. DPDK (§6) and the stacks in §7 follow their upstream documentation, listed in §14. Behavior depends on the NIC, firmware, driver and kernel versions, so validate each stack on your hardware before relying on it.
 
 ## At a glance
 
@@ -37,29 +34,13 @@ flowchart LR
 
 On the kernel path, a received packet raises an interrupt and is processed in a softirq by the IP/UDP/TCP stack, copied into a socket buffer, and handed to the application through a syscall that may also wake a sleeping thread. [Guide 04](04-network-optimization.md) makes each of those steps as fast and as predictable as the kernel allows. A tuned kernel path still costs roughly **5–10 µs one way**, and its tail is shaped by softirq scheduling.
 
-A **kernel-bypass stack** maps a NIC's hardware queues (descriptor rings and doorbell registers) into the application's address space. The NIC DMAs packets straight into memory the application owns, and an application thread **polls** the ring:
-
-```mermaid
-flowchart TD
-  subgraph kpath["Kernel path: about 5 to 10 µs"]
-    direction LR
-    n1["NIC"] --> i1["IRQ"] --> s1["softirq<br/>NAPI, IP, TCP/UDP"] --> b1["socket<br/>buffer"] --> w1["syscall,<br/>wake-up"] --> a1["app"]
-  end
-  subgraph bpath["Bypass path: about 1 to 2 µs"]
-    direction LR
-    n2["NIC"] --> d2["DMA into<br/>user memory"]
-    a2["app thread<br/>(isolated CPU)"] -- "polls the ring:<br/>no IRQ, no syscall" --> d2
-  end
-  kpath ~~~ bpath
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  class a2,d2 iso
-```
-
-*On the kernel path a packet passes through an interrupt, a softirq, a socket buffer and a syscall. With bypass, the NIC writes into memory the application owns, and a pinned thread polls it directly.*
+A **kernel-bypass stack** maps a NIC's hardware queues (descriptor rings and doorbell registers) into the application's address space. The NIC writes packets (by DMA) straight into memory the application owns, and an application thread **polls** the ring:
 
 <img src="../assets/diagrams/packet-path.svg" alt="Animation: on the kernel path a packet passes through a DMA, an interrupt, softirq processing, a socket buffer, a wake-up and recv, and the interrupt and wake-up steps are highlighted; with kernel bypass a pinned thread polls the ring and about 6 microseconds are not spent" width="720">
 
 *The same packet on both paths, on one time scale: bypass removes the interrupt, the softirq, the socket and the wake-up, which are the steps that shape the kernel path's tail.*
+
+> **Picture it.** The kernel path is a hotel front desk: the parcel arrives, someone rings your room, a porter carries it up, and you open the door. Bypass puts the mailbox in your room, and you check it every moment.
 
 <img src="../assets/diagrams/kernel-vs-bypass-buffers.svg" alt="Three lanes for the same packet: on the kernel stack it crosses three queues, or four with RPS, and is copied once; with Onload sockets it crosses three queues in user space and is copied once; with DPDK or ef_vi it crosses two queues and is read in place; each lane says where to read a drop" width="720">
 
@@ -71,6 +52,9 @@ That brings one-way latency down to roughly **1–2 µs**, with a much tighter t
 - **Vendor-specific software and tuning**: its own configuration, its own statistics, its own upgrade cycle.
 - **Huge pages** for packet buffers ([Guide 03](03-huge-pages-configuration.md)).
 - **Different operations**: `tcpdump`, `ss`, `netstat`, iptables and conntrack do not see accelerated traffic.
+
+> [!NOTE]
+> **Sources.** Onload (§5) follows the [Onload repository](https://github.com/Xilinx-CNS/onload) and the *Onload User Guide*. DPDK (§6) and the stacks in §7 follow their upstream documentation, listed in §14. Behavior depends on the NIC, firmware, driver and kernel versions, so validate each stack on your hardware before relying on it.
 
 ## 2. The families, and which one fits your card and application
 
@@ -156,7 +140,7 @@ Onload is a user-space TCP/UDP stack. The `onload` launcher sets `LD_PRELOAD`, s
 
 <img src="../assets/diagrams/onload-ef-vi.svg" alt="A Solarflare NIC with hardware filters steering flows to virtual interfaces, each made of an RX queue, a TX queue and an event queue; packets are written by DMA into 2 KiB packet buffers in huge pages; the Onload library and the application thread read them in place; the kernel path keeps ARP, ICMP and unaccelerated sockets" width="720">
 
-*A hardware filter picks the VI, the NIC writes into packet buffers that your process owns, and a spinning thread reads the event queue. The defaults for each limit are in [Concept: network buffers §7.2](../concepts/network-buffers.md#72-solarflare-ef_vi-and-onload).*
+*A hardware filter picks the VI (virtual interface: one RX queue, one TX queue and one event queue), the NIC writes into packet buffers that your process owns, and a spinning thread reads the event queue. The defaults for each limit are in [Concept: network buffers §7.2](../concepts/network-buffers.md#72-solarflare-ef_vi-and-onload).*
 
 Traffic Onload does not accelerate still goes through the kernel `sfc` driver and its channels: ARP, ICMP, loopback by default, and sockets the application creates before Onload is loaded. Hence the single kernel queue of §3.
 
@@ -217,7 +201,7 @@ onload_stackdump filters             # the hardware filters steering each socket
 onload_tcpdump -i ens1f0             # packet capture of accelerated traffic (tcpdump cannot see it)
 ```
 
-An application that starts but shows **no stack** in `onload_stackdump` is running on the kernel path: see §11.
+An application that starts but shows **no stack** in `onload_stackdump` is running on the kernel path: see §10.
 
 ## 6. DPDK on Intel NICs
 
@@ -267,9 +251,9 @@ DPDK_DRIVER=vfio-pci
 
 Bindings do not survive a reboot. `lowlat-runtime.service` re-binds them at boot, before `04-network` runs.
 
-Every device in the port's **IOMMU group** must be bound to `vfio-pci` or to no driver. Check the group with `ls /sys/bus/pci/devices/0000:3b:00.0/iommu_group/devices/`. On boards without PCIe ACS, both ports of a card can share a group, and then both have to go to DPDK.
+Every device in the port's **IOMMU group** must be bound to `vfio-pci` or to no driver. Check the group with `ls /sys/bus/pci/devices/0000:3b:00.0/iommu_group/devices/`. On boards without PCIe Access Control Services (ACS), both ports of a card can share a group, and then both have to go to DPDK.
 
-The `ice` PMD (E810) needs the **DDP package** (`ice.pkg`, usually under `/lib/firmware/intel/ice/ddp/`). Without it the port runs in a reduced "safe mode".
+The `ice` poll-mode driver (E810) needs the **DDP package** (Dynamic Device Personalization) (`ice.pkg`, usually under `/lib/firmware/intel/ice/ddp/`). Without it the port runs in a reduced "safe mode".
 
 ### 6.3 Running a DPDK application
 
@@ -328,16 +312,7 @@ dpdk-devbind.py --status-dev net                   # DPDK: ports under "drv=vfio
 
 Then measure against your baseline: kernel-stack p50/p99/p99.9 against bypass. Run `sockperf` with and without the `onload` prefix for Onload, or `dpdk-testpmd` plus your application's own timestamps for DPDK. Hardware timestamps ([ethtool §12](../concepts/ethtool.md#12--t-timestamping)) give the most honest numbers.
 
-## 10. Bare metal vs VM
-
-| | Bare metal | VM |
-|---|---|---|
-| Onload / XLIO | ✅ | Only on an SR-IOV VF or passthrough of a supported NIC, with the vendor's VF support |
-| DPDK | ✅ | On an SR-IOV VF or passthrough NIC (with a virtual IOMMU or no-IOMMU mode in the guest), or on virtio with the virtio PMD, which usually gains little |
-| Busy polling | ✅ | ✅ (virtio-net supports it on recent kernels) |
-| Deciding factor | — | Whether the hypervisor owner will give you pinned vCPUs, huge-page-backed memory and a VF. Without those, bypass inside a VM mostly moves the jitter elsewhere. |
-
-## 11. Troubleshooting
+## 10. Troubleshooting
 
 ```mermaid
 flowchart TD
@@ -367,12 +342,21 @@ flowchart TD
 | DPDK: `No available hugepages` | Pool on the wrong node, or `--socket-mem` asks for the wrong node | `--socket-mem` per node, as in Guide 03 |
 | E810 in "safe mode" | DDP package missing | Install `ice.pkg` (§6.2) |
 
-## 12. Rollback
+## 11. Rollback
 
 - [ ] Undo the stack: `sudo scripts/08-kernel-bypass --rollback`. For Onload, this removes the `modprobe.d` file and does a pinned reload. For DPDK, it rebinds the ports to their recorded kernel drivers.
 - [ ] Re-apply kernel queues and IRQ placement: `sudo scripts/04-network --runtime`
 - [ ] In `lowlat.conf`, set `KERNEL_BYPASS_STACK=""`, and for Onload clear `KERNEL_BYPASS_DRIVER` and `KERNEL_BYPASS_COMMAND`, so that the next boot does not re-apply anything
 - [ ] DPDK: put the interfaces back into `NICS`, then re-run `01-grub-bootloader --apply` to restore your IOMMU choice, and reboot
+
+## 12. Bare metal vs VM
+
+| | Bare metal | VM |
+|---|---|---|
+| Onload / XLIO | ✅ | Only on an SR-IOV VF or passthrough of a supported NIC, with the vendor's VF support |
+| DPDK | ✅ | On an SR-IOV VF or passthrough NIC (with a virtual IOMMU or no-IOMMU mode in the guest), or on virtio with the virtio PMD, which usually gains little |
+| Busy polling | ✅ | ✅ (virtio-net supports it on recent kernels) |
+| Deciding factor | — | Whether the hypervisor owner will give you pinned vCPUs, huge-page-backed memory and a VF. Without those, bypass inside a VM mostly moves the jitter elsewhere. |
 
 ## 13. Key takeaways
 

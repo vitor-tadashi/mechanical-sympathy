@@ -174,7 +174,7 @@ flowchart TD
 | Application cannot pin threads | cpuset trap: [Guide 05 §4.4](guides/05-cgroup-isolation.md#44-the-cpuset-trap) |
 | JVM fails with large pages | Pool on the wrong node or too small: [Guide 03 §9](guides/03-huge-pages-configuration.md#9-troubleshooting) |
 | Network settings gone after reboot | `systemctl status lowlat-runtime` |
-| Kernel-bypass application falls back to the kernel stack | [Guide 08 §11](guides/08-kernel-bypass.md#11-troubleshooting) |
+| Kernel-bypass application falls back to the kernel stack | [Guide 08 §10](guides/08-kernel-bypass.md#10-troubleshooting) |
 | Undo everything | `sudo scripts/apply-all --rollback`; read [whole-host rollback](#whole-host-rollback) for verification and manual limits |
 
 

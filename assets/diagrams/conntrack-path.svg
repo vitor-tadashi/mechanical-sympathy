@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 440" width="760" height="440" role="img" aria-labelledby="t d">
+<title id="t">Where netfilter costs a packet: conntrack, notrack, or bypass</title>
+<desc id="d">Three lanes show a received packet crossing the host. With a firewall that tracks connections, the packet waits while the conntrack table is looked up and updated. With the firewall kept but the critical flow marked notrack in the raw table, the packet passes the hook without the table work. With kernel bypass, the application reads the NIC queue itself and netfilter never sees the packet.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .mid { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .wire { stroke: #57606a; stroke-width: 2; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .app2 { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; text-anchor: end; }
+  .late { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; text-anchor: end; }
+  .t1 { transform: translateX(620px); animation: t1 8s linear infinite; }
+  .t2 { transform: translateX(620px); animation: t2 8s linear infinite; }
+  .t3 { transform: translateX(560px); animation: t3 8s linear infinite; }
+  @keyframes t1 { 0% { transform: translateX(0); } 10% { transform: translateX(190px); } 18% { transform: translateX(325px); } 55% { transform: translateX(325px); } 66% { transform: translateX(480px); } 74% { transform: translateX(620px); } 100% { transform: translateX(620px); } }
+  @keyframes t2 { 0% { transform: translateX(0); } 10% { transform: translateX(190px); } 22% { transform: translateX(480px); } 30% { transform: translateX(620px); } 100% { transform: translateX(620px); } }
+  @keyframes t3 { 0% { transform: translateX(0); } 8% { transform: translateX(560px); } 100% { transform: translateX(560px); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .t1, .t2, .t3 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="440" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="128" rx="6"/>
+<text class="cap" x="24" y="34">Firewall with connection tracking</text>
+<text class="sub" x="24" y="52">Every packet is looked up, and inserted, in the conntrack table.</text>
+<line class="wire" x1="60" y1="86" x2="700" y2="86"/>
+<rect class="box" x="24" y="66" width="96" height="40" rx="5"/><text class="mid" x="72.0" y="91">NIC</text>
+<rect class="box" x="150" y="66" width="120" height="40" rx="5"/><text class="mid" x="210.0" y="91">netfilter hook</text>
+<rect class="wait" x="300" y="66" width="170" height="40" rx="5"/><text class="mid" x="385.0" y="83">conntrack</text><text class="mid" x="385.0" y="98">lookup, insert</text>
+<rect class="box" x="500" y="66" width="100" height="40" rx="5"/><text class="mid" x="550.0" y="91">IP and UDP</text>
+<rect class="app" x="630" y="66" width="100" height="40" rx="5"/><text class="mid" x="680.0" y="91">socket</text>
+<circle class="tok t1" cx="60" cy="86" r="8"/>
+<text class="late" x="736" y="50">waits in conntrack</text>
+<rect class="lane" x="10" y="148" width="740" height="128" rx="6"/>
+<text class="cap" x="24" y="172">Firewall kept, critical flow marked notrack</text>
+<text class="sub" x="24" y="190">The rules still apply. The flow skips the per-packet table work.</text>
+<line class="wire" x1="60" y1="224" x2="700" y2="224"/>
+<rect class="box" x="24" y="204" width="96" height="40" rx="5"/><text class="mid" x="72.0" y="229">NIC</text>
+<rect class="box" x="150" y="204" width="120" height="40" rx="5"/><text class="mid" x="210.0" y="229">netfilter hook</text>
+<rect class="mut" x="300" y="204" width="170" height="40" rx="5"/><text class="mid" x="385.0" y="221">conntrack</text><text class="mid" x="385.0" y="236">skipped: notrack</text>
+<rect class="box" x="500" y="204" width="100" height="40" rx="5"/><text class="mid" x="550.0" y="229">IP and UDP</text>
+<rect class="app" x="630" y="204" width="100" height="40" rx="5"/><text class="mid" x="680.0" y="229">socket</text>
+<circle class="tok t2" cx="60" cy="224" r="8"/>
+<text class="done" x="736" y="188">no table work</text>
+<rect class="lane" x="10" y="286" width="740" height="128" rx="6"/>
+<text class="cap" x="24" y="310">Kernel bypass</text>
+<text class="sub" x="24" y="328">The application polls the NIC queue itself. Netfilter never sees the packet.</text>
+<line class="wire" x1="60" y1="362" x2="700" y2="362"/>
+<rect class="box" x="24" y="342" width="96" height="40" rx="5"/><text class="mid" x="72.0" y="367">NIC</text>
+<rect class="mut" x="150" y="342" width="120" height="40" rx="5"/><text class="mid" x="210.0" y="367">netfilter hook</text>
+<rect class="mut" x="300" y="342" width="170" height="40" rx="5"/><text class="mid" x="385.0" y="359">conntrack</text><text class="mid" x="385.0" y="374">never reached</text>
+<rect class="mut" x="500" y="342" width="100" height="40" rx="5"/><text class="mid" x="550.0" y="367">IP and UDP</text>
+<rect class="app" x="630" y="342" width="100" height="40" rx="5"/><text class="mid" x="680.0" y="367">application</text>
+<path d="M72,384 C 200,402 520,402 676,384" fill="none" stroke="#1d6b33" stroke-width="2.5" stroke-dasharray="6 4"/>
+<circle class="tok t3" cx="72" cy="392" r="8"/>
+<text class="done" x="736" y="326">netfilter never entered</text>
+<text class="note" x="736" y="430">schematic: the token shows where a packet waits, not to scale</text>
+
+</svg>
