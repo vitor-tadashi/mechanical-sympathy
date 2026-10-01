@@ -1,6 +1,6 @@
 # Guide 09 — Measuring Latency
 
-> **Script:** [`scripts/09-measure-latency`](../scripts/09-measure-latency) · **Concepts:** [cpu-isolation §8](../concepts/cpu-isolation.md#8-measuring-noise), [network-tuning §10](../concepts/network-tuning.md#10-measuring) · **Example:** [Java latency probe](../examples/hugepages-java-example.md) · **Use it:** before [Guide 01](01-grub-bootloader-tuning.md), and after every guide · **Terms:** [Glossary](../GLOSSARY.md)
+> **Script:** [`scripts/09-measure-latency`](../scripts/09-measure-latency) · **Concepts:** [cpu-isolation §8](../concepts/cpu-isolation.md#8-measuring-noise), [network-tuning §10](../concepts/network-tuning.md#10-measuring) · **Example:** [Java latency probe](../examples/hugepages-java-example.md) · **Previous:** [Guide 08](08-kernel-bypass.md) · **Next:** [Guide 10 — Time synchronization](10-time-sync.md) · **Use it:** before [Guide 00](00-bios-firmware.md), and after every guide · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|
@@ -65,13 +65,13 @@ A latency distribution is long-tailed. The mean mixes the common fast case with 
 
 ### 3.2 Enough samples
 
-A percentile is only as good as the number of samples behind it. To see p99.99 at all you need at least 10,000 samples, and to trust it you want **100 times that**: about a million. Run long enough to cover the periodic events you are hunting. The residual tick is once per second, and some housekeeping timers run every few seconds, so a 10-second run can miss them entirely.
+A percentile is only as good as the number of samples beyond it. With 10,000 samples, p99.99 is one single sample. To trust it you want about **100 samples beyond it** (a million in total, ±10 %), and about 1,000 beyond it is comfortable (±3 %, [tail latency §3](../concepts/tail-latency.md#3-what-a-percentile-is)). Run long enough to cover the periodic events you are hunting. The residual tick is once per second, and some housekeeping timers run every few seconds, so a 10-second run can miss them entirely.
 
-| Target | Minimum samples | Comfortable |
+| Target | Usable (~100 beyond it) | Comfortable (~1,000 beyond it) |
 |---|---|---|
-| p99 | 1,000 | 100,000 |
-| p99.9 | 10,000 | 1,000,000 |
-| p99.99 | 100,000 | 10,000,000 |
+| p99 | 10,000 | 100,000 |
+| p99.9 | 100,000 | 1,000,000 |
+| p99.99 | 1,000,000 | 10,000,000 |
 
 ### 3.3 Coordinated omission
 
@@ -92,7 +92,7 @@ The [Java probe](../examples/hugepages-java-example.md) is a closed-loop ping-po
 
 Take both readings of a duration from `CLOCK_MONOTONIC` (`System.nanoTime()` in Java), never from the wall clock, which the time daemon can step. A latency between two hosts is only as accurate as the sync between their clocks. [Concept: clocks and time](../concepts/clocks-and-time.md#7-latency-across-two-hosts) gives the numbers.
 
-### 3.4 Record the environment
+### 3.5 Record the environment
 
 Two measurements are only comparable if everything except the one change is the same. Keep with every result: the kernel version, `/proc/cmdline`, the BIOS profile, the application build and configuration, the load (rate, message size, duration), the CPUs used, and the `verify-tuning` report. `09-measure-latency --run` writes most of this into the bundle for you.
 
@@ -112,7 +112,7 @@ flowchart LR
 
 *Four questions, four families of tools: OS noise on a CPU, scheduling of one thread, hardware and firmware interruptions, and end-to-end latency.*
 
-| Tool | Package (RHEL 8/9) | Measures | Notes |
+| Tool | Package (RHEL) | Measures | Notes |
 |---|---|---|---|
 | `rtla osnoise` | `rtla` (RHEL 9, RHEL 8.8+) | Every interruption of a spinning workload on each CPU: its duration and its source (IRQ, softirq, thread, NMI) | The main host-noise tool. It **runs a workload** on the measured CPUs. |
 | `rtla timerlat` | `rtla` | Wake-up latency of a timer-driven thread, split into IRQ and thread latency | Answers "how late does a sleeping thread wake up?" |
@@ -208,7 +208,7 @@ flowchart LR
 | Pattern | Likely cause | Where to fix it |
 |---|---|---|
 | p99.9 spike once per second | Residual tick, or RT throttling (50 ms) with a FIFO spinner | [Guide 01 §7](01-grub-bootloader-tuning.md#7-verification), [Guide 02 §4.4](02-cpu-core-isolation.md#44-real-time-throttling) |
-| Noise every 1–4 ms | The full tick: `nohz_full` missing, or a second runnable task | [Guide 01](01-grub-bootloader-tuning.md), [Guide 02 §8](02-cpu-core-isolation.md#8-verification) |
+| Noise every 1 ms | The full tick: `nohz_full` missing, or a second runnable task | [Guide 01](01-grub-bootloader-tuning.md), [Guide 02 §8](02-cpu-core-isolation.md#8-verification) |
 | `osnoise` shows IRQ time on an isolated CPU | A NIC or device IRQ landing there | [Guide 04 §6](04-network-optimization.md#6-interrupt-affinity-set_nic_irq_affinity) |
 | `osnoise` shows thread time (`kworker`, agents) | Workqueues or agents on the CPU | [Guide 02 §4.2](02-cpu-core-isolation.md#42-unbound-kernel-workqueues-runtime), [Guide 05](05-cgroup-isolation.md) |
 | Bimodal histogram | Some samples cross NUMA nodes, or share a core with an SMT sibling | [Guide 02 §3](02-cpu-core-isolation.md#3-designing-the-cpu-layout), [Guide 03 §5.3](03-huge-pages-configuration.md#53-make-sure-the-pages-come-from-the-right-node) |
@@ -237,7 +237,7 @@ cat /var/lib/lowlat/measurements/<stamp>/osnoise.txt     # MAX SINGLE NOISE per 
 | `rtla: tracefs not mounted` | tracefs not mounted | `mount -t tracefs nodev /sys/kernel/tracing` |
 | `turbostat` shows no `SMI` column | VM, or a CPU without the SMI counter MSR | Expected in VMs. On bare metal, load `msr` (`modprobe msr`). |
 | The application's latency got worse during `--run` | `osnoise` ran on the application's CPUs | Measure before the application starts, or set `MEASURE_CPUS` |
-| Results differ a lot between runs | The load, duration or environment changed | §3.4: record and hold everything but the one change |
+| Results differ a lot between runs | The load, duration or environment changed | §3.5: record and hold everything but the one change |
 
 ## 10. Rollback
 

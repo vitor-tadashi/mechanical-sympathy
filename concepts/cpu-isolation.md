@@ -90,7 +90,7 @@ flowchart TD
 
 Isolation gives a thread a CPU, and **how the thread uses memory** decides whether it stays fast.
 
-- **Cache lines are 64 bytes**, and coherence works per line (MESI/MESIF). When two cores write to the same line, it bounces between their private caches, costing ~40–100 ns per transfer on the same socket and more across sockets.
+- **Cache lines are 64 bytes**, and coherence works per line (MESI/MESIF). When two cores write to the same line, it bounces between their private caches, costing ~20–40 ns per transfer inside one L3 domain and ~130–200 ns across sockets ([hardware topology §3](hardware-topology.md#3-numbers-to-remember)).
 - **False sharing**: two independent variables, written by two threads, that happen to share a line. Typical examples are per-thread counters in an array, or the head and tail indices of a queue. Pad or align hot, independently written fields to 64 bytes (128 on CPUs with adjacent-line prefetch). In Java, `@jdk.internal.vm.annotation.Contended` or manual padding.
 - **Single-writer principle**: design data so each line has one writer. Single-producer/single-consumer (SPSC) ring buffers exist for this reason. [Concept: thread handoff](thread-handoff.md) builds one, line by line.
 - **NUMA**: memory is attached to a socket. A thread on node 1 reading node 0 memory pays the interconnect latency on every miss. Pin threads and their memory to the same node, the node where the NIC is attached.
@@ -100,7 +100,7 @@ Isolation gives a thread a CPU, and **how the thread uses memory** decides wheth
 
 | | Busy-spin | Block (futex/epoll wait) |
 |---|---|---|
-| Wake-up latency | ~50–100 ns (cache line transfer when the producer writes) | 2–50 µs (IPI + scheduler + possibly C-state exit) |
+| Wake-up latency | ~50–100 ns in one L3 domain (one cache-line transfer, plus the spin loop noticing it) | 2–50 µs (IPI + scheduler + possibly C-state exit) |
 | CPU cost | 100 % of one core | ~0 when idle |
 | Requires | A dedicated (isolated) core | Nothing |
 

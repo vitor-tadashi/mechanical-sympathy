@@ -17,7 +17,7 @@
 
 The fleet has two hosts of the same model, with the same BIOS profile and the same `lowlat.conf`. Both run the latency probe under the same fixed load ([Guide 09 §5](../../guides/09-measuring-latency.md#5-a-measurement-protocol)). Host A reports a p50 of about 1.9 µs, and host B about 2.2 µs. Repeating the run does not settle it: a run started right after a reboot is faster than the same run half an hour later.
 
-Nothing in the software differs. The hardware does: host B sits higher in the rack and breathes warmer air.
+Nothing in the software differs. The hardware does: host B sits higher in the rack, where the air it takes in is warmer.
 
 <img src="../../assets/diagrams/turbo-frequency.svg" alt="Animation: with turbo on, the clock of CPU 7 steps down from 3.9 to 3.3 GHz as the chip warms up and every message takes a little longer; with turbo off the clock stays at 3.0 GHz and every message takes the same time" width="720">
 

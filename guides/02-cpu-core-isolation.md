@@ -19,7 +19,7 @@
 
 ```mermaid
 flowchart LR
-  g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g00["00<br/>BIOS"] --> g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
   g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
   class g02 focus
   classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
@@ -36,17 +36,17 @@ A latency-critical thread that spins on a CPU is delayed by every event that tak
 | Source of interference | Typical cost | Handled by |
 |---|---|---|
 | Another runnable task (daemon, cron job, shell) | 1 time slice = ms | `isolcpus` + systemd `CPUAffinity` (this guide) |
-| Scheduler tick | 1–5 µs, 250–1000×/s | `nohz_full` ([Guide 01](01-grub-bootloader-tuning.md)) |
+| Scheduler tick | 1–5 µs, 1000×/s | `nohz_full` ([Guide 01](01-grub-bootloader-tuning.md)) |
 | RCU callbacks in softirq | µs to 100s of µs | `rcu_nocbs` ([Guide 01](01-grub-bootloader-tuning.md)) |
 | Kernel workqueue items (`kworker`) | µs to ms | workqueue cpumask (this guide) |
-| Device interrupts + softirq (NIC, disk) | 1–50 µs per IRQ | IRQ affinity ([Guide 04](04-network-optimization.md)), irqbalance off (this guide) |
+| Device interrupts + softirq (NIC, disk) | 1–5 µs per IRQ, up to ~50 µs with the softirq work | IRQ affinity ([Guide 04](04-network-optimization.md)), irqbalance off (this guide) |
 | Migration to another CPU | cold L1/L2, µs to 10s of µs | one thread per CPU, pinned (this guide) |
 | RT throttling | **50 ms every second** for SCHED_FIFO spinners | `sched_rt_runtime_us=-1` (this guide) |
 | TLB shootdown IPIs from threads of the same process | 1–5 µs | fewer `munmap`/`mprotect` calls, huge pages ([Guide 03](03-huge-pages-configuration.md)) |
 
 <img src="../assets/diagrams/who-wants-my-cpu.svg" alt="Seven sources of interference on a CPU, each paired with the setting that removes it, leading to an isolated CPU that runs one pinned thread uninterrupted" width="720">
 
-*Seven things take a CPU away from a thread, and each has exactly one removal. Guides 01, 02, 04 and 05 apply them.*
+*Each thing that takes a CPU away from a thread has exactly one removal, and Guides 01 to 05 apply them. The picture shows seven of the eight rows above; TLB shootdowns are in [Guide 03](03-huge-pages-configuration.md).*
 
 The kernel parameters from Guide 01 make the isolated CPUs *eligible* to be quiet. This guide moves the rest of the system away from them, and then puts **exactly one** application thread on each one.
 
@@ -331,8 +331,9 @@ static int pin_current_thread(int cpu) {
 When you cannot change the code:
 
 ```bash
-# Whole process (all current threads) onto the OS CPUs of node 1 - non-critical threads
-taskset -a -cp 1 <pid>
+# Whole process (all current threads) onto OS CPUs with no NIC interrupts and no agents.
+# Not CPU 1: it takes the critical NIC's interrupts. Memory stays on node 1 through numactl (below).
+taskset -a -cp 8,10,12,14 <pid>
 
 # One thread (TID from `ps -L -p <pid>` or /proc/<pid>/task) onto one isolated CPU
 taskset -cp 9 <tid>

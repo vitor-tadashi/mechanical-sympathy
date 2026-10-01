@@ -39,7 +39,7 @@
 <rect class="wait" x="350" y="104" width="30" height="20" rx="2"/><rect class="ev" x="380" y="102" width="8" height="24" rx="1" style="animation-delay:-3.58s"/>
 <rect class="wait" x="470" y="104" width="30" height="20" rx="2"/><rect class="ev" x="500" y="102" width="8" height="24" rx="1" style="animation-delay:-2.32s"/>
 <rect class="wait" x="590" y="104" width="30" height="20" rx="2"/><rect class="ev" x="620" y="102" width="8" height="24" rx="1" style="animation-delay:-1.05s"/>
-<text class="axis" x="150" y="141">red: waiting ~40–100 ns for the line; blue: the write itself</text>
+<text class="axis" x="150" y="141">red: waiting ~20–40 ns for the line; blue: the write itself</text>
 <rect class="lane" x="10" y="160" width="740" height="140" rx="6"/>
 <text class="cap" x="24" y="184">Padded: each index on its own line</text>
 <text class="sub" x="24" y="202">Each line has one writer. The reader pulls it about once per batch: waits become rare.</text>

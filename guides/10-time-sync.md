@@ -1,12 +1,12 @@
 # Guide 10 — Time Synchronization (chrony and PTP)
 
-> **Script:** [`scripts/10-time-sync`](../scripts/10-time-sync) · **Concepts:** [ethtool §12 (timestamping)](../concepts/ethtool.md#12--t-timestamping), [network-tuning](../concepts/network-tuning.md) · **Example:** [segmentation §7 (PTP on the timing NIC)](../examples/network-segmentation-example.md#7-ptp-on-the-timing-nic) · **Builds on:** [Guide 04](04-network-optimization.md) (the `timing` NIC role) · **Next:** [Guide 11 — Day-2 operations](11-day2-operations.md) · **Terms:** [Glossary](../GLOSSARY.md)
+> **Script:** [`scripts/10-time-sync`](../scripts/10-time-sync) · **Concepts:** [ethtool §12 (timestamping)](../concepts/ethtool.md#12--t-timestamping), [network-tuning](../concepts/network-tuning.md) · **Example:** [segmentation §7 (PTP on the timing NIC)](../examples/network-segmentation-example.md#7-ptp-on-the-timing-nic) · **Previous:** [Guide 09](09-measuring-latency.md) · **Builds on:** [Guide 04](04-network-optimization.md) (the `timing` NIC role) · **Next:** [Guide 11 — Day-2 operations](11-day2-operations.md) · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|
 | **Risk level** | **2 / 5**. A wrong setup leaves the clock drifting or stepping. Switching between chrony and PTP briefly leaves the clock undisciplined. |
 | **Reboot required** | No |
-| **Applies to** | Bare metal: chrony or PTP. VMs: chrony, preferably from the hypervisor's clock (§11). |
+| **Applies to** | Bare metal: chrony or PTP. VMs: chrony, preferably from the hypervisor's clock (§12). |
 | **Time** | 15 min for chrony. 1 h for PTP, most of it confirming the network side with the network team. |
 
 ## At a glance
@@ -101,13 +101,7 @@ ethtool -T eno1
 
 The script enables `chronyd`, stops `ptp4l` and `phc2sys` (two daemons steering one clock fight each other), and pins `chronyd`. The server list stays yours: `/etc/chrony.conf` is site-specific.
 
-When `TIME_SYNC_MODE=chrony`, the script requires both `chronyc` and the
-`chronyd.service` unit before writing any drop-ins or changing services.
-If either is absent, it exits with precheck status `3` and asks for
-`dnf install chrony`. Install the package, then retry and verify with
-`systemctl is-active chronyd` and `chronyc tracking`. Set `TIME_SYNC_MODE=""`
-only when another service manages the clock; that choice skips clock tuning.
-A failed precheck changes nothing in Guide 10, so no rollback is needed.
+**Precheck.** In chrony mode, the script checks for `chronyc` and the `chronyd.service` unit before it writes anything. If one is missing, it stops with exit code 3 and changes nothing: run `dnf install chrony` and try again. In PTP mode, the hardware timestamping check runs later, after the CPU drop-ins are written, so after a failed PTP check run `--rollback` ([SAFETY.md](../SAFETY.md)). Set `TIME_SYNC_MODE=""` only when another service manages the clock.
 
 Settings worth checking in `/etc/chrony.conf`:
 

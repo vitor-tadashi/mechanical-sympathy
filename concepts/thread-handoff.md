@@ -69,9 +69,9 @@ When the ring is empty, the consumer must wait. How it waits sets its wake-up la
 
 | Strategy | Wake-up latency | CPU cost | Use on |
 |---|---|---|---|
-| **spin** with `Thread.onSpinWait()` (`PAUSE`) | ~50–100 ns: one line transfer | a whole core | isolated CPUs |
+| **spin** with `Thread.onSpinWait()` (`PAUSE`) | ~50–100 ns in one L3 domain: one line transfer, plus the loop noticing it | a whole core | isolated CPUs |
 | **backoff**: spin, then `Thread.yield()`, then `parkNanos` with growing sleeps | ns to ~100 µs, depending on how long it was idle | low | shared CPUs, VMs, development |
-| **block** on a lock or a blocking queue | 5–50 µs: futex, wake-up [IPI](../GLOSSARY.md#ipi), scheduler, maybe a C-state exit | none while idle | threads off the critical path |
+| **block** on a lock or a blocking queue | 2–50 µs: futex, wake-up [IPI](../GLOSSARY.md#ipi), scheduler, maybe a C-state exit | none while idle | threads off the critical path |
 
 <img src="../assets/diagrams/spin-vs-block.svg" alt="Animation: a message to a blocked thread passes through an IPI, a C-state exit and the scheduler; a spinning thread sees the same message almost at once" width="720">
 
@@ -101,7 +101,7 @@ Typical orders of magnitude, not measurements.
 | Round trip (ping-pong) in the probe, same L3 | ~100–250 ns |
 | A `volatile` store on x86 (full fence) | ~20–40 cycles |
 | A contended `compareAndSet` | a line transfer plus retries |
-| Handoff through a blocking queue to a parked thread | ~5–50 µs |
+| Handoff through a blocking queue to a parked thread | ~2–50 µs |
 | False sharing between two busy writers | throughput can fall by 10× or more |
 
 ## 8. How it shows up

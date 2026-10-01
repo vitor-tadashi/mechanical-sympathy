@@ -18,7 +18,7 @@
 |---|---|---|
 | **Swap-out** | Under pressure, the kernel writes cold anonymous pages to the swap device and frees them | Disk writes, on `kswapd` or on the thread in direct reclaim |
 | **Swap-in** | A thread touches a swapped-out page. It takes a major fault and waits while the kernel reads the page back | 0.1 ms to many ms, **on the thread that touched it** |
-| **Readahead** | The kernel reads a few neighbors at the same time (`vm.page-cluster`, 8 pages by default) | More I/O, sometimes fewer faults |
+| **Readahead** | The kernel reads a few neighbors at the same time (`vm.page-cluster`: the default `3` means 2³ = 8 pages) | More I/O, sometimes fewer faults |
 
 What can and cannot be swapped:
 
@@ -36,7 +36,7 @@ So a JVM with its heap in huge pages is **not** safe from swap by that alone. It
 `vm.swappiness` (0–200, default 60) is **not** a threshold. It is the relative cost the kernel assigns to reclaiming anonymous pages versus file pages. A low value says "prefer dropping page cache over swapping".
 
 - `swappiness=0` does **not** turn swap off. It makes the kernel avoid swapping while there is page cache to drop. When the page cache is gone, it swaps anyway.
-- tuned's `latency-performance` profile, which `network-latency` includes ([Guide 07 §5](../guides/07-os-hygiene.md#5-tuned-profile)), sets it to `10`. Check the value on your host with `sysctl vm.swappiness`.
+- tuned's `latency-performance` profile, which `network-latency` includes ([Guide 07 §5](../guides/07-os-hygiene.md#5-tuned-profile)), sets it to `10`. [Guide 12 §4.2](../guides/12-memory-pressure.md#42-swap-kept-latency-services-protected-swap_policyprotect) sets `1` when you keep swap. Check the value on your host with `sysctl vm.swappiness`.
 - In cgroup v2, `memory.swap.max` (`MemorySwapMax=` in systemd) caps swap per cgroup. `0` means the group never swaps, whatever the global setting. [Guide 05](../guides/05-cgroup-isolation.md#4-design-three-slices) sets it for the housekeeping slice.
 
 The only setting that guarantees a page is never swapped is that the page cannot be: no swap device, `memory.swap.max=0` on the group, `mlock`, or the hugetlb pool.
@@ -123,7 +123,7 @@ Typical orders of magnitude, not measurements.
 | Swap-in from NVMe | ~0.1–0.5 ms per fault |
 | Swap-in from a spinning disk | ~5–10 ms per fault |
 | Swap-in from zswap or zram | ~5–50 µs (decompression) |
-| Default `vm.swappiness` / tuned latency profiles | 60 / 10 |
+| Default `vm.swappiness` / tuned latency profiles / Guide 12 `protect` | 60 / 10 / 1 |
 | Default swap readahead | 8 pages |
 | `oom_score_adj` range | −1000 (never) to +1000 (first) |
 
@@ -150,7 +150,7 @@ All read-only.
 
 ```bash
 swapon --show                     # empty: no swap device
-sysctl vm.swappiness              # 10 with tuned's latency profiles
+sysctl vm.swappiness              # 10 with tuned's latency profiles, 1 after Guide 12 protect
 cat /sys/module/zswap/parameters/enabled 2>/dev/null   # N
 grep -E '^(pswpin|pswpout) ' /proc/vmstat              # 0 0 on a host that never swapped
 

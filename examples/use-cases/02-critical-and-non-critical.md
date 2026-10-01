@@ -76,7 +76,7 @@ timer.cpu.affinity=13
 Each thread pins itself first, before it touches its data, so its first-touch memory lands on node 1 as well. The [Java probe](../java-latency-probe/) does it with the Foreign Function and Memory API and no third-party library. If you cannot change the code, pin from outside ([Guide 02 §6.3](../../guides/02-cpu-core-isolation.md#63-pin-from-the-outside)):
 
 ```bash
-taskset -a -cp 1 <pid>                 # first, the whole process (every thread) onto node 1's housekeeping CPU
+taskset -a -cp 8,10,12,14 <pid>        # first, the whole process onto quiet OS CPUs (not CPU 1, the IRQ CPU)
 taskset -cp 9 <tid>                    # then, each critical thread onto its own isolated CPU
 ```
 

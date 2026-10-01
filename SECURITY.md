@@ -6,7 +6,7 @@ This page is about reporting problems. How the scripts protect a host, and how y
 
 The guides and scripts change kernel arguments, CPU and interrupt affinity, firewall rules and, on request, CPU vulnerability mitigations. A wrong recommendation can lock you out of a host, break boot or remove a security control. Treat a bad instruction here as a security issue.
 
-Settings that lower security are opt-in and marked with `> [!CAUTION]`. Examples are turning mitigations off ([Guide 01 section 5.6](guides/01-grub-bootloader-tuning.md#56-iommu-and-cpu-vulnerability-mitigations-security-sensitive)) and removing host packet filtering ([Guide 07 section 6](guides/07-os-hygiene.md#6-opt-in-removing-host-packet-filtering)).
+Settings that lower security are opt-in and marked with `> [!CAUTION]`. Examples are turning mitigations off ([Guide 01 §5.6](guides/01-grub-bootloader-tuning.md#56-iommu-and-cpu-vulnerability-mitigations-security-sensitive)) and removing host packet filtering ([Guide 07 §6](guides/07-os-hygiene.md#6-opt-in-removing-host-packet-filtering)).
 
 ## What to report privately
 

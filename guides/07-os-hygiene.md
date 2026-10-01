@@ -1,6 +1,6 @@
 # Guide 07 — Operating System Hygiene
 
-> **Script:** [`scripts/07-os-hygiene`](../scripts/07-os-hygiene) · **Previous:** [Guide 06](06-kernel-sysctl-tuning.md) · **Then:** [`scripts/verify-tuning`](../scripts/verify-tuning) · **Optional:** [Guide 08 — Kernel bypass](08-kernel-bypass.md) · **Terms:** [Glossary](../GLOSSARY.md)
+> **Script:** [`scripts/07-os-hygiene`](../scripts/07-os-hygiene) · **Previous:** [Guide 06](06-kernel-sysctl-tuning.md) · **Next:** [Guide 08 — Kernel bypass](08-kernel-bypass.md) (optional) · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|
@@ -18,7 +18,7 @@
 
 ```mermaid
 flowchart LR
-  g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g00["00<br/>BIOS"] --> g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
   g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
   class g07 focus
   classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
@@ -117,6 +117,8 @@ energy_perf_bias=performance
 min_perf_pct=100
 ```
 
+`min_perf_pct` only acts through `intel_pstate`. [Guide 01](01-grub-bootloader-tuning.md#53-frequency-and-power) turns that driver off, so on a host with the full command line the `performance` governor of `acpi-cpufreq` holds the clock, and the line is harmless.
+
 What `network-latency` brings (through `latency-performance`):
 
 | Setting | Effect |
@@ -125,7 +127,7 @@ What `network-latency` brings (through `latency-performance`):
 | `governor=performance` | Fixed maximum frequency (with `acpi-cpufreq` after `intel_pstate=disable`, [Guide 01](01-grub-bootloader-tuning.md#53-frequency-and-power)) |
 | `transparent_hugepages=never` | Same as the boot argument |
 | `kernel.numa_balancing=0` | Same as [Guide 06](06-kernel-sysctl-tuning.md#2-kernel-logging-and-debug) |
-| `net.core.busy_read=50`, `net.core.busy_poll=50` | **Busy polling** for all sockets: a blocking `recv`/`poll` spins on the NIC queue for up to 50 µs before sleeping ([Guide 04 §6.1](04-network-optimization.md#61-choosing-the-cpu), model B) |
+| `net.core.busy_read=50`, `net.core.busy_poll=50` | **Busy polling** for all sockets: a blocking `recv`/`poll` spins on the NIC queue for up to 50 µs before sleeping ([Guide 04 §6.1](04-network-optimization.md#61-choosing-the-cpu), model B). A thread that already spins on a non-blocking socket (model A) is not affected. |
 | `net.ipv4.tcp_fastopen=3` | Same as Guide 06 |
 
 **Ordering with Guide 06.** tuned applies its `[sysctl]` values and then, because `reapply_sysctl = 1` is the default in `/etc/tuned/tuned-main.conf`, re-applies `/etc/sysctl.d/`. So on any conflict the Guide 06 file wins, and the script makes sure the option has not been turned off. Some scripts run `tuned-adm profile network-latency` *before* writing their sysctls with `sysctl -w`. That works until the next reboot, when tuned and the missing persistence change the result.
@@ -142,7 +144,7 @@ tuned-adm verify                  # checks that the profile's settings are in ef
 
 Every packet traverses the netfilter hooks. With connection tracking loaded, each packet also does a conntrack table lookup/insert (hashing, locking, per-flow state, timers), even if the rule set is empty. On a gateway handling millions of small messages, removing that per-packet work, and the conntrack table's garbage-collection work, is measurable, typically a few hundred ns to a few µs per packet in the tail.
 
-Reference implementations do three things, which map to three switches:
+Removing the filtering takes three steps, and each one has its own switch:
 
 | Switch | What it does |
 |---|---|
@@ -167,7 +169,7 @@ Module unloading and rule flushing are **not persistent**. When opted in, `lowla
 
 ## 7. Things this guide deliberately does *not* do
 
-| Seen in the wild | Why not here |
+| Seen elsewhere | Why not here |
 |---|---|
 | `rm /dev/random && ln -s /dev/urandom /dev/random` | Since kernel 5.6, and in the RHEL 8 backport, `/dev/random` only blocks until the CRNG is initialized at early boot, so it no longer blocks in normal operation. The symlink is also lost at every boot (devtmpfs). For Java, use `-Djava.security.egd=file:/dev/urandom` (the `file:/dev/./urandom` spelling is a workaround for very old JDKs). |
 | Killing all application processes before tuning | Tuning must be applied **before** the application starts, at boot, by `lowlat-runtime.service`. A tuning script that kills production processes is a hazard. Apply changes in a maintenance window instead. |

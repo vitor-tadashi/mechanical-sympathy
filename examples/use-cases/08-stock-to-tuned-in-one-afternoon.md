@@ -41,7 +41,7 @@ gantt
     Application launch and latency run    :c2, after c1, 60m
 ```
 
-*About an hour to measure and design, under an hour to apply with a single reboot, then about 90 minutes to verify and compare against the baseline. The times are indicative.*
+*About two hours to measure and design, under an hour to apply with a single reboot, then about 90 minutes to verify and compare against the baseline. The times are indicative.*
 
 | Step | What you do | Guide | Story |
 |---|---|---|---|

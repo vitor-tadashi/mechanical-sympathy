@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 340" width="760" height="340" role="img" aria-labelledby="t d">
 <title id="t">Where the NIC interrupt lands decides whether the spinning thread is interrupted</title>
-<desc id="d">Three packets arrive for a net.rx thread that spins on isolated CPU 3. When the NIC interrupt points at CPU 3, each packet cuts into the spin with a hardirq and softirq. When the interrupt points at housekeeping CPU 1, CPU 1 does that work, the spin on CPU 3 is never cut, and the data reaches CPU 3 as one cache-line transfer.</desc>
+<desc id="d">Three packets arrive for a net.rx thread that spins on isolated CPU 3. When the NIC interrupt points at CPU 3, each packet cuts into the spin with a hardirq and softirq. When the interrupt points at housekeeping CPU 1, CPU 1 does that work, the spin on CPU 3 is never cut, and the data reaches CPU 3 through the cache, a few cache-line transfers.</desc>
 <style>
   .bg { fill: #ffffff; }
   .lane { fill: #f6f8fa; stroke: #d0d7de; }
@@ -68,7 +68,7 @@
 <!-- Lane 2: IRQ on the housekeeping CPU -->
 <rect class="lane" x="10" y="175" width="740" height="155" rx="6"/>
 <text class="cap" x="24" y="199">NIC IRQ on housekeeping CPU 1 (reference layout)</text>
-<text class="sub" x="24" y="217">CPU 1 takes the interrupts and hands each packet to CPU 3 as one cache-line transfer (~40–80 ns).</text>
+<text class="sub" x="24" y="217">CPU 1 takes the interrupts and hands each packet to CPU 3 through the cache, ~20–40 ns per line.</text>
 <text class="lbl" x="24" y="249">CPU 3</text>
 <text class="role" x="24" y="263">isolated, net.rx</text>
 <rect class="app" x="150" y="235" width="570" height="30" rx="4"/>

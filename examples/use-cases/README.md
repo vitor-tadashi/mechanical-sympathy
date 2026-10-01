@@ -1,9 +1,9 @@
 # Use cases — stories from symptom to result
 
-Each use case follows one path: the **symptom** you see, how to **diagnose** it with commands and the expected output, the **change** with the exact `lowlat.conf` lines and the script, the **result**, how to **verify and roll back**, and the **takeaways**. Read them in any order. Every one links to the guide that explains the settings in depth.
+Each use case follows one path (the capstone, use case 8, walks a whole host instead): the **symptom** you see, how to **diagnose** it with commands and the expected output, the **change** with the exact `lowlat.conf` lines and the script, the **result**, how to **verify and roll back**, and the **takeaways**. Read them in any order. Every one links to the guide that explains the settings in depth.
 
 > [!NOTE]
-> All figures in these pages are **illustrative**: they come from the mechanism costs stated in the guides, on the fictional reference host of [`lowlat.conf.example`](../../scripts/lowlat.conf.example). They are not benchmark results. Measure your own host ([Guide 09](../../guides/09-measuring-latency.md)).
+> All figures in these pages are **illustrative**: they come from the mechanism costs stated in the guides, on the fictional reference host of [`lowlat.conf.example`](../../scripts/lowlat.conf.example), unless a page names another host (use case 12 uses a 2 × 12-core fixture). They are not benchmark results. Measure your own host ([Guide 09](../../guides/09-measuring-latency.md)).
 
 | # | Use case | Symptom | Guides | Time |
 |---|---|---|---|---|

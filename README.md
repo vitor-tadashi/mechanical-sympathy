@@ -78,7 +78,7 @@ Everything here removes noise that comes from outside your application. None of 
 - **You need to know your own threads.** Isolation, pinning and busy-spinning assume you can say which threads are critical, what each one waits for and who writes to what. If you cannot, start there.
 - **Your data structures set the ceiling.** Cache lines, false sharing, single-writer designs and queues that never block matter more than any setting. A quiet host still loses to a lock, an allocation or a cache miss on the hot path.
 - **Hundreds of threads cannot be tuned.** A pool that grows and shrinks on its own has no one-thread-per-CPU layout to protect, and isolation only leaves CPUs idle. Bring the count down to a few threads whose roles you control, and tune after that.
-- **Measure to learn which case you are in.** A histogram with a comb on it is the host. A slow, wide body is usually the design ([Guide 09 section 7](guides/09-measuring-latency.md#7-reading-the-results)).
+- **Measure to learn which case you are in.** A histogram with a comb on it is the host. A slow, wide body is usually the design ([Guide 09 §7](guides/09-measuring-latency.md#7-reading-the-results)).
 
 If that sounds like your application, fix the application first. These guides will still be here, and they will work far better for it. Start with [caches and coherence](concepts/cpu-isolation.md#5-caches-and-coherence-the-mechanical-sympathy-part), [pinning the application](guides/02-cpu-core-isolation.md#6-pinning-the-application) and the [Java example](examples/hugepages-java-example.md).
 
@@ -120,8 +120,8 @@ Plus:
 %%{init: {"flowchart": {"wrappingWidth": 480}}}%%
 flowchart TD
   conf[("<b>/etc/lowlat/lowlat.conf</b><br/>CPU layout · NIC roles · huge pages per node")]
-  once["<b>Apply once, then reboot</b> (persistent)<br/>00 BIOS setup (by hand) · 01 kernel command line: isolcpus, nohz_full, rcu_nocbs, idle=poll, THP off<br/>02 systemd CPUAffinity, RT limits · 03 huge pages per NUMA node<br/>05 housekeeping.slice · 06 sysctl profile · 07 services, limits, noatime, tuned · 10 time sync"]
-  boot["<b>Every boot</b>: lowlat-runtime.service<br/>04 NIC coalescing, offloads, IRQ affinity · 02 workqueue cpumask<br/>05 pin agents · 07 opt-in firewall and modules"]
+  once["<b>Apply once, then reboot</b> (persistent)<br/>00 BIOS setup (by hand) · 01 kernel command line: isolcpus, nohz_full, rcu_nocbs, idle=poll, THP off<br/>02 systemd CPUAffinity, RT limits · 03 huge pages per NUMA node<br/>05 housekeeping.slice · 06 sysctl profile · 07 services, limits, noatime, tuned · 10 time sync<br/>12 swap off, OOM order and memlock of the latency services"]
+  boot["<b>Every boot</b>: lowlat-runtime.service<br/>00 PCIe power policy · 02 workqueue cpumask · 08 DPDK port binding<br/>04 NIC coalescing, offloads, IRQ affinity · 05 pin agents · 07 opt-in firewall and modules · 12 zswap off"]
   app["<b>Application launcher</b><br/>JVM options by host class · large pages, NUMA, pre-touch when pinned<br/>threads pinned to isolated CPUs · busy-spin idle strategy"]
   verify{{"<b>scripts/verify-tuning</b><br/>PASS / WARN / FAIL"}}
   watch["<b>11 Day-2</b>: lowlat-verify.timer<br/>daily and 10 min after every boot"]
@@ -147,7 +147,7 @@ sudo vi /etc/lowlat/lowlat.conf              # describe your CPUs, NICs and memo
 
 scripts/apply-all --plan                     # what applies on this host class
 scripts/apply-all --dry-run | less           # every command and file, nothing changed
-sudo scripts/apply-all --apply               # apply 00-08, 10 and 11 + install lowlat-runtime.service
+sudo scripts/apply-all --apply               # apply 00-08, 10, 11 and 12 + install lowlat-runtime.service
 sudo systemctl reboot
 scripts/verify-tuning                        # PASS/WARN/FAIL for every guide
 ```

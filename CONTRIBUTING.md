@@ -35,7 +35,7 @@ make site                     # optional: assemble _site/ to preview the site lo
 - `make check-vm` boots each cloud image in QEMU/KVM, applies the guides, reboots, verifies, rolls back, reboots again, and compares with the state before apply. It needs Linux with a usable `/dev/kvm` and `sudo` for one tap device, so on macOS leave it to CI (`.github/workflows/vm.yml`, which also runs it nightly). `tools/check-vm rocky9` checks one image (also `rocky8`, `alma10`, `stream10`, and `stream9` once CentOS publishes a checksum for it again: the check boots no image it cannot verify). Its known bugs live in `scripts/fixtures/vm/known-issues`, with the same rules.
 - Work lands on `main` through pull requests. Never push directly to `main`.
 - One change per pull request.
-- Both squash and rebase merges are enabled. A squash merge turns the PR title into the commit title, and a rebase merge keeps every commit, so every commit title and the PR title follow the same rule. Use `type(scope): subject`, imperative and lowercase, at most 72 ASCII characters. `tools/check-commit-title` enforces it, and the full rules are in [AGENTS.md section 8](AGENTS.md#8-git).
+- Both squash and rebase merges are enabled. A squash merge turns the PR title into the commit title, and a rebase merge keeps every commit, so every commit title and the PR title follow the same rule. Use `type(scope): subject`, imperative and lowercase, at most 72 ASCII characters. `tools/check-commit-title` enforces it, and the full rules are in [AGENTS.md §8](AGENTS.md#8-git).
 - PR and commit descriptions are plain text: no emojis, no tool attribution footers. `tools/check-description` enforces it.
 
 ## Dependency updates

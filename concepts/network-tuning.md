@@ -5,12 +5,12 @@
 ## At a glance
 
 - A received packet waits in up to ten places between the wire and `recv()`. On a tuned host, only the interrupt, softirq and wake-up are left.
-- The median barely changes with tuning. The tail does: coalescing adds 30–100 µs, PAUSE frames add milliseconds, and a dropped segment adds hundreds of milliseconds.
+- The median barely changes with tuning. The tail does: adaptive coalescing adds 30–50 µs, PAUSE frames add milliseconds, and a dropped segment adds hundreds of milliseconds.
 - Each stage has one knob. Know the stage and you know which knob fixes which part of the histogram.
 
 ## 1. Why it matters
 
-On a well-tuned host, the time between a packet arriving at the NIC and the application seeing it is 2–5 µs with the kernel stack, and about 1 µs with kernel bypass. On an untuned host the *median* is often similar. The difference shows up in the tail: 30–100 µs from interrupt coalescing, milliseconds from PAUSE frames, and hundreds of ms from a dropped segment that TCP has to retransmit. Understanding each stage tells you which knob fixes which part of the histogram.
+On a well-tuned host, the time between a packet arriving at the NIC and the application seeing it is about 5–10 µs with the kernel stack, and about 1–2 µs with kernel bypass. On an untuned host the *median* is often similar. The difference shows up in the tail: 30–50 µs from adaptive interrupt coalescing, milliseconds from PAUSE frames, and hundreds of ms from a dropped segment that TCP has to retransmit. Understanding each stage tells you which knob fixes which part of the histogram.
 
 ## 2. The receive path, step by step
 
@@ -80,7 +80,7 @@ For a latency-critical flow (requests, RPCs or event messages: a few thousand to
 
 ## 4. NAPI, softirq budget and `ksoftirqd`
 
-NAPI processes up to `net.core.netdev_budget` packets (300 by default) or `netdev_budget_usecs` (2 ms) per softirq round. Anything left over is deferred to the next round. If softirqs keep re-raising, processing moves to `ksoftirqd/<cpu>`, a normal-priority thread that competes with user tasks. Symptoms: `/proc/net/softnet_stat` column 3 (`time_squeeze`) increasing, and latency spikes under bursts. Remedies: a CPU dedicated to the NIC's IRQs, more queues spread over more housekeeping CPUs, or busy polling so the application does the work. While NAPI is behind, the RX ring holds the packets. The per-CPU backlog queue (`netdev_max_backlog`) is only in the path with RPS/RFS, loopback, veth and some tunnels. [Concept: network buffers](network-buffers.md) covers every queue on the path.
+NAPI processes up to `net.core.netdev_budget` packets (300 by default) or `netdev_budget_usecs` (2 ms) per softirq round. Anything left over waits for the next round, and each early stop counts as `time_squeeze` (`/proc/net/softnet_stat` column 3). Most of the time the next round runs at once. Only when the outer softirq limit runs out does the rest move to `ksoftirqd/<cpu>`, a normal-priority thread that waits for the scheduler ([interrupts §3](interrupts-and-deferred-work.md#3-softirqs-and-ksoftirqd)). So a growing `time_squeeze` says the NIC is busy; latency spikes under bursts say the work also waited. Remedies: a CPU dedicated to the NIC's IRQs, more queues spread over more housekeeping CPUs, or busy polling so the application does the work. While NAPI is behind, the RX ring holds the packets. The per-CPU backlog queue (`netdev_max_backlog`) is only in the path with RPS/RFS, loopback, veth and some tunnels. [Concept: network buffers](network-buffers.md) covers every queue on the path.
 
 ## 5. Steering: RSS, RPS, RFS, XPS
 

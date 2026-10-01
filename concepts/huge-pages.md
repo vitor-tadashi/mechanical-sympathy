@@ -90,7 +90,7 @@ The buddy allocator hands out physical memory in power-of-two blocks. After a ho
 
 ## 6. NUMA
 
-On a multi-socket server, each socket has its own memory controllers. Access to local memory costs ~80–100 ns, and to the other socket's memory ~130–200 ns, with lower bandwidth. `numactl --hardware` shows the node distance matrix.
+On a multi-socket server, each socket has its own memory controllers. Access to local memory costs ~80–120 ns, and the other socket's memory adds ~60–100 ns, with lower bandwidth. `numactl --hardware` shows the node distance matrix.
 
 - **First touch**: by default, a page is allocated on the node of the CPU that first touches it. A thread pinned on node 1 that initializes its data gets node-1 memory. A main thread on node 0 that initializes everything before handing it over puts everything on node 0.
 ```mermaid

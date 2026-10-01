@@ -70,7 +70,7 @@ Processes that are not systemd units (started by a vendor script, or respawning 
 scripts/05-cgroup-isolation --verify
 systemd-cgls --no-pager /housekeeping.slice                    # the agents are inside
 cat /sys/fs/cgroup/housekeeping.slice/cpuset.cpus.effective    # expect: 4,6
-cat /sys/fs/cgroup/housekeeping.slice/cpu.stat                 # nr_throttled rises when the quota bites
+cat /sys/fs/cgroup/housekeeping.slice/cpu.stat                 # nr_throttled rises when the quota is reached
 ```
 
 ## 5. Result
@@ -82,7 +82,7 @@ Illustrative:
 | Agent threads on isolated CPUs or the NIC's interrupt CPU | possible, at any time | none: the cpuset refuses |
 | A burst of an agent | competes with any CPU it lands on | limited to CPUs 4 and 6, at most 1.5 CPUs of time |
 | Agent memory | unbounded, can fill the page cache | capped at 4 GiB, and an OOM stays inside the slice |
-| Cost | none | agents get less headroom and may report degraded health: agree the limits with their owners |
+| Cost | none | agents get less headroom and may report degraded health: agree on the limits with their owners |
 
 ## 6. Roll back
 

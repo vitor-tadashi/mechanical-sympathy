@@ -46,10 +46,13 @@ flowchart TD
 | 5 | [03](guides/03-huge-pages-configuration.md) | Per-NUMA huge page reservation, sized for heap + code cache + bypass buffers | ✔ (same reboot) |
 | 6 | [06](guides/06-kernel-sysctl-tuning.md) | sysctl profile | |
 | 7 | [07](guides/07-os-hygiene.md) | Services, limits, noatime, tuned. Firewall section only with sign-off. | |
-| 8 | [05](guides/05-cgroup-isolation.md) | housekeeping.slice for agents, pin EDR/AV | |
-| 9 | [04](guides/04-network-optimization.md) | NIC roles, coalescing, IRQ affinity. Runtime-only: `lowlat-runtime.service` re-applies it at every boot, and `apply-all` installs that unit. | |
-| 10 | [Example](examples/hugepages-java-example.md) | Launcher: options by host class, large-page flags when pinned, threads pinned by role | |
-| 11 | [08](guides/08-kernel-bypass.md) | *Optional.* Kernel bypass: Onload on Solarflare/AMD NICs, or DPDK on Intel NICs (enables the IOMMU in step 3) | DPDK: ✔ (same reboot) |
+| 8 | [12](guides/12-memory-pressure.md) | Swap off (or `SWAP_POLICY=protect`), OOM order and memlock of the latency services | |
+| 9 | [10](guides/10-time-sync.md) | chrony, or PTP on the timing NIC, with the daemons pinned to an OS CPU | |
+| 10 | [05](guides/05-cgroup-isolation.md) | housekeeping.slice for agents, pin EDR/AV | |
+| 11 | [08](guides/08-kernel-bypass.md) | *Optional.* Kernel bypass: Onload on Solarflare/AMD NICs, or DPDK on Intel NICs (enables the IOMMU in step 3). Before 04, because a driver reload resets the NICs. | DPDK: ✔ (same reboot) |
+| 12 | [04](guides/04-network-optimization.md) | NIC roles, coalescing, IRQ affinity. Runtime-only: `lowlat-runtime.service` re-applies it at every boot, and `apply-all` installs that unit. | |
+| 13 | [11](guides/11-day2-operations.md) | The verification timer, so the host reports its own drift | |
+| 14 | [Example](examples/hugepages-java-example.md) | Launcher: options by host class, large-page flags when pinned, threads pinned by role | |
 
 ```bash
 scripts/apply-all --dry-run | less
@@ -57,9 +60,7 @@ sudo scripts/apply-all --apply && sudo systemctl reboot
 scripts/verify-tuning
 ```
 
-`apply-all` runs the guides in a different order than the table: 00, 01, 02, 03, 06, 07, 12, 10, 05, 08 (only with a bypass stack), 04, 11. It puts 08 before 04 because a driver reload resets the NICs, and it never runs Guide 09. If you apply the guides one by one, follow the table.
-
-**Also, on every host:** time synchronization with chrony, or PTP on the timing NIC, with the daemons pinned to a housekeeping CPU ([Guide 10](guides/10-time-sync.md)). `apply-all` runs it after Guide 07. It also installs the [verification timer of Guide 11](guides/11-day2-operations.md), so the host reports its own drift, and applies the memory policy of [Guide 12](guides/12-memory-pressure.md): swap off unless `SWAP_POLICY=protect`, and the OOM order of the latency services.
+<a id="reading-order-and-run-order"></a>**Reading order and run order.** The guide numbers are the *reading* order: each guide builds on the ideas of the one before. The table above is the *run* order, the same one `apply-all` uses. It differs in a few places: sysctl and services (06, 07) come before the NICs, because tuned re-applies `sysctl.d`, and 08 comes before 04, because a driver reload resets the NICs. `apply-all` never runs Guide 09, which only measures.
 
 **Time:** about half a day for the first host, including the reboot and verification. The next hosts with the same hardware take minutes (same `lowlat.conf`).
 
@@ -81,7 +82,8 @@ gantt
     Application launch and latency run    :c2, after c1, 60m
 ```
 
-*About an hour to measure and design, under an hour to apply with a single reboot, then about 90 minutes to verify and compare against the baseline. The times are indicative.*
+*About two hours to measure and design, under an hour to apply with a single reboot, then about 90 minutes to verify and compare against the baseline. The times are indicative.*
+
 **What to expect:** the biggest change is in the tail. p99.9 and max typically drop several-fold, while p50 improves modestly. The exact gain depends on how noisy the host was before, so measure against your baseline.
 
 ---
@@ -100,7 +102,7 @@ gantt
 | 5 | [04](guides/04-network-optimization.md) | Coalescing/offloads where the virtual NIC supports them; IRQ affinity for virtio/SR-IOV queues |
 | 6 | App | Low-resource JVM options, **back-off** idle strategy, no large-page flags (`affinity.enable=false`) |
 
-The scripts skip isolation, huge-page reservation, irqbalance and RT throttling automatically on `virtual_machine`. Time synchronization still applies: chrony, ideally from the hypervisor's clock ([Guide 10 §12](guides/10-time-sync.md#12-bare-metal-vs-vm)). So does the [verification timer of Guide 11](guides/11-day2-operations.md#11-bare-metal-vs-vm).
+The scripts skip isolation, huge-page reservation, irqbalance and RT throttling automatically on `virtual_machine`. Time synchronization still applies: chrony, ideally from the hypervisor's clock ([Guide 10 §12](guides/10-time-sync.md#12-bare-metal-vs-vm)). So do the [verification timer of Guide 11](guides/11-day2-operations.md#11-bare-metal-vs-vm) and the swap policy of [Guide 12](guides/12-memory-pressure.md#9-bare-metal-vs-vm).
 
 **Biggest lever outside the guest:** ask for dedicated physical CPUs with vCPU pinning, huge-page-backed guest memory, SR-IOV passthrough of the critical NIC, and the host BIOS settings from [Guide 00](guides/00-bios-firmware.md). With those, the guest behaves much more like Scenario A.
 
@@ -118,6 +120,8 @@ The scripts skip isolation, huge-page reservation, irqbalance and RT throttling 
 | 3 | [03](guides/03-huge-pages-configuration.md) | Per-node pool sized only for the latency-critical tenant |
 | 4 | [04](guides/04-network-optimization.md) | Dedicated NIC (or VLAN + `tc` prioritization, see the [segmentation example §6.3](examples/network-segmentation-example.md#63-when-traffic-classes-must-share-a-nic)) for the critical tenant |
 | 5 | [06](guides/06-kernel-sysctl-tuning.md), [07](guides/07-os-hygiene.md) | As usual, without disabling services other tenants need |
+| 6 | [12](guides/12-memory-pressure.md) | Usually `SWAP_POLICY=protect`: the other tenants keep their swap, the latency services never swap |
+| 7 | [10](guides/10-time-sync.md), [11](guides/11-day2-operations.md) | Time synchronization and the verification timer, as on any host |
 
 ---
 
@@ -152,8 +156,8 @@ flowchart TD
   boot -- yes --> slow{"SSH slow?"}
   slow -- yes --> f2["Too few OS CPUs: check mpstat -P ALL 1,<br/>give CPUs back in lowlat.conf"]
   slow -- no --> app{"App fails?"}
-  app -- "cannot pin threads" --> f3["cpuset trap: Guide 05 section 4.4"]
-  app -- "JVM large pages fail" --> f4["Pool on the wrong node or too small:<br/>Guide 03 section 9"]
+  app -- "cannot pin threads" --> f3["cpuset trap: Guide 05 §4.4"]
+  app -- "JVM large pages fail" --> f4["Pool on the wrong node or too small:<br/>Guide 03 §9"]
   app -- no --> net{"NIC settings<br/>lost at boot?"}
   net -- yes --> f5["systemctl status lowlat-runtime"]
   net -- no --> f6["Find the row in the table below"]
@@ -181,48 +185,31 @@ sudo scripts/apply-all --rollback
 sudo systemctl reboot
 ```
 
-Use the same `--config` file and path overrides used for apply. The wrapper
-stops and disables `lowlat-runtime.service` first, then rolls guides back in
-this order: **11, 08, 04, 05, 10, 07, 06, 03, 02, 01, 00**. Guide 08 runs before
-04 because its driver reload can reset restored NIC settings. NIC state is
-saved before the first guide runs. The wrapper removes the runtime unit it
-created, or restores a preexisting unit and its original service state, then
-reloads systemd. A preexisting enabled unit resumes its original behavior.
+Use the same `--config` file and path overrides as for the apply.
 
-Original files and first-apply state remain under
-`/var/lib/lowlat/factory-settings/`. Repeated apply and boot reapplication do
-not replace those originals. Rollback without an earlier wrapper apply is a
-no-op. An interrupted apply records which guides it reached; rollback invokes
-those guides. A guide that the host class skips is recorded as skipped and is
-not rolled back: on a virtual machine that is Guides 00, 02 and 03, so a huge
-page pool that apply never managed stays as it is. Each guide's rollback limits
-still apply, including manual BIOS settings, application launch settings, and
-the time-sync service choice ([Guide 10](guides/10-time-sync.md#11-rollback)).
+```mermaid
+flowchart LR
+  stop["Stop and disable<br/>lowlat-runtime.service"] --> g["Roll back the guides<br/>11 → 08 → 04 → 05 → 10 → 12 → 07 → 06 → 03 → 02 → 01 → 00"] --> unit["Remove or restore<br/>the runtime unit"] --> boot(["Reboot"])
+```
 
-If the rollback of one guide fails, the wrapper goes on with the other guides, restores the runtime unit, and then stops with an error that names the failed guide. Fix the cause and run it again. A unit that systemd starts only as a dependency, such as `rpcbind.target`, is not started by hand: it comes back when something needs it, or at the next boot.
+*The wrapper undoes the guides in reverse run order. Guide 08 comes before 04, because its driver reload would reset the NIC settings that 04 restores.*
 
-A host that an older `apply-all` tuned has the runtime unit but no record, and
-its guides have no saved baseline. The wrapper then stops with an error and
-changes nothing. Run `systemctl disable --now lowlat-runtime.service`, and roll
-the guides back one by one as each guide's rollback section says. Do not apply
-again first: that would record the tuned state as the baseline.
+What the wrapper does:
 
-Check `systemctl is-enabled lowlat-runtime.service` and
-`systemctl is-active lowlat-runtime.service`. If no unit existed before apply,
-both should report it disabled, inactive, or absent, and its generated file
-should be gone. If it existed, compare `systemctl cat` and service state with
-the saved baseline. Verify NIC settings and IRQ placement using
-[Guide 04](guides/04-network-optimization.md#12-rollback), and restored files,
-mounts, and services using [Guide 07](guides/07-os-hygiene.md#11-rollback).
-After reboot, check `/proc/cmdline` and PID 1's `Cpus_allowed_list` against the
-baseline. `verify-tuning` validates the tuned configuration and is expected
-to report failures after tuning has been removed.
+- **It restores the originals.** They sit under `/var/lib/lowlat/factory-settings/`, saved before the first apply. A later apply or a boot never replaces them.
+- **It only undoes what was applied.** An interrupted apply records how far it got. A guide that the host class skipped is not rolled back: on a VM that is Guides 00, 02 and 03, so a huge page pool the scripts never managed stays as it is. With no earlier apply, rollback does nothing.
+- **It keeps going after a failure.** If one guide fails, the others are still rolled back and the runtime unit is restored. Then it stops with an error that names the guide. Fix the cause and run it again.
+- **It stops when it cannot be sure.** A missing backup or a saved state it cannot read stops it with an error, and boot re-application stays off. Keep the backups while you fix the cause.
+- **It refuses a host without a record.** A host tuned by an older `apply-all` has the runtime unit but no saved baseline. Run `systemctl disable --now lowlat-runtime.service` and roll the guides back one by one. Do not apply again first: that would save the tuned state as the baseline.
 
-A missing backup, invalid recorded state, or failed restoration command stops
-the wrapper with an error. Boot reapplication stays disabled while you correct
-the problem and retry; keep the backups. Some effects require the reboot:
-GRUB arguments, PID 1 and inherited service affinity, and pages still held by
-applications. Lost connections and interrupted work cannot be recreated.
-This rollback path is covered by the harnesses. Drivers and tuned profiles
-differ, so check the result on your host. To tune the host again,
-run `sudo scripts/apply-all --apply`, reboot, and verify as above.
+Check the result:
+
+- [ ] `systemctl is-enabled lowlat-runtime.service` and `systemctl is-active lowlat-runtime.service`: disabled, inactive or absent if no unit existed before; otherwise the same state as before the apply.
+- [ ] NIC settings and IRQ placement: [Guide 04 §12](guides/04-network-optimization.md#12-rollback).
+- [ ] Files, mounts and services: [Guide 07 §11](guides/07-os-hygiene.md#11-rollback).
+- [ ] After the reboot: `/proc/cmdline` and PID 1's `Cpus_allowed_list` match your baseline. `verify-tuning` now reports FAIL lines, which is expected.
+
+> [!NOTE]
+> A rollback cannot undo everything. The BIOS settings, the application's launch settings and the choice of time-sync service ([Guide 10 §11](guides/10-time-sync.md#11-rollback)) are yours to restore. A unit that systemd starts only as a dependency, such as `rpcbind.target`, comes back when something needs it.
+
+The automated checks cover this path ([SAFETY.md](SAFETY.md)), but drivers and tuned profiles differ, so check the result on your host. To tune the host again, run `sudo scripts/apply-all --apply`, reboot, and verify.
