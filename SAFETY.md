@@ -7,7 +7,7 @@ Tuning a kernel feels risky when you have never done it. This page explains what
 ## At a glance
 
 - **Nothing changes until you say so.** `--plan` and `--dry-run` show every command and file first. Only `--apply`, run as root, changes the host.
-- **Every change is recorded and can be undone.** The first time a script touches a file, it keeps the original. `sudo scripts/apply-all --rollback` restores the host.
+- **Every change is recorded and can be undone.** The first time a script touches a file, it keeps the original. `sudo scripts/apply-all --rollback` restores the host, with the few exceptions listed in [section 6](#6-what-this-project-does-not-do-yet).
 - **Only one kind of change can stop a boot:** the kernel command line (Guide 01). It has a documented way back through the out-of-band console, so test that console before you start.
 
 ```mermaid
@@ -34,7 +34,7 @@ Every guide script makes these promises. Each one is implemented once, in [`scri
 | **A dry run changes nothing.** | Every command goes through `run`, and every file goes through `write_file`, `sysfs_write` or `set_key_value_line`. With `--dry-run` they only print. A dry run needs no root, and without a config file it uses the example. |
 | **The original is kept before the first write.** | `backup_file` copies each file to `/var/lib/lowlat/factory-settings/` the first time it is touched. A later apply never replaces that copy. Each run also keeps its own copy under `/var/lib/lowlat/backup/<date>/`. |
 | **Absence is recorded too.** | If a file or a service did not exist before, rollback removes it instead of leaving it behind. |
-| **The script stops when something is wrong.** | Not root, a missing command, no config file or an unsupported host class stops it before it changes anything (exit code 3). A missing backup or saved state it cannot read stops a rollback with an error, instead of guessing. |
+| **The script stops when something is wrong.** | Not root, or no config file, stops it before it changes anything (exit code 3). Other checks run inside a guide, just before the step that needs them. Example: Guide 10 checks for PTP hardware timestamping after it has written its systemd drop-ins. Under `apply-all`, the earlier guides are already applied by then. `apply-all` records how far it got, and `--rollback` undoes those guides. A missing backup or saved state it cannot read stops a rollback with an error, instead of guessing. |
 | **It changes only what its guide describes.** | It uses the standard RHEL tools: `grubby` for kernel arguments, `sysctl.d` files, systemd units and drop-ins. It does not wipe system files or use `rc.local`. Anything else is a bug: see [SECURITY.md](SECURITY.md#what-to-report-privately). |
 | **It respects the host class.** | `capability_decision` decides what runs on bare metal and what runs on a VM. On a VM it skips CPU isolation, huge pages and BIOS checks. On a host class it does not know, it refuses to run. |
 | **Your SSH path is left alone.** | A NIC with the `mgmt` role (SSH, monitoring) never gets new coalescing, offload or ring settings. Its interrupts move only if you give it a CPU list. |
@@ -129,6 +129,7 @@ Two open entries matter for recovery. Read them before you roll back on these ve
 - **No trial boot.** Guide 01 changes every kernel entry. It does not first boot the new arguments once with an automatic way back. The out-of-band console is that way back.
 - **No layout gate.** `apply-all --apply` does not run `plan-layout --check`. You run it.
 - **No tagged releases.** Review the commit you run and pin it, for example with `git checkout <commit>` on your hosts.
+- **Rollback does not restore a previous time-sync stack.** Guide 10's rollback removes its drop-ins and enables `chronyd`, the RHEL default. If the host ran something else before, for example a vendor PTP stack, restore that by hand ([Guide 10 §11](guides/10-time-sync.md#11-rollback)).
 - **Rollback is tested, not proven in production** across every driver and tuned profile ([whole-host rollback](QUICK_START.md#whole-host-rollback)).
 
 </details>
