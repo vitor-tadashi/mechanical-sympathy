@@ -47,7 +47,7 @@ flowchart LR
 
 ## 3. Aging: the LRU lists
 
-The kernel keeps file pages and anonymous pages on separate **LRU** lists, each split into **active** and **inactive**. A new page starts inactive. A page that is used again moves to active. Reclaim takes pages from the tail of the inactive lists, so a page used once is evicted before a page used often. When an evicted page is needed again soon, the kernel counts a **refault** (`workingset_refault_*` in `/proc/vmstat`), and takes it as a sign that the lists are too short.
+The kernel keeps file pages and anonymous pages on separate **LRU** lists, each split into **active** and **inactive**. A new page starts inactive. A page that is used again moves to active. Reclaim takes pages from the tail of the inactive lists, so a page used once is evicted before a page used often. When an evicted page is needed again soon, the kernel counts a **refault** (`workingset_refault_file` and `_anon` in `/proc/vmstat`, or one `workingset_refault` on RHEL 8), and takes it as a sign that the lists are too short.
 
 ## 4. Watermarks: who reclaims
 
@@ -63,10 +63,10 @@ Each memory zone (on x86-64, mainly `Normal` on each NUMA node) has three waterm
 
 *The watermarks decide who pays for reclaim: `kswapd` on a housekeeping CPU, or the thread that asked for memory.*
 
-`vm.min_free_kbytes` sets `min`, and `low` and `high` follow it. [Guide 06 §8](../guides/06-kernel-sysctl-tuning.md#8-virtual-memory) raises it, so `kswapd` starts early and a burst of allocations has a cushion. `vm.watermark_scale_factor` widens the gap between the marks without raising `min`.
+`vm.min_free_kbytes` sets `min`, and `low` and `high` follow it: each gap is the larger of a quarter of `min` and the `vm.watermark_scale_factor` share of the zone. [Guide 06 §8](../guides/06-kernel-sysctl-tuning.md#8-virtual-memory) raises it, so `kswapd` starts early and a burst of allocations has a cushion. `vm.watermark_scale_factor` widens the gap between the marks without raising `min`.
 
 > [!NOTE]
-> **Not proven in production.** `vm.watermark_scale_factor` (default `10`, meaning 0.1 % of memory between marks) is an alternative to a large `min_free_kbytes`. The guides use `min_free_kbytes` only.
+> **Not proven in production.** `vm.watermark_scale_factor` (default `10`, meaning a gap of at least 0.1 % of the zone, or a quarter of `min` if that is larger) is an alternative to a large `min_free_kbytes`. The guides use `min_free_kbytes` only.
 
 Reclaim is per NUMA node. With `vm.zone_reclaim_mode=0` (the RHEL default), a node that is short of memory takes pages from another node instead of reclaiming locally. Keep it at `0`: a value of `1` makes allocations stall to reclaim on their own node.
 
@@ -113,7 +113,7 @@ Typical orders of magnitude, not measurements.
 | Direct reclaim | 0.1 ms to tens of ms |
 | Direct compaction | ms |
 | A writer throttled at `dirty_ratio` | ms to seconds |
-| Default gap between watermarks | 0.1 % of memory per zone |
+| Gap between watermarks | the larger of 0.1 % of the zone and a quarter of `min` |
 
 ## 9. How it shows up
 
@@ -124,7 +124,7 @@ Typical orders of magnitude, not measurements.
 | A slow first call after a nightly batch job | Code pages evicted, then a major fault | `pgmajfault`, `ps -o maj_flt` | §7 |
 | Stalls when a large allocation happens, with free memory available | Direct compaction | `compact_stall` | §5 |
 | A writer blocks for ms while the disk is busy | Throttled at `dirty_ratio` | `Dirty`, `nr_dirty_threshold` | §6 |
-| Refaults climb, the disk reads the same files again and again | The working set does not fit | `workingset_refault_file` | §3 |
+| Refaults climb, the disk reads the same files again and again | The working set does not fit | `workingset_refault_file` (`workingset_refault` on RHEL 8) | §3 |
 
 ## 10. Myths
 
@@ -151,7 +151,7 @@ Steps 1 and 2 only read. Step 3 changes the page cache, so run it on a developme
    ```bash
    sar -B 1 10
    # majflt/s: major faults; pgscank/s: kswapd scanning; pgscand/s: direct reclaim (want 0)
-   grep -E '^(allocstall|compact_stall|pgmajfault|workingset_refault_file)' /proc/vmstat
+   grep -E '^(allocstall|compact_stall|pgmajfault|workingset_refault)' /proc/vmstat   # RHEL 8 has one workingset_refault, newer kernels split it
    ```
 
 3. On a development box only: see major faults appear when code pages are no longer cached.
