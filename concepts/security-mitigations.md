@@ -56,7 +56,7 @@ flowchart LR
 
 This gives the order of decisions:
 
-1. **Cross less.** Busy-poll instead of blocking, batch messages per system call, or move the critical path to kernel bypass ([Guide 08](../guides/08-kernel-bypass.md)). Each removes crossings, and with them the mitigation cost, with no security change.
+1. **Cross less.** Batch messages per system call (`recvmmsg`, `sendmmsg`), or move the critical path to kernel bypass ([Guide 08](../guides/08-kernel-bypass.md)). Both remove crossings, and with them the mitigation cost, with no security change. Busy polling (`SO_BUSY_POLL`) is not the same: it removes the interrupt, the wake-up and the context switch, but the `recv` or `poll` system call itself stays, and its entry and exit still pay.
 2. **Measure what is left** (§8). If the critical path makes no system calls, turning mitigations off gains nothing there.
 3. **Opt out per mitigation**, only for what the measurement shows, with the sign-off of [Guide 01 §5.6](../guides/01-grub-bootloader-tuning.md#56-iommu-and-cpu-vulnerability-mitigations-security-sensitive).
 
@@ -107,12 +107,12 @@ Measure the cost of a crossing on your own CPU and kernel. `dd` with a 1-byte bl
 
 ```bash
 time dd if=/dev/zero of=/dev/null bs=1 count=1000000 status=none
-# real 0m0.42s  ->  0.42 s / 2,000,000 calls = ~210 ns per call (illustrative)
+# real 0m0.42s  ->  0.42 s / 2,000,000 calls = ~210 ns per call, everything included (illustrative)
 ```
 
-Run it pinned to one CPU (`taskset -c 3`) a few times and keep the lowest number. To see what the mitigations cost, compare with the same command on a **scratch VM or test host** booted with `mitigations=off`, never on a production host. On a CPU that reports `Not affected` for Meltdown and MDS, the two numbers will be close.
+Run it pinned to one CPU (`taskset -c 3`) a few times and keep the lowest number. That number includes the useful work of `read` and `write` and the `dd` loop, so it is not the mitigation cost. To isolate that cost, run the same command on a **scratch VM or test host** booted with `mitigations=off`, never on a production host, and divide the **difference** of the two times by the 2,000,000 calls. On a CPU that reports `Not affected` for Meltdown and MDS, the difference will be small.
 
-`perf stat -e 'syscalls:sys_enter_*' -p <pid> -- sleep 10` (root) counts how many system calls your application makes per second. Multiply by the per-call cost to see what the mitigations cost the whole process.
+`perf stat -e 'syscalls:sys_enter_*' -p <pid> -- sleep 10` (root) counts how many system calls your application makes per second. Multiplied by that per-call difference, it gives a rough estimate of what the mitigations cost the process. Other system calls cost more or less than `read` and `write` on `/dev/zero`, so treat it as an order of magnitude.
 
 ## 9. Myths
 
@@ -123,12 +123,12 @@ Run it pinned to one CPU (`taskset -c 3`) a few times and keep the lowest number
 
 ## 10. Illustrative scenario
 
-An illustrative case, not a measurement. A gateway on a kernel-stack socket path made one `recvmsg` and one `sendmsg` per message. After a quarterly kernel and microcode update, p50 rose by 0.6 µs with no configuration change. `vulnerabilities/` showed a new `Mitigation:` line, and `perf top` on the critical CPU had kernel entry and exit code near the top. Instead of asking for `mitigations=off`, the team switched the receive path to `recvmmsg` with a batch of 16 and enabled busy polling. That cut the system calls per message by about ten, and p50 ended 0.4 µs lower than before the update, with every mitigation still on.
+An illustrative case, not a measurement. A gateway on a kernel-stack socket path made one `recvmsg` and one `sendmsg` per message. After a quarterly kernel and microcode update, p50 rose by 0.6 µs with no configuration change. `vulnerabilities/` showed a new `Mitigation:` line, and `perf top` on the critical CPU had kernel entry and exit code near the top. Instead of asking for `mitigations=off`, the team switched the receive path to `recvmmsg` with a batch of 16 and the send path to `sendmmsg`. That cut the system calls per message by about ten, and p50 ended 0.4 µs lower than before the update, with every mitigation still on.
 
 ## 11. Key takeaways
 
 - Mitigations tax crossings: kernel entry and exit, context switches, VM exits. Computation in user space is not taxed.
-- Cross less first: busy polling, batching, kernel bypass. That gain comes with no security cost.
+- Cross less first: batching and kernel bypass remove crossings with no security cost. Busy polling removes wake-ups, not the system call.
 - Read `/sys/devices/system/cpu/vulnerabilities/*` after every kernel and microcode update. A new line can mean a new cost.
 - If you still opt out, do it per mitigation, only where measured, with written sign-off, never with `mitigations=off`.
 
