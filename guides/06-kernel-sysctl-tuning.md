@@ -63,7 +63,7 @@ flowchart LR
 
 | Key | Value | Why |
 |---|---|---|
-| `kernel.printk` | `1 4 1 7` | Console log level 1: only `KERN_EMERG` messages are printed **synchronously** to the console. Printing to a slow console (VGA, IPMI serial) blocks the CPU that emits the message; a burst of warnings can stall a CPU for milliseconds. Everything still reaches the journal/`dmesg`. |
+| `kernel.printk` | `1 4 1 7` | Console log level 1: only `KERN_EMERG` messages are printed **synchronously** to the console. Printing to a slow console (VGA, IPMI serial) blocks the CPU that emits the message; a burst of warnings can stall a CPU for milliseconds. Everything still reaches the journal/`dmesg`. [Concept: logging and I/O](../concepts/logging-and-io.md) covers the application side. |
 | `kernel.nmi_watchdog` | `0` | Same as `nmi_watchdog=0` on the command line ([Guide 01](01-grub-bootloader-tuning.md#54-silence-the-watchdogs-and-error-pollers)). Setting both makes it take effect on VMs too, where the GRUB isolation set is skipped. |
 | `debug.exception-trace` | `0` | Stops the kernel from logging every user-space segfault or unhandled trap. That is a log-flood vector. |
 | `kernel.ftrace_enabled` | `0` | Disables the function tracer's patching hooks. Re-enable temporarily (`sysctl -w kernel.ftrace_enabled=1`) when you need `trace-cmd`/`perf ftrace`. |

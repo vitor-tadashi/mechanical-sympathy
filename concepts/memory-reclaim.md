@@ -86,7 +86,7 @@ A `write()` to a file only copies the data into the page cache and marks the pag
 | `vm.dirty_ratio` | Dirty pages above it | **The writing thread is throttled**: `write()` blocks until enough is written |
 | `vm.dirty_expire_centisecs` | A page dirty for longer than this (30 s) | Written at the next flush |
 
-Dirty pages also slow reclaim, because they cannot be dropped until they are written.
+Dirty pages also slow reclaim, because they cannot be dropped until they are written. The [logging and I/O concept](logging-and-io.md#31-dirty-throttling) shows what this means for a thread that writes a journal.
 
 ## 7. Faults: what a missing page costs
 

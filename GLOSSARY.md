@@ -117,6 +117,7 @@
 | <a id="ffm"></a>**FFM** | **Foreign Function and Memory API.** The standard way for Java code to call native functions (JEP 454). | The Java probe uses it to pin threads, and no third-party library is needed. [Java probe](examples/java-latency-probe) |
 | <a id="fifo"></a>**FIFO** | **First In, First Out.** A queue where the oldest item leaves first. | A NIC has a small on-chip FIFO before the [ring buffer](#ring-buffer). Counters with "fifo" in the name mean that it overflowed. [Concept: ethtool §11](concepts/ethtool.md#11--s-statistics) |
 | <a id="first-touch"></a>**first touch** | A memory page is placed on the [NUMA node](#numa) of the CPU that writes to it first. | It decides where your memory ends up. [Guide 03 §5.3](guides/03-huge-pages-configuration.md#53-make-sure-the-pages-come-from-the-right-node) |
+| <a id="fsync"></a>**fsync** | A system call that waits until a file's data is safely on disk. `fdatasync` skips metadata that is not needed to read the data back. | It always waits for the disk: 0.1 ms or more. Batch it on a logger thread, never on the critical thread. [Concept: logging and I/O §3.2](concepts/logging-and-io.md#32-fsync) |
 
 ### G
 
@@ -178,6 +179,7 @@
 | <a id="jep"></a>**JEP** | **JDK Enhancement Proposal.** A numbered document that describes one change to Java. JEP 454 describes the [FFM](#ffm) API. | [Java probe](examples/java-latency-probe) |
 | <a id="jit"></a>**JIT** | **Just-In-Time compiler.** The [JVM](#jvm) turns hot code into machine code while the program runs. | The first calls are slow, until the code is compiled. Running warm-up traffic before real traffic hides this. [Pre-touch](#pre-touch) does not: it only removes page faults. [Guide 09](guides/09-measuring-latency.md) |
 | <a id="jitter"></a>**jitter** | How much the time of an operation changes from one run to the next. Low jitter means a narrow histogram. | This is what the tuning reduces. [Guide 09](guides/09-measuring-latency.md) |
+| <a id="journald"></a>**journald** | `systemd-journald`, the systemd service that collects logs: kernel messages, service output and `syslog()` calls. | A program that logs through stdout or `syslog()` can wait when journald is slow. [Concept: logging and I/O §3](concepts/logging-and-io.md#3-where-a-log-line-waits) |
 | <a id="jvm"></a>**JVM** | **Java Virtual Machine.** The program that runs Java code. | The reference application is a Java program, so the guides give JVM flags. [Guide 03 §5](guides/03-huge-pages-configuration.md#5-java-applications) |
 
 ### K
@@ -197,6 +199,7 @@
 |---|---|---|
 | <a id="leap-second"></a>**leap second** | A second added to [UTC](#utc) now and then to keep it close to the Earth's rotation. | It steps `CLOCK_REALTIME` by one second, or a server smears it over hours. Durations taken from REALTIME break. [Concept: clocks and time §5](concepts/clocks-and-time.md#5-step-and-slew) |
 | <a id="llc"></a>**LLC** | **Last-Level Cache.** The biggest and slowest CPU cache (usually called L3). On Intel Xeon the cores of a socket share one; on AMD EPYC each [CCX](#ccx) has its own. | [DDIO](#ddio) writes packets here. [Guide 02](guides/02-cpu-core-isolation.md) |
+| <a id="log4j"></a>**Log4j 2** | A widely used open-source logging library for Java. Its asynchronous loggers hand each log event to a background thread through a preallocated ring. | An example of the handoff design for logging. Check that it does not allocate per call and that its thread is pinned. [Concept: logging and I/O §4](concepts/logging-and-io.md#4-the-design-hand-off-do-not-write) |
 | <a id="lowlat-runtime-service"></a>**lowlat-runtime.service** | The systemd unit that applies all runtime (not persistent) settings again at every boot. | [Guide 11 §2](guides/11-day2-operations.md#2-the-verification-timer) |
 | <a id="lowlat-verify-timer"></a>**lowlat-verify.timer** | The timer that runs `verify-tuning` every day and 10 minutes after each boot. The unit fails when a check fails. | [Guide 11 §2](guides/11-day2-operations.md#2-the-verification-timer) |
 | <a id="lro"></a>**LRO** | **Large Receive Offload.** The NIC joins received packets into one big packet. | It hides packet boundaries and adds delay, so it is off. [Guide 04 §5.5](guides/04-network-optimization.md#55-segmentation-and-aggregation-offloads-off-ethtool--k-tso-off-gso-off-lro-off) |

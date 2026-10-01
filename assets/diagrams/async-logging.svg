@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 310" width="760" height="310" role="img" aria-labelledby="t d">
+<title id="t">A synchronous log write blocks the hot thread; a handoff does not</title>
+<desc id="d">Two timelines of four log lines. When event.loop writes each line itself, most writes take microseconds, but one blocks for milliseconds at the dirty-page limit and another waits for fsync, and event.loop handles no message meanwhile. When event.loop only puts each line into a ring for a logger thread on a housekeeping CPU, the enqueue takes tens of nanoseconds; the logger thread blocks instead, and event.loop never stops.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .seg { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .run { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .io { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .stall { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .ev { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: pulse 6s linear infinite; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @keyframes pulse {
+    0%, 4%   { transform: scaleY(1.35); }
+    8%, 100% { transform: scaleY(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ev, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="310" rx="8"/>
+
+<!-- Lane 1: synchronous -->
+<rect class="lane" x="10" y="10" width="740" height="130" rx="6"/>
+<text class="cap" x="24" y="34">Synchronous: event.loop writes each line itself</text>
+<text class="sub" x="24" y="52">Most writes take µs. One hits the dirty-page limit, one waits for fsync: ms with no message handled.</text>
+<text class="lbl" x="24" y="94">event.loop</text>
+<rect class="run" x="150" y="76" width="570" height="30" rx="3"/>
+<rect class="ev" x="250" y="72" width="5" height="38" rx="1" style="animation-delay:-4.95s"/>
+<rect class="io" x="255" y="76" width="12" height="30" rx="2"/>
+<rect class="ev" x="330" y="72" width="5" height="38" rx="1" style="animation-delay:-4.11s"/>
+<rect class="stall" x="335" y="76" width="95" height="30" rx="3"/><text class="seg" x="382" y="95">write() blocked</text>
+<rect class="ev" x="520" y="72" width="5" height="38" rx="1" style="animation-delay:-2.11s"/>
+<rect class="io" x="525" y="76" width="12" height="30" rx="2"/>
+<rect class="ev" x="600" y="72" width="5" height="38" rx="1" style="animation-delay:-1.26s"/>
+<rect class="stall" x="605" y="76" width="60" height="30" rx="3"/><text class="seg" x="635" y="95">fsync</text>
+<text class="axis" x="150" y="128">yellow: a log call; red: the hot thread waits for I/O</text>
+
+<!-- Lane 2: handoff -->
+<rect class="lane" x="10" y="150" width="740" height="150" rx="6"/>
+<text class="cap" x="24" y="174">Handoff: event.loop puts each line in a ring</text>
+<text class="sub" x="24" y="192">The enqueue takes tens of ns. The logger thread on a housekeeping CPU does the I/O, and waits instead.</text>
+<text class="lbl" x="24" y="222">event.loop</text>
+<rect class="run" x="150" y="206" width="570" height="26" rx="3"/>
+<rect class="ev" x="250" y="202" width="5" height="34" rx="1" style="animation-delay:-4.95s"/>
+<rect class="ev" x="330" y="202" width="5" height="34" rx="1" style="animation-delay:-4.11s"/>
+<rect class="ev" x="520" y="202" width="5" height="34" rx="1" style="animation-delay:-2.11s"/>
+<rect class="ev" x="600" y="202" width="5" height="34" rx="1" style="animation-delay:-1.26s"/>
+<text class="lbl" x="24" y="258">logger, CPU 4</text>
+<rect class="io" x="262" y="242" width="28" height="26" rx="3"/>
+<rect class="stall" x="342" y="242" width="95" height="26" rx="3"/><text class="seg" x="389" y="259">blocked here</text>
+<rect class="io" x="532" y="242" width="28" height="26" rx="3"/>
+<rect class="stall" x="612" y="242" width="60" height="26" rx="3"/><text class="seg" x="642" y="259">fsync</text>
+<text class="axis" x="150" y="290">the same I/O waits, moved to a thread that can afford them</text>
+
+<line class="head" x1="150" y1="66" x2="150" y2="272"/>
+</svg>

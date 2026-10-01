@@ -1,6 +1,6 @@
 # Use case 16 — The log line that cost five milliseconds
 
-> Guides: [01 Kernel command line](../../guides/01-grub-bootloader-tuning.md), [06 Kernel sysctls](../../guides/06-kernel-sysctl-tuning.md) · Scripts: [`01-grub-bootloader`](../../scripts/01-grub-bootloader), [`06-kernel-sysctl`](../../scripts/06-kernel-sysctl)
+> Guides: [01 Kernel command line](../../guides/01-grub-bootloader-tuning.md), [06 Kernel sysctls](../../guides/06-kernel-sysctl-tuning.md) · Scripts: [`01-grub-bootloader`](../../scripts/01-grub-bootloader), [`06-kernel-sysctl`](../../scripts/06-kernel-sysctl) · Concept: [logging and I/O](../../concepts/logging-and-io.md#33-the-kernel-console)
 
 ## At a glance
 
