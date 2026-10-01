@@ -232,7 +232,7 @@ After isolation, `ps -eLo psr,comm | awk '$1==5'` still shows a few kernel threa
 | `kworker/5:*` | Bound workqueues | Only if something on CPU 5 queues work (e.g. `vmstat` updates, see `vm.stat_interval` in [Guide 06](06-kernel-sysctl-tuning.md)) |
 | `idle_inject/5` | Thermal/power capping | Should never run with `idle=poll` |
 
-What matters is not that they exist, but that they **stay asleep**. Measure it with the tools in §7.
+What matters is not that they exist, but that they **stay asleep**. Measure it with the tools in §8. [Concept: interrupts and deferred work](../concepts/interrupts-and-deferred-work.md) explains what wakes each of them.
 
 ## 6. Pinning the application
 

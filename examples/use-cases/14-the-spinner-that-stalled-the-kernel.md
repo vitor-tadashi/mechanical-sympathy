@@ -1,6 +1,6 @@
 # Use case 14 — The spinner that stalled the kernel
 
-> Guides: [02 CPU isolation](../../guides/02-cpu-core-isolation.md), [04 Network](../../guides/04-network-optimization.md) · Scripts: [`02-cpu-isolation`](../../scripts/02-cpu-isolation), [`04-network`](../../scripts/04-network) · Concept: [CPU isolation](../../concepts/cpu-isolation.md)
+> Guides: [02 CPU isolation](../../guides/02-cpu-core-isolation.md), [04 Network](../../guides/04-network-optimization.md) · Scripts: [`02-cpu-isolation`](../../scripts/02-cpu-isolation), [`04-network`](../../scripts/04-network) · Concepts: [CPU isolation](../../concepts/cpu-isolation.md), [interrupts and deferred work](../../concepts/interrupts-and-deferred-work.md#3-softirqs-and-ksoftirqd)
 
 ## At a glance
 
