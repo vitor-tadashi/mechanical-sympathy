@@ -52,7 +52,7 @@ R = S / (1 − ρ)        and the p99 is about 4.6 × S / (1 − ρ)
 
 <img src="../assets/diagrams/utilization-wait.svg" alt="Chart of response time in multiples of the service time against utilization: the mean is 2 S at 50 %, 3.3 S at 70 % and 10 S at 90 %; the p99 is 9 S, 15 S and 46 S; with a fixed service time the p99 is about half as high" width="720">
 
-*Waiting is small while the server is mostly idle, and grows without limit as utilization approaches 100 %. The tail grows faster than the mean, and a steady service time cuts it about in half.*
+*Waiting is small while the server is mostly idle, and grows without limit as utilization approaches 100 %. In this model the p99 stays about 4.6 times the mean, so every step toward 100 % adds 4.6 times more to the tail, and a steady service time cuts it about in half.*
 
 | Utilization | Mean response | p99 response |
 |---|---|---|
@@ -66,7 +66,7 @@ With S = 2 µs, a thread at 70 % has a p99 of about 30 µs, although it never ta
 
 ## 4. Variability: the other half of the formula
 
-The M/M/1 numbers assume the worst common case: random arrivals **and** random service times. A good approximation for any single queue (Kingman's formula) shows both kinds of variability side by side:
+The M/M/1 numbers are a reference model: random arrivals **and** random service times, each with a coefficient of variation of 1. They are not a worst case. Bursty or correlated arrivals and heavy-tailed service times (rare long stalls) have coefficients above 1, and they wait longer than the table says. For one server with any arrival and service distributions, Kingman's approximation of the mean wait, most accurate at high utilization, shows both kinds of variability side by side:
 
 ```text
 W ≈ S × ρ / (1 − ρ) × (ca² + cs²) / 2
@@ -165,7 +165,8 @@ q() { awk -v rho="$1" -v fixed="$2" 'BEGIN { srand(1); t = 0; free = 0
     print free - t } }' | sort -n | awk '{ s += $1; v[NR] = $1 } END { printf "mean %.1f S, p99 %.1f S\n", s / NR, v[int(NR * 0.99)] }'; }
 for rho in 0.5 0.7 0.9; do printf 'utilization %s, random service: ' "$rho"; q "$rho" 0; done
 for rho in 0.5 0.7 0.9; do printf 'utilization %s, fixed service:  ' "$rho"; q "$rho" 1; done
-# random: mean 2.0 / 3.3 / 9.7 S, p99 9.1 / 15.2 / 43.0 S
+# approximate, and different with each awk implementation and seed:
+# random: mean about 2 / 3.3 / 10 S, p99 about 9 / 15 / 45 S
 # fixed:  p99 about half of the random case at each utilization
 ```
 
@@ -177,7 +178,7 @@ An illustrative case, not a measurement. A pricing engine ran one pinned worker 
 
 ## 14. Key takeaways
 
-- Waiting grows like 1/(1 − ρ), and the tail faster. Keep latency-critical threads mostly idle.
+- Waiting grows like 1/(1 − ρ), and the p99 with it, at several times the mean. Keep latency-critical threads mostly idle.
 - Variability counts as much as utilization. Removing service-time jitter, the aim of all the tuning here, shortens every queue behind it.
 - Measure utilization at the time scale of a burst, and size queues for the burst excess.
 - A stall leaves a backlog that drains in D × ρ / (1 − ρ). Busy servers echo stalls longer.

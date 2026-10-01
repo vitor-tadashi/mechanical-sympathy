@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 400" width="760" height="400" role="img" aria-labelledby="t d">
-<title id="t">Waiting grows like 1/(1 − utilization), and the tail grows faster</title>
+<title id="t">Waiting grows like 1/(1 − utilization), and the p99 grows with it</title>
 <desc id="d">Response time of a single queue, in multiples of the service time, against utilization. The mean is 2 times the service time at 50 % utilization, 3.3 times at 70 % and 10 times at 90 %. The 99th percentile is 9, 15 and 46 times the service time at the same points. With a fixed service time instead of a variable one, the 99th percentile is about half as high, which is what removing jitter from the service does.</desc>
 <style>
   .bg { fill: #ffffff; }
