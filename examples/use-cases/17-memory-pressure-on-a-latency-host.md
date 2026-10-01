@@ -29,21 +29,22 @@ Three questions: is free memory at the watermarks, did threads reclaim inline, a
 
 ```mermaid
 flowchart LR
-  a["MemFree near<br/>the watermarks?"] --> b["allocstall rising<br/>at the stall?"] --> c["PSI memory<br/>some above 0?"]
+  a["Zone free pages<br/>near min?"] --> b["allocstall rising<br/>at the stall?"] --> c["PSI memory<br/>some above 0?"]
   class a,b,c focus
   classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
 ```
 
-*First compare free memory with the watermarks, then count inline reclaim, then confirm that tasks waited.*
+*First compare each zone's free pages with its watermarks, then count inline reclaim, then confirm that tasks waited.*
 
 ```bash
 # 1. Where the memory is (Guide 03 §8 reads the same file for huge pages)
 grep -E '^(MemTotal|MemFree|Cached|Dirty|HugePages_Total):' /proc/meminfo
 # before, after two days: MemFree a few hundred MiB, Cached tens of GiB
 
-# 2. The watermarks, in 4 KiB pages (Guide 06 §10)
-awk '/^Node/ {zone = $0} /^ +(min|low|high) / && zone ~ /Normal/ {print zone ":", $1, $2}' /proc/zoneinfo
-# before: min and low a few tens of MiB apart, and MemFree just above them
+# 2. Free pages against the watermarks, per Normal zone, in 4 KiB pages (Guide 06 §10)
+awk '/^Node/ {zone = $0} zone ~ /Normal/ && /pages free/ {free = $3} zone ~ /Normal/ && /^ +min / {min = $2} zone ~ /Normal/ && /^ +low / {print zone ": free", free, "min", min, "low", $2}' /proc/zoneinfo
+# before: in at least one zone, free sits just above min, with min and low a few tens of MiB apart
+# the min mark is enforced per zone: MemFree, a total over every zone, can hide a zone at min
 
 # 3. Inline reclaim: sample before and after a stall (Guide 06 §10)
 grep -E '^(allocstall|pgscan_direct|pgscan_kswapd)' /proc/vmstat
@@ -66,7 +67,7 @@ The Guide 06 profile sets all three values:
 | Key | Guide 06 value | Effect here |
 |---|---|---|
 | `vm.min_free_kbytes` | `1048576` (1 GiB) | Raises the min watermark to 1 GiB, and low and high with it. `kswapd` starts much earlier, and a burst has a large cushion before it reaches min. |
-| `vm.dirty_background_ratio` | `3` | Background writeback starts at 3 % dirty memory: small, frequent flushes of the journal. |
+| `vm.dirty_background_ratio` | `3` | Background writeback starts once 3 % of dirtyable memory is dirty. On a host with hundreds of GiB that is more than one 1 GiB rotation, so it does not flush every rotation: it stops dirty pages from piling up over many of them. Pages older than `vm.dirty_expire_centisecs` (30 s by default) are written back anyway. |
 | `vm.dirty_ratio` | `10` | The level where a writer is throttled synchronously. With early background writeback, the journal rarely gets there. |
 
 ```bash
@@ -94,10 +95,10 @@ Illustrative:
 ## 5. Verify and roll back
 
 - [ ] `sysctl vm.min_free_kbytes vm.dirty_ratio vm.dirty_background_ratio` prints `1048576`, `10` and `3`
-- [ ] The watermarks in `/proc/zoneinfo` rose, and `MemFree` stays above min after days of uptime
+- [ ] The watermarks in `/proc/zoneinfo` rose, and after days of uptime the free pages of every Normal zone stay above that zone's min (step 2)
 - [ ] `allocstall_*` stays flat across a journal rotation, and `/proc/pressure/memory` shows `some avg10=0.00`
 - [ ] `scripts/verify-tuning` shows PASS for Guide 06
-- [ ] Roll back: `sudo scripts/06-kernel-sysctl --rollback`, then reboot, or reload the remaining files with `sudo sysctl --system` ([Guide 06 §12](../../guides/06-kernel-sysctl-tuning.md#12-rollback))
+- [ ] Roll back: `sudo scripts/06-kernel-sysctl --rollback`, then reboot ([Guide 06 §12](../../guides/06-kernel-sysctl-tuning.md#12-rollback)). Removing the file does not reset the running values, and `sudo sysctl --system` does not reset keys no remaining file sets. To roll back without a reboot, set the values you recorded in step 5 by hand: `sudo sysctl -w vm.min_free_kbytes=<before> vm.dirty_ratio=<before> vm.dirty_background_ratio=<before>`
 
 ## 6. Key takeaways
 
