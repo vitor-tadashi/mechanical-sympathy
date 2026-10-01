@@ -117,6 +117,7 @@
 | <a id="ffm"></a>**FFM** | **Foreign Function and Memory API.** The standard way for Java code to call native functions (JEP 454). | The Java probe uses it to pin threads, and no third-party library is needed. [Java probe](examples/java-latency-probe) |
 | <a id="fifo"></a>**FIFO** | **First In, First Out.** A queue where the oldest item leaves first. | A NIC has a small on-chip FIFO before the [ring buffer](#ring-buffer). Counters with "fifo" in the name mean that it overflowed. [Concept: ethtool §11](concepts/ethtool.md#11--s-statistics) |
 | <a id="first-touch"></a>**first touch** | A memory page is placed on the [NUMA node](#numa) of the CPU that writes to it first. | It decides where your memory ends up. [Guide 03 §5.3](guides/03-huge-pages-configuration.md#53-make-sure-the-pages-come-from-the-right-node) |
+| <a id="fsync"></a>**fsync** | A system call that waits until a file's data is safely on disk. `fdatasync` skips metadata that is not needed to read the data back. | It always waits for the disk: 0.1 ms or more. Batch it on a logger thread, never on the critical thread. [Concept: logging and I/O §3.2](concepts/logging-and-io.md#32-fsync) |
 
 ### G
 
@@ -178,6 +179,7 @@
 | <a id="jep"></a>**JEP** | **JDK Enhancement Proposal.** A numbered document that describes one change to Java. JEP 454 describes the [FFM](#ffm) API. | [Java probe](examples/java-latency-probe) |
 | <a id="jit"></a>**JIT** | **Just-In-Time compiler.** The [JVM](#jvm) turns hot code into machine code while the program runs. | The first calls are slow, until the code is compiled. Running warm-up traffic before real traffic hides this. [Pre-touch](#pre-touch) does not: it only removes page faults. [Guide 09](guides/09-measuring-latency.md) |
 | <a id="jitter"></a>**jitter** | How much the time of an operation changes from one run to the next. Low jitter means a narrow histogram. | This is what the tuning reduces. [Guide 09](guides/09-measuring-latency.md) |
+| <a id="journald"></a>**journald** | `systemd-journald`, the systemd service that collects logs: kernel messages, service output and `syslog()` calls. | A program that logs through stdout or `syslog()` can wait when journald is slow. [Concept: logging and I/O §3](concepts/logging-and-io.md#3-where-a-log-line-waits) |
 | <a id="jvm"></a>**JVM** | **Java Virtual Machine.** The program that runs Java code. | The reference application is a Java program, so the guides give JVM flags. [Guide 03 §5](guides/03-huge-pages-configuration.md#5-java-applications) |
 
 ### K
