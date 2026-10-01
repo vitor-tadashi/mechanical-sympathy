@@ -43,7 +43,7 @@
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .head, .pw, .pb, .pg { animation: none; }
+    .head, .pw, .pb, .pg, .ctr { animation: none; }
     .head { display: none; }
   }
 

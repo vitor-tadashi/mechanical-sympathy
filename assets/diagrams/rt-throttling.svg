@@ -44,7 +44,7 @@
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .head, .thr, .msg, .pick { animation: none; }
+    .head, .thr, .msg, .msg-wait, .pick { animation: none; }
     .head { display: none; }
   }
 </style>

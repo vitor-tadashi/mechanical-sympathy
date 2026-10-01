@@ -50,7 +50,7 @@
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .head, .pkt, .sw, .hw, .wait { animation: none; }
+    .head, .pkt, .sw, .hw, .wait, .w1, .w2, .w3 { animation: none; }
     .head { display: none; }
   }
 </style>
