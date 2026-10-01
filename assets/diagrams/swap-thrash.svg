@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" width="760" height="300" role="img" aria-labelledby="t d">
+<title id="t">With swap, memory pressure becomes silent stalls; without swap, one process dies loudly</title>
+<desc id="d">Two timelines of the same memory spike caused by an agent that leaks memory. With swap, the kernel swaps out cold pages of the latency application, and event.loop stalls each time it touches one of them again, with nothing in the logs. Without swap, the OOM killer ends the agent at once, the kernel logs it, systemd restarts the agent, and event.loop never stops.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .seg { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .bad { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; }
+  .run { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .agent { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .grow { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .stall { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: pulse 6s linear infinite; }
+  .kill { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; transform-box: fill-box; transform-origin: center; animation: pulse 6s linear infinite; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @keyframes pulse {
+    0%, 4%   { transform: scaleY(1.3); }
+    8%, 100% { transform: scaleY(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .stall, .kill, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="300" rx="8"/>
+
+<!-- Lane 1: with swap -->
+<rect class="lane" x="10" y="10" width="740" height="135" rx="6"/>
+<text class="cap" x="24" y="34">With swap: the pressure moves into the latency process</text>
+<text class="sub" x="24" y="52">Cold pages of the application are swapped out. Each later touch is a major fault. Nothing is logged.</text>
+<text class="lbl" x="24" y="75">agent</text>
+<rect class="agent" x="150" y="64" width="110" height="18" rx="3"/>
+<rect class="grow" x="260" y="64" width="460" height="18" rx="3"/><text class="seg" x="490" y="77">leaks memory, keeps running</text>
+<text class="lbl" x="24" y="109">event.loop</text>
+<rect class="run" x="150" y="92" width="570" height="28" rx="3"/>
+<rect class="stall" x="330" y="92" width="30" height="28" rx="3" style="animation-delay:-4.11s"/>
+<rect class="stall" x="400" y="92" width="40" height="28" rx="3" style="animation-delay:-3.37s"/>
+<rect class="stall" x="470" y="92" width="25" height="28" rx="3" style="animation-delay:-2.63s"/>
+<rect class="stall" x="560" y="92" width="35" height="28" rx="3" style="animation-delay:-1.68s"/>
+<text class="bad" x="330" y="138">swap-in stalls: ms each, again and again</text>
+
+<!-- Lane 2: without swap -->
+<rect class="lane" x="10" y="155" width="740" height="135" rx="6"/>
+<text class="cap" x="24" y="179">Without swap: the OOM killer ends the agent</text>
+<text class="sub" x="24" y="197">One process dies, the kernel logs it, systemd restarts it. The latency thread never stops.</text>
+<text class="lbl" x="24" y="220">agent</text>
+<rect class="agent" x="150" y="209" width="110" height="18" rx="3"/>
+<rect class="grow" x="260" y="209" width="40" height="18" rx="3"/>
+<rect class="kill" x="300" y="205" width="10" height="26" rx="2" style="animation-delay:-4.42s"/>
+<rect class="agent" x="380" y="209" width="340" height="18" rx="3"/><text class="seg" x="550" y="222">restarted by systemd</text>
+<text class="lbl" x="24" y="254">event.loop</text>
+<rect class="run" x="150" y="237" width="570" height="28" rx="3"/><text class="seg" x="435" y="256">runs without a stall</text>
+<text class="axis" x="300" y="283">OOM kill, logged in the kernel journal ("Out of memory: Killed process ...")</text>
+
+<line class="head" x1="150" y1="62" x2="150" y2="269"/>
+</svg>

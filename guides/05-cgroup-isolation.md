@@ -128,6 +128,8 @@ Why those CPUs: 4 and 6 are node-0 OS CPUs that serve **no** NIC interrupts (0 d
 
 Why `CPUQuota` in addition to the cpuset: the cpuset decides *where* the processes run, and the quota decides *how much*. Without the quota, a runaway agent keeps both CPUs at 100 %. That is harmless for the application, but it starves the other agents (monitoring included) at exactly the moment you need them.
 
+Why `MemoryMax` with `MemorySwapMax=0`: a leaking agent then ends in an OOM kill inside this slice, logged and restarted, instead of pushing the host into swap or a global OOM. [Concept: swap and the OOM killer](../concepts/swap-and-oom.md#6-silent-stalls-versus-a-loud-failure) explains the trade.
+
 ### 4.2 Moving services in (`move_service_to_slice`)
 
 A drop-in per unit, `/etc/systemd/system/<unit>.d/10-lowlat-housekeeping.conf`:

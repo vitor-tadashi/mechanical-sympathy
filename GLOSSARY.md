@@ -244,6 +244,7 @@
 | <a id="offload"></a>**offload** | Work that the NIC does instead of the CPU, such as checksums or cutting large packets. | Some offloads help, and some add delay. [Concept: ethtool §7](concepts/ethtool.md#7--k---k-offload-features) |
 | <a id="onload"></a>**Onload** | A Solarflare (now AMD) software layer. It sits between the program and the kernel, and it runs the TCP/UDP stack in user space over the NIC queues. The program does not change. | The field-proven [kernel bypass](#kernel-bypass) path in these guides. [Guide 08 §5](guides/08-kernel-bypass.md#5-onload-on-solarflare--amd-nics-field-proven) |
 | <a id="oom"></a>**OOM** | **Out Of Memory.** The kernel kills a process because memory ran out. | Reserved huge pages cannot be used by others, which can cause it. [Guide 03 §3](guides/03-huge-pages-configuration.md#3-sizing-the-pool) |
+| <a id="oom-score-adj"></a>**oom_score / oom_score_adj** | The [OOM](#oom) killer's score for each process (0–1000), and the adjustment you can add to it (−1000 to +1000). The highest score is killed first. | Give agents a positive value and the latency service `−900`, so it is killed last. systemd sets it with `OOMScoreAdjust=`. [Concept: swap and the OOM killer §5](concepts/swap-and-oom.md#5-the-oom-killer) |
 | <a id="open-loop"></a>**open loop** | A load generator that sends on a fixed schedule, whether or not the answers have come back, and times each request from when it was due. | It sees every request a stall delays, as real users do. [Guide 09 §3.3](guides/09-measuring-latency.md#33-coordinated-omission), [use case 19](examples/use-cases/19-the-benchmark-that-lied.md) |
 | <a id="os-cpus"></a>**OS CPUs** | All CPUs that are not isolated. This is the same set as the [housekeeping CPUs](#housekeeping-cpu), and it is what systemd's `CPUAffinity` lists. | [Guide 02 §4.1](guides/02-cpu-core-isolation.md#41-systemd-cpuaffinity-persistent) |
 
@@ -317,6 +318,8 @@
 | <a id="spsc"></a>**SPSC** | **Single Producer, Single Consumer.** A queue with exactly one writer thread and one reader thread. It needs no locks. | The usual way to pass data between pinned threads. [Concept: CPU isolation](concepts/cpu-isolation.md) |
 | <a id="sr-iov"></a>**SR-IOV / VF** | **Single Root I/O Virtualization** and **Virtual Function.** A NIC presents itself as several small NICs, and each VF can go to a virtual machine. | The way to run [kernel bypass](#kernel-bypass) or [PTP](#ptp) in a VM. [Guide 08 §10](guides/08-kernel-bypass.md#10-bare-metal-vs-vm) |
 | <a id="ssh"></a>**SSH** | **Secure Shell.** Remote login to a server. | If you change the NIC that your SSH session uses, the session drops. [Guide 04](guides/04-network-optimization.md) |
+| <a id="swap"></a>**swap** | Disk space where the kernel writes anonymous memory (heap, stacks) to free RAM. Reading it back is a major [page fault](#page-fault). | A swapped page costs milliseconds on the thread that touches it, and nothing is logged. [Concept: swap and the OOM killer §2](concepts/swap-and-oom.md#2-what-swap-does) |
+| <a id="swappiness"></a>**swappiness** | `vm.swappiness`, 0–200: how much the kernel prefers dropping page cache over swapping. It is a preference, not a switch. | `0` does not turn swap off. [Concept: swap and the OOM killer §3](concepts/swap-and-oom.md#3-what-vmswappiness-really-means) |
 | <a id="syn"></a>**SYN** | The first packet of a TCP connection ("synchronize"). | A queue of half-open connections waits on it. [Guide 06 §3](guides/06-kernel-sysctl-tuning.md#3-tcp-behavior) |
 | <a id="systemd-analyze"></a>**systemd-analyze** | A systemd command. `systemd-analyze verify FILE` reads a unit file and reports typos, unknown settings and missing programs without starting anything. | `tools/check-containers` runs it on every unit file that the scripts write, on each RHEL-family image. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
 
@@ -387,6 +390,8 @@
 | Term | Means | Why you meet it here |
 |---|---|---|
 | <a id="zgc"></a>**ZGC** | A [JVM](#jvm) garbage collector that keeps pauses very short. | It fails at start when huge pages are missing. [Guide 03 §5](guides/03-huge-pages-configuration.md#5-java-applications) |
+| <a id="zram"></a>**zram** | A compressed disk in RAM, often used as a [swap](#swap) device (`/dev/zram0`). | It makes swap faster, but a swap-in is still a fault on the hot path. [Concept: swap and the OOM killer §4](concepts/swap-and-oom.md#4-compressed-swap-zswap-and-zram) |
+| <a id="zswap"></a>**zswap** | A compressed cache in RAM in front of a [swap](#swap) device. Pages are compressed there before they go to disk. | Off by default on RHEL. Check `/sys/module/zswap/parameters/enabled`. [Concept: swap and the OOM killer §4](concepts/swap-and-oom.md#4-compressed-swap-zswap-and-zram) |
 
 ## Everyday words with a special meaning here
 
