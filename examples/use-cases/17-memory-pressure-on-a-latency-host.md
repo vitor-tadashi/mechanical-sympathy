@@ -1,6 +1,6 @@
 # Use case 17 — Memory pressure on a latency host
 
-> Guides: [06 Kernel sysctls](../../guides/06-kernel-sysctl-tuning.md), [03 Huge pages](../../guides/03-huge-pages-configuration.md) · Script: [`06-kernel-sysctl`](../../scripts/06-kernel-sysctl) · Concept: [Huge pages](../../concepts/huge-pages.md), [cgroups §3 PSI](../../concepts/cgroups.md#psi-pressure-stall-information)
+> Guides: [06 Kernel sysctls](../../guides/06-kernel-sysctl-tuning.md), [03 Huge pages](../../guides/03-huge-pages-configuration.md) · Script: [`06-kernel-sysctl`](../../scripts/06-kernel-sysctl) · Concepts: [Huge pages](../../concepts/huge-pages.md), [memory reclaim](../../concepts/memory-reclaim.md), [cgroups §3 PSI](../../concepts/cgroups.md#psi-pressure-stall-information)
 
 ## At a glance
 

@@ -80,6 +80,7 @@ flowchart TD
 | [Network path](concepts/network-tuning.md) | ~8 min | Where does a packet wait between the wire and `recv()`? What do coalescing, NAPI, RSS, and bypass change? |
 | [Network buffers](concepts/network-buffers.md) | ~10 min | How big is each queue on the way to `recv()`? How long does a ring hold a burst? Where did the packet die, and which counter shows it? What do DPDK and Onload change? |
 | [`ethtool` reference](concepts/ethtool.md) | ~16 min | What is a channel, and what does `combined` mean? Which options reset the link? How do I steer one flow to one queue? How do I persist each setting? |
+| [Memory reclaim & faults](concepts/memory-reclaim.md) | ~10 min | Where does the memory go? Who reclaims it, kswapd or my thread? What does a minor or major fault cost? Why do stalls appear only after days of uptime? |
 | [Huge pages & NUMA](concepts/huge-pages.md) | ~7 min | What is TLB reach? Why pre-touch? Why is THP unpredictable? Why reserve per node? |
 | [cgroups](concepts/cgroups.md) | ~5 min | Affinity vs cpuset? What do quota, memory.max, io.weight do? How does systemd map onto cgroups? |
 

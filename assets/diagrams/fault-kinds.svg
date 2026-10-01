@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" width="760" height="330" role="img" aria-labelledby="t d">
+<title id="t">The same memory access: pre-touched, minor fault, major fault</title>
+<desc id="d">Three timelines of one thread reading one address. If the page was touched at start-up, the read is an ordinary memory access. If the page was never touched, the kernel takes a minor fault: it allocates and zeroes a page, which costs about a microsecond for 4 KiB. If the page was evicted from the page cache or swapped out, the kernel takes a major fault and waits for the disk, from a tenth of a millisecond to many milliseconds.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .seg { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .run { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .stall { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .acc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: pulse 6s linear infinite; animation-delay: -5.47s; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @keyframes pulse {
+    0%, 4%   { transform: scaleY(1.3); }
+    8%, 100% { transform: scaleY(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .acc, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="330" rx="8"/>
+
+<!-- Lane 1: pre-touched -->
+<rect class="lane" x="10" y="10" width="740" height="100" rx="6"/>
+<text class="cap" x="24" y="34">Pre-touched page (or a huge page from the pool)</text>
+<text class="sub" x="24" y="52">The page is already mapped. The read is a cache or memory access: ns.</text>
+<text class="lbl" x="24" y="85">read x</text>
+<rect class="run" x="150" y="66" width="50" height="28" rx="3"/>
+<rect class="acc" x="200" y="62" width="8" height="36" rx="2"/>
+<rect class="run" x="208" y="66" width="512" height="28" rx="3"/><text class="seg" x="464" y="85">the thread goes on at once</text>
+
+<!-- Lane 2: minor fault -->
+<rect class="lane" x="10" y="115" width="740" height="100" rx="6"/>
+<text class="cap" x="24" y="139">Minor fault: first touch</text>
+<text class="sub" x="24" y="157">The kernel allocates a page, zeroes it and maps it: ~1 µs for 4 KiB, ~50–100 µs for 2 MiB.</text>
+<text class="lbl" x="24" y="190">read x</text>
+<rect class="run" x="150" y="171" width="50" height="28" rx="3"/>
+<rect class="acc" x="200" y="167" width="8" height="36" rx="2"/>
+<rect class="stall" x="208" y="171" width="92" height="28" rx="3"/><text class="seg" x="254" y="190">alloc + zero</text>
+<rect class="run" x="300" y="171" width="420" height="28" rx="3"/><text class="seg" x="510" y="190">then the thread goes on</text>
+
+<!-- Lane 3: major fault -->
+<rect class="lane" x="10" y="220" width="740" height="100" rx="6"/>
+<text class="cap" x="24" y="244">Major fault: the page was evicted or swapped out</text>
+<text class="sub" x="24" y="262">The kernel reads it back from disk before the thread can go on: 0.1 ms to many ms.</text>
+<text class="lbl" x="24" y="295">read x</text>
+<rect class="run" x="150" y="276" width="50" height="28" rx="3"/>
+<rect class="acc" x="200" y="272" width="8" height="36" rx="2"/>
+<rect class="stall" x="208" y="276" width="512" height="28" rx="3"/><text class="seg" x="464" y="295">waiting for the disk … (bar not to scale: far longer)</text>
+
+<line class="head" x1="150" y1="60" x2="150" y2="310"/>
+</svg>
