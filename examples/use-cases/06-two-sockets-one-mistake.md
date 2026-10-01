@@ -1,6 +1,6 @@
 # Use case 6 — Two sockets, one mistake
 
-> Guides: [02 CPU isolation](../../guides/02-cpu-core-isolation.md), [03 Huge pages](../../guides/03-huge-pages-configuration.md) · Concept: [huge pages and NUMA](../../concepts/huge-pages.md) · Example: [Java probe](../java-latency-probe/)
+> Guides: [02 CPU isolation](../../guides/02-cpu-core-isolation.md), [03 Huge pages](../../guides/03-huge-pages-configuration.md) · Concepts: [huge pages and NUMA](../../concepts/huge-pages.md), [hardware topology](../../concepts/hardware-topology.md) · Example: [Java probe](../java-latency-probe/)
 
 ## At a glance
 

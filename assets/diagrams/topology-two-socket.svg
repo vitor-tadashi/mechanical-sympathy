@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 480" width="760" height="480" role="img" aria-labelledby="t d">
+<title id="t">How far another CPU, the memory and the NIC are from one thread</title>
+<desc id="d">A two-socket server where each socket has two last-level cache domains, its own memory and its own PCIe root. Seen from the net.rx thread on socket 1, a core in the same cache domain is about 20 to 40 nanoseconds away, a core in the other domain of the same socket about 60 to 120 nanoseconds, and a core on the other socket about 130 to 200 nanoseconds. The critical NIC hangs off socket 1, so its packets land in socket 1's cache.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .sock { fill: #f6f8fa; stroke: #57606a; stroke-width: 1.5; }
+  .llc { fill: #ffffff; stroke: #8c959f; stroke-width: 1.2; stroke-dasharray: 5 3; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .focus { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .link { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .sub { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; text-anchor: middle; }
+  .leg { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .arc { fill: none; stroke: #8a5a00; stroke-width: 2; }
+  .wire { fill: none; stroke: #1f4e8c; stroke-width: 2; }
+  .num { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .numt { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="480" rx="8"/>
+
+<!-- Socket 0 -->
+<rect class="sock" x="20" y="50" width="320" height="246" rx="8"/>
+<text class="cap" x="324" y="72" text-anchor="end">Socket 0 · NUMA node 0</text>
+<rect class="llc" x="36" y="84" width="138" height="116" rx="5"/>
+<rect class="box" x="46" y="104" width="56" height="32" rx="4"/><text class="lbl" x="74" y="124">CPU 0</text>
+<rect class="box" x="108" y="104" width="56" height="32" rx="4"/><text class="lbl" x="136" y="124">CPU 2</text>
+<rect class="box" x="46" y="144" width="56" height="32" rx="4"/><text class="lbl" x="74" y="164">CPU 4</text>
+<rect class="box" x="108" y="144" width="56" height="32" rx="4"/><text class="lbl" x="136" y="164">CPU 6</text>
+<text class="sub" x="105" y="193">shared L3, domain 0A</text>
+<rect class="llc" x="186" y="84" width="138" height="116" rx="5"/>
+<rect class="box" x="196" y="104" width="56" height="32" rx="4"/><text class="lbl" x="224" y="124">CPU 8</text>
+<rect class="box" x="258" y="104" width="56" height="32" rx="4"/><text class="lbl" x="286" y="124">CPU 10</text>
+<rect class="box" x="196" y="144" width="56" height="32" rx="4"/><text class="lbl" x="224" y="164">CPU 12</text>
+<rect class="box" x="258" y="144" width="56" height="32" rx="4"/><text class="lbl" x="286" y="164">CPU 14</text>
+<text class="sub" x="255" y="193">shared L3, domain 0B</text>
+<rect class="box" x="36" y="212" width="288" height="36" rx="5"/>
+<text class="lbl" x="180" y="234">node 0 DRAM</text>
+<rect class="link" x="36" y="256" width="138" height="28" rx="4"/>
+<text class="sub" x="105" y="274">PCIe root: mgmt, bulk</text>
+
+<!-- Socket link -->
+<rect class="link" x="340" y="146" width="80" height="44" rx="4"/>
+<text class="lbl" x="380" y="164">socket</text>
+<text class="lbl" x="380" y="180">link</text>
+
+<!-- Socket 1 -->
+<rect class="sock" x="420" y="50" width="320" height="246" rx="8"/>
+<text class="cap" x="724" y="72" text-anchor="end">Socket 1 · NUMA node 1</text>
+<rect class="llc" x="436" y="84" width="138" height="116" rx="5"/>
+<rect class="focus" x="446" y="104" width="56" height="32" rx="4"/><text class="lbl" x="474" y="118">CPU 3</text><text class="sub" x="474" y="131">net.rx</text>
+<rect class="app" x="508" y="104" width="56" height="32" rx="4"/><text class="lbl" x="536" y="118">CPU 5</text><text class="sub" x="536" y="131">event.loop</text>
+<rect class="box" x="446" y="144" width="56" height="32" rx="4"/><text class="lbl" x="474" y="164">CPU 1</text>
+<rect class="app" x="508" y="144" width="56" height="32" rx="4"/><text class="lbl" x="536" y="164">CPU 7</text>
+<text class="sub" x="505" y="193">shared L3, domain 1A</text>
+<rect class="llc" x="586" y="84" width="138" height="116" rx="5"/>
+<rect class="app" x="596" y="104" width="56" height="32" rx="4"/><text class="lbl" x="624" y="118">CPU 9</text><text class="sub" x="624" y="131">worker.0</text>
+<rect class="app" x="658" y="104" width="56" height="32" rx="4"/><text class="lbl" x="686" y="124">CPU 11</text>
+<rect class="app" x="596" y="144" width="56" height="32" rx="4"/><text class="lbl" x="624" y="164">CPU 13</text>
+<rect class="app" x="658" y="144" width="56" height="32" rx="4"/><text class="lbl" x="686" y="164">CPU 15</text>
+<text class="sub" x="655" y="193">shared L3, domain 1B</text>
+<rect class="box" x="436" y="212" width="288" height="36" rx="5"/>
+<text class="lbl" x="580" y="228">node 1 DRAM</text>
+<text class="sub" x="580" y="242">huge pages, packet buffers</text>
+<rect class="link" x="436" y="256" width="138" height="28" rx="4"/>
+<text class="sub" x="505" y="274">PCIe root</text>
+
+<!-- NIC -->
+<path class="wire" d="M505 284 L505 316"/>
+<rect class="app" x="436" y="316" width="138" height="32" rx="4"/>
+<text class="lbl" x="505" y="337">critical NIC</text>
+
+<!-- Distances seen from CPU 3 -->
+<path class="arc" d="M474 104 Q505 82 536 104"/>
+<path class="arc" d="M474 104 Q549 50 624 104"/>
+<path class="arc" d="M474 104 C474 0 74 0 74 104"/>
+<circle class="num" cx="505" cy="93" r="9"/><text class="numt" x="505" y="97">1</text>
+<circle class="num" cx="549" cy="77" r="9"/><text class="numt" x="549" y="81">2</text>
+<circle class="num" cx="274" cy="25" r="9"/><text class="numt" x="274" y="29">3</text>
+<circle class="num" cx="590" cy="332" r="9"/><text class="numt" x="590" y="336">4</text>
+
+<!-- Legend -->
+<text class="cap" x="24" y="376">Seen from net.rx on CPU 3:</text>
+<text class="leg" x="24" y="398">1  Same L3 domain: a cache line moves through the shared L3, about 20–40 ns.</text>
+<text class="leg" x="24" y="418">2  Other L3 domain, same socket: through the on-chip fabric, about 60–120 ns.</text>
+<text class="leg" x="24" y="438">3  Other socket: across the socket link, about 130–200 ns, and every miss to node 0 DRAM pays it too.</text>
+<text class="leg" x="24" y="458">4  The NIC is on socket 1's PCIe root, so its DMA writes land in socket 1's L3 and DRAM.</text>
+<text class="note" x="24" y="474">Typical orders of magnitude, not measurements. Domain sizes and CPU numbers are illustrative.</text>
+</svg>

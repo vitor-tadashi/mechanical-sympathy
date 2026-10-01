@@ -1,6 +1,6 @@
 # Use case 12 — The sibling that shares your core
 
-> Guides: [00 BIOS and firmware](../../guides/00-bios-firmware.md), [01 Kernel command line](../../guides/01-grub-bootloader-tuning.md), [02 CPU isolation](../../guides/02-cpu-core-isolation.md) · Scripts: [`plan-layout`](../../scripts/plan-layout), [`02-cpu-isolation`](../../scripts/02-cpu-isolation) · Concept: [CPU isolation](../../concepts/cpu-isolation.md)
+> Guides: [00 BIOS and firmware](../../guides/00-bios-firmware.md), [01 Kernel command line](../../guides/01-grub-bootloader-tuning.md), [02 CPU isolation](../../guides/02-cpu-core-isolation.md) · Scripts: [`plan-layout`](../../scripts/plan-layout), [`02-cpu-isolation`](../../scripts/02-cpu-isolation) · Concepts: [CPU isolation](../../concepts/cpu-isolation.md), [hardware topology](../../concepts/hardware-topology.md)
 
 ## At a glance
 
