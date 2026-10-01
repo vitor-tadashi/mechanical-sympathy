@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 340" width="760" height="340" role="img" aria-labelledby="t d">
+<title id="t">Below the min watermark the allocating thread reclaims memory itself; higher watermarks let kswapd do it early</title>
+<desc id="d">Two timelines of free memory while the page cache grows, with the kernel's low and min watermarks. With the default watermarks, free memory falls through the low watermark, kswapd wakes too late, and when it crosses the min watermark the event.loop thread's next allocation does direct reclaim inline and stalls for milliseconds. With vm.min_free_kbytes raised, both watermarks sit higher and further apart, kswapd starts reclaiming on a housekeeping CPU early, free memory never reaches the min watermark, and event.loop never stalls.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .track { fill: #ffffff; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .free { fill: none; stroke: #1a1a1a; stroke-width: 2.5; }
+  .wm { stroke: #57606a; stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .wmin { stroke: #9b1c1c; stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .in { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .wl { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+  .ev { transform-box: fill-box; transform-origin: center; animation: flash 6s linear infinite; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @keyframes flash {
+    0%, 4%   { transform: scaleY(1.3); stroke-width: 3; }
+    8%, 100% { transform: scaleY(1); stroke-width: 1.5; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ev, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="340" rx="8"/>
+
+<!-- Lane 1: default watermarks -->
+<rect class="lane" x="10" y="10" width="740" height="150" rx="6"/>
+<text class="cap" x="24" y="34">Default watermarks: the page cache eats the free memory</text>
+<text class="sub" x="24" y="52">kswapd wakes at the low mark, too late. Below the min mark, the thread that allocates reclaims itself.</text>
+<text class="lbl" x="24" y="84">free memory</text>
+<rect class="track" x="150" y="60" width="570" height="38" rx="3"/>
+<line class="wm" x1="150" y1="84" x2="720" y2="84"/>
+<text class="wl" x="724" y="87">low</text>
+<line class="wmin" x1="150" y1="91" x2="720" y2="91"/>
+<text class="wl" x="724" y="96">min</text>
+<path class="free" d="M150 66 L360 84 L400 94 L470 88 L560 80 L720 82"/>
+<text class="lbl" x="24" y="117">kswapd (CPU 0)</text>
+<rect class="track" x="150" y="104" width="570" height="18" rx="3"/>
+<rect class="box ev" x="360" y="104" width="200" height="18" rx="2" style="animation-delay:-3.79s"/>
+<text class="in" x="460" y="117">reclaims, too late</text>
+<text class="lbl" x="24" y="141">event.loop</text>
+<rect class="app" x="150" y="128" width="250" height="18" rx="2"/>
+<rect class="wait ev" x="400" y="128" width="100" height="18" rx="2" style="animation-delay:-3.37s"/>
+<text class="in" x="450" y="141">direct reclaim</text>
+<rect class="app" x="500" y="128" width="220" height="18" rx="2"/>
+
+<!-- Lane 2: raised min_free_kbytes -->
+<rect class="lane" x="10" y="170" width="740" height="150" rx="6"/>
+<text class="cap" x="24" y="194">vm.min_free_kbytes = 1 GiB: higher watermarks, further apart</text>
+<text class="sub" x="24" y="212">kswapd starts early, on a housekeeping CPU, and free memory never reaches the min mark.</text>
+<text class="lbl" x="24" y="244">free memory</text>
+<rect class="track" x="150" y="220" width="570" height="38" rx="3"/>
+<line class="wm" x1="150" y1="234" x2="720" y2="234"/>
+<text class="wl" x="724" y="237">low</text>
+<line class="wmin" x1="150" y1="251" x2="720" y2="251"/>
+<text class="wl" x="724" y="256">min</text>
+<path class="free" d="M150 226 L300 234 L420 238 L560 233 L720 235"/>
+<text class="lbl" x="24" y="277">kswapd (CPU 0)</text>
+<rect class="track" x="150" y="264" width="570" height="18" rx="3"/>
+<rect class="box ev" x="300" y="264" width="260" height="18" rx="2" style="animation-delay:-4.42s"/>
+<text class="in" x="430" y="277">reclaims in the background</text>
+<text class="lbl" x="24" y="301">event.loop</text>
+<rect class="app" x="150" y="288" width="570" height="18" rx="2"/>
+<text class="in" x="435" y="301">never reclaims: allocations stay fast</text>
+
+<text class="axis" x="380" y="334">schematic · higher line = more free memory · the page cache grows at the same rate in both lanes</text>
+<line class="head" x1="150" y1="58" x2="150" y2="308"/>
+</svg>
