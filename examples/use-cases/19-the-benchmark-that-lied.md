@@ -1,6 +1,6 @@
 # Use case 19 — The benchmark that lied
 
-> Guides: [09 Measuring latency](../../guides/09-measuring-latency.md) · Script: [`09-measure-latency`](../../scripts/09-measure-latency) · Example: [Java latency probe](../hugepages-java-example.md)
+> Guides: [09 Measuring latency](../../guides/09-measuring-latency.md) · Script: [`09-measure-latency`](../../scripts/09-measure-latency) · Concept: [tail latency](../../concepts/tail-latency.md#6-service-time-and-response-time) · Example: [Java latency probe](../hugepages-java-example.md)
 
 ## At a glance
 

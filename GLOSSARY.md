@@ -137,7 +137,7 @@
 
 | Term | Means | Why you meet it here |
 |---|---|---|
-| <a id="hdrhistogram"></a>**HdrHistogram** | A library that records latency values in a compact histogram with a fixed precision. | The standard way to record percentiles and to correct [coordinated omission](#coordinated-omission). [Guide 09](guides/09-measuring-latency.md) |
+| <a id="hdrhistogram"></a>**HdrHistogram (HDR histogram)** | A library that records latency values in a compact histogram with a fixed precision. | The standard way to record percentiles and to correct [coordinated omission](#coordinated-omission). [Guide 09](guides/09-measuring-latency.md) |
 | <a id="host-class"></a>**host class** | What the scripts find out about the host: `bare_metal`, `virtual_machine` or `container`. It decides which steps apply. | [Guide 00 §10](guides/00-bios-firmware.md#10-bare-metal-vs-vm) |
 | <a id="housekeeping-cpu"></a>**housekeeping CPU** | A CPU that is *not* isolated. The operating system, its background work and the interrupts run there. | The critical CPUs stay quiet because everything else is sent to the housekeeping CPUs. [Guide 02 §3](guides/02-cpu-core-isolation.md#3-designing-the-cpu-layout) |
 | <a id="hpet"></a>**HPET** | **High Precision Event Timer.** A timer chip on the motherboard. Linux can use it as a [clocksource](#clocksource). | It is much slower to read than the [TSC](#tsc). If the kernel falls back to it, every timestamp costs about a microsecond. [Concept: clocks and time §3](concepts/clocks-and-time.md#3-the-tsc-and-the-clocksource) |
