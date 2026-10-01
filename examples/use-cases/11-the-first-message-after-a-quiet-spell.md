@@ -1,6 +1,6 @@
 # Use case 11 — The first message after a quiet spell
 
-> Guides: [00 BIOS and firmware](../../guides/00-bios-firmware.md), [01 Kernel command line](../../guides/01-grub-bootloader-tuning.md), [02 CPU isolation](../../guides/02-cpu-core-isolation.md), [07 OS hygiene](../../guides/07-os-hygiene.md) · Scripts: [`01-grub-bootloader`](../../scripts/01-grub-bootloader), [`07-os-hygiene`](../../scripts/07-os-hygiene) · Concept: [Bootloader §4](../../concepts/bootloader.md#idlepoll-processormax_cstate-intel_idlemax_cstate)
+> Guides: [00 BIOS and firmware](../../guides/00-bios-firmware.md), [01 Kernel command line](../../guides/01-grub-bootloader-tuning.md), [02 CPU isolation](../../guides/02-cpu-core-isolation.md), [07 OS hygiene](../../guides/07-os-hygiene.md) · Scripts: [`01-grub-bootloader`](../../scripts/01-grub-bootloader), [`07-os-hygiene`](../../scripts/07-os-hygiene) · Concepts: [Bootloader §4](../../concepts/bootloader.md#idlepoll-processormax_cstate-intel_idlemax_cstate), [power and frequency §2](../../concepts/power-and-frequency.md#2-idle-c-states)
 
 ## At a glance
 
