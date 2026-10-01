@@ -420,6 +420,10 @@ rtla osnoise top -c 9 -d 30s                   # max single noise in us, per sou
 
 # 6. Interrupts that still land on isolated CPUs (should not increase)
 watch -d -n1 "awk 'NR==1 || /LOC|RES|CAL|TLB|NMI/' /proc/interrupts"
+
+# 7. Threads in a real-time class, with their CPU and priority (CLS: TS = SCHED_OTHER, FF = SCHED_FIFO, RR = SCHED_RR)
+ps -eLo psr,tid,cls,rtprio,stat,comm | awk 'NR == 1 || $3 == "FF" || $3 == "RR"'
+#    expect: kernel threads such as migration/N and, only if you chose it, your spinner at a low priority on an isolated CPU
 ```
 
 How to read `/proc/interrupts` on isolated CPUs:
@@ -456,7 +460,8 @@ flowchart TD
 | All critical threads on the first isolated CPU | Pinned to a *range* of isolated CPUs | One CPU per thread |
 | `sshd`/`rsyslogd` still on isolated CPUs after apply | No reboot yet | Reboot. `systemctl daemon-reexec` does not move running units. |
 | `taskset: failed to set pid's affinity: Invalid argument` | Target CPU outside the process's **cpuset** (cgroup), or offline | Check `cat /proc/<pid>/cpuset` and the slice `AllowedCPUs` ([Guide 05](05-cgroup-isolation.md#44-the-cpuset-trap)) |
-| Periodic ~50 ms stall once per second | RT throttling with a FIFO spinner | §4.4 |
+| Periodic ~50 ms stall once per second, and `sched: RT throttling activated` once in `dmesg` | RT throttling with a FIFO spinner | §4.4, and whether the thread needs FIFO at all (§6.5) |
+| With RT throttling off: packets pile up on the spinner's CPU, or a command that waits for work on every CPU hangs | A `SCHED_FIFO` spinner never lets `ksoftirqd/N` or a queued `kworker/N` run on its CPU | Run the spinner as `SCHED_OTHER` (§6.5), and keep device interrupts off isolated CPUs ([Guide 04 §6](04-network-optimization.md#6-interrupt-affinity-set_nic_irq_affinity)) |
 | `kworker/9:1` wakes up regularly on an isolated CPU | Per-CPU vmstat update, or the thread does syscalls that queue work | `vm.stat_interval=60` ([Guide 06](06-kernel-sysctl-tuning.md)); remove syscalls from the hot loop |
 | Host sluggish, SSH slow | Too few OS CPUs for the agents plus the OS | Give back CPUs; check `mpstat -P ALL 1` on the OS CPUs |
 | JIT/GC threads steal CPU from critical threads | JVM service threads inherited an isolated mask | Launch the JVM with the OS mask; only critical threads pin to isolated CPUs |
