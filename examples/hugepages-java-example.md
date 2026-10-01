@@ -182,7 +182,7 @@ flowchart TD
 
 *Only the two measuring threads are pinned, one isolated CPU each, on the NIC's node. Every other JVM thread keeps the OS CPU mask it inherited from systemd.*
 
-The two threads exchange a sequence number through two `PaddedSequence` objects. Each has one writer and sits on its own cache line, so the round trip measures exactly one cache-line transfer in each direction:
+The two threads exchange a sequence number through two `PaddedSequence` objects. Each has one writer and sits on its own cache line, so the round trip measures exactly one cache-line transfer in each direction ([concept: thread handoff](../concepts/thread-handoff.md) explains the padding and the release and acquire modes):
 
 ```java
 for (long i = 0; i < total; i++) {                    // total = warmup + iterations
