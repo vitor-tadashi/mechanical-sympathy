@@ -38,11 +38,11 @@ flowchart TD
 
 After a hard IRQ, the kernel runs the pending softirqs. To keep a flood of interrupts from starving everything else, it stops after about 2 ms or 10 rounds, and wakes **`ksoftirqd/N`** to finish the rest. `ksoftirqd` is an ordinary `SCHED_OTHER` thread. It waits its turn like any task, while the packets it should process wait in the NIC ring.
 
-<img src="../assets/diagrams/irq-to-softirq.svg" alt="Animation: under light load each hard IRQ on CPU 1 is followed at once by a short NET_RX softirq; under a burst the softirq uses its budget of 300 packets, another task runs, and ksoftirqd/1 processes the rest later while packets wait in the ring" width="720">
+<img src="../assets/diagrams/irq-to-softirq.svg" alt="Animation: under light load each hard IRQ on CPU 1 is followed at once by a short NET_RX softirq; under a long burst NET_RX rounds run until the softirq limit of about 2 ms, another task runs, and ksoftirqd/1 processes the rest later while packets wait in the ring" width="720">
 
-*Inside its budget, a softirq finishes in microseconds. Beyond it, the work becomes a thread that waits for the scheduler.*
+*Inside its limits, a softirq finishes in microseconds. Beyond them, the work becomes a thread that waits for the scheduler.*
 
-The network receive softirq has its own, smaller budget: `net.core.netdev_budget` packets (300) or `netdev_budget_usecs` (2 ms) per round. Running out shows up as `time_squeeze` in `/proc/net/softnet_stat` ([concept: network path §4](network-tuning.md#4-napi-softirq-budget-and-ksoftirqd)).
+The network receive softirq has its own budget inside that limit: `net.core.netdev_budget` packets (300) or `netdev_budget_usecs` (2 ms) per round. Running out of it counts as `time_squeeze` in `/proc/net/softnet_stat` and raises NET_RX again, which often just runs another round at once. Only when the outer limit above is reached, or the CPU must reschedule, does the rest move to `ksoftirqd`. So `time_squeeze` says the NIC is busy, and not by itself that packets waited for the scheduler ([concept: network path §4](network-tuning.md#4-napi-softirq-budget-and-ksoftirqd)).
 
 Two consequences for the layout:
 
@@ -77,7 +77,7 @@ A **workqueue** item is a function the kernel runs later in a `kworker` thread.
 - **Bound** work runs on the CPU that queued it (`kworker/5:1`). Something on CPU 5 has to queue it, for example a per-CPU statistics update (`vmstat_update`, tuned by `vm.stat_interval` in [Guide 06](../guides/06-kernel-sysctl-tuning.md#8-virtual-memory)), or an operation that asks every CPU to drain a per-CPU list.
 - **Unbound** work runs on any CPU in the workqueue cpumask (`kworker/u64:2`). [Guide 02](../guides/02-cpu-core-isolation.md) sets that mask to the workqueue CPUs, which removes it from the isolated ones.
 
-**Timers** come in two kinds. The timer wheel handles coarse timeouts in jiffies, and expires them in the `TIMER` softirq. High-resolution timers (`hrtimer`) fire at exact times, from the `HRTIMER` softirq or the interrupt itself. A timer fires on the CPU where it was armed. A thread that calls `nanosleep` or `epoll_wait` with a timeout on an isolated CPU arms a timer there, which is one more reason to spin.
+**Timers** come in two kinds. The timer wheel handles coarse timeouts in jiffies, and expires them in the `TIMER` softirq. High-resolution timers (`hrtimer`) fire at exact times, from the `HRTIMER` softirq or the interrupt itself. Pinned and per-CPU timers fire on the CPU where they were armed. An ordinary timer armed on a `nohz_full` CPU can be moved to a housekeeping CPU (timer migration), so its callback need not interrupt the isolated CPU. The thread it wakes still runs there, so a thread that calls `nanosleep` or `epoll_wait` with a timeout on an isolated CPU still brings a wake-up, often a reschedule IPI, back to it: one more reason to spin.
 
 ## 7. Where each kind runs, and the setting that moves it
 
@@ -114,7 +114,7 @@ Typical orders of magnitude, not measurements.
 | A FIFO spinner and a stuck network or block device on the same CPU | `ksoftirqd` or a `kworker` starved | [Use case 14](../examples/use-cases/14-the-spinner-that-stalled-the-kernel.md) |
 | First packet of each burst late by a fixed time | NIC interrupt moderation | [Use case 15](../examples/use-cases/15-the-coalescing-timer.md) |
 | `TLB` count rises on isolated CPUs when the GC runs | Shootdowns from the same process | §4 |
-| `time_squeeze` grows during bursts | NET_RX budget exhausted, `ksoftirqd` takes over | §3 |
+| `time_squeeze` grows during bursts | NET_RX budget exhausted; `ksoftirqd` takes over only when the outer softirq limit is reached too | §3 |
 | `LOC` near 1000/s on an isolated CPU | The tick did not stop | [Guide 01](../guides/01-grub-bootloader-tuning.md) `nohz_full` |
 
 ## 10. Myths

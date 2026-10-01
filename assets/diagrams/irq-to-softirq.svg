@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" width="760" height="300" role="img" aria-labelledby="t d">
-<title id="t">When the softirq budget runs out, the rest waits for ksoftirqd</title>
-<desc id="d">Two timelines of housekeeping CPU 1, which takes the critical NIC's interrupts. Under light load, each hard interrupt is followed at once by a short NET_RX softirq, and the packets are ready in microseconds. Under a burst, the softirq uses up its budget, the rest of the work is handed to the ksoftirqd thread, and ksoftirqd waits for the scheduler behind another task while the packets wait in the ring.</desc>
+<title id="t">When the softirq time limit runs out, the rest waits for ksoftirqd</title>
+<desc id="d">Two timelines of housekeeping CPU 1, which takes the critical NIC's interrupts. Under light load, each hard interrupt is followed at once by a short NET_RX softirq, and the packets are ready in microseconds. Under a long burst, NET_RX rounds keep running until the softirq limit of about 2 milliseconds or 10 restarts is reached; only then is the rest of the work handed to the ksoftirqd thread, and ksoftirqd waits for the scheduler behind another task while the packets wait in the ring.</desc>
 <style>
   .bg { fill: #ffffff; }
   .lane { fill: #f6f8fa; stroke: #d0d7de; }
@@ -37,21 +37,21 @@
 <rect class="soft" x="212" y="78" width="70" height="34" rx="3"/><text class="seg" x="247" y="99">NET_RX</text>
 <rect class="irq" x="450" y="78" width="12" height="34" rx="2" style="animation-delay:-2.84s"/>
 <rect class="soft" x="462" y="78" width="70" height="34" rx="3"/><text class="seg" x="497" y="99">NET_RX</text>
-<text class="axis" x="200" y="130">each burst handled in the softirq, inside its budget</text>
+<text class="axis" x="200" y="130">each burst handled in the softirq, inside its limits</text>
 
 <!-- Lane 2: burst -->
 <rect class="lane" x="10" y="155" width="740" height="135" rx="6"/>
-<text class="cap" x="24" y="179">Burst: the budget runs out, the rest goes to ksoftirqd</text>
+<text class="cap" x="24" y="179">Long burst: the softirq limit runs out, the rest goes to ksoftirqd</text>
 <text class="sub" x="24" y="197">ksoftirqd/1 is an ordinary thread. It waits for the scheduler while the packets wait in the ring.</text>
 <text class="lbl" x="24" y="244">CPU 1</text>
 <rect class="irq" x="200" y="223" width="12" height="34" rx="2" style="animation-delay:-5.47s"/>
-<rect class="soft" x="212" y="223" width="118" height="34" rx="3"/><text class="seg" x="271" y="244">NET_RX: 300 pkts</text>
+<rect class="soft" x="212" y="223" width="118" height="34" rx="3"/><text class="seg" x="271" y="244">NET_RX rounds</text>
 <rect class="ev" x="330" y="223" width="6" height="34" rx="1" style="animation-delay:-4.11s"/>
 <rect class="other" x="336" y="223" width="114" height="34" rx="3"/><text class="seg" x="393" y="244">another task</text>
 <rect class="soft" x="450" y="223" width="120" height="34" rx="3"/><text class="seg" x="510" y="244">ksoftirqd/1: the rest</text>
 <path class="wait" d="M336 266 L450 266"/>
 <text class="waitt" x="393" y="281">packets wait in the ring</text>
-<text class="axis" x="590" y="281">red mark: budget used up</text>
+<text class="axis" x="590" y="281">red mark: limit reached</text>
 
 <line class="head" x1="150" y1="70" x2="150" y2="262"/>
 </svg>
