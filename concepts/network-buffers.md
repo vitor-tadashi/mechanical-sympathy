@@ -66,7 +66,7 @@ That is why [Guide 04 §5.1](../guides/04-network-optimization.md#51-queues-chan
 
 ## 3. Burst math
 
-One formula answers most sizing questions:
+One formula answers most sizing questions. [Concept: queueing](queueing.md) gives the general theory behind it: utilization, variability and back pressure.
 
 ```text
 time to overflow = capacity / (arrival rate - drain rate)

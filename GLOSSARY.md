@@ -40,6 +40,7 @@
 
 | Term | Means | Why you meet it here |
 |---|---|---|
+| <a id="back-pressure"></a>**back pressure** | When a queue is full, the producer is made to wait or slow down, instead of the queue growing or dropping. | It moves the wait upstream. Choose it, a counted drop or a rejection on purpose for every bounded queue. [Concept: queueing §7](concepts/queueing.md#7-bounded-queues-and-back-pressure) |
 | <a id="baseline"></a>**baseline** | Latency percentiles and a `verify-tuning` report that you capture **before** any change. Every result is compared with it. | Without a baseline you cannot tell whether a change helped. [Guide 09 §5](guides/09-measuring-latency.md#5-a-measurement-protocol) |
 | <a id="bdp"></a>**BDP** | **Bandwidth-delay product.** The link speed times the round-trip time. It is the amount of data that is "in flight" on the path at one moment. | A TCP receive buffer must be at least this big to keep the link full. [Concept: network buffers §4](concepts/network-buffers.md#4-socket-buffers) |
 | <a id="bios"></a>**BIOS / UEFI** | **Basic Input/Output System** and **Unified Extensible Firmware Interface.** The first program that runs when a server starts. It sets up the hardware before Linux loads. UEFI is the modern replacement of the BIOS, and people often say "BIOS" for both. | Power, turbo and memory settings live here, and they change every CPU at once. [Guide 00](guides/00-bios-firmware.md) |
@@ -198,6 +199,7 @@
 | Term | Means | Why you meet it here |
 |---|---|---|
 | <a id="leap-second"></a>**leap second** | A second added to [UTC](#utc) now and then to keep it close to the Earth's rotation. | It steps `CLOCK_REALTIME` by one second, or a server smears it over hours. Durations taken from REALTIME break. [Concept: clocks and time §5](concepts/clocks-and-time.md#5-step-and-slew) |
+| <a id="littles-law"></a>**Little's law** | For any stable queue: the number of items in it equals the arrival rate times the average time each item spends in it (L = λ × R). | It turns a queue length into a latency without a single timestamp. [Concept: queueing §2](concepts/queueing.md#2-the-vocabulary) |
 | <a id="llc"></a>**LLC** | **Last-Level Cache.** The biggest and slowest CPU cache (usually called L3). On Intel Xeon the cores of a socket share one; on AMD EPYC each [CCX](#ccx) has its own. | [DDIO](#ddio) writes packets here. [Guide 02](guides/02-cpu-core-isolation.md) |
 | <a id="log4j"></a>**Log4j 2** | A widely used open-source logging library for Java. Its asynchronous loggers hand each log event to a background thread through a preallocated ring. | An example of the handoff design for logging. Check that it does not allocate per call and that its thread is pinned. [Concept: logging and I/O §4](concepts/logging-and-io.md#4-the-design-hand-off-do-not-write) |
 | <a id="lowlat-runtime-service"></a>**lowlat-runtime.service** | The systemd unit that applies all runtime (not persistent) settings again at every boot. | [Guide 11 §2](guides/11-day2-operations.md#2-the-verification-timer) |
@@ -360,6 +362,7 @@
 | <a id="usb-emulation"></a>**USB emulation** | The firmware makes a USB keyboard look like an old PS/2 device, and it uses [SMIs](#smi) to do it. | Turn it off on servers without a local keyboard. [Guide 00 §4.6](guides/00-bios-firmware.md#46-system-management-interrupts) |
 | <a id="user-mode-networking"></a>**user-mode networking** | The network of [QEMU](#qemu) that needs no host setup (also called SLIRP). QEMU itself plays the router, and can forward a host port into the guest. It has one queue only. | `tools/check-vm` gives the mgmt NIC this network: SSH through a forwarded port, and the internet for `dnf`. [CONTRIBUTING](CONTRIBUTING.md#workflow) |
 | <a id="utc"></a>**UTC** | **Coordinated Universal Time.** The world's reference wall-clock time. | `CLOCK_REALTIME` follows it, including its [leap seconds](#leap-second). [Concept: clocks and time §4](concepts/clocks-and-time.md#4-which-clock-to-read) |
+| <a id="utilization"></a>**utilization** | The share of time a server (a thread, a CPU, a link) is busy with work: arrival rate × service time. | Waiting grows like 1/(1 − utilization), so a thread at 90 % has a p99 of about 46 service times. [Concept: queueing §3](concepts/queueing.md#3-why-waiting-explodes-near-full-load) |
 
 ### V
 

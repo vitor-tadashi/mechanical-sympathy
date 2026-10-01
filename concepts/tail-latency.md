@@ -70,7 +70,7 @@ Record in nanoseconds from `CLOCK_MONOTONIC` ([clocks and time §4](clocks-and-t
 
 *A closed loop records the stall once. An open loop records every request that was due during it.*
 
-The difference between the two is queueing, and it grows quickly as the load approaches what the system can serve.
+The difference between the two is queueing. The [queueing concept](queueing.md) explains how fast it grows with load.
 
 ## 7. Reading the shape
 

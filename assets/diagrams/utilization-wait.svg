@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 400" width="760" height="400" role="img" aria-labelledby="t d">
+<title id="t">Waiting grows like 1/(1 − utilization), and the tail grows faster</title>
+<desc id="d">Response time of a single queue, in multiples of the service time, against utilization. The mean is 2 times the service time at 50 % utilization, 3.3 times at 70 % and 10 times at 90 %. The 99th percentile is 9, 15 and 46 times the service time at the same points. With a fixed service time instead of a variable one, the 99th percentile is about half as high, which is what removing jitter from the service does.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .plot { fill: #f6f8fa; stroke: #d0d7de; }
+  .grid { stroke: #d0d7de; stroke-width: 1; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .mean { fill: none; stroke: #1f4e8c; stroke-width: 2.5; }
+  .p99 { fill: none; stroke: #9b1c1c; stroke-width: 2.5; }
+  .det { fill: none; stroke: #1d6b33; stroke-width: 2.5; stroke-dasharray: 7 4; }
+  .mark { stroke: #8a5a00; stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .mtxt { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; text-anchor: middle; }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="400" rx="8"/>
+<text class="cap" x="24" y="30">Response time of one queue, in multiples of the service time S</text>
+<rect class="plot" x="90" y="60" width="610" height="270"/>
+<line class="grid" x1="90" y1="276.0" x2="700" y2="276.0"/><text class="axis" x="82" y="280.0" text-anchor="end">10 S</text>
+<line class="grid" x1="90" y1="222.0" x2="700" y2="222.0"/><text class="axis" x="82" y="226.0" text-anchor="end">20 S</text>
+<line class="grid" x1="90" y1="168.0" x2="700" y2="168.0"/><text class="axis" x="82" y="172.0" text-anchor="end">30 S</text>
+<line class="grid" x1="90" y1="114.0" x2="700" y2="114.0"/><text class="axis" x="82" y="118.0" text-anchor="end">40 S</text>
+<line class="grid" x1="90" y1="60.0" x2="700" y2="60.0"/><text class="axis" x="82" y="64.0" text-anchor="end">50 S</text>
+<text class="axis" x="82" y="334" text-anchor="end">0</text>
+<text class="axis" x="90.0" y="348" text-anchor="middle">0 %</text>
+<text class="axis" x="242.5" y="348" text-anchor="middle">25 %</text>
+<text class="axis" x="395.0" y="348" text-anchor="middle">50 %</text>
+<text class="axis" x="547.5" y="348" text-anchor="middle">75 %</text>
+<text class="axis" x="700.0" y="348" text-anchor="middle">100 %</text>
+<text class="axis" x="395" y="366" text-anchor="middle">utilization: arrival rate × service time</text>
+<line class="mark" x1="395.0" y1="60" x2="395.0" y2="330"/>
+<line class="mark" x1="517.0" y1="60" x2="517.0" y2="330"/>
+<line class="mark" x1="639.0" y1="60" x2="639.0" y2="330"/>
+<polyline class="mean" points="90.0,324.6 120.5,324.3 151.0,324.0 181.5,323.6 212.0,323.2 242.5,322.8 273.0,322.3 303.5,321.7 334.0,321.0 364.5,320.2 395.0,319.2 425.5,318.0 456.0,316.5 486.5,314.6 517.0,312.0 547.5,308.4 578.0,303.0 608.5,294.0 639.0,276.0 669.5,222.0 681.7,150.0"/>
+<polyline class="p99" points="90.0,305.1 120.5,303.8 151.0,302.4 181.5,300.7 212.0,298.9 242.5,296.8 273.0,294.5 303.5,291.7 334.0,288.6 364.5,284.8 395.0,280.3 425.5,274.7 456.0,267.8 486.5,258.9 517.0,247.1 547.5,230.5 578.0,205.7 608.5,164.2 639.0,81.3 669.5,60.0"/>
+<polyline class="det" points="90.0,324.6 120.5,320.1 151.0,319.4 181.5,318.5 212.0,316.8 242.5,315.6 273.0,314.4 303.5,312.8 334.0,311.0 364.5,309.1 395.0,306.6 425.5,303.8 456.0,300.3 486.5,296.0 517.0,290.2 547.5,282.2 578.0,270.0 608.5,250.4 639.0,213.2 669.5,112.4 681.7,60.0"/>
+<circle cx="395.0" cy="319.2" r="4" fill="#1f4e8c"/><circle cx="395.0" cy="280.3" r="4" fill="#9b1c1c"/>
+<text class="mtxt" x="369.0" y="274.3">9 S</text>
+<circle cx="517.0" cy="312.0" r="4" fill="#1f4e8c"/><circle cx="517.0" cy="247.1" r="4" fill="#9b1c1c"/>
+<text class="mtxt" x="491.0" y="241.1">15 S</text>
+<circle cx="639.0" cy="276.0" r="4" fill="#1f4e8c"/><circle cx="639.0" cy="81.3" r="4" fill="#9b1c1c"/>
+<text class="mtxt" x="613.0" y="75.3">46 S</text>
+<line class="p99" x1="110" y1="82" x2="140" y2="82"/><text class="lbl" x="148" y="86" fill="#9b1c1c">p99, variable service time</text>
+<line class="det" x1="110" y1="102" x2="140" y2="102"/><text class="lbl" x="148" y="106" fill="#1d6b33">p99, fixed service time (no jitter)</text>
+<line class="mean" x1="110" y1="122" x2="140" y2="122"/><text class="lbl" x="148" y="126" fill="#1f4e8c">mean, variable service time</text>
+<text class="axis" x="24" y="392">One server, random arrivals. Mean and p99 from queueing theory (M/M/1); the fixed-service curve is simulated. Shapes, not measurements.</text>
+</svg>
