@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 290" width="760" height="290" role="img" aria-labelledby="t d">
+<title id="t">Coalescing costs a lone packet the whole timer; a burst shares one wait</title>
+<desc id="d">Two timelines of the same packets reaching one NIC: three lone packets and one burst of six. With interrupt coalescing, each lone packet waits in the NIC for the full coalescing timer before the interrupt fires, while the packets of the burst arrive during one shared wait and each waits less. With rx-usecs 0 every packet raises the interrupt at once, so low-rate traffic no longer pays the timer.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .track { fill: #ffffff; stroke: #d0d7de; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .msg { fill: #8a5a00; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .in { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+  .ev { transform-box: fill-box; transform-origin: center; animation: flash 6s linear infinite; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @keyframes flash {
+    0%, 4%   { transform: scaleY(1.25); stroke-width: 3; }
+    8%, 100% { transform: scaleY(1); stroke-width: 1.5; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ev, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="290" rx="8"/>
+
+<!-- Lane 1: coalescing -->
+<rect class="lane" x="10" y="10" width="740" height="125" rx="6"/>
+<text class="cap" x="24" y="34">Coalescing on (driver default, rx-usecs 50 or adaptive): the NIC waits to interrupt</text>
+<text class="sub" x="24" y="52">A lone packet pays the whole timer. In a burst, the others arrive during the same wait.</text>
+<text class="lbl" x="24" y="97">ens1f1</text>
+<path class="msg" d="M164 64 h12 l-6 9 z M294 64 h12 l-6 9 z M444 64 h12 l-6 9 z M454 64 h12 l-6 9 z M464 64 h12 l-6 9 z M474 64 h12 l-6 9 z M484 64 h12 l-6 9 z M494 64 h12 l-6 9 z M614 64 h12 l-6 9 z"/>
+<rect class="track" x="150" y="80" width="570" height="26" rx="3"/>
+<rect class="wait ev" x="170" y="78" width="60" height="30" rx="2" style="animation-delay:-5.79s"/>
+<text class="in" x="200" y="97">timer</text>
+<rect class="app" x="230" y="78" width="14" height="30" rx="2"/>
+<rect class="wait ev" x="300" y="78" width="60" height="30" rx="2" style="animation-delay:-4.42s"/>
+<text class="in" x="330" y="97">timer</text>
+<rect class="app" x="360" y="78" width="14" height="30" rx="2"/>
+<rect class="wait ev" x="450" y="78" width="60" height="30" rx="2" style="animation-delay:-2.84s"/>
+<text class="in" x="480" y="97">shared</text>
+<rect class="app" x="510" y="78" width="14" height="30" rx="2"/>
+<rect class="wait ev" x="620" y="78" width="60" height="30" rx="2" style="animation-delay:-1.05s"/>
+<text class="in" x="650" y="97">timer</text>
+<rect class="app" x="680" y="78" width="14" height="30" rx="2"/>
+<text class="axis" x="435" y="126">schematic · ▼ packet arrives · red: waits in the NIC for the timer · green: interrupt, packet delivered</text>
+
+<!-- Lane 2: rx-usecs 0 -->
+<rect class="lane" x="10" y="150" width="740" height="125" rx="6"/>
+<text class="cap" x="24" y="174">Adaptive off, rx-usecs 0: the NIC interrupts at once</text>
+<text class="sub" x="24" y="192">The same packets. Each one reaches the application when it arrives, lone or not.</text>
+<text class="lbl" x="24" y="237">ens1f1</text>
+<path class="msg" d="M164 204 h12 l-6 9 z M294 204 h12 l-6 9 z M444 204 h12 l-6 9 z M454 204 h12 l-6 9 z M464 204 h12 l-6 9 z M474 204 h12 l-6 9 z M484 204 h12 l-6 9 z M494 204 h12 l-6 9 z M614 204 h12 l-6 9 z"/>
+<rect class="track" x="150" y="220" width="570" height="26" rx="3"/>
+<rect class="app ev" x="170" y="218" width="14" height="30" rx="2" style="animation-delay:-5.79s"/>
+<rect class="app ev" x="300" y="218" width="14" height="30" rx="2" style="animation-delay:-4.42s"/>
+<rect class="app ev" x="450" y="218" width="64" height="30" rx="2" style="animation-delay:-2.84s"/>
+<text class="in" x="482" y="237">one by one</text>
+<rect class="app ev" x="620" y="218" width="14" height="30" rx="2" style="animation-delay:-1.05s"/>
+<text class="axis" x="435" y="266">more interrupts on housekeeping CPU 1, and no timer to wait for</text>
+
+<line class="head" x1="150" y1="60" x2="150" y2="252"/>
+</svg>
