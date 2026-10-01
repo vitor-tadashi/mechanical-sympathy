@@ -154,7 +154,7 @@ In the text output, a `Package` is a socket, `L3` lines group cores, and `PU` is
 
 ## 7. See it on your host
 
-This lab only reads. It works on any Linux box, and on a laptop or a VM the answers are simply smaller.
+This lab only reads. Steps 1 and 2 work on any Linux box. Step 3 needs enough cores on one NUMA node, as it explains. Step 4 needs two sockets.
 
 1. Print the CPU table, and write down which CPUs share a core and which share an L3:
 
@@ -180,6 +180,8 @@ This lab only reads. It works on any Linux box, and on a laptop or a VM the answ
    scripts/plan-layout --nic ens1f0 --threads 4
    # ISOLATED_CPUS and OS_CPUS on the NIC's node; no core split between two roles
    ```
+
+   It needs 4 threads plus 2 spares (`--spares`) of free cores on the NIC's node, beside one housekeeping core, and it refuses with a message that says what is missing. On a smaller box, try `--nic-node 0 --threads 1 --spares 0`. A VM NIC with `numa_node` `-1` cannot be used with `--nic`: pass the node with `--nic-node`.
 
 4. Optional, on a two-socket host that is not in production: compare local and remote memory bandwidth. Bandwidth is not latency, but the gap shows the socket link at work.
 
