@@ -37,7 +37,7 @@ flowchart LR
 | `MemFree` | Free pages | — |
 | `Cached`, `Active(file)`, `Inactive(file)` | Page cache | Yes. Clean pages are dropped; dirty ones are written first. |
 | `Dirty`, `Writeback` | Page cache waiting for, or in, write-back | Only after the write |
-| `AnonPages`, `Active(anon)`, `Inactive(anon)` | Process memory without a file | Only to swap |
+| `AnonPages`, `Active(anon)`, `Inactive(anon)` | Process memory without a file | Only to swap ([swap and the OOM killer](swap-and-oom.md)) |
 | `SReclaimable` / `SUnreclaim` | Kernel caches (dentries, inodes) / kernel objects | Partly |
 | `Mlocked` | Pages locked with `mlock` | No |
 | `HugePages_Total` × `Hugepagesize` | The hugetlb pool | No |
