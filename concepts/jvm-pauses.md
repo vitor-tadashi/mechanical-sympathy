@@ -46,7 +46,7 @@ A thread stops only at a **poll**. Compiled code polls on method return and on l
 - **A thread that is not running.** A thread that the operating system has descheduled cannot reach its poll until it runs again. On an oversubscribed host, TTSP includes scheduler delay. On isolated CPUs with one pinned thread each, it does not.
 - **A page fault or a stall on the way.** Anything that slows the thread before its next poll slows every other thread's release.
 
-<img src="../assets/diagrams/time-to-safepoint.svg" alt="Animation: in one lane worker.0 is in a long loop without a poll, so net.rx and event.loop stop at once and wait until worker.0 reaches a poll, then the short pause runs; in the other lane the loop polls often, every thread stops within microseconds, and the stop is little more than the pause" width="720">
+<img src="../assets/diagrams/time-to-safepoint.svg" alt="Animation: in one lane worker.0 is in a long loop without a poll, so net.rx and event.loop stop at once and wait until worker.0 reaches a poll, then the short pause runs; in the other lane the loop polls often, every thread stops within microseconds, and the stop is little more than the pause; waiting is hatched and each state is labeled" width="720">
 
 *Every thread waits for the slowest one to arrive. With frequent polls, the stop shrinks to the pause itself.*
 
@@ -54,13 +54,13 @@ A thread inside a native call (JNI, or an FFM downcall like the probe's [`Thread
 
 ## 4. Garbage collection with ZGC
 
-On JDK 25, ZGC is always generational. Almost all its work runs concurrently in GC threads, next to the application. Each young and old collection has three short stop-the-world pauses (mark start, mark end, relocate start), typically tens to a few hundred microseconds each, independent of heap size.
+On JDK 25, ZGC is always generational. Almost all its work runs concurrently in GC threads, next to the application. A minor collection (young generation only) has three short stop-the-world pauses: mark start, mark end, relocate start. A major collection adds two more for the old generation (old mark end, old relocate start), so its log shows five. Each is typically tens to a few hundred microseconds, independent of heap size.
 
 What can still stop or slow a latency thread:
 
 | Event | What happens | Log line or event |
 |---|---|---|
-| The three ZGC pauses | Every Java thread stops, briefly | `-Xlog:gc*`: `Pause Mark Start`, `Pause Mark End`, `Pause Relocate Start` |
+| The ZGC pauses (three per minor, five per major collection) | Every Java thread stops, briefly | `-Xlog:gc*`: `Pause Mark Start`, `Pause Mark End`, `Pause Relocate Start` |
 | **Allocation stall** | The application allocates faster than ZGC frees. The allocating thread **waits** until memory is freed. It is not a pause, so `-Xlog:safepoint` does not show it | `-Xlog:gc`: `Allocation Stall`; JFR `jdk.ZAllocationStall` |
 | Load barriers | Reading a reference may take a slow path while objects move | Spread out, small; seen as a higher median |
 | GC threads | They need CPU time. Unpinned, they run on the OS CPUs ([Java example](../examples/hugepages-java-example.md)) | — |
@@ -95,10 +95,12 @@ A safepoint line then looks like this (operation name and values illustrative):
 [...][safepoint] Safepoint "ZMarkEnd", Time since last: 1003421337 ns, Reaching safepoint: 2810 ns, At safepoint: 41250 ns, Total: 44060 ns
 ```
 
-Reaching safepoint is TTSP, At safepoint is the operation. For the stalls that are not safepoints, use JFR, which costs about 1 % with the default settings:
+Reaching safepoint is TTSP, At safepoint is the operation. For the stalls that are not safepoints, use JFR, which costs about 1 % with the default settings, a little more with class-loading events on. The file is written when the recording stops, so stop it before you print it:
 
 ```bash
-jcmd <pid> JFR.start duration=10m filename=/var/tmp/app.jfr
+jcmd <pid> JFR.start name=pauses class-loading=true          # class loading is off in both default settings
+# ... let the application run through the period you care about ...
+jcmd <pid> JFR.stop name=pauses filename=/var/tmp/app.jfr     # the file is written now
 jfr print --events jdk.SafepointBegin,jdk.GCPhasePause,jdk.ZAllocationStall,jdk.Deoptimization,jdk.ClassLoad /var/tmp/app.jfr | head
 ```
 
@@ -118,7 +120,7 @@ Typical orders of magnitude, not measurements.
 | A deoptimization on the hot path | tens of µs to ms, for the next few calls |
 | First load of a class | ~0.1–1 ms |
 | A ZGC allocation stall | ms |
-| JFR overhead, default settings | ~1 % |
+| JFR overhead, default settings | ~1 % (a little more with class-loading events) |
 
 ## 9. How it shows up
 
@@ -134,7 +136,7 @@ Typical orders of magnitude, not measurements.
 
 ## 10. Myths
 
-- **"ZGC has no pauses."** It has three short ones per cycle, and it can stall an allocating thread. Both are small and both are measurable.
+- **"ZGC has no pauses."** It has three short ones per minor collection and five per major one, and it can stall an allocating thread. Both are small and both are measurable.
 - **"My thread is pinned and isolated, so the JVM cannot stop it."** Every Java thread takes part in every global safepoint.
 - **"Counted loops block safepoints."** They did in old JDKs. With loop strip mining (default since JDK 10 with G1 and ZGC), they poll every 1,000 iterations.
 - **"Biased locking revocations cause pauses."** Biased locking was removed in JDK 18. On JDK 25 it does not exist.
@@ -145,14 +147,15 @@ Run the [Java probe](../examples/java-latency-probe/) with safepoint and GC logg
 
 ```bash
 cd examples/java-latency-probe
-printf '%s\n' '-Xlog:async' '-Xlog:safepoint*=info,gc*=info:file=log/jvm.log:uptimenanos,tags' >>conf/jvm.options   # jvm-low-resource.options on a VM
+cp conf/jvm.options conf/jvm.options.orig                      # keep your own options
+printf '%s\n' '-Xlog:async' '-Xlog:safepoint*=info,gc*=info:file=log/jvm.log:uptimenanos,tags' >>conf/jvm.options   # on a VM: jvm-low-resource.options, here and in the cp and mv lines
 APP_NUMA_NODE=1 bin/launch
 grep -E 'Safepoint "|Pause|Allocation Stall' log/jvm.log | tail -20
 # Total of each safepoint in ns; with -Xmx and a small working set there may be no GC at all
-git checkout conf/
+mv conf/jvm.options.orig conf/jvm.options                      # restore exactly what you had
 ```
 
-Then run it with a small heap (`-Xmx256m` in a copy of the options) and a working set that allocates, to see ZGC cycles and their pauses appear. The probe's own `rtt` maximum should match the longest `Total` within the run, when a safepoint was the cause.
+Then run it with a small heap (`-Xmx256m` in a copy of the options) and a working set that allocates, to see ZGC cycles and their pauses appear. Do not expect the probe's `rtt` maximum to equal the longest `Total`: the probe records the round trip and the random walk as separate intervals, and a safepoint may fall in the walk, in the warm-up or between samples. A safepoint explains a slow sample only when their times line up; JFR records both with timestamps.
 
 ## 12. Illustrative scenario
 
