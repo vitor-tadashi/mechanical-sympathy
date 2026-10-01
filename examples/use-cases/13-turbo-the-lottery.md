@@ -1,6 +1,6 @@
 # Use case 13 — Turbo, the lottery
 
-> Guides: [00 BIOS and firmware](../../guides/00-bios-firmware.md), [09 Measuring latency](../../guides/09-measuring-latency.md) · Scripts: [`00-bios-firmware`](../../scripts/00-bios-firmware), [`09-measure-latency`](../../scripts/09-measure-latency)
+> Guides: [00 BIOS and firmware](../../guides/00-bios-firmware.md), [09 Measuring latency](../../guides/09-measuring-latency.md) · Scripts: [`00-bios-firmware`](../../scripts/00-bios-firmware), [`09-measure-latency`](../../scripts/09-measure-latency) · Concept: [power and frequency §4](../../concepts/power-and-frequency.md#4-turbo-a-clock-that-depends-on-the-weather)
 
 ## At a glance
 
