@@ -147,6 +147,8 @@ The per-interface keys are generated from `NICS` in `lowlat.conf`, so no interfa
 | `vm.stat_interval` | `60` | Per-CPU VM counters are folded into global counters every `stat_interval` seconds by a per-CPU `kworker`. Going from 1 s to 60 s means 60× fewer wake-ups. With `nohz_full`, isolated CPUs are already mostly exempt, and this also quiets the housekeeping CPUs. Cost: `/proc/meminfo` counters can be up to a minute stale. |
 | `fs.file-max` | `13076444` | System-wide file handle limit. Per-process limits are in [Guide 07](07-os-hygiene.md#3-resource-limits). |
 
+[Concept: memory reclaim and faults](../concepts/memory-reclaim.md) explains the watermarks, `kswapd`, direct reclaim and dirty throttling behind these keys.
+
 Huge-page sysctls (`vm.nr_overcommit_hugepages`, `kernel.shmmni`) live in [Guide 03](03-huge-pages-configuration.md#43-sysctls). `kernel.sched_rt_runtime_us` lives in [Guide 02](02-cpu-core-isolation.md#44-real-time-throttling).
 
 ## 9. Using the script

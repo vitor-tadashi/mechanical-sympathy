@@ -1,6 +1,6 @@
 # Use case 5 — Page faults on the hot path
 
-> Guide: [03 Huge pages](../../guides/03-huge-pages-configuration.md) · Script: [`03-huge-pages`](../../scripts/03-huge-pages) · Concept: [huge pages and NUMA](../../concepts/huge-pages.md) · Example: [Java on a tuned host](../hugepages-java-example.md)
+> Guide: [03 Huge pages](../../guides/03-huge-pages-configuration.md) · Script: [`03-huge-pages`](../../scripts/03-huge-pages) · Concepts: [huge pages and NUMA](../../concepts/huge-pages.md), [memory reclaim and faults](../../concepts/memory-reclaim.md#7-faults-what-a-missing-page-costs) · Example: [Java on a tuned host](../hugepages-java-example.md)
 
 ## At a glance
 
