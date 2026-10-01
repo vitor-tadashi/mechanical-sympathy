@@ -19,6 +19,7 @@ Each use case follows one path: the **symptom** you see, how to **diagnose** it 
 | 10 | [Line rate without the kernel](10-line-rate-without-the-kernel.md) | Packets lost all the time, with the rings already at the maximum | [04](../../guides/04-network-optimization.md), [08](../../guides/08-kernel-bypass.md) | ~1 h + window |
 | 11 | [The first message after a quiet spell](11-the-first-message-after-a-quiet-spell.md) | Fast under load, slow on the first message after idle | [00](../../guides/00-bios-firmware.md), [01](../../guides/01-grub-bootloader-tuning.md), [07](../../guides/07-os-hygiene.md) | ~30 min + reboot |
 | 12 | [The sibling that shares your core](12-the-sibling-that-shares-your-core.md) | A critical thread slows down whenever another thread's batch runs | [00](../../guides/00-bios-firmware.md), [01](../../guides/01-grub-bootloader-tuning.md), [02](../../guides/02-cpu-core-isolation.md) | ~15 min, or ~1 h + reboot |
+| 13 | [Turbo, the lottery](13-turbo-the-lottery.md) | Identical hosts with different medians, and a median that creeps up after a reboot | [00](../../guides/00-bios-firmware.md), [09](../../guides/09-measuring-latency.md) | ~2 h |
 
 <img src="../../assets/diagrams/who-wants-my-cpu.svg" alt="Seven sources of interference on a CPU, each paired with the setting that removes it, leading to an isolated CPU that runs one pinned thread uninterrupted" width="720">
 
