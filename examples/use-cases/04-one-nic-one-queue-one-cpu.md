@@ -1,6 +1,6 @@
 # Use case 4 — One NIC, one queue, one CPU
 
-> Guide: [04 Network](../../guides/04-network-optimization.md) · Script: [`04-network`](../../scripts/04-network) · Concepts: [network path](../../concepts/network-tuning.md), [`ethtool` reference](../../concepts/ethtool.md)
+> Guide: [04 Network](../../guides/04-network-optimization.md) · Script: [`04-network`](../../scripts/04-network) · Concepts: [network path](../../concepts/network-tuning.md), [`ethtool` reference](../../concepts/ethtool.md), [interrupts and deferred work](../../concepts/interrupts-and-deferred-work.md)
 
 ## At a glance
 
