@@ -148,7 +148,7 @@ trace-cmd report | head -50
 
 ## 12. Illustrative scenario
 
-An illustrative case, not a measurement. A JVM gateway showed a 20 µs spike on its isolated `net.rx` CPU every few minutes. The delta method found nothing in the device rows, but the `TLB` row grew by a few hundred during each spike. The spikes lined up with the garbage collector giving unused heap back to the operating system: a GC thread on a housekeeping CPU called `madvise` and `munmap`, and every CPU running a thread of the JVM received a TLB flush. Pre-touching the heap, turning off heap uncommit and moving off-heap buffers to huge pages removed the map changes (`-XX:+AlwaysPreTouch`, heap uncommit off), and the `TLB` row stopped moving.
+An illustrative case, not a measurement. A JVM gateway showed a 20 µs spike on its isolated `net.rx` CPU every few minutes. The delta method found nothing in the device rows, but the `TLB` row grew by a few hundred during each spike. The spikes lined up with the garbage collector giving unused heap back to the operating system: a GC thread on a housekeeping CPU called `madvise` and `munmap`, and every CPU running a thread of the JVM received a TLB flush. Pre-touching the heap, turning off heap uncommit and moving off-heap buffers to huge pages removed the map changes (`-XX:+AlwaysPreTouch`, heap uncommit off), and the `TLB` row stopped moving. The [JVM pauses concept](jvm-pauses.md#4-garbage-collection-with-zgc) covers the flags.
 
 ## 13. Key takeaways
 

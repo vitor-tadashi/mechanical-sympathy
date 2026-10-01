@@ -87,6 +87,7 @@ flowchart TD
 | [Swap & the OOM killer](concepts/swap-and-oom.md) | ~9 min | What can be swapped, and what does a swap-in cost? What does swappiness really do? How does the OOM killer choose? Why prefer a loud failure? |
 | [Logging & I/O](concepts/logging-and-io.md) | ~9 min | Where can a log line block? What do dirty throttling, fsync and the kernel console cost? How do I log without doing I/O on the hot path? |
 | [Huge pages & NUMA](concepts/huge-pages.md) | ~7 min | What is TLB reach? Why pre-touch? Why is THP unpredictable? Why reserve per node? |
+| [JVM pauses](concepts/jvm-pauses.md) | ~10 min | Why does a pinned Java thread still stop? What is time to safepoint? What does ZGC still pause for? Which JVM stalls are not pauses, and how do I log them? |
 | [cgroups](concepts/cgroups.md) | ~5 min | Affinity vs cpuset? What do quota, memory.max, io.weight do? How does systemd map onto cgroups? |
 
 ## Examples
