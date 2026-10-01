@@ -40,9 +40,9 @@ A **single-producer, single-consumer ring** ([SPSC](../GLOSSARY.md#spsc)) is the
 
 Coherence works per 64-byte line. If the producer's head and the consumer's tail sit in the same line, every write by one thread invalidates the other's copy, and its next write must pull the line back first.
 
-<img src="../assets/diagrams/spsc-ring.svg" alt="Animation: with head and tail on one 64-byte line, the producer on CPU 3 and the consumer on CPU 5 each wait for the line before almost every write; with each index on its own padded line, neither waits and many more messages pass in the same time" width="720">
+<img src="../assets/diagrams/spsc-ring.svg" alt="Animation: with head and tail on one 64-byte line, the producer on CPU 3 and the consumer on CPU 5 each wait for the line before almost every write; with each index on its own padded line, waits become rare and many more messages pass in the same time" width="720">
 
-*Two indexes that share a line make both threads wait on every write. Padding gives each writer a line of its own.*
+*Two indexes that share a line make both threads wait on every write. Padding gives each writer a line of its own: the reader still pulls that line now and then, about once per batch with cached indexes, but no longer on every write.*
 
 - **Pad** each independently written hot field to its own line: 64 bytes, or 128 on CPUs whose adjacent-line prefetcher fetches lines in pairs.
 - In Java, the JVM decides field order inside a class, so padding fields next to each other may be reordered. The probe's [`PaddedSequence`](../examples/java-latency-probe/src/main/java/com/example/lowlat/PaddedSequence.java) uses **class-hierarchy padding**: the JVM does not move fields across a superclass boundary. `@jdk.internal.vm.annotation.Contended` does the same, but needs `-XX:-RestrictContended` for application classes.
@@ -128,12 +128,13 @@ Typical orders of magnitude, not measurements.
    ```bash
    cd examples/java-latency-probe
    grep -E '^(ping|pong).cpu.affinity|^idle.strategy' conf/application.properties
+   cp conf/application.properties conf/application.properties.orig   # keep your own settings
    APP_NUMA_NODE=1 bin/launch          # rtt p50 around 100-250 ns in one L3 domain
    # edit pong.cpu.affinity to a CPU on the other socket and run again: p50 rises by the socket link
-   git checkout conf/application.properties
+   mv conf/application.properties.orig conf/application.properties   # restore exactly what you had
    ```
 
-2. Set `idle.strategy=backoff` and run again. The median rises and the spread grows: that is the cost of waking a parked thread.
+2. Set `idle.strategy=backoff` and run again. The median barely moves: `BackoffIdleStrategy` spins 100 times and yields 10 times before it parks, and a ping-pong answers long before that. Only the rare slow round trips reach the park, and they show its wake-up cost in the highest percentiles. In production, the same strategy parks after every quiet gap, and the first message after the gap pays it.
 
 3. On a test host, record cache-line contention while the probe runs. The two `PaddedSequence` lines should show transfers, but no line written by both threads:
 
