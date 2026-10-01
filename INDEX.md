@@ -27,12 +27,16 @@ flowchart TD
     direction LR
     n1["04<br/>Network"] --> n2["Concept:<br/>network path"] --> n3["Concept:<br/>ethtool"] --> n4["08<br/>Bypass"] --> n5["Segmentation<br/>example"] --> n6["06 §3-6<br/>TCP, buffers"]
   end
-  op ~~~ story ~~~ dev ~~~ mgr ~~~ net
+  subgraph learn["Learner of mechanisms: understand the machine (about three hours)"]
+    direction LR
+    u1["Concepts:<br/>hardware"] --> u2["Kernel<br/>and CPU"] --> u3["Memory"] --> u4["Network"] --> u5["Application"] --> u6["Measurement"]
+  end
+  op ~~~ story ~~~ dev ~~~ mgr ~~~ net ~~~ learn
   classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
   class m3,m4 risk
 ```
 
-*Five lanes: the operator walks guides 00 to 07, then 10, 11 and 12 (08 only with kernel bypass), and ends at verify-tuning; the learner follows three use cases and the layout explorer; the developer reads the pinning and Java sections and the Java example; the reviewer reads the risks, with mitigations and firewall highlighted; the network engineer goes from Guide 04 through the network concepts to bypass and segmentation.*
+*Six lanes: the operator walks guides 00 to 07, then 10, 11 and 12 (08 only with kernel bypass), and ends at verify-tuning; the learner follows three use cases and the layout explorer; the developer reads the pinning and Java sections and the Java example; the reviewer reads the risks, with mitigations and firewall highlighted; the network engineer goes from Guide 04 through the network concepts to bypass and segmentation; the learner of mechanisms reads every concept, from the hardware up to measurement.*
 
 **Operator applying the tuning (about half a day for the first host, minutes for the next)**
 [QUICK_START](QUICK_START.md) → [00](guides/00-bios-firmware.md) → [01](guides/01-grub-bootloader-tuning.md) → [02](guides/02-cpu-core-isolation.md) → [03](guides/03-huge-pages-configuration.md) → [04](guides/04-network-optimization.md) → [05](guides/05-cgroup-isolation.md) → [06](guides/06-kernel-sysctl-tuning.md) → [07](guides/07-os-hygiene.md) → ([08](guides/08-kernel-bypass.md), only with a bypass stack) → [10](guides/10-time-sync.md) → [11](guides/11-day2-operations.md) → [12](guides/12-memory-pressure.md) → `scripts/verify-tuning`
@@ -48,6 +52,9 @@ flowchart TD
 
 **Network engineer**
 [Guide 04](guides/04-network-optimization.md) → [concepts/network-tuning](concepts/network-tuning.md) → [concepts/ethtool](concepts/ethtool.md) → [Guide 08 — kernel bypass](guides/08-kernel-bypass.md) → [segmentation example](examples/network-segmentation-example.md) → [Guide 06 §3–6](guides/06-kernel-sysctl-tuning.md#3-tcp-behavior) → [Guide 10 — time sync](guides/10-time-sync.md)
+
+**Learner of mechanisms: understand the machine (about three hours)**
+[Hardware topology](concepts/hardware-topology.md) → [power and frequency](concepts/power-and-frequency.md) → [clocks and time](concepts/clocks-and-time.md) → [boot path](concepts/bootloader.md) → [CPU isolation](concepts/cpu-isolation.md) → [interrupts and deferred work](concepts/interrupts-and-deferred-work.md) → [security mitigations](concepts/security-mitigations.md) → [cgroups](concepts/cgroups.md) → [huge pages and NUMA](concepts/huge-pages.md) → [memory reclaim](concepts/memory-reclaim.md) → [swap and the OOM killer](concepts/swap-and-oom.md) → [network path](concepts/network-tuning.md) → [network buffers](concepts/network-buffers.md) → [ethtool](concepts/ethtool.md) → [thread handoff](concepts/thread-handoff.md) → [logging and I/O](concepts/logging-and-io.md) → [JVM pauses](concepts/jvm-pauses.md) → [tail latency](concepts/tail-latency.md) → [queueing](concepts/queueing.md). The [concept map](#concepts) shows how they build on each other.
 
 ## Guides
 
@@ -69,27 +76,56 @@ flowchart TD
 
 ## Concepts
 
-| Concept | Read | Questions it answers |
-|---|---|---|
-| [Hardware topology](concepts/hardware-topology.md) | ~9 min | Which CPUs share a core, an L3, a node? How far is the NIC from my thread? How do I read the topology before writing a layout? |
-| [Power, frequency & firmware](concepts/power-and-frequency.md) | ~10 min | Why is the first message after a pause slow? Who chooses the clock? Is turbo worth it? Why does an SMI leave no trace? |
-| [Clocks and time](concepts/clocks-and-time.md) | ~9 min | Which clock do I read for a duration? Why can a latency be negative? What does the clocksource cost? How good is a one-way latency across hosts? |
-| [Security mitigations](concepts/security-mitigations.md) | ~8 min | What do Spectre and Meltdown fixes cost, and where? Who pays: a spinning thread or a blocking one? How do I measure it before opting out? |
-| [Interrupts & deferred work](concepts/interrupts-and-deferred-work.md) | ~10 min | What runs after an interrupt, and where? When does ksoftirqd take over? Which IPIs reach an isolated CPU, and why? Where do RCU callbacks and kworkers run? |
-| [Tail latency](concepts/tail-latency.md) | ~9 min | Why does p99 matter to every user? How many samples does a percentile need? Why can percentiles not be averaged? What does the histogram shape say? |
-| [Queueing](concepts/queueing.md) | ~9 min | Why does p99 explode as load rises? What does Little's law tell me? Why does jitter cost as much as capacity? How long does one stall echo? |
-| [Thread handoff](concepts/thread-handoff.md) | ~10 min | What does passing a message between two cores cost? What is false sharing, and how do I pad? Acquire, release or volatile? Spin, back off or block? |
-| [Boot path](concepts/bootloader.md) | ~7 min | How do arguments reach the kernel? What is the housekeeping mask? Why can't these be changed at runtime? |
-| [CPU isolation](concepts/cpu-isolation.md) | ~7 min | What interrupts a CPU? What does a context switch really cost? Spin or block? |
-| [Network path](concepts/network-tuning.md) | ~8 min | Where does a packet wait between the wire and `recv()`? What do coalescing, NAPI, RSS, and bypass change? |
-| [Network buffers](concepts/network-buffers.md) | ~10 min | How big is each queue on the way to `recv()`? How long does a ring hold a burst? Where did the packet die, and which counter shows it? What do DPDK and Onload change? |
-| [`ethtool` reference](concepts/ethtool.md) | ~16 min | What is a channel, and what does `combined` mean? Which options reset the link? How do I steer one flow to one queue? How do I persist each setting? |
-| [Memory reclaim & faults](concepts/memory-reclaim.md) | ~10 min | Where does the memory go? Who reclaims it, kswapd or my thread? What does a minor or major fault cost? Why do stalls appear only after days of uptime? |
-| [Swap & the OOM killer](concepts/swap-and-oom.md) | ~9 min | What can be swapped, and what does a swap-in cost? What does swappiness really do? How does the OOM killer choose? Why prefer a loud failure? |
-| [Logging & I/O](concepts/logging-and-io.md) | ~9 min | Where can a log line block? What do dirty throttling, fsync and the kernel console cost? How do I log without doing I/O on the hot path? |
-| [Huge pages & NUMA](concepts/huge-pages.md) | ~7 min | What is TLB reach? Why pre-touch? Why is THP unpredictable? Why reserve per node? |
-| [JVM pauses](concepts/jvm-pauses.md) | ~10 min | Why does a pinned Java thread still stop? What is time to safepoint? What does ZGC still pause for? Which JVM stalls are not pauses, and how do I log them? |
-| [cgroups](concepts/cgroups.md) | ~5 min | Affinity vs cpuset? What do quota, memory.max, io.weight do? How does systemd map onto cgroups? |
+The concepts explain why the guides work. They build on each other from the hardware up:
+
+```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 260}}}%%
+flowchart TD
+  hw["Hardware<br/>topology · power and frequency · clocks"]
+  kern["Kernel and CPU<br/>boot path · CPU isolation · interrupts and deferred work · mitigations · cgroups"]
+  mem["Memory<br/>huge pages and NUMA · reclaim and faults · swap and OOM"]
+  net["Network<br/>network path · network buffers · ethtool"]
+  app["Application<br/>thread handoff · logging and I/O · JVM pauses"]
+  meas["Measurement<br/>tail latency · queueing"]
+  hw --> kern
+  hw --> mem
+  kern --> net
+  kern --> app
+  mem --> app
+  net --> app
+  app --> meas
+  net --> meas
+  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
+  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
+  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+  class hw,kern,mem,net hk
+  class app iso
+  class meas focus
+```
+
+*Hardware sets the costs, the kernel and memory decide who pays them, the network and the application are where a message spends its time, and measurement tells you whether any of it worked.*
+
+| Layer | Concept | Read | Questions it answers |
+|---|---|---|---|
+| Hardware | [Hardware topology](concepts/hardware-topology.md) | ~9 min | Which CPUs share a core, an L3, a node? How far is the NIC from my thread? How do I read the topology before writing a layout? |
+| Hardware | [Power, frequency & firmware](concepts/power-and-frequency.md) | ~10 min | Why is the first message after a pause slow? Who chooses the clock? Is turbo worth it? Why does an SMI leave no trace? |
+| Hardware | [Clocks and time](concepts/clocks-and-time.md) | ~9 min | Which clock do I read for a duration? Why can a latency be negative? What does the clocksource cost? How good is a one-way latency across hosts? |
+| Kernel and CPU | [Boot path](concepts/bootloader.md) | ~7 min | How do arguments reach the kernel? What is the housekeeping mask? Why can't these be changed at runtime? |
+| Kernel and CPU | [CPU isolation](concepts/cpu-isolation.md) | ~7 min | What interrupts a CPU? What does a context switch really cost? Spin or block? |
+| Kernel and CPU | [Interrupts & deferred work](concepts/interrupts-and-deferred-work.md) | ~10 min | What runs after an interrupt, and where? When does ksoftirqd take over? Which IPIs reach an isolated CPU, and why? Where do RCU callbacks and kworkers run? |
+| Kernel and CPU | [Security mitigations](concepts/security-mitigations.md) | ~8 min | What do Spectre and Meltdown fixes cost, and where? Who pays: a spinning thread or a blocking one? How do I measure it before opting out? |
+| Kernel and CPU | [cgroups](concepts/cgroups.md) | ~5 min | Affinity vs cpuset? What do quota, memory.max, io.weight do? How does systemd map onto cgroups? |
+| Memory | [Huge pages & NUMA](concepts/huge-pages.md) | ~7 min | What is TLB reach? Why pre-touch? Why is THP unpredictable? Why reserve per node? |
+| Memory | [Memory reclaim & faults](concepts/memory-reclaim.md) | ~10 min | Where does the memory go? Who reclaims it, kswapd or my thread? What does a minor or major fault cost? Why do stalls appear only after days of uptime? |
+| Memory | [Swap & the OOM killer](concepts/swap-and-oom.md) | ~9 min | What can be swapped, and what does a swap-in cost? What does swappiness really do? How does the OOM killer choose? Why prefer a loud failure? |
+| Network | [Network path](concepts/network-tuning.md) | ~8 min | Where does a packet wait between the wire and `recv()`? What do coalescing, NAPI, RSS, and bypass change? |
+| Network | [Network buffers](concepts/network-buffers.md) | ~10 min | How big is each queue on the way to `recv()`? How long does a ring hold a burst? Where did the packet die, and which counter shows it? What do DPDK and Onload change? |
+| Network | [`ethtool` reference](concepts/ethtool.md) | ~16 min | What is a channel, and what does `combined` mean? Which options reset the link? How do I steer one flow to one queue? How do I persist each setting? |
+| Application | [Thread handoff](concepts/thread-handoff.md) | ~10 min | What does passing a message between two cores cost? What is false sharing, and how do I pad? Acquire, release or volatile? Spin, back off or block? |
+| Application | [Logging & I/O](concepts/logging-and-io.md) | ~9 min | Where can a log line block? What do dirty throttling, fsync and the kernel console cost? How do I log without doing I/O on the hot path? |
+| Application | [JVM pauses](concepts/jvm-pauses.md) | ~10 min | Why does a pinned Java thread still stop? What is time to safepoint? What does ZGC still pause for? Which JVM stalls are not pauses, and how do I log them? |
+| Measurement | [Tail latency](concepts/tail-latency.md) | ~9 min | Why does p99 matter to every user? How many samples does a percentile need? Why can percentiles not be averaged? What does the histogram shape say? |
+| Measurement | [Queueing](concepts/queueing.md) | ~9 min | Why does p99 explode as load rises? What does Little's law tell me? Why does jitter cost as much as capacity? How long does one stall echo? |
 
 ## Examples
 
