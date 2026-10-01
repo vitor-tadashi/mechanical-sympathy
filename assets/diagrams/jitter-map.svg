@@ -16,6 +16,9 @@
   .role { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #333333; }
   .chip { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
   .side { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="490" rx="8"/>
 <text class="cap" x="20" y="28">Where the tail comes from</text>

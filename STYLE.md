@@ -59,7 +59,20 @@ Concept pages use the same idea on a smaller scale: a 3-bullet **At a glance** a
 | Use American English and the neutral names from AGENTS.md §1. | Consistency. |
 | Write for readers whose first language is not English: short sentences, no idioms, one meaning per word. Spell out an abbreviation the first time it appears in a page, or link it to [`GLOSSARY.md`](GLOSSARY.md). | Most readers translate as they read. An unexplained SMI or NAPI stops them, and an idiom such as "a wall of text" may not translate at all. |
 
-### 2.1 Alerts
+### 2.1 Picture it
+
+Most mechanisms in these pages are invisible: a cache line, a timer, a queue in a NIC. When a section explains one, give the reader an everyday picture of it in one line, right next to the diagram that shows the real thing:
+
+```markdown
+> **Picture it.** Interrupt coalescing is a mail carrier who waits until the bag is full, or until the clock says go, before ringing your bell.
+```
+
+- **One per key idea**, not one per paragraph. A section with no abstract mechanism needs none.
+- **Literal and short.** One or two sentences, everyday objects, no idioms, no wordplay. It must survive translation.
+- **It never replaces the mechanism.** The next sentence says what really happens, with the number.
+- **It is not an alert,** so it does not count toward the one-alert-per-screen rule.
+
+### 2.2 Alerts
 
 Use GitHub alerts instead of ad-hoc bold warnings or emoji. Keep each alert to one or two sentences.
 
@@ -73,7 +86,7 @@ Use GitHub alerts instead of ad-hoc bold warnings or emoji. Keep each alert to o
 
 Use at most one alert per screen. When everything is highlighted, nothing is.
 
-### 2.2 Folding depth away
+### 2.3 Folding depth away
 
 Wrap content in `<details>` when it is longer than about 15 lines and not needed to apply the step. That covers long command output, full file listings, historical notes and deep dives:
 
@@ -168,19 +181,41 @@ Rules for every SVG:
 
 - Hand-written, in `assets/diagrams/<name>.svg`. No script, no external fonts or images. (GitHub serves SVGs as images, so scripts would not run anyway.)
 - `<title>` and `<desc>` as the first children of `<svg>`. `<desc>` states the point in one or two sentences.
-- Colors from §3.2, readable on a white and on a dark background. Put a background rectangle in the SVG, because GitHub does not theme images.
+- Colors from §3.2 on a white background rectangle (`class="bg"`). Add the **dark-mode block** below, which inverts the lightness and keeps the hues. Browsers apply it when the page around the image is dark, as GitHub's dark theme is:
+
+  ```css
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  ```
 - Color is never the only signal. Every colored box or bar carries a text label.
 - At most 30 KB.
 
 Extra rules for an animated SVG:
 
 - Animate with CSS `@keyframes` inside the file.
-- **Keep the whole picture visible at all times.** Move one playhead across all lanes, and pulse each event briefly as the playhead reaches it, as in [`tick-nohz.svg`](assets/diagrams/tick-nohz.svg). Never hide parts of the picture and reveal them later: the reader must be able to compare the lanes at any moment.
-- Time a pulse with a negative `animation-delay` computed from the event's position, so it fires exactly when the playhead gets there.
-- The base styles draw the complete picture. An `@media (prefers-reduced-motion: reduce)` block stops every animation and hides the playhead, so the complete picture is what those readers see. It must make the point on its own.
-- A loop of 4 to 8 seconds, and no flashing faster than 3 times per second.
+- **Two kinds of motion, pick the one the idea needs:**
+  - **A playhead, for timelines.** One playhead sweeps across all lanes, and each event pulses briefly as the playhead reaches it, as in [`tick-nohz.svg`](assets/diagrams/tick-nohz.svg) and [`tail-spikes.svg`](assets/diagrams/tail-spikes.svg). Time a pulse with a negative `animation-delay` computed from the event's position, so it fires exactly when the playhead gets there.
+  - **Moving tokens, for a path.** A packet or a message travels through the stages, waits where it really waits, and arrives, as in [`spin-vs-block.svg`](assets/diagrams/spin-vs-block.svg). A short caption ("handled late") may appear when the token arrives.
+- **The lanes stay comparable.** Every box, lane and label of the comparison is drawn all the time. Only tokens move, and only arrival captions may fade in.
+- The base styles draw the complete picture: the tokens at their destination, every caption visible. An `@media (prefers-reduced-motion: reduce)` block stops every animation and hides the playhead, so the complete picture is what those readers see. It must make the point on its own.
+- A loop of 4 to 10 seconds, and no flashing faster than 3 times per second.
 
-Structure, as in [`tick-nohz.svg`](assets/diagrams/tick-nohz.svg): a `viewBox` about 760 wide, one lane per case (default on top, tuned below), a caption and a one-line subcaption in each lane, and the classes `.bg`, `.lane`, `.box` (housekeeping blue), `.app` (isolated green), `.wait` (risk red), `.lbl`, `.cap` and `.sub`.
+Structure, as in [`tick-nohz.svg`](assets/diagrams/tick-nohz.svg): a `viewBox` 760 wide, one lane per case (default on top, tuned below), a caption and a one-line subcaption in each lane.
+
+| Class | Use | Style |
+|---|---|---|
+| `.bg`, `.lane` | Background, and one rounded lane per case | `#ffffff`; `#f6f8fa` with a `#d0d7de` border |
+| `.box`, `.app`, `.wait`, `.mut`, `.foc` | The §3.2 colors: housekeeping, isolated, risk, muted, focus | as in §3.2 |
+| `.cap` | Lane caption | 600 14px, `#1a1a1a` |
+| `.sub` | One-line subcaption | 12px, `#444444` |
+| `.lbl` | Labels in and next to boxes | 600 12–13px, `#1a1a1a` |
+| `.axis`, `.note` | Axis labels and footnotes | 11px, `#57606a` |
+| `.head` | The playhead | `#8a5a00`, 2px, dashed |
+
+Text is 11px or larger. 10px is the floor, for a label inside a narrow bar, and `tools/lint-docs` rejects anything smaller. A pulse brightens its own color: `#ff3b3b` for a red event, `#3d7fd9` for a blue one.
+
+**One signature animation per guide.** Each guide shows, near its At a glance, the one animation that makes its point: the tick for Guide 01, the interrupt for Guide 04, the fenced agent for Guide 05. A reader who only watches the pictures should still learn what each guide removes.
 
 Embed it with an `<img>` that has an `alt` text, followed by the same one-sentence summary as a Mermaid diagram:
 
@@ -195,7 +230,8 @@ Embed it with an `<img>` that has an `alt` text, followed by the same one-senten
 - [ ] No meaning is carried by color alone.
 - [ ] Long output and deep dives are folded. Warnings and required commands are not.
 - [ ] Headings are real headings, in order (no jump from `##` to `####`), so the GitHub outline works.
+- [ ] Abstract mechanisms have one **Picture it** line (§2.1), and each SVG passes the rules of §3.5 (`make lint` checks the size, title and desc, the font sizes, the loop length, the dark-mode and reduced-motion blocks).
 - [ ] Every new abbreviation, product or unusual word has an entry in [`GLOSSARY.md`](GLOSSARY.md), in the same change (`make lint` keeps the entries sorted).
 - [ ] Link text says where the link goes ("Guide 05 §4.4, the cpuset trap"), never "here".
-- [ ] Unmeasured advice is marked (§2.1).
+- [ ] Unmeasured advice is marked (§2.2).
 - [ ] `make lint` passes (links, anchors, Mermaid, SVG rules).

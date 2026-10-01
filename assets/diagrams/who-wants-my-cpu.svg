@@ -25,6 +25,9 @@
   .ok { stroke: #1d6b33; stroke-width: 2; fill: none; }
   .big { font: 700 16px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0b2613; text-anchor: middle; }
   .bigs { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0b2613; text-anchor: middle; }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="420" rx="8"/>
 <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#57606a"/></marker><marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1d6b33"/></marker></defs>

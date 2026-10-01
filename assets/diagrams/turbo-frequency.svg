@@ -20,6 +20,9 @@
     0%, 4%   { transform: scale(1.6); stroke-width: 3; }
     8%, 100% { transform: scale(1); stroke-width: 1.5; }
   }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
   @media (prefers-reduced-motion: reduce) {
     .ev, .head { animation: none; }
     .head { display: none; }

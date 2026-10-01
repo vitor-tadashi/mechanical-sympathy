@@ -47,6 +47,9 @@
   @keyframes dslow { 0%, 81% { opacity: 0; } 83%, 100% { opacity: 1; } }
   @keyframes dfast { 0%, 31% { opacity: 0; } 33%, 100% { opacity: 1; } }
 
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
   @media (prefers-reduced-motion: reduce) {
     .p-slow, .p-fast, .t-bar, .d-slow, .d-fast { animation: none; }
   }

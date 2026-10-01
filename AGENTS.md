@@ -24,7 +24,7 @@ These rules apply to every change, whoever makes it. If a rule and a request con
 - Guides are deep. For every setting they explain what it does, why this value was chosen, how to verify it, how to troubleshoot it and how to roll it back. Never ship an outline.
 - One script per guide. A new guide `guides/NN-name.md` comes with `scripts/NN-name`, and with entries in `README.md`, `INDEX.md` and `QUICK_START.md`, all in the same change.
 - Advice that follows documentation and that this repository does not measure is marked **Validate on your hardware** in the text.
-- Pages follow [`STYLE.md`](STYLE.md): the short answer first (At a glance), a diagram where a flow, layout or decision needs one, depth folded into `<details>`, and Key takeaways at the end.
+- Pages follow [`STYLE.md`](STYLE.md): the short answer first (At a glance), a diagram where a flow, layout or decision needs one, an animation where time is the point, one "Picture it" line per abstract mechanism, depth folded into `<details>`, and Key takeaways at the end.
 - American English in every committed file.
 - New jargon goes into [`GLOSSARY.md`](GLOSSARY.md) in the same change: plain English, short sentences, an entry id that keeps the A–Z order (`tools/check-glossary` enforces it, and `tools/check-glossary --missing` lists acronyms with no entry).
 - Use cases (`examples/use-cases/`) follow the same skeleton (situation, diagnose, change, result, verify and roll back, takeaways), are listed in `examples/use-cases/README.md`, `README.md` and `INDEX.md`, and reuse commands that a guide already documents. Every number that is not a measurement is labeled illustrative.
@@ -63,7 +63,7 @@ These rules apply to every change, whoever makes it. If a rule and a request con
 |---|---|
 | `make lint` | everything below. CI runs it (`.github/workflows/lint.yml`) |
 | `make lint-scripts` | no `.sh`/`.bash` files, exec bits, ShellCheck `enable=all`, `bash -n`, `tools/check-plan-layout` (`plan-layout` against the fixtures in `scripts/fixtures`), and `tools/check-size-buffers` (`size-buffers` against `scripts/fixtures/buffers`, plus the numbers that `concepts/network-buffers.md` prints) |
-| `make lint-docs` | `GLOSSARY.md` ids are unique and sorted (`tools/check-glossary`), relative links and `#anchors` resolve, every Mermaid block parses (mermaid-cli, required in CI), SVG rules from `STYLE.md`, no orphan SVG, no image without alt text |
+| `make lint-docs` | `GLOSSARY.md` ids are unique and sorted (`tools/check-glossary`), relative links and `#anchors` resolve, every Mermaid block parses (mermaid-cli, required in CI), SVG rules from `STYLE.md` §3.5 (size, title and desc, viewBox, fonts of 10px or more, loops of 4 to 10 s, dark-mode and reduced-motion blocks), no orphan SVG, no image without alt text |
 | `make lint-site` | `site/` pages load nothing from another origin, links and images exist, alt text, `tools/check-explorer` and `tools/check-buffers` (Node, required in CI) hold `site/layout.js` and `site/buffers.js` to the same golden files as `plan-layout` and `size-buffers` |
 | `make site` | assembles `_site/` for a local preview (`python3 -m http.server --directory _site`) |
 | `make lint-java` | Checkstyle, `-Werror` compile, dependency approval, checksums |

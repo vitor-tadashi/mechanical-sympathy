@@ -18,6 +18,9 @@
     0%, 5%   { transform: scaleY(1.2); }
     10%, 100% { transform: scaleY(1); }
   }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
   @media (prefers-reduced-motion: reduce) {
     .tax, .head { animation: none; }
     .head { display: none; }

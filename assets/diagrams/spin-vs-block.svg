@@ -13,7 +13,7 @@
   .wire { stroke: #57606a; stroke-width: 2; }
   .msg { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
   .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; text-anchor: middle; }
-  .spin { fill: none; stroke: #1d6b33; stroke-width: 2; stroke-dasharray: 5 4; animation: poll 0.9s linear infinite; }
+  .spin { fill: none; stroke: #1d6b33; stroke-width: 2; stroke-dasharray: 5 4; animation: poll 7s linear infinite; }
 
   .m-block { transform: translateX(516px); animation: block 7s linear infinite; }
   .m-spin  { transform: translateX(516px); animation: spinmsg 7s linear infinite; }
@@ -35,8 +35,11 @@
   }
   @keyframes dblock { 0%, 75% { opacity: 0; } 77%, 100% { opacity: 1; } }
   @keyframes dspin  { 0%, 15% { opacity: 0; } 17%, 100% { opacity: 1; } }
-  @keyframes poll { to { stroke-dashoffset: -18; } }
+  @keyframes poll { to { stroke-dashoffset: -144; } }
 
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
   @media (prefers-reduced-motion: reduce) {
     .m-block, .m-spin, .d-block, .d-spin, .spin { animation: none; }
   }

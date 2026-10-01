@@ -24,6 +24,9 @@
   .rl { font: 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #333333; text-anchor: middle; }
   .arr { stroke: #1f4e8c; stroke-width: 2.5; fill: none; }
   .pcie { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="484" rx="8"/>
 <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#1f4e8c"/></marker></defs>

@@ -20,11 +20,14 @@
   .midw { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0b1f33; text-anchor: middle; }
   .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
 
-  .num { font: 600 9px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .num { font: 600 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
   .tree { stroke: #57606a; stroke-width: 1.5; fill: none; }
   .adv { stroke-dasharray: 3 2; }
   .fence { stroke-width: 2.5; }
   .dir { font: 11px ui-monospace, "SF Mono", Menlo, Consolas, monospace; fill: #1a1a1a; }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="408" rx="8"/>
 <text class="role" x="20" y="34">CPU number, 0 to 31: green = isolated, blue = OS CPUs</text>

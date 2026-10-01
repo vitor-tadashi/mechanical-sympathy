@@ -35,6 +35,9 @@
   .would { fill: none; stroke: #9b1c1c; stroke-width: 1.5; stroke-dasharray: 5 3; }
   .drops { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1; stroke-dasharray: 4 3; }
   .kept { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1; }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
   @media (prefers-reduced-motion: reduce) {
     .head, .evt, .evg { animation: none; }
     .head { display: none; }

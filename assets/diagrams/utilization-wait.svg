@@ -13,6 +13,9 @@
   .det { fill: none; stroke: #1d6b33; stroke-width: 2.5; stroke-dasharray: 7 4; }
   .mark { stroke: #8a5a00; stroke-width: 1.5; stroke-dasharray: 3 3; }
   .mtxt { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; text-anchor: middle; }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="400" rx="8"/>
 <text class="cap" x="24" y="30">Response time of one queue, in multiples of the service time S</text>
@@ -44,5 +47,5 @@
 <line class="p99" x1="110" y1="82" x2="140" y2="82"/><text class="lbl" x="148" y="86" fill="#9b1c1c">p99, variable service time</text>
 <line class="det" x1="110" y1="102" x2="140" y2="102"/><text class="lbl" x="148" y="106" fill="#1d6b33">p99, fixed service time (no jitter)</text>
 <line class="mean" x1="110" y1="122" x2="140" y2="122"/><text class="lbl" x="148" y="126" fill="#1f4e8c">mean, variable service time</text>
-<text class="axis" x="24" y="392">One server, random arrivals. Mean and p99 from queueing theory (M/M/1); the fixed-service curve is simulated. Shapes, not measurements.</text>
+<text class="axis" x="24" y="392">One server, random arrivals (M/M/1 theory); the fixed-service curve is simulated. Shapes, not measurements.</text>
 </svg>

@@ -17,6 +17,9 @@
     0%, 3%   { fill: #ff3b3b; transform: scaleY(1.15); }
     6%, 100% { fill: #9b1c1c; transform: scaleY(1); }
   }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
   @media (prefers-reduced-motion: reduce) {
     .tick, .head { animation: none; }
     .head { display: none; }

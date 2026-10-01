@@ -14,6 +14,9 @@
   .val { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
   .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
   .tagt { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="430" rx="8"/>
 <text class="cap" x="20" y="28">Same workload, before and after: the tail moves, the median barely does</text>
