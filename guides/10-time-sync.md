@@ -43,6 +43,8 @@ The time daemons also matter for **noise**. They wake up periodically, take inte
 
 ## 2. Clocks in Linux, briefly
 
+[Concept: clocks and time](../concepts/clocks-and-time.md) goes deeper: the TSC flags, the clocksource watchdog, every clock ID, steps and slews, and what a one-way latency across hosts can and cannot show.
+
 | Clock | What it is | Use |
 |---|---|---|
 | TSC | CPU cycle counter, invariant on current CPUs | The `tsc` clocksource behind `clock_gettime()` via the vDSO: tens of ns, no syscall |
