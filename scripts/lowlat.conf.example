@@ -223,3 +223,25 @@ DAY2_VERIFY_TIMER=yes
 
 # systemd OnCalendar expression for the scheduled run.
 DAY2_VERIFY_SCHEDULE=daily
+
+# -----------------------------------------------------------------------------
+# Memory pressure (Guide 12)
+# -----------------------------------------------------------------------------
+
+# off | protect.
+#   off      no swap: swapoff, the swap lines of /etc/fstab commented out, zram swap masked.
+#            A leak ends in a logged OOM kill instead of silent swap-in stalls.
+#   protect  keep the host's swap, vm.swappiness=1, and MemorySwapMax=0 on LATENCY_UNITS.
+SWAP_POLICY=off
+
+# The latency-critical services. Each gets a drop-in with OOMScoreAdjust=, LimitMEMLOCK=infinity
+# and (cgroup v2) MemorySwapMax=0. lowlat-app.service is the example unit of Guide 05.
+LATENCY_UNITS=(lowlat-app.service)
+
+# -900, not -1000: the service is killed last, but a leak in it cannot make the kernel kill
+# everything else and then panic.
+LATENCY_OOM_SCORE_ADJ=-900
+
+# WARN when the share of time in which every task waited for memory (PSI "full", 5-minute
+# average, percent) is above this. Illustrative: set it from your own baseline.
+MEMORY_PSI_FULL_AVG300_MAX=1.00

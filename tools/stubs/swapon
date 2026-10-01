@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+#
+# swapon, swapoff (fake) - swap devices of the fake host LOWLAT_ROOT.
+#
+#   run/fake-swap-devices   "device size_kB" for each swap device that exists (volatile)
+#   proc/swaps              the active devices; SwapTotal and SwapFree in proc/meminfo follow them
+#
+#   swapon -a      activate every swap line of etc/fstab whose device exists
+#   swapon --show  list the active devices
+#   swapoff -a     deactivate every device
+# Pages are never in use on the fake host, so SwapFree always equals SwapTotal.
+
+# shellcheck source=tools/stubs/lib/fake
+. "$(dirname "${BASH_SOURCE[0]}")/lib/fake"
+
+swaps="${LOWLAT_ROOT}/proc/swaps"
+devices="${LOWLAT_ROOT}/run/fake-swap-devices"
+header="$(printf 'Filename\t\t\t\tType\t\tSize\t\tUsed\t\tPriority')"
+
+sync_meminfo() {
+	local total
+	total="$(awk 'NR > 1 { s += $3 } END { print s + 0 }' "${swaps}")"
+	sed -i "s/^SwapTotal:.*/SwapTotal:      ${total} kB/; s/^SwapFree:.*/SwapFree:       ${total} kB/" "${LOWLAT_ROOT}/proc/meminfo"
+}
+
+swapon_all() {
+	local device size
+	while read -r device; do
+		[[ -n "${device}" ]] || continue
+		awk -v d="${device}" 'NR > 1 && $1 == d { found = 1 } END { exit !found }' "${swaps}" && continue
+		size="$(awk -v d="${device}" '$1 == d { print $2 }' "${devices}" 2>/dev/null || true)"
+		[[ -n "${size}" ]] || fake_fail 255 "cannot open ${device}: No such file or directory"
+		printf '%s\tpartition\t%s\t\t0\t\t-2\n' "${device}" "${size}" >>"${swaps}"
+	done < <(awk '!/^[[:space:]]*#/ && $3 == "swap" { print $1 }' "${LOWLAT_ROOT}/etc/fstab" 2>/dev/null || true)
+	sync_meminfo
+}
+
+[[ -f "${swaps}" ]] || printf '%s\n' "${header}" >"${swaps}"
+case "${FAKE_NAME} $*" in
+'swapon -a')
+	fake_record "$@"
+	swapon_all
+	;;
+'swapon --show')
+	# Like util-linux: nothing at all when no device is active.
+	awk 'NR > 1 && !shown { print "NAME TYPE SIZE USED PRIO"; shown = 1 } NR > 1 { printf "%s %s %sK 0B %s\n", $1, $2, $3, $5 }' "${swaps}"
+	;;
+'swapoff -a')
+	fake_record "$@"
+	printf '%s\n' "${header}" >"${swaps}"
+	sync_meminfo
+	;;
+*) fake_fail 1 "unsupported arguments: $*" ;;
+esac

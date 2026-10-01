@@ -10,6 +10,7 @@ rt_throttling        skip
 huge_pages           skip
 sysctl               apply
 os_hygiene           apply
+memory_pressure      apply
 time_sync            apply
 cgroup_isolation     apply
 nic_tuning           apply
@@ -21,6 +22,7 @@ remove_netfilter     no
 bypass_stack         none
 time_sync_mode       chrony
 day2_verify_timer    yes
+swap_policy          off
 ---- exit 0
 
 ==== apply-all --dry-run
@@ -289,7 +291,6 @@ LOW-LATENCY TUNING (apply)
            [dry-run] write /etc/fstab (mode 0644):
              | /dev/mapper/rhel-root / xfs defaults,noatime 0 0
              | UUID=0000-boot /boot xfs defaults,noatime 0 0
-             | /dev/mapper/rhel-swap  none   swap  defaults  0 0
     14.02 Remounting / with noatime
            [dry-run] mount -o remount,noatime /
     14.03 Remounting /boot with noatime
@@ -316,22 +317,29 @@ LOW-LATENCY TUNING (apply)
     16.01 FLUSH_FIREWALL_RULES=no, keeping firewall rules
     16.02 REMOVE_NETFILTER_MODULES=no, keeping netfilter modules
 
-17. Time synchronization (TIME_SYNC_MODE=chrony)
-    17.01 Pinning chronyd.service to CPUs 0
+17. Memory pressure (SWAP_POLICY=off)
+    17.01 No swap device is active
+    17.02 zswap is already off
+
+18. OOM order and memory limits of the latency services
+    WARN: LATENCY_UNITS is empty: no OOM score and no memlock limit set for the latency services
+
+19. Time synchronization (TIME_SYNC_MODE=chrony)
+    19.01 Pinning chronyd.service to CPUs 0
            [dry-run] write /etc/systemd/system/chronyd.service.d/10-lowlat-time-sync.conf (mode 0644):
              | # Managed by mechanical-sympathy 10-time-sync
              | # Housekeeping CPU, not housekeeping.slice: the daemon's scheduling latency is part
              | # of the clock error, so it must not share a CPU quota with agents.
              | [Service]
              | CPUAffinity=0
-    17.02 Pinning ptp4l.service to CPUs 0
+    19.02 Pinning ptp4l.service to CPUs 0
            [dry-run] write /etc/systemd/system/ptp4l.service.d/10-lowlat-time-sync.conf (mode 0644):
              | # Managed by mechanical-sympathy 10-time-sync
              | # Housekeeping CPU, not housekeeping.slice: the daemon's scheduling latency is part
              | # of the clock error, so it must not share a CPU quota with agents.
              | [Service]
              | CPUAffinity=0
-    17.03 Pinning phc2sys.service to CPUs 0
+    19.03 Pinning phc2sys.service to CPUs 0
            [dry-run] write /etc/systemd/system/phc2sys.service.d/10-lowlat-time-sync.conf (mode 0644):
              | # Managed by mechanical-sympathy 10-time-sync
              | # Housekeeping CPU, not housekeeping.slice: the daemon's scheduling latency is part
@@ -339,15 +347,15 @@ LOW-LATENCY TUNING (apply)
              | [Service]
              | CPUAffinity=0
            [dry-run] systemctl daemon-reload
-    17.04 Stopping ptp4l and phc2sys (they would fight chronyd over the system clock)
+    19.04 Stopping ptp4l and phc2sys (they would fight chronyd over the system clock)
            [dry-run] systemctl disable --now phc2sys
            [dry-run] systemctl disable --now ptp4l
-    17.05 Enabling chronyd
+    19.05 Enabling chronyd
            [dry-run] systemctl enable chronyd
            [dry-run] systemctl restart chronyd
 
-18. Housekeeping slice
-    18.01 Writing /etc/systemd/system/housekeeping.slice (cgroup v2)
+20. Housekeeping slice
+    20.01 Writing /etc/systemd/system/housekeeping.slice (cgroup v2)
            [dry-run] write /etc/systemd/system/housekeeping.slice (mode 0644):
              | # Managed by mechanical-sympathy 05-cgroup-isolation
              | [Unit]
@@ -368,8 +376,8 @@ LOW-LATENCY TUNING (apply)
              | IOWeight=50
            [dry-run] systemctl daemon-reload
 
-19. Moving agent services into the housekeeping slice
-    19.01 Moving node_exporter.service into housekeeping.slice
+21. Moving agent services into the housekeeping slice
+    21.01 Moving node_exporter.service into housekeeping.slice
            [dry-run] write /etc/systemd/system/node_exporter.service.d/10-lowlat-housekeeping.conf (mode 0644):
              | # Managed by mechanical-sympathy 05-cgroup-isolation
              | [Service]
@@ -377,7 +385,7 @@ LOW-LATENCY TUNING (apply)
              | CPUAffinity=1
              | Nice=10
              | IOSchedulingClass=idle
-    19.02 Moving fluent-bit.service into housekeeping.slice
+    21.02 Moving fluent-bit.service into housekeeping.slice
            [dry-run] write /etc/systemd/system/fluent-bit.service.d/10-lowlat-housekeeping.conf (mode 0644):
              | # Managed by mechanical-sympathy 05-cgroup-isolation
              | [Service]
@@ -386,44 +394,44 @@ LOW-LATENCY TUNING (apply)
              | Nice=10
              | IOSchedulingClass=idle
            [dry-run] systemctl daemon-reload
-    19.03 Restart the moved services (or reboot) for the new slice to take effect
+    21.03 Restart the moved services (or reboot) for the new slice to take effect
 
-20. Pinning housekeeping processes
-    20.01 edr-agentd is not running
-    20.02 av-scand is not running
+22. Pinning housekeeping processes
+    22.01 edr-agentd is not running
+    22.02 av-scand is not running
 
-21. Kernel bypass (none)
-    21.01 KERNEL_BYPASS_STACK is empty, nothing to do
+23. Kernel bypass (none)
+    23.01 KERNEL_BYPASS_STACK is empty, nothing to do
 
-22. NIC queues, coalescing, pause frames, offloads and rings
-    22.01 eth0: 1 combined queue(s), one per IRQ CPU (1)
+24. NIC queues, coalescing, pause frames, offloads and rings
+    24.01 eth0: 1 combined queue(s), one per IRQ CPU (1)
            [dry-run] ethtool -L eth0 combined 1
-    22.02 eth0: adaptive-rx off, adaptive-tx off
+    24.02 eth0: adaptive-rx off, adaptive-tx off
            [dry-run] ethtool -C eth0 adaptive-rx off adaptive-tx off
-    22.03 eth0: rx-usecs 0, tx-usecs 0
+    24.03 eth0: rx-usecs 0, tx-usecs 0
            [dry-run] ethtool -C eth0 rx-usecs 0
            [dry-run] ethtool -C eth0 tx-usecs 0
-    22.04 eth0: pause frames off (ethtool -A autoneg off rx off tx off)
+    24.04 eth0: pause frames off (ethtool -A autoneg off rx off tx off)
            [dry-run] ethtool -A eth0 autoneg off rx off tx off
-    22.05 eth0: tso off, gso off, lro off
+    24.05 eth0: tso off, gso off, lro off
            [dry-run] ethtool -K eth0 tso off gso off lro off
-    22.06 eth0: RX ring 1024
+    24.06 eth0: RX ring 1024
            [dry-run] ethtool -G eth0 rx 1024
-    22.07 eth0: TX ring 1024
+    24.07 eth0: TX ring 1024
            [dry-run] ethtool -G eth0 tx 1024
-    22.08 eth1 is a management interface, leaving it untouched
+    24.08 eth1 is a management interface, leaving it untouched
 
-23. NIC interrupt affinity
+25. NIC interrupt affinity
     WARN: irqbalance is running on this VM and will move these IRQs again
-    23.01 eth0: routing interrupts to CPUs 1
+    25.01 eth0: routing interrupts to CPUs 1
            [dry-run] echo 1 > /proc/irq/100/smp_affinity_list
            [dry-run] echo 1 > /proc/irq/101/smp_affinity_list
            [dry-run] echo 1 > /proc/irq/102/smp_affinity_list
            [dry-run] echo 1 > /proc/irq/103/smp_affinity_list
-    23.02 eth0: 4 IRQ(s) placed
+    25.02 eth0: 4 IRQ(s) placed
 
-24. Verification timer (DAY2_VERIFY_TIMER=yes)
-    24.01 Writing lowlat-verify.service (ExecStart=/opt/lowlat/scripts/verify-tuning, CPUs: 0 1)
+26. Verification timer (DAY2_VERIFY_TIMER=yes)
+    26.01 Writing lowlat-verify.service (ExecStart=/opt/lowlat/scripts/verify-tuning, CPUs: 0 1)
            [dry-run] write /etc/systemd/system/lowlat-verify.service (mode 0644):
              | # Managed by mechanical-sympathy 11-day2-operations
              | [Unit]
@@ -444,7 +452,7 @@ LOW-LATENCY TUNING (apply)
              | Nice=19
              | IOSchedulingClass=idle
              | CPUAffinity=0 1
-    24.02 Writing lowlat-verify.timer (daily, and 10 min after every boot)
+    26.02 Writing lowlat-verify.timer (daily, and 10 min after every boot)
            [dry-run] write /etc/systemd/system/lowlat-verify.timer (mode 0644):
              | # Managed by mechanical-sympathy 11-day2-operations
              | [Unit]
@@ -461,12 +469,12 @@ LOW-LATENCY TUNING (apply)
            [dry-run] systemctl daemon-reload
            [dry-run] systemctl enable --now lowlat-verify.timer
 
-25. Boot-time re-application of runtime settings
-    25.01 Installing /etc/systemd/system/lowlat-runtime.service (ExecStart=/opt/lowlat/scripts/apply-all --runtime)
+27. Boot-time re-application of runtime settings
+    27.01 Installing /etc/systemd/system/lowlat-runtime.service (ExecStart=/opt/lowlat/scripts/apply-all --runtime)
            [dry-run] write /etc/systemd/system/lowlat-runtime.service (mode 0644):
              | # Re-applies the NON-persistent part of the low-latency tuning at every boot:
              | #   00 PCIe ASPM policy, 02 workqueue cpumask, 08 DPDK port binding, 04 NIC coalescing/offloads/rings/IRQ affinity,
-             | #   05 pinning of housekeeping processes, 07 opt-in firewall/module removal.
+             | #   05 pinning of housekeeping processes, 07 opt-in firewall/module removal, 12 zswap.
              | # Persistent settings (GRUB, systemd.conf, sysctl.d, huge page unit, slices, tuned)
              | # are not touched here.
              | #
@@ -514,15 +522,17 @@ Step timing summary
 | 14   | noatime on local filesystems                             |    0.000 s |
 | 15   | tuned profile                                            |    0.000 s |
 | 16   | Host packet filtering (opt-in)                           |    0.000 s |
-| 17   | Time synchronization (TIME_SYNC_MODE=chrony)             |    0.000 s |
-| 18   | Housekeeping slice                                       |    0.000 s |
-| 19   | Moving agent services into the housekeeping slice        |    0.000 s |
-| 20   | Pinning housekeeping processes                           |    0.000 s |
-| 21   | Kernel bypass (none)                                     |    0.000 s |
-| 22   | NIC queues, coalescing, pause frames, offloads and rings |    0.000 s |
-| 23   | NIC interrupt affinity                                   |    0.000 s |
-| 24   | Verification timer (DAY2_VERIFY_TIMER=yes)               |    0.000 s |
-| 25   | Boot-time re-application of runtime settings             |    0.000 s |
+| 17   | Memory pressure (SWAP_POLICY=off)                        |    0.000 s |
+| 18   | OOM order and memory limits of the latency services      |    0.000 s |
+| 19   | Time synchronization (TIME_SYNC_MODE=chrony)             |    0.000 s |
+| 20   | Housekeeping slice                                       |    0.000 s |
+| 21   | Moving agent services into the housekeeping slice        |    0.000 s |
+| 22   | Pinning housekeeping processes                           |    0.000 s |
+| 23   | Kernel bypass (none)                                     |    0.000 s |
+| 24   | NIC queues, coalescing, pause frames, offloads and rings |    0.000 s |
+| 25   | NIC interrupt affinity                                   |    0.000 s |
+| 26   | Verification timer (DAY2_VERIFY_TIMER=yes)               |    0.000 s |
+| 27   | Boot-time re-application of runtime settings             |    0.000 s |
 +------+----------------------------------------------------------+------------+
 |      | TOTAL                                                    |    0.000 s |
 +------+----------------------------------------------------------+------------+
@@ -599,49 +609,56 @@ LOW-LATENCY TUNING (apply)
     16.01 FLUSH_FIREWALL_RULES=no, keeping firewall rules
     16.02 REMOVE_NETFILTER_MODULES=no, keeping netfilter modules
 
-17. Time synchronization (TIME_SYNC_MODE=chrony)
-    17.01 Pinning chronyd.service to CPUs 0
-    17.02 Pinning ptp4l.service to CPUs 0
-    17.03 Pinning phc2sys.service to CPUs 0
-    17.04 Stopping ptp4l and phc2sys (they would fight chronyd over the system clock)
-    17.05 Enabling chronyd
+17. Memory pressure (SWAP_POLICY=off)
+    17.01 No swap device is active
+    17.02 zswap is already off
 
-18. Housekeeping slice
-    18.01 Writing /etc/systemd/system/housekeeping.slice (cgroup v2)
+18. OOM order and memory limits of the latency services
+    WARN: LATENCY_UNITS is empty: no OOM score and no memlock limit set for the latency services
 
-19. Moving agent services into the housekeeping slice
-    19.01 node_exporter.service is not installed, skipping
-    19.02 fluent-bit.service is not installed, skipping
-    19.03 Restart the moved services (or reboot) for the new slice to take effect
+19. Time synchronization (TIME_SYNC_MODE=chrony)
+    19.01 Pinning chronyd.service to CPUs 0
+    19.02 Pinning ptp4l.service to CPUs 0
+    19.03 Pinning phc2sys.service to CPUs 0
+    19.04 Stopping ptp4l and phc2sys (they would fight chronyd over the system clock)
+    19.05 Enabling chronyd
 
-20. Pinning housekeeping processes
-    20.01 edr-agentd is not running
-    20.02 av-scand is not running
+20. Housekeeping slice
+    20.01 Writing /etc/systemd/system/housekeeping.slice (cgroup v2)
 
-21. Kernel bypass (none)
-    21.01 KERNEL_BYPASS_STACK is empty, nothing to do
+21. Moving agent services into the housekeeping slice
+    21.01 node_exporter.service is not installed, skipping
+    21.02 fluent-bit.service is not installed, skipping
+    21.03 Restart the moved services (or reboot) for the new slice to take effect
 
-22. NIC queues, coalescing, pause frames, offloads and rings
-    22.01 eth0: 1 combined queue(s), one per IRQ CPU (1)
-    22.02 eth0: adaptive-rx off, adaptive-tx off
-    22.03 eth0: rx-usecs 0, tx-usecs 0
-    22.04 eth0: pause frames off (ethtool -A autoneg off rx off tx off)
-    22.05 eth0: tso off, gso off, lro off
-    22.06 eth0: RX ring 1024
-    22.07 eth0: TX ring 1024
-    22.08 eth1 is a management interface, leaving it untouched
+22. Pinning housekeeping processes
+    22.01 edr-agentd is not running
+    22.02 av-scand is not running
 
-23. NIC interrupt affinity
+23. Kernel bypass (none)
+    23.01 KERNEL_BYPASS_STACK is empty, nothing to do
+
+24. NIC queues, coalescing, pause frames, offloads and rings
+    24.01 eth0: 1 combined queue(s), one per IRQ CPU (1)
+    24.02 eth0: adaptive-rx off, adaptive-tx off
+    24.03 eth0: rx-usecs 0, tx-usecs 0
+    24.04 eth0: pause frames off (ethtool -A autoneg off rx off tx off)
+    24.05 eth0: tso off, gso off, lro off
+    24.06 eth0: RX ring 1024
+    24.07 eth0: TX ring 1024
+    24.08 eth1 is a management interface, leaving it untouched
+
+25. NIC interrupt affinity
     WARN: irqbalance is running on this VM and will move these IRQs again
-    23.01 eth0: routing interrupts to CPUs 1
-    23.02 eth0: 4 IRQ(s) placed
+    25.01 eth0: routing interrupts to CPUs 1
+    25.02 eth0: 4 IRQ(s) placed
 
-24. Verification timer (DAY2_VERIFY_TIMER=yes)
-    24.01 Writing lowlat-verify.service (ExecStart=/opt/lowlat/scripts/verify-tuning, CPUs: 0 1)
-    24.02 Writing lowlat-verify.timer (daily, and 10 min after every boot)
+26. Verification timer (DAY2_VERIFY_TIMER=yes)
+    26.01 Writing lowlat-verify.service (ExecStart=/opt/lowlat/scripts/verify-tuning, CPUs: 0 1)
+    26.02 Writing lowlat-verify.timer (daily, and 10 min after every boot)
 
-25. Boot-time re-application of runtime settings
-    25.01 Installing /etc/systemd/system/lowlat-runtime.service (ExecStart=/opt/lowlat/scripts/apply-all --runtime)
+27. Boot-time re-application of runtime settings
+    27.01 Installing /etc/systemd/system/lowlat-runtime.service (ExecStart=/opt/lowlat/scripts/apply-all --runtime)
 
 Step timing summary
 +------+----------------------------------------------------------+------------+
@@ -663,15 +680,17 @@ Step timing summary
 | 14   | noatime on local filesystems                             |    0.000 s |
 | 15   | tuned profile                                            |    0.000 s |
 | 16   | Host packet filtering (opt-in)                           |    0.000 s |
-| 17   | Time synchronization (TIME_SYNC_MODE=chrony)             |    0.000 s |
-| 18   | Housekeeping slice                                       |    0.000 s |
-| 19   | Moving agent services into the housekeeping slice        |    0.000 s |
-| 20   | Pinning housekeeping processes                           |    0.000 s |
-| 21   | Kernel bypass (none)                                     |    0.000 s |
-| 22   | NIC queues, coalescing, pause frames, offloads and rings |    0.000 s |
-| 23   | NIC interrupt affinity                                   |    0.000 s |
-| 24   | Verification timer (DAY2_VERIFY_TIMER=yes)               |    0.000 s |
-| 25   | Boot-time re-application of runtime settings             |    0.000 s |
+| 17   | Memory pressure (SWAP_POLICY=off)                        |    0.000 s |
+| 18   | OOM order and memory limits of the latency services      |    0.000 s |
+| 19   | Time synchronization (TIME_SYNC_MODE=chrony)             |    0.000 s |
+| 20   | Housekeeping slice                                       |    0.000 s |
+| 21   | Moving agent services into the housekeeping slice        |    0.000 s |
+| 22   | Pinning housekeeping processes                           |    0.000 s |
+| 23   | Kernel bypass (none)                                     |    0.000 s |
+| 24   | NIC queues, coalescing, pause frames, offloads and rings |    0.000 s |
+| 25   | NIC interrupt affinity                                   |    0.000 s |
+| 26   | Verification timer (DAY2_VERIFY_TIMER=yes)               |    0.000 s |
+| 27   | Boot-time re-application of runtime settings             |    0.000 s |
 +------+----------------------------------------------------------+------------+
 |      | TOTAL                                                    |    0.000 s |
 +------+----------------------------------------------------------+------------+
@@ -759,7 +778,11 @@ A /var/lib/lowlat/factory-settings/.values/*/mount-options/boot/options
 A /var/lib/lowlat/factory-settings/.values/*/mount-options/options
 A /var/lib/lowlat/factory-settings/.values/*/mounts
 A /var/lib/lowlat/factory-settings/.values/*/services
+A /var/lib/lowlat/factory-settings/.values/*/swappiness
+A /var/lib/lowlat/factory-settings/.values/*/swaps
 A /var/lib/lowlat/factory-settings/.values/*/tuned-profile
+A /var/lib/lowlat/factory-settings/.values/*/units
+A /var/lib/lowlat/factory-settings/.values/*/zswap
 A /var/lib/lowlat/factory-settings/.values/apply-all/complete
 A /var/lib/lowlat/factory-settings/.values/apply-all/guides/00-bios-firmware
 A /var/lib/lowlat/factory-settings/.values/apply-all/guides/01-grub-bootloader
@@ -772,9 +795,11 @@ A /var/lib/lowlat/factory-settings/.values/apply-all/guides/07-os-hygiene
 A /var/lib/lowlat/factory-settings/.values/apply-all/guides/08-kernel-bypass
 A /var/lib/lowlat/factory-settings/.values/apply-all/guides/10-time-sync
 A /var/lib/lowlat/factory-settings/.values/apply-all/guides/11-day2-operations
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/12-memory-pressure
 A /var/lib/lowlat/factory-settings/.values/apply-all/started
 A /var/lib/lowlat/factory-settings/.values/files/etc/fstab
 A /var/lib/lowlat/factory-settings/.values/files/etc/security/limits.d/90-lowlat.conf
+A /var/lib/lowlat/factory-settings/.values/files/etc/sysctl.d/91-lowlat-memory.conf
 A /var/lib/lowlat/factory-settings/.values/files/etc/systemd/system/lowlat-runtime.service
 A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/active_profile
 A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/bootcmdline
@@ -803,6 +828,7 @@ A /var/lib/lowlat/factory-settings/.values/services/rpcbind.target
 A /var/lib/lowlat/factory-settings/.values/services/rsyslog
 A /var/lib/lowlat/factory-settings/.values/services/sysstat-collect.timer
 A /var/lib/lowlat/factory-settings/.values/services/sysstat-summary.timer
+A /var/lib/lowlat/factory-settings/.values/services/systemd-zram-setup@zram0.service
 A /var/lib/lowlat/factory-settings/.values/services/tuned
 A /var/lib/lowlat/factory-settings/etc/fstab
 A /var/lib/lowlat/factory-settings/etc/tuned/active_profile
@@ -895,6 +921,9 @@ lowlat-runtime.service: /opt/lowlat/scripts/apply-all --runtime
   
   06. Host packet filtering (opt-in)
   
+  07. zswap
+      07.01 zswap is already off
+  
   Step timing summary
   +------+----------------------------------------------------------+------------+
   | Step | Description                                              |   Duration |
@@ -905,6 +934,7 @@ lowlat-runtime.service: /opt/lowlat/scripts/apply-all --runtime
   | 04   | NIC interrupt affinity                                   |    0.000 s |
   | 05   | Pinning housekeeping processes                           |    0.000 s |
   | 06   | Host packet filtering (opt-in)                           |    0.000 s |
+  | 07   | zswap                                                    |    0.000 s |
   +------+----------------------------------------------------------+------------+
   |      | TOTAL                                                    |    0.000 s |
   +------+----------------------------------------------------------+------------+
@@ -1037,11 +1067,18 @@ LOW-LATENCY TUNING VERIFICATION
   PASS the last lowlat-verify run did not fail
   INFO no report yet: the timer has not run
 
+== 12 Memory pressure ==
+  PASS no active swap device (SWAP_POLICY=off)
+  PASS no active swap line in /etc/fstab
+  PASS zswap is off
+  INFO LATENCY_UNITS is empty: no latency service checked
+  PASS no page swapped in since boot (pswpin = 0)
+  PASS memory pressure: PSI full avg300 <= 1.00 %
+
 == Host-wide ==
   PASS CPU frequency governor is performance on every CPU
   PASS no cpuidle driver active (idle=poll)
   WARN clocksource is tsc (cheap, vDSO-accelerated clock_gettime)
-  PASS no swap in use
   PASS clock synchronized (chrony/PTP)
   INFO vulnerability mitigations: spectre_v2 
   INFO load average: 0.00 0.01 0.05, uptime: 
@@ -1086,6 +1123,13 @@ LOW-LATENCY TUNING VERIFICATION
     01.02 Removing ptp4l.service drop-in
     01.03 Removing phc2sys.service drop-in
     01.04 Enabling chronyd (the RHEL default)
+---- exit 0
+
+==== 12-memory-pressure --rollback
+
+01. Memory pressure
+    01.01 Restoring /etc/sysctl.d/91-lowlat-memory.conf, vm.swappiness and zswap
+    01.02 Restart the latency services to drop their OOM score and memlock limit
 ---- exit 0
 
 ==== 07-os-hygiene --rollback
@@ -1178,18 +1222,24 @@ LOW-LATENCY TUNING VERIFICATION
     01.03 Removing phc2sys.service drop-in
     01.04 Enabling chronyd (the RHEL default)
 
-07. Rollback 07-os-hygiene
+07. Rollback 12-memory-pressure
+
+01. Memory pressure
+    01.01 Restoring /etc/sysctl.d/91-lowlat-memory.conf, vm.swappiness and zswap
+    01.02 Restart the latency services to drop their OOM score and memlock limit
+
+08. Rollback 07-os-hygiene
 
 01. Restoring OS hygiene baseline
 
-08. Rollback 06-kernel-sysctl
+09. Rollback 06-kernel-sysctl
 
 01. Removing /etc/sysctl.d/90-lowlat.conf
     01.01 Values stay active until reboot (or re-run: sysctl --system)
-    08.01 Skipping 03-huge-pages: apply-all did not apply it on this host
-    08.02 Skipping 02-cpu-isolation: apply-all did not apply it on this host
+    09.01 Skipping 03-huge-pages: apply-all did not apply it on this host
+    09.02 Skipping 02-cpu-isolation: apply-all did not apply it on this host
 
-09. Rollback 01-grub-bootloader
+10. Rollback 01-grub-bootloader
 
 01. Removing managed kernel arguments from every kernel entry
     01.01 Removing idle
@@ -1216,9 +1266,9 @@ LOW-LATENCY TUNING VERIFICATION
     01.22 Removing mds
     01.23 Removing tsx_async_abort
     01.24 Reboot required
-    09.01 Skipping 00-bios-firmware: apply-all did not apply it on this host
+    10.01 Skipping 00-bios-firmware: apply-all did not apply it on this host
 
-10. Restoring the original runtime unit
+11. Restoring the original runtime unit
 
 Reboot to restore boot parameters and inherited service affinity.
 ---- exit 0
@@ -1251,7 +1301,11 @@ A /var/lib/lowlat/factory-settings/.values/*/mount-options/boot/options
 A /var/lib/lowlat/factory-settings/.values/*/mount-options/options
 A /var/lib/lowlat/factory-settings/.values/*/mounts
 A /var/lib/lowlat/factory-settings/.values/*/services
+A /var/lib/lowlat/factory-settings/.values/*/swappiness
+A /var/lib/lowlat/factory-settings/.values/*/swaps
 A /var/lib/lowlat/factory-settings/.values/*/tuned-profile
+A /var/lib/lowlat/factory-settings/.values/*/units
+A /var/lib/lowlat/factory-settings/.values/*/zswap
 A /var/lib/lowlat/factory-settings/.values/apply-all/complete
 A /var/lib/lowlat/factory-settings/.values/apply-all/guides/00-bios-firmware
 A /var/lib/lowlat/factory-settings/.values/apply-all/guides/01-grub-bootloader
@@ -1264,9 +1318,11 @@ A /var/lib/lowlat/factory-settings/.values/apply-all/guides/07-os-hygiene
 A /var/lib/lowlat/factory-settings/.values/apply-all/guides/08-kernel-bypass
 A /var/lib/lowlat/factory-settings/.values/apply-all/guides/10-time-sync
 A /var/lib/lowlat/factory-settings/.values/apply-all/guides/11-day2-operations
+A /var/lib/lowlat/factory-settings/.values/apply-all/guides/12-memory-pressure
 A /var/lib/lowlat/factory-settings/.values/apply-all/started
 A /var/lib/lowlat/factory-settings/.values/files/etc/fstab
 A /var/lib/lowlat/factory-settings/.values/files/etc/security/limits.d/90-lowlat.conf
+A /var/lib/lowlat/factory-settings/.values/files/etc/sysctl.d/91-lowlat-memory.conf
 A /var/lib/lowlat/factory-settings/.values/files/etc/systemd/system/lowlat-runtime.service
 A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/active_profile
 A /var/lib/lowlat/factory-settings/.values/files/etc/tuned/bootcmdline
@@ -1295,6 +1351,7 @@ A /var/lib/lowlat/factory-settings/.values/services/rpcbind.target
 A /var/lib/lowlat/factory-settings/.values/services/rsyslog
 A /var/lib/lowlat/factory-settings/.values/services/sysstat-collect.timer
 A /var/lib/lowlat/factory-settings/.values/services/sysstat-summary.timer
+A /var/lib/lowlat/factory-settings/.values/services/systemd-zram-setup@zram0.service
 A /var/lib/lowlat/factory-settings/.values/services/tuned
 A /var/lib/lowlat/factory-settings/etc/fstab
 A /var/lib/lowlat/factory-settings/etc/tuned/active_profile

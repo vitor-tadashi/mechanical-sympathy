@@ -18,3 +18,5 @@ FAKE_NICS=(
 )
 SERVICES=(chronyd crond irqbalance rsyslog sshd tuned)
 PROCESSES=()
+# A cloud image has no swap.
+SWAP_KB=0

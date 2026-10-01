@@ -57,9 +57,9 @@ sudo scripts/apply-all --apply && sudo systemctl reboot
 scripts/verify-tuning
 ```
 
-`apply-all` runs the guides in a different order than the table: 00, 01, 02, 03, 06, 07, 10, 05, 08 (only with a bypass stack), 04, 11. It puts 08 before 04 because a driver reload resets the NICs, and it never runs Guide 09. If you apply the guides one by one, follow the table.
+`apply-all` runs the guides in a different order than the table: 00, 01, 02, 03, 06, 07, 12, 10, 05, 08 (only with a bypass stack), 04, 11. It puts 08 before 04 because a driver reload resets the NICs, and it never runs Guide 09. If you apply the guides one by one, follow the table.
 
-**Also, on every host:** time synchronization with chrony, or PTP on the timing NIC, with the daemons pinned to a housekeeping CPU ([Guide 10](guides/10-time-sync.md)). `apply-all` runs it after Guide 07. It also installs the [verification timer of Guide 11](guides/11-day2-operations.md), so the host reports its own drift.
+**Also, on every host:** time synchronization with chrony, or PTP on the timing NIC, with the daemons pinned to a housekeeping CPU ([Guide 10](guides/10-time-sync.md)). `apply-all` runs it after Guide 07. It also installs the [verification timer of Guide 11](guides/11-day2-operations.md), so the host reports its own drift, and applies the memory policy of [Guide 12](guides/12-memory-pressure.md): swap off unless `SWAP_POLICY=protect`, and the OOM order of the latency services.
 
 **Time:** about half a day for the first host, including the reboot and verification. The next hosts with the same hardware take minutes (same `lowlat.conf`).
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# verify-tuning - read-only report of every tuning guide (00-11) on this host.
+# verify-tuning - read-only report of every tuning guide (00-12) on this host.
 #
 #   verify-tuning [--config FILE] [--report FILE]
 #
@@ -33,7 +33,7 @@ fi
 
 # shellcheck source=lib/common
 . "${SCRIPTS_DIR}/lib/common"
-for guide in 00-bios-firmware 01-grub-bootloader 02-cpu-isolation 03-huge-pages 04-network 05-cgroup-isolation 06-kernel-sysctl 07-os-hygiene 08-kernel-bypass 09-measure-latency 10-time-sync 11-day2-operations; do
+for guide in 00-bios-firmware 01-grub-bootloader 02-cpu-isolation 03-huge-pages 04-network 05-cgroup-isolation 06-kernel-sysctl 07-os-hygiene 08-kernel-bypass 09-measure-latency 10-time-sync 11-day2-operations 12-memory-pressure; do
 	# shellcheck source=/dev/null
 	. "${SCRIPTS_DIR}/${guide}"
 done
@@ -63,12 +63,6 @@ no_deep_cstate_usage() {
 	[[ "${driver}" == none ]]
 }
 
-swap_off_or_unused() {
-	local used
-	used="$(awk '/^SwapTotal/{t=$2} /^SwapFree/{f=$2} END{print t-f}' "${LOWLAT_ROOT}"/proc/meminfo)"
-	((used == 0))
-}
-
 clocksource_is_tsc() {
 	grep -qx tsc "${LOWLAT_ROOT}"/sys/devices/system/clocksource/clocksource0/current_clocksource
 }
@@ -82,7 +76,6 @@ verify_host_wide() {
 	verify_soft "CPU frequency governor is performance on every CPU" cpu_governor_is_performance
 	verify_soft "no cpuidle driver active (idle=poll)" no_deep_cstate_usage
 	verify_soft "clocksource is tsc (cheap, vDSO-accelerated clock_gettime)" clocksource_is_tsc
-	verify_soft "no swap in use" swap_off_or_unused
 	verify_soft "clock synchronized (chrony/PTP)" time_synchronized
 	local mitigations load up
 	mitigations="$({ grep -l -v -i '^not affected' "${LOWLAT_ROOT}"/sys/devices/system/cpu/vulnerabilities/* 2>/dev/null || true; } | xargs -r -n1 basename | tr '\n' ' ')"
@@ -131,6 +124,8 @@ section "10 Time synchronization"
 verify_time_sync || true
 section "11 Day-2 operations"
 verify_day2_operations || true
+section "12 Memory pressure"
+verify_memory_pressure || true
 section "Host-wide"
 verify_host_wide
 

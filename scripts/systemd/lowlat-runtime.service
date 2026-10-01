@@ -1,6 +1,6 @@
 # Re-applies the NON-persistent part of the low-latency tuning at every boot:
 #   00 PCIe ASPM policy, 02 workqueue cpumask, 08 DPDK port binding, 04 NIC coalescing/offloads/rings/IRQ affinity,
-#   05 pinning of housekeeping processes, 07 opt-in firewall/module removal.
+#   05 pinning of housekeeping processes, 07 opt-in firewall/module removal, 12 zswap.
 # Persistent settings (GRUB, systemd.conf, sysctl.d, huge page unit, slices, tuned)
 # are not touched here.
 #

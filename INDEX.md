@@ -8,7 +8,7 @@ Pick the lane that matches your role. Each box is one page, read left to right, 
 flowchart TD
   subgraph op["Operator: apply the tuning (about half a day for the first host)"]
     direction LR
-    o0["Quick start"] --> o00["00<br/>BIOS"] --> o1["01<br/>GRUB"] --> o2["02<br/>CPUs"] --> o3["03<br/>Huge pages"] --> o4["04<br/>Network"] --> o5["05<br/>cgroups"] --> o6["06<br/>sysctl"] --> o7["07<br/>Hygiene"] --> o10["10 Time<br/>11 Day-2"] --> ov[["verify-tuning"]]
+    o0["Quick start"] --> o00["00<br/>BIOS"] --> o1["01<br/>GRUB"] --> o2["02<br/>CPUs"] --> o3["03<br/>Huge pages"] --> o4["04<br/>Network"] --> o5["05<br/>cgroups"] --> o6["06<br/>sysctl"] --> o7["07<br/>Hygiene"] --> o10["10 Time<br/>11 Day-2<br/>12 Memory"] --> ov[["verify-tuning"]]
     o7 -.-> o8["08 Bypass<br/>(only with a<br/>bypass stack)"] -.-> o10
   end
   subgraph story["Learner: from stories"]
@@ -32,10 +32,10 @@ flowchart TD
   class m3,m4 risk
 ```
 
-*Five lanes: the operator walks guides 00 to 07, then 10 and 11 (08 only with kernel bypass), and ends at verify-tuning; the learner follows three use cases and the layout explorer; the developer reads the pinning and Java sections and the Java example; the reviewer reads the risks, with mitigations and firewall highlighted; the network engineer goes from Guide 04 through the network concepts to bypass and segmentation.*
+*Five lanes: the operator walks guides 00 to 07, then 10, 11 and 12 (08 only with kernel bypass), and ends at verify-tuning; the learner follows three use cases and the layout explorer; the developer reads the pinning and Java sections and the Java example; the reviewer reads the risks, with mitigations and firewall highlighted; the network engineer goes from Guide 04 through the network concepts to bypass and segmentation.*
 
 **Operator applying the tuning (about half a day for the first host, minutes for the next)**
-[QUICK_START](QUICK_START.md) → [00](guides/00-bios-firmware.md) → [01](guides/01-grub-bootloader-tuning.md) → [02](guides/02-cpu-core-isolation.md) → [03](guides/03-huge-pages-configuration.md) → [04](guides/04-network-optimization.md) → [05](guides/05-cgroup-isolation.md) → [06](guides/06-kernel-sysctl-tuning.md) → [07](guides/07-os-hygiene.md) → ([08](guides/08-kernel-bypass.md), only with a bypass stack) → [10](guides/10-time-sync.md) → [11](guides/11-day2-operations.md) → `scripts/verify-tuning`
+[QUICK_START](QUICK_START.md) → [00](guides/00-bios-firmware.md) → [01](guides/01-grub-bootloader-tuning.md) → [02](guides/02-cpu-core-isolation.md) → [03](guides/03-huge-pages-configuration.md) → [04](guides/04-network-optimization.md) → [05](guides/05-cgroup-isolation.md) → [06](guides/06-kernel-sysctl-tuning.md) → [07](guides/07-os-hygiene.md) → ([08](guides/08-kernel-bypass.md), only with a bypass stack) → [10](guides/10-time-sync.md) → [11](guides/11-day2-operations.md) → [12](guides/12-memory-pressure.md) → `scripts/verify-tuning`
 
 **Learner (from stories)**
 [Use case 1 — the quiet core](examples/use-cases/01-the-quiet-core.md) → [Use case 2 — critical and non-critical threads](examples/use-cases/02-critical-and-non-critical.md) → [Use case 8 — the capstone](examples/use-cases/08-stock-to-tuned-in-one-afternoon.md) → the [layout explorer](https://vitor-tadashi.github.io/mechanical-sympathy/explorer.html)
@@ -65,6 +65,7 @@ flowchart TD
 | [09 Measuring latency](guides/09-measuring-latency.md) | ~14 min | baselines, percentiles, coordinated omission, rtla osnoise/timerlat/hwnoise, turbostat SMIs, a measurement protocol, reading histogram shapes | `install_measurement_tools`, `capture_bundle`, `verify_measurement` |
 | [10 Time synchronization](guides/10-time-sync.md) | ~11 min | chrony vs PTP, hardware timestamping, the timing NIC, pinning the time daemons, ptp4l + phc2sys, VMs (`ptp_kvm`) | `pin_time_daemons`, `configure_chrony`, `configure_ptp`, `verify_time_sync` |
 | [11 Day-2 operations](guides/11-day2-operations.md) | ~10 min | the verification timer, kernel updates and the boot loader entries, what to alert on, adding a thread, an update routine | `install_verify_timer`, `all_kernel_entries_isolated`, `verify_day2_operations` |
+| [12 Memory pressure](guides/12-memory-pressure.md) | ~11 min | swap off or protected, the swapoff precheck, zswap and zram, the OOM order (`OOMScoreAdjust=-900`), `LimitMEMLOCK` for services, PSI and `pswpin` checks | `disable_swap`, `protect_latency_units`, `verify_memory_pressure` |
 
 ## Concepts
 

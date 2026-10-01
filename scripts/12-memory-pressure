@@ -1,0 +1,360 @@
+#!/usr/bin/env bash
+#
+# 12-memory-pressure - swap, the OOM killer order and memory pressure checks (Guide 12).
+#
+#   disable_swap               SWAP_POLICY=off: swapoff, the swap lines of /etc/fstab commented
+#                              out, zram swap masked (persistent and runtime)
+#   write_memory_sysctls       SWAP_POLICY=protect: vm.swappiness=1 in its own sysctl.d file
+#   disable_zswap              zswap off (runtime: lowlat-runtime.service re-applies it)
+#   protect_latency_units      a drop-in per LATENCY_UNITS entry: OOMScoreAdjust=, LimitMEMLOCK=
+#                              and, on cgroup v2, MemorySwapMax=0
+#   verify_memory_pressure     read-only checks, swap traffic since boot and memory PSI included
+#
+# SWAP_POLICY (off or protect), LATENCY_UNITS, LATENCY_OOM_SCORE_ADJ and
+# MEMORY_PSI_FULL_AVG300_MAX come from lowlat.conf. Files written before Guide 12 get the
+# defaults. swapoff refuses to run when the swap in use would not fit in available memory.
+
+set -Eeuo pipefail
+# shellcheck source=lib/common
+. "$(dirname "${BASH_SOURCE[0]}")/lib/common"
+
+FSTAB="${FSTAB:-${LOWLAT_ROOT}/etc/fstab}"
+SYSTEMD_UNIT_DIR="${SYSTEMD_UNIT_DIR:-${LOWLAT_ROOT}/etc/systemd/system}"
+MEMORY_SYSCTL_FILE="${MEMORY_SYSCTL_FILE:-${LOWLAT_ROOT}/etc/sysctl.d/91-lowlat-memory.conf}"
+MEMORY_DROPIN=20-lowlat-memory.conf
+SWAPS_FILE="${LOWLAT_ROOT}/proc/swaps"
+MEMINFO_FILE="${LOWLAT_ROOT}/proc/meminfo"
+SWAPPINESS_FILE="${LOWLAT_ROOT}/proc/sys/vm/swappiness"
+ZSWAP_FILE="${LOWLAT_ROOT}/sys/module/zswap/parameters/enabled"
+PSI_MEMORY_FILE="${LOWLAT_ROOT}/proc/pressure/memory"
+ZRAM_UNIT=systemd-zram-setup@zram0.service
+SWAP_MARKER="# disabled by mechanical-sympathy 12-memory-pressure:"
+
+# memory_defaults - lowlat.conf files written before Guide 12 have none of its keys.
+memory_defaults() {
+	SWAP_POLICY="${SWAP_POLICY:-off}"
+	LATENCY_OOM_SCORE_ADJ="${LATENCY_OOM_SCORE_ADJ:--900}"
+	MEMORY_PSI_FULL_AVG300_MAX="${MEMORY_PSI_FULL_AVG300_MAX:-1.00}"
+	[[ -n "${LATENCY_UNITS+set}" ]] || LATENCY_UNITS=()
+	case "${SWAP_POLICY}" in
+	off | protect) ;;
+	*) die "SWAP_POLICY must be off or protect, not '${SWAP_POLICY}'" "${EXIT_PRECHECK}" ;;
+	esac
+	if [[ ! "${LATENCY_OOM_SCORE_ADJ}" =~ ^-?[0-9]+$ ]] || ((LATENCY_OOM_SCORE_ADJ < -1000 || LATENCY_OOM_SCORE_ADJ > 1000)); then
+		die "LATENCY_OOM_SCORE_ADJ must be an integer from -1000 to 1000" "${EXIT_PRECHECK}"
+	fi
+	return 0
+}
+
+# --- what the host has ---------------------------------------------------------
+
+# active_swap_devices - one device per line, from /proc/swaps (empty when none).
+active_swap_devices() {
+	awk 'NR > 1 && NF > 0 { print $1 }' "${SWAPS_FILE}" 2>/dev/null || true
+}
+
+# meminfo_kb <key> - a /proc/meminfo value in kB, or nothing when the key is absent.
+meminfo_kb() {
+	awk -v k="$1:" '$1 == k { print $2 }' "${MEMINFO_FILE}" 2>/dev/null || true
+}
+
+# fstab_has_swap - predicate: an active (not commented) swap line in /etc/fstab.
+fstab_has_swap() {
+	awk '!/^[[:space:]]*#/ && $3 == "swap" { found = 1 } END { exit !found }' "${FSTAB}" 2>/dev/null
+}
+
+no_active_swap() {
+	local devices
+	devices="$(active_swap_devices)"
+	[[ -z "${devices}" ]]
+}
+
+cgroup_v2() {
+	[[ -f "${LOWLAT_ROOT}/sys/fs/cgroup/cgroup.controllers" ]]
+}
+
+zswap_off() {
+	local value
+	value="$(read_value "${ZSWAP_FILE}" N)"
+	[[ "${value}" == N ]]
+}
+
+swappiness_is() {
+	local value
+	value="$(read_value "${SWAPPINESS_FILE}")"
+	[[ "${value}" == "$1" ]]
+}
+
+unit_property_is() { # unit_property_is <unit> <property> <value>
+	local value
+	value="$(systemctl show -p "$2" --value "$1" 2>/dev/null || true)"
+	[[ "${value}" == "$3" ]]
+}
+
+# vmstat_zero <key> - predicate: a /proc/vmstat counter is 0 since boot.
+vmstat_zero() {
+	local value
+	value="$(awk -v k="$1" '$1 == k { print $2 }' "${LOWLAT_ROOT}/proc/vmstat" 2>/dev/null || true)"
+	[[ "${value}" == 0 ]]
+}
+
+# psi_full_avg300_at_most <limit> - predicate: memory PSI "full avg300" <= limit (percent).
+psi_full_avg300_at_most() {
+	awk -v limit="$1" '$1 == "full" { for (i = 2; i <= NF; i++) if ($i ~ /^avg300=/) { sub(/^avg300=/, "", $i); found = 1; ok = ($i + 0 <= limit + 0) } }
+		END { exit !(found && ok) }' "${PSI_MEMORY_FILE}" 2>/dev/null
+}
+
+# pid_swap_zero <pid> - predicate: VmSwap of a process is 0 kB.
+pid_swap_zero() {
+	awk '$1 == "VmSwap:" { found = 1; zero = ($2 == 0) } END { exit !(found && zero) }' "${LOWLAT_ROOT}/proc/$1/status" 2>/dev/null
+}
+
+# --- apply ---------------------------------------------------------------------
+
+# memory_precheck - swapoff moves every swapped page back into RAM. Refuse when they would
+# not fit: the host would end in the OOM killer, which is the thing this guide plans for.
+memory_precheck() {
+	local total free available used
+	total="$(meminfo_kb SwapTotal)"
+	free="$(meminfo_kb SwapFree)"
+	available="$(meminfo_kb MemAvailable)"
+	[[ -n "${available}" ]] || available="$(meminfo_kb MemFree)"
+	used=$((${total:-0} - ${free:-0}))
+	((used > 0)) || return 0
+	if ((used >= ${available:-0})); then
+		if [[ "${DRY_RUN}" -eq 1 ]]; then
+			log_warn "swap in use (${used} kB) does not fit in available memory (${available:-0} kB): --apply would refuse"
+			return 0
+		fi
+		die "swap in use (${used} kB) does not fit in available memory (${available:-0} kB): swapoff would push the host into the OOM killer. Free memory first, or set SWAP_POLICY=protect" "${EXIT_PRECHECK}"
+	fi
+	log_sub_step "Swap in use: ${used} kB, available memory: ${available} kB (fits)"
+}
+
+# remember_memory_pressure - first-apply state for the rollback.
+remember_memory_pressure() {
+	local unit swaps
+	[[ "${DRY_RUN}" -eq 1 ]] && return 0
+	remember_file "${MEMORY_SYSCTL_FILE}"
+	remember_runtime_value 12/swappiness "${SWAPPINESS_FILE}"
+	remember_runtime_value 12/zswap "${ZSWAP_FILE}"
+	swaps="$(active_swap_devices)"
+	remember_value 12/swaps "${swaps:-none}"
+	remember_service "${ZRAM_UNIT}"
+	if ((${#LATENCY_UNITS[@]} > 0)); then
+		remember_value 12/units "${LATENCY_UNITS[*]}"
+	else
+		remember_value 12/units none
+	fi
+	for unit in "${LATENCY_UNITS[@]}"; do
+		remember_file "${SYSTEMD_UNIT_DIR}/${unit}.d/${MEMORY_DROPIN}"
+	done
+}
+
+disable_swap() {
+	local devices content
+	memory_precheck
+	devices="$(active_swap_devices)"
+	if [[ -n "${devices}" ]]; then
+		log_sub_step "Turning swap off: ${devices//$'\n'/ }"
+		run swapoff -a
+	else
+		log_sub_step "No swap device is active"
+	fi
+	if fstab_has_swap; then
+		log_sub_step "Commenting out the swap lines of ${FSTAB}, so no swap comes back at boot"
+		content="$(awk -v marker="${SWAP_MARKER}" '!/^[[:space:]]*#/ && $3 == "swap" { print marker " " $0; next } { print }' "${FSTAB}")"
+		printf '%s\n' "${content}" | write_file "${FSTAB}"
+	fi
+	if systemctl cat "${ZRAM_UNIT}" >/dev/null 2>&1; then
+		log_sub_step "Masking ${ZRAM_UNIT}: no compressed RAM swap at boot"
+		run systemctl mask "${ZRAM_UNIT}"
+	fi
+	if [[ -f "${MEMORY_SYSCTL_FILE}" ]]; then
+		log_sub_step "Removing ${MEMORY_SYSCTL_FILE}: swappiness does not matter without swap"
+		run rm -f "${MEMORY_SYSCTL_FILE}"
+	fi
+}
+
+write_memory_sysctls() {
+	if grep -q "^${SWAP_MARKER}" "${FSTAB}" 2>/dev/null; then
+		log_warn "an earlier SWAP_POLICY=off apply commented out the swap lines of ${FSTAB}: roll back first to get swap back"
+	fi
+	log_sub_step "Writing ${MEMORY_SYSCTL_FILE} (vm.swappiness = 1)"
+	write_file "${MEMORY_SYSCTL_FILE}" <<EOF
+# Managed by mechanical-sympathy 12-memory-pressure - see guides/12-memory-pressure.md
+# SWAP_POLICY=protect: drop page cache long before swapping anonymous memory.
+# Latency services are kept out of swap by MemorySwapMax=0 and mlockall, not by this value.
+vm.swappiness = 1
+EOF
+	run_quiet sysctl -p "${MEMORY_SYSCTL_FILE}"
+}
+
+disable_zswap() {
+	if [[ ! -e "${ZSWAP_FILE}" ]]; then
+		log_sub_step "No zswap on this kernel"
+		return 0
+	fi
+	if zswap_off; then
+		log_sub_step "zswap is already off"
+		return 0
+	fi
+	log_sub_step "Turning zswap off"
+	sysfs_write N "${ZSWAP_FILE}"
+}
+
+protect_latency_units() {
+	local unit swap_line=""
+	if ((${#LATENCY_UNITS[@]} == 0)); then
+		log_warn "LATENCY_UNITS is empty: no OOM score and no memlock limit set for the latency services"
+		return 0
+	fi
+	cgroup_v2 && swap_line=$'# never swap this service, whatever the host\'s swap policy\nMemorySwapMax=0'
+	for unit in "${LATENCY_UNITS[@]}"; do
+		log_sub_step "${unit}: OOMScoreAdjust=${LATENCY_OOM_SCORE_ADJ}, LimitMEMLOCK=infinity${swap_line:+, MemorySwapMax=0}"
+		write_file "${SYSTEMD_UNIT_DIR}/${unit}.d/${MEMORY_DROPIN}" <<EOF
+# Managed by mechanical-sympathy 12-memory-pressure
+[Service]
+# the OOM killer takes almost every other process first; not -1000, so a leak here
+# cannot make the kernel kill everything else and then panic
+OOMScoreAdjust=${LATENCY_OOM_SCORE_ADJ}
+# limits.d applies to login sessions only: a service needs this for mlockall
+LimitMEMLOCK=infinity
+${swap_line}
+EOF
+	done
+	run systemctl daemon-reload
+	log_sub_step "Restart the latency services for the new limits to take effect"
+}
+
+apply_memory_pressure() {
+	memory_defaults
+	log_step "Memory pressure (SWAP_POLICY=${SWAP_POLICY})"
+	require_capability memory_pressure || return 0
+	remember_memory_pressure
+	if [[ "${SWAP_POLICY}" == off ]]; then
+		disable_swap
+	else
+		write_memory_sysctls
+	fi
+	disable_zswap
+	log_step "OOM order and memory limits of the latency services"
+	protect_latency_units
+}
+
+apply_memory_pressure_runtime() {
+	log_step "zswap"
+	disable_zswap
+}
+
+# --- verification (read-only) ------------------------------------------------
+
+verify_memory_pressure() {
+	local unit devices pid
+	memory_defaults
+	devices="$(active_swap_devices)"
+	if [[ "${SWAP_POLICY}" == off ]]; then
+		verify_check "no active swap device (SWAP_POLICY=off)" no_active_swap
+		verify_check "no active swap line in ${FSTAB}" not fstab_has_swap
+	else
+		verify_check "vm.swappiness = 1 (SWAP_POLICY=protect)" swappiness_is 1
+		verify_info "active swap: ${devices:-none}"
+	fi
+	if [[ -e "${ZSWAP_FILE}" ]]; then
+		verify_check "zswap is off" zswap_off
+	fi
+	for unit in "${LATENCY_UNITS[@]}"; do
+		verify_check "${unit}: ${MEMORY_DROPIN} drop-in exists" test -f "${SYSTEMD_UNIT_DIR}/${unit}.d/${MEMORY_DROPIN}"
+		if ! systemctl cat "${unit}" >/dev/null 2>&1; then
+			verify_info "${unit} is not installed: the drop-in applies when it is"
+			continue
+		fi
+		verify_check "${unit}: OOMScoreAdjust=${LATENCY_OOM_SCORE_ADJ}" unit_property_is "${unit}" OOMScoreAdjust "${LATENCY_OOM_SCORE_ADJ}"
+		verify_check "${unit}: LimitMEMLOCK=infinity" unit_property_is "${unit}" LimitMEMLOCK infinity
+		pid="$(systemctl show -p MainPID --value "${unit}" 2>/dev/null || true)"
+		if [[ "${pid}" =~ ^[1-9][0-9]*$ ]]; then
+			verify_soft "${unit}: no memory on swap (VmSwap of pid ${pid})" pid_swap_zero "${pid}"
+		fi
+	done
+	if ((${#LATENCY_UNITS[@]} == 0)); then
+		verify_info "LATENCY_UNITS is empty: no latency service checked"
+	fi
+	if [[ -r "${LOWLAT_ROOT}/proc/vmstat" ]]; then
+		verify_soft "no page swapped in since boot (pswpin = 0)" vmstat_zero pswpin
+	fi
+	if [[ -r "${PSI_MEMORY_FILE}" ]]; then
+		verify_soft "memory pressure: PSI full avg300 <= ${MEMORY_PSI_FULL_AVG300_MAX} %" psi_full_avg300_at_most "${MEMORY_PSI_FULL_AVG300_MAX}"
+	else
+		verify_info "no memory PSI on this kernel (RHEL 8: add psi=1 to the kernel command line)"
+	fi
+	verify_result
+}
+
+# --- rollback ------------------------------------------------------------------
+
+rollback_memory_pressure() {
+	local units unit swaps content
+	local -a saved_units=()
+	log_step "Memory pressure"
+	if [[ ! -f "${LOWLAT_FACTORY_DIR}/.values/12/swaps" ]]; then
+		log_sub_step "Nothing to roll back: 12-memory-pressure was never applied here"
+		return 0
+	fi
+	units="$(original_value 12/units)"
+	if [[ "${units}" != none ]]; then
+		log_sub_step "Removing the drop-ins of ${units}"
+		read -r -a saved_units <<<"${units}"
+		for unit in "${saved_units[@]}"; do
+			restore_file "${SYSTEMD_UNIT_DIR}/${unit}.d/${MEMORY_DROPIN}"
+		done
+		run systemctl daemon-reload
+	fi
+	log_sub_step "Restoring ${MEMORY_SYSCTL_FILE}, vm.swappiness and zswap"
+	restore_file "${MEMORY_SYSCTL_FILE}"
+	restore_runtime_value 12/swappiness "${SWAPPINESS_FILE}" '^[0-9]+$'
+	restore_runtime_value 12/zswap "${ZSWAP_FILE}" '^[YN]$'
+	# Only the lines this guide commented out: Guide 07 edits the same file (noatime).
+	if grep -q "^${SWAP_MARKER} " "${FSTAB}" 2>/dev/null; then
+		log_sub_step "Restoring the swap lines of ${FSTAB}"
+		content="$(awk -v marker="${SWAP_MARKER} " 'index($0, marker) == 1 { print substr($0, length(marker) + 1); next } { print }' "${FSTAB}")"
+		printf '%s\n' "${content}" | write_file "${FSTAB}"
+	fi
+	restore_service "${ZRAM_UNIT}"
+	swaps="$(original_value 12/swaps)"
+	if [[ "${swaps}" != none ]]; then
+		log_sub_step "Turning swap back on: ${swaps//$'\n'/ }"
+		run swapon -a
+	fi
+	log_sub_step "Restart the latency services to drop their OOM score and memlock limit"
+}
+
+main() {
+	parse_mode_args "$@" || true
+	case "${MODE}" in
+	apply)
+		require_root
+		load_config
+		apply_memory_pressure
+		print_step_timing_table
+		;;
+	runtime)
+		require_root
+		load_config
+		apply_memory_pressure_runtime
+		;;
+	verify)
+		load_config
+		verify_memory_pressure
+		;;
+	rollback)
+		require_root
+		load_config
+		rollback_memory_pressure
+		;;
+	*) print_usage ;;
+	esac
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+	main "$@"
+fi
