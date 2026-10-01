@@ -60,6 +60,9 @@ A **P-state** is a pair of clock frequency and voltage. A lower clock uses much 
 | `acpi-cpufreq` | The Linux governor | `performance` governor through tuned |
 | `amd-pstate` (`active`, `passive`, `guided`) | The CPU (active) or the governor (passive) | `amd_pstate=passive` or `acpi-cpufreq`, with `performance` |
 
+> [!NOTE]
+> **Not proven in production.** The reference hosts are Intel Xeon. The AMD rows follow the kernel documentation and have not been measured on a production AMD EPYC host ([Guide 01 §5](../guides/01-grub-bootloader-tuning.md#5-the-parameters-one-by-one)).
+
 The **governor** is the Linux policy. `performance` asks for the highest P-state all the time. `powersave`, `ondemand` and `schedutil` follow the load: they raise the clock only after they see the CPU busy, which takes milliseconds. A burst that arrives on a slow core is handled at the slow clock until the governor reacts.
 
 <img src="../assets/diagrams/frequency-ramp.svg" alt="Animation: a burst of six messages on a core whose clock follows the load starts at 1.2 GHz, and the first messages take two to three times longer until the clock reaches 3.0 GHz; with a fixed clock every message takes the same short time" width="720">
@@ -153,7 +156,7 @@ turbostat --quiet --interval 5 --num_iterations 1 \
 | `Bzy_MHz` | Average clock while in C0 | Steady between runs. A drift means turbo or power limits. |
 | `TSC_MHz` | The constant [TSC](../GLOSSARY.md#tsc) rate | The base clock. It does not change with P-states. |
 | `C1%`, `CPU%c6` | Share of time in each idle state | 0 with `idle=poll` |
-| `SMI` | SMIs counted in the interval (the counter is per box, so every CPU shows the same value) | 0, or a small constant you cannot remove |
+| `SMI` | SMIs counted in the interval, per CPU (the counter is per logical CPU; most firmware stops every CPU for each SMI, so the rows usually match, but they can differ) | 0, or a small constant you cannot remove |
 | `CoreTmp`, `PkgWatt` | Temperature and package power | Watch them while the clock drifts |
 
 `turbostat` reads model-specific registers, so it needs root and the `msr` module. It is part of `kernel-tools`, which [Guide 09](../guides/09-measuring-latency.md) installs.
@@ -169,21 +172,21 @@ turbostat --quiet --interval 5 --num_iterations 1 \
 
 ## 11. See it on your host
 
-`cyclictest` (from `rt-tests`, installed by [Guide 09](../guides/09-measuring-latency.md)) measures how late a thread wakes up from a timer. By default it holds `/dev/cpu_dma_latency` at 0, which keeps CPUs out of deep C-states. `--laptop` turns that off. Run both on a host that is **not** tuned with `idle=poll`, for example a development box:
+`cyclictest` (from `rt-tests`, installed by [Guide 09](../guides/09-measuring-latency.md)) measures how late a thread wakes up from a timer. It needs root: `-p 80` asks for `SCHED_FIFO`, and `-m` locks its memory. By default it holds `/dev/cpu_dma_latency` at 0, which keeps CPUs out of deep C-states. `--laptop` turns that off. Run both on a host that is **not** tuned with `idle=poll`, for example a development box:
 
 ```bash
-cyclictest -m -q -p 80 -t 1 -a 3 -i 2000 -l 15000 --laptop   # C-states allowed
+sudo cyclictest -m -q -p 80 -t 1 -a 3 -i 2000 -l 15000 --laptop   # C-states allowed
 # T: 0 (...) P:80 I:2000 C:15000 Min: ... Act: ... Avg: ... Max:   <- note Avg and Max
-cyclictest -m -q -p 80 -t 1 -a 3 -i 2000 -l 15000             # PM QoS holds C-states off
+sudo cyclictest -m -q -p 80 -t 1 -a 3 -i 2000 -l 15000             # PM QoS holds C-states off
 # Avg and Max lower: the gap is the cost of waking from the idle states your CPU chose
 ```
 
 Then watch the governor and the clock follow the load (skip this on a host with a fixed clock):
 
 ```bash
-turbostat --quiet --interval 1 --show CPU,Bzy_MHz,Busy% --cpu 3 &
+sudo timeout 5 turbostat --quiet --interval 1 --show CPU,Bzy_MHz,Busy% --cpu 3 &
 taskset -c 3 timeout 3 sh -c 'while :; do :; done'
-# Bzy_MHz climbs over the first second of load, then stays; kill %1 to stop turbostat
+# Bzy_MHz climbs over the first second of load, then stays; turbostat stops after 5 s
 ```
 
 Both steps change nothing that survives the command. On a tuned host, the two `cyclictest` runs should give the same numbers: that is the point of the tuning.
