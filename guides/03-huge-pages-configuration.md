@@ -19,7 +19,7 @@
 
 ```mermaid
 flowchart LR
-  g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g00["00<br/>BIOS"] --> g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
   g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
   class g03 focus
   classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
@@ -101,7 +101,7 @@ flowchart LR
 
 Then check that the node has that much free RAM **plus** what the OS needs (`numactl --hardware`).
 
-Reference host: a 16 GiB heap plus about 2 GiB of code cache and bypass buffers on node 1 gives 18 GiB, and with headroom **24 GiB = 12,288 × 2 MiB on node 1**. Tooling and helper JVMs on node 0 get **4 GiB = 2,048 pages**, and there is a surplus of **2,048** overcommit pages (§4.3).
+Reference host: a 16 GiB heap plus about 2 GiB of code cache and bypass buffers on node 1 gives 18 GiB. 20 % headroom makes about 22 GiB, and the reference rounds that up to **24 GiB = 12,288 × 2 MiB on node 1**. Tooling and helper JVMs on node 0 get **4 GiB = 2,048 pages**, and there is a surplus of **2,048** overcommit pages (§4.3).
 
 Pages in the pool are **not available** to anything else, not even the page cache. Reserving 24 GiB on a 32 GiB node leaves 8 GiB for everything else that runs there.
 
@@ -218,7 +218,7 @@ On a **bare-metal host whose application threads are pinned** ([Guide 02](02-cpu
 | `-XX:+UseLargePages` | The heap (and code cache) is mapped from the explicit huge page pool (`MAP_HUGETLB` / hugetlbfs). ZGC uses a `memfd` with `MFD_HUGETLB`, so no hugetlbfs mount is needed. | TLB reach for a 16 GiB heap goes from 8 MiB to 4 GiB. |
 | `-XX:+UseNUMA` | Heap memory is placed so that each thread allocates on its own node. | Combined with pinning, a critical thread on node 1 gets node-1 memory. |
 | `-XX:+AlwaysPreTouch` | The JVM writes to every page of the committed heap during start-up. | Moves all page faults (and zeroing) out of the serving path. If the pool is too small, this fails **at start-up**, not hours later under load when the heap grows. |
-| `-Xms` = `-Xmx` | The whole heap is committed at start. | Nothing to commit later. With ZGC, uncommit never goes below `-Xms`, so `-ZUncommit` is belt and braces. |
+| `-Xms` = `-Xmx` | The whole heap is committed at start. | Nothing to commit later. With ZGC, uncommit never goes below `-Xms`, so `-ZUncommit` is a second safeguard. |
 
 Start-up takes longer because of the pre-touch (several seconds for 16 GiB). That is the point: you pay the cost before the first request arrives, not while serving it.
 

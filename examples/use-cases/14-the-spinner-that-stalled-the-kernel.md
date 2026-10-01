@@ -121,5 +121,5 @@ Illustrative:
 ## 6. Key takeaways
 
 - **A spinner does not need a real-time class.** Alone on an isolated CPU, `SCHED_OTHER` spins the same, and it still lets the kernel do its few µs of work.
-- **FIFO turns every kernel thread on its CPU into a hostage.** With throttling it costs 50 ms a second, and without it the kernel work never runs.
+- **FIFO blocks every kernel thread on its CPU.** With throttling it costs 50 ms a second, and without it the kernel work never runs.
 - **Keep interrupts off the isolated CPU.** Then nothing wakes `ksoftirqd` there, whatever the scheduling class.

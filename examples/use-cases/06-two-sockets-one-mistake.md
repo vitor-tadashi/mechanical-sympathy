@@ -15,13 +15,13 @@
 
 ## 1. Situation
 
-Two-socket servers are two computers joined by an interconnect. Memory and PCIe slots belong to a socket, and a CPU on the other socket reaches them across the link. One misplaced `net.rx` thread, pinned to CPU 4 (node 0) while the NIC and the memory sit on node 1, is enough to add a second hump to the histogram.
+Two-socket servers are two computers joined by an interconnect. Memory and PCIe slots belong to a socket, and a CPU on the other socket reaches them across the link. One misplaced `net.rx` thread, pinned to CPU 4 (node 0) while the NIC and the memory sit on node 1, is enough to move its whole histogram to the right.
 
 <img src="../../assets/diagrams/numa-locality.svg" alt="Two sockets: a net.rx thread on node 1 reads the NIC's packet buffers locally; the same thread on node 0 crosses the interconnect on every cache miss" width="720">
 
 *The thread, the NIC and the memory belong on the same node. Otherwise every cache miss pays the trip across sockets.*
 
-A histogram with two humps is the signature ([Guide 09 §7](../../guides/09-measuring-latency.md#7-reading-the-results)): some samples stay on one node and some cross it, or share a core with an SMT sibling.
+The signature is in the histogram ([Guide 09 §7](../../guides/09-measuring-latency.md#7-reading-the-results)). A thread that is always on the wrong node shifts every percentile by the same few hundred nanoseconds. A thread whose placement changes, for example from one restart to the next, gives two humps: one per node.
 
 ## 2. Diagnose
 
@@ -77,7 +77,7 @@ exec numactl --membind=1 java ...        # in the launcher: the heap must come f
 Then check that the pool on node 1 is big enough for what is now bound to it (`HUGEPAGES_PER_NODE`, [Guide 03 §5.3](../../guides/03-huge-pages-configuration.md#53-make-sure-the-pages-come-from-the-right-node)). If the layout was designed from the [floor plan](02-critical-and-non-critical.md), this mistake should not exist, and the fix is a one-line change.
 
 > [!IMPORTANT]
-> Changing node interleaving or SNC/NPS in the BIOS changes the node numbers and the CPU-to-node map. Update `ISOLATED_CPUS`, `OS_CPUS`, `HUGEPAGES_PER_NODE` and `NICS` in `lowlat.conf` afterwards ([Guide 00 §4.5](../../guides/00-bios-firmware.md#45-memory-and-numa)).
+> Changing node interleaving or SNC/NPS in the BIOS changes the node numbers and the CPU-to-node map. Update `ISOLATED_CPUS`, `OS_CPUS`, `HUGEPAGES_PER_NODE` and `NICS` in `lowlat.conf` afterward ([Guide 00 §4.5](../../guides/00-bios-firmware.md#45-memory-and-numa)).
 
 ## 4. Verify
 

@@ -19,7 +19,7 @@
 
 ```mermaid
 flowchart LR
-  g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g00["00<br/>BIOS"] --> g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
   g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
   class g04 focus
   classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
@@ -213,7 +213,7 @@ The queue count matters in three places:
 
 ```bash
 ethtool -L ens1f0 combined 1        # NICS entry "ens1f0|critical|1|0": one IRQ CPU → one queue
-ethtool -L ens2f0 combined 2        # NICS entry "ens2f0|bulk|28,30|..." → two queues, one per CPU
+ethtool -L ens2f0 combined 2        # if the entry were "ens2f0|bulk|28,30|...": two queues, one per CPU (the reference uses 30 alone)
 ```
 
 The script sets `combined` to the **number of CPUs in the NIC's `irq_cpus` field** in `NICS`, capped at the hardware maximum.
@@ -249,7 +249,7 @@ With **DPDK on an Intel card** the question disappears: the port is unbound from
 In `lowlat.conf`, `KERNEL_BYPASS_DRIVER` and `KERNEL_BYPASS_COMMAND` mark socket-acceleration NICs. The script gives those NICs one queue, whatever their `irq_cpus` field says.
 
 > [!WARNING]
-> **Changing channels resets the NIC** on most drivers (link down for 1–3 s), and the new queues come up with **default IRQ affinity**. Do it at boot or in a maintenance window, never under live traffic, and always re-run the IRQ placement (§6) afterwards. `apply-all` and `lowlat-runtime.service` already run the two steps in that order.
+> **Changing channels resets the NIC** on most drivers (link down for 1–3 s), and the new queues come up with **default IRQ affinity**. Do it at boot or in a maintenance window, never under live traffic, and always re-run the IRQ placement (§6) afterward. `apply-all` and `lowlat-runtime.service` already run the two steps in that order.
 
 ### 5.2 Adaptive coalescing off: `ethtool -C adaptive-rx off adaptive-tx off`
 
@@ -292,6 +292,8 @@ This is **flow control** (IEEE 802.3x PAUSE), not an offload. With RX pause on, 
 
 `ethtool -K rx off tx off` disables **checksum offload** and moves checksum computation to the CPU. Some tuning scripts do this together with the offloads above. It is **not** a general latency win: the NIC computes checksums at line rate for free, while the CPU spends cycles on every byte. The only cases where turning it off makes sense are specific NIC/driver bugs, or packet-capture setups that need the raw checksum. It is therefore **opt-in** here (`NIC_DISABLE_CSUM_OFFLOAD=yes`).
 
+<a id="ring-sizes"></a>
+
 ### 5.7 Ring sizes at maximum: `ethtool -G rx <max> tx <max>`
 
 The RX ring is where the NIC DMAs packets before software picks them up. If a burst (a traffic spike, a reconnect storm, a GC-less but busy consumer) arrives faster than NAPI drains it, packets are **dropped in hardware**, and a dropped TCP segment costs a retransmit timeout of ≥ 200 ms. A larger ring does not add latency while it is empty. It only absorbs bursts. Watch `ethtool -S <iface> | grep -iE 'drop|miss|fifo|no_buf'`.
@@ -328,11 +330,11 @@ Where the NIC interrupt runs is where the **softirq** (protocol processing) runs
 
 | Model | IRQ + softirq on | App thread | Pros | Cons |
 |---|---|---|---|---|
-| **A. Housekeeping IRQ CPU** (reference) | a node-local, non-isolated CPU (CPU 1) | isolated CPU, spins on the socket (non-blocking `recv` in a loop) | Isolated CPU never interrupted. Deterministic. | One cache-line transfer (same node, ~40–80 ns) from CPU 1 to the app CPU per packet |
-| **B. Busy polling** | NAPI is polled **from the app thread's syscall** (`SO_BUSY_POLL`, `net.core.busy_read`) | isolated CPU | Skips the IRQ → softirq → wake-up chain | CPU cost; the IRQ still fires unless deferred (`napi_defer_hard_irqs`) |
+| **A. Housekeeping IRQ CPU** (reference) | a node-local, non-isolated CPU (CPU 1) | isolated CPU, spins on the socket (non-blocking `recv` in a loop) | Isolated CPU never interrupted. Deterministic. | A few cache-line transfers per packet from CPU 1 to the app CPU (same node, ~20–40 ns each inside one L3 domain) |
+| **B. Busy polling** | NAPI is polled **from the app thread's syscall** (`SO_BUSY_POLL`, `net.core.busy_read`; tuned's `network-latency` sets 50 µs for every blocking socket, [Guide 07 §5](07-os-hygiene.md#5-tuned-profile)) | isolated CPU | Skips the IRQ → softirq → wake-up chain | CPU cost; the IRQ still fires unless deferred (`napi_defer_hard_irqs`) |
 | **C. Kernel bypass** (§7, [Guide 08](08-kernel-bypass.md)) | none for data (user space polls the NIC) | isolated CPU | Lowest latency, no syscalls | Vendor stack, own tuning, huge pages |
 
-<img src="../assets/diagrams/irq-placement.svg" alt="Animation: with the NIC interrupt on isolated CPU 3, every packet cuts into the spinning net.rx thread; with the interrupt on housekeeping CPU 1, the spin is never cut and each packet reaches CPU 3 as one cache-line transfer" width="720">
+<img src="../assets/diagrams/irq-placement.svg" alt="Animation: with the NIC interrupt on isolated CPU 3, every packet cuts into the spinning net.rx thread; with the interrupt on housekeeping CPU 1, the spin is never cut and each packet reaches CPU 3 through the cache" width="720">
 
 *Model A: the interrupt work goes to housekeeping CPU 1, so the isolated CPU only ever runs its spinning thread.*
 

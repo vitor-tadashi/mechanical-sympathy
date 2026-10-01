@@ -19,7 +19,7 @@
 
 ```mermaid
 flowchart LR
-  g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g00["00<br/>BIOS"] --> g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
   g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
   class g05 focus
   classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
@@ -34,7 +34,7 @@ flowchart LR
 [Guide 02](02-cpu-core-isolation.md) already moves every service off the isolated CPUs, through systemd's `CPUAffinity`. That is affinity, which is **advisory**: any process may call `sched_setaffinity()` and move itself. Two classes of process make that insufficient:
 
 1. **Agents that set their own affinity or spawn processes outside systemd**: endpoint security (EDR/antivirus), some monitoring and backup agents, vendor tools started from their own init scripts. They can end up anywhere, including on an isolated CPU or on the CPU that serves the critical NIC's interrupts.
-2. **Agents that misbehave under load**: a log shipper that reads 2 GB of backlog after a network blip, or a scanner walking the filesystem. They do not need an isolated CPU to hurt you. Saturating the **housekeeping** CPUs (where NIC IRQs and softirqs run), filling the page cache, or hammering the disk is enough.
+2. **Agents that misbehave under load**: a log shipper that reads 2 GB of backlog after a network blip, or a scanner walking the filesystem. They do not need an isolated CPU to hurt you. Saturating the **OS CPUs** where NIC IRQs and softirqs run, filling the page cache, or hammering the disk is enough.
 
 <img src="../assets/diagrams/noisy-neighbor.svg" alt="Animation: three agent bursts stall a critical thread when the agent shares its CPU, and never reach it when the agent runs in housekeeping.slice on another CPU" width="720">
 
@@ -152,7 +152,7 @@ systemd-cgls /housekeeping.slice
 
 ### 4.3 Processes that are not systemd units (`pin_housekeeping_processes`)
 
-Some agents are started by vendor scripts, or respawn workers that reset their affinity. For those, the reference implementation simply pins every thread of each matching process by name, and re-runs this at boot:
+Some agents are started by vendor scripts, or respawn workers that reset their affinity. For those, the script pins every thread of each matching process by name, and `lowlat-runtime.service` repeats it at every boot:
 
 ```bash
 for proc in edr-agentd av-scand; do

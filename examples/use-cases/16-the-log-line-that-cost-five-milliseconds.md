@@ -5,7 +5,7 @@
 ## At a glance
 
 - **Situation:** a rare stall of several milliseconds on the critical feed. Each one lines up, to the second, with a kernel warning in `dmesg`.
-- **Cause:** the kernel writes messages above the console log level to every console **synchronously**. One warning line, printed on housekeeping CPU 1 to a graphical and a serial console, holds that CPU for about 5 ms and delays the critical NIC's interrupts.
+- **Cause:** the kernel writes messages more urgent than the console log level to every console **synchronously**. One warning line, printed on housekeeping CPU 1 to a graphical and a serial console, holds that CPU for about 5 ms and delays the critical NIC's interrupts.
 - **Fix:** `kernel.printk = 1 4 1 7`, so that only emergencies reach the console, and no graphical console on the kernel command line. The messages still reach `dmesg` and the journal.
 
 **Time:** ~15 min + one reboot · **You need:** root, out-of-band console access.

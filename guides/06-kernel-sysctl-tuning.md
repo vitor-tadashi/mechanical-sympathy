@@ -18,7 +18,7 @@
 
 ```mermaid
 flowchart LR
-  g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g00["00<br/>BIOS"] --> g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
   g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
   class g06 focus
   classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
@@ -77,7 +77,7 @@ flowchart LR
 | `net.ipv4.tcp_sack` | `1` | Selective ACKs let the sender retransmit only the missing segments, recovering several losses in one RTT. |
 | `net.ipv4.tcp_window_scaling` | `1` | Windows above 64 KiB. Needed for the socket buffer sizes in §4. |
 | `net.ipv4.tcp_slow_start_after_idle` | `0` | By default, after an idle period of one RTO, TCP resets the congestion window to its initial value. For a long-lived connection that is quiet for a few seconds, the next burst would then be throttled. `0` keeps the window. |
-| `net.ipv4.tcp_fastopen` | `3` | TCP Fast Open for client (1) and server (2). On a reconnect, data rides in the SYN, which saves one RTT. Only helps if both ends support it. |
+| `net.ipv4.tcp_fastopen` | `3` | TCP Fast Open for client (1) and server (2). On a reconnect, the first data travels in the SYN packet, which saves one round trip (RTT). Only helps if both ends support it. |
 | `net.ipv4.tcp_fin_timeout` | `5` | How long an **orphaned** socket stays in `FIN_WAIT_2` (default 60 s). It does **not** shorten `TIME_WAIT`, whatever many blog posts say. That is fixed at 60 s. |
 | `net.ipv4.tcp_tw_reuse` | `1` | Lets **new outgoing** connections reuse a `TIME_WAIT` socket's port when timestamps prove it is safe. Useful for gateways that reconnect often. It does not affect incoming connections. |
 | `net.ipv4.tcp_max_tw_buckets` | `262144` | Upper bound on `TIME_WAIT` sockets before the kernel destroys them early and logs a warning. |
@@ -143,7 +143,7 @@ The per-interface keys are generated from `NICS` in `lowlat.conf`, so no interfa
 |---|---|---|
 | `vm.dirty_background_ratio` | `3` | Background writeback starts when 3 % of memory is dirty: small, frequent flushes. |
 | `vm.dirty_ratio` | `10` | A process writing to files is **throttled synchronously** at 10 % dirty memory. Lower values mean the application's own journaling hits the limit less abruptly, because background writeback started earlier. The application's journal writer should still run on a non-critical thread. |
-| `vm.min_free_kbytes` | `1048576` (1 GiB) | Raises the free-memory watermarks. `kswapd` starts reclaiming earlier, in the background, so allocations rarely fall into **direct reclaim** (reclaim done inline by the allocating thread, costing ms). ⚠️ Scale it to the host: 1 GiB is appropriate for 256 GiB+ hosts. On a 16 GiB VM, use 128–256 MiB, or you waste memory and risk OOM. |
+| `vm.min_free_kbytes` | `1048576` (1 GiB) | Raises the free-memory watermarks. `kswapd` starts reclaiming earlier, in the background, so allocations rarely fall into **direct reclaim** (reclaim done inline by the allocating thread, costing ms). **Scale it to the host**, about 1–2 % of RAM: 1 GiB fits the reference host (two 32 GiB nodes) and anything larger. On a 16 GiB VM, use 128–256 MiB, or you waste memory and risk OOM. |
 | `vm.stat_interval` | `60` | Per-CPU VM counters are folded into global counters every `stat_interval` seconds by a per-CPU `kworker`. Going from 1 s to 60 s means 60× fewer wake-ups. With `nohz_full`, isolated CPUs are already mostly exempt, and this also quiets the housekeeping CPUs. Cost: `/proc/meminfo` counters can be up to a minute stale. |
 | `fs.file-max` | `13076444` | System-wide file handle limit. Per-process limits are in [Guide 07](07-os-hygiene.md#3-resource-limits). |
 

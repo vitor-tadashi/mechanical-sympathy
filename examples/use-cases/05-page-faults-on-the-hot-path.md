@@ -35,7 +35,7 @@ grep -E 'HugePages_(Total|Free|Rsvd|Surp)' /proc/meminfo
 # Which node did the pages come from?
 numastat -p <pid>                                        # the "Huge" row, per node
 
-# Is the running JVM using explicit large pages?
+# Can a JVM with these flags get explicit large pages? (This starts a small new JVM.)
 java -Xlog:gc+init -XX:+UseZGC -XX:+UseLargePages -Xms1g -Xmx1g -version 2>&1 | grep -i 'large page'
 # expect: Large Page Support: Enabled (Explicit)
 

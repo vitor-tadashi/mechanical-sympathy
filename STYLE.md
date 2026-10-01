@@ -32,7 +32,7 @@ Every guide follows this order. Numbered sections stay numbered, because other p
 
    ```mermaid
    flowchart LR
-     here["Copy the you-are-here strip from section 3.3"]
+     here["Copy the you-are-here strip from §3.3"]
    ```
    ~~~~
 
@@ -128,17 +128,17 @@ classDef muted fill:#eeeeee,stroke:#777777,color:#333333
 
 ### 3.3 The "you are here" strip
 
-The ordered tuning guides (00 to 08) show where they sit in the sequence. Guides 09, 10 and 11 are cross-cutting (measuring, clocks, keeping a host tuned), so they open with a diagram of their own instead. Copy this block, and move `:::focus` to the current guide:
+The ordered tuning guides (00 to 08) show where they sit in the sequence. Guides 09 to 12 are cross-cutting (measuring, clocks, keeping a host tuned, memory pressure), so they open with a diagram of their own instead. Copy this block, and point the `class … focus` line at the current guide:
 
 ```mermaid
 flowchart LR
-  g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g00["00<br/>BIOS"] --> g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
   g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
   class g01 focus
   classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
 ```
 
-*Guide 01 is the current step. The dotted arrow marks guide 08 as optional.*
+*Guide 01 is the current step. The dotted arrow marks Guide 08 as optional.*
 
 ### 3.4 Troubleshooting flowcharts
 

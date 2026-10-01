@@ -77,7 +77,7 @@ Typical orders of magnitude on a recent server, not measurements. Use them to ju
 | Remote DRAM | local + ~60–100 ns |
 | SMT sibling busy | the other sibling's work slows by ~20–40 %, often more |
 
-A handler that touches 50 cache lines from another thread pays about 1 µs for the trip within one domain, and about 8 µs across sockets. On a 5 µs budget, that is the whole answer.
+A handler that touches 50 cache lines from another thread pays about 1 µs for the trip within one domain, and about 8 µs across sockets. On a 5 µs budget, that alone can decide the result.
 
 ## 4. Reading the topology from a host
 

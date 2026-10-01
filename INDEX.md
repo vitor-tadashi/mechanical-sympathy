@@ -21,11 +21,11 @@ flowchart TD
   end
   subgraph mgr["Manager or reviewer: what, why, what can go wrong"]
     direction LR
-    m1["README<br/>Read this first"] --> m2["Risk tables<br/>atop each guide"] --> m3["01 §5.6<br/>Mitigations"] --> m4["07 §6<br/>Firewall"]
+    m1["README<br/>Read this first"] --> m1b["Safety"] --> m2["Risk tables<br/>atop each guide"] --> m3["01 §5.6<br/>Mitigations"] --> m4["07 §6<br/>Firewall"]
   end
   subgraph net["Network engineer"]
     direction LR
-    n1["04<br/>Network"] --> n2["Concept:<br/>network path"] --> n3["Concept:<br/>ethtool"] --> n4["08<br/>Bypass"] --> n5["Segmentation<br/>example"] --> n6["06 §3-6<br/>TCP, buffers"]
+    n1["04<br/>Network"] --> n2["Concept:<br/>network path"] --> n3["Concept:<br/>ethtool"] --> n4["08<br/>Bypass"] --> n5["Segmentation<br/>example"] --> n6["06 §3-6<br/>TCP, buffers"] --> n7["10<br/>Time sync"]
   end
   subgraph learn["Learner of mechanisms: understand the machine (about three hours)"]
     direction LR
@@ -36,9 +36,9 @@ flowchart TD
   class m3,m4 risk
 ```
 
-*Six lanes: the operator walks guides 00 to 07, then 10, 11 and 12 (08 only with kernel bypass), and ends at verify-tuning; the learner follows three use cases and the layout explorer; the developer reads the pinning and Java sections and the Java example; the reviewer reads the risks, with mitigations and firewall highlighted; the network engineer goes from Guide 04 through the network concepts to bypass and segmentation; the learner of mechanisms reads every concept, from the hardware up to measurement.*
+*Six lanes: the operator walks guides 00 to 07, then 10, 11 and 12 (08 only with kernel bypass), and ends at verify-tuning; the learner follows three use cases and the layout explorer; the developer reads the pinning and Java sections and the Java example; the reviewer reads the safety page and the risks, with mitigations and firewall highlighted; the network engineer goes from Guide 04 through the network concepts to bypass, segmentation and time sync; the learner of mechanisms reads every concept, from the hardware up to measurement.*
 
-**Operator applying the tuning (about half a day for the first host, minutes for the next)**
+**Operator applying the tuning (about half a day for the first host, minutes for the next).** This is the reading order. `apply-all` runs the guides in a slightly different order, explained in [QUICK_START](QUICK_START.md#reading-order-and-run-order).
 [QUICK_START](QUICK_START.md) → [00](guides/00-bios-firmware.md) → [01](guides/01-grub-bootloader-tuning.md) → [02](guides/02-cpu-core-isolation.md) → [03](guides/03-huge-pages-configuration.md) → [04](guides/04-network-optimization.md) → [05](guides/05-cgroup-isolation.md) → [06](guides/06-kernel-sysctl-tuning.md) → [07](guides/07-os-hygiene.md) → ([08](guides/08-kernel-bypass.md), only with a bypass stack) → [10](guides/10-time-sync.md) → [11](guides/11-day2-operations.md) → [12](guides/12-memory-pressure.md) → `scripts/verify-tuning`
 
 **Learner (from stories)**
@@ -141,7 +141,7 @@ flowchart TD
 |---|---|
 | [`lowlat.conf.example`](scripts/lowlat.conf.example) | Describe the host. Copy to `/etc/lowlat/lowlat.conf`. |
 | [`plan-layout`](scripts/plan-layout) `--threads N --nic-node N` | Propose the CPU layout of `lowlat.conf` from `lscpu`, or `--check` one you wrote by hand. The [explorer](https://vitor-tadashi.github.io/mechanical-sympathy/explorer.html) does the same in a browser |
-| `NN-* --dry-run / --apply / --verify / --rollback` | One guide at a time (00–11). `09-measure-latency --run` captures a measurement bundle. |
+| `NN-* --dry-run / --apply / --verify / --rollback` | One guide at a time (00–12). `09-measure-latency --run` captures a measurement bundle. |
 | [`apply-all`](scripts/apply-all) `--plan / --dry-run / --apply / --runtime / --rollback` | All guides in order, with step timing, and the whole-host rollback |
 | [`size-buffers`](scripts/size-buffers) `--burst-mpps R --ring N` | How long a burst lasts and how big the ring and the socket buffer must be to lose nothing. The [simulator](https://vitor-tadashi.github.io/mechanical-sympathy/buffers.html) does the same in a browser |
 | [`verify-tuning`](scripts/verify-tuning) `[--report FILE]` | Read-only PASS/WARN/FAIL for everything |

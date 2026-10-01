@@ -5,12 +5,12 @@
 ## At a glance
 
 - A log line looks cheap because `write()` only copies into the page cache. Usually it takes microseconds. Now and then it blocks for milliseconds: at the dirty-page limit, on a new block of the file, on `fsync`, or on a slow consumer at the other end of a socket.
-- The kernel's own messages are worse: above the console log level, they are printed to the console synchronously, at the speed of a serial line.
+- The kernel's own messages are worse: more urgent than the console log level, they are printed to the console synchronously, at the speed of a serial line.
 - The hot path should not do I/O. Put the line into a ring, and let a logger thread on a housekeeping CPU do the writing and the waiting.
 
 ## 1. Why it matters
 
-Every latency-critical application logs: audit trails, journals, errors, metrics. Logging is also the most common way that I/O sneaks onto the hot path, because the call looks like a string operation. The guides keep the kernel's console quiet ([Guide 06 §2](../guides/06-kernel-sysctl-tuning.md#2-kernel-logging-and-debug)) and start writeback early ([Guide 06 §8](../guides/06-kernel-sysctl-tuning.md#8-virtual-memory)). This page shows every place a log line can wait, so the application's own logging can be designed to never wait on the critical thread.
+Every latency-critical application logs: audit trails, journals, errors, metrics. Logging is also the most common way that I/O gets onto the hot path unnoticed, because the call looks like a string operation. The guides keep the kernel's console quiet ([Guide 06 §2](../guides/06-kernel-sysctl-tuning.md#2-kernel-logging-and-debug)) and start writeback early ([Guide 06 §8](../guides/06-kernel-sysctl-tuning.md#8-virtual-memory)). This page shows every place a log line can wait, so the application's own logging can be designed to never wait on the critical thread.
 
 ## 2. The path of a log line
 
@@ -29,7 +29,7 @@ flowchart LR
   class con risk
 ```
 
-*An application line goes to the page cache or to a logging daemon, and reaches the disk later. A kernel line above the console log level goes to the console at once, on the CPU that printed it.*
+*An application line goes to the page cache or to a logging daemon, and reaches the disk later. A kernel line more urgent than the console log level goes to the console at once, on the CPU that printed it.*
 
 ## 3. Where a log line waits
 
@@ -41,7 +41,7 @@ flowchart LR
 | | | The file's modification time changes: a metadata update in the filesystem journal | µs to ms |
 | `fsync()` / `fdatasync()` | — | Always: it waits for the disk | 0.1 ms (NVMe) to tens of ms |
 | `syslog()` or stdout to journald | 2–10 µs | journald is slow and the socket buffer is full | ms to seconds |
-| Kernel message (`printk`) | µs into the ring buffer | Its level is above the console log level: printed synchronously to every console | ~7 ms per line on a 115200-baud serial console |
+| Kernel message (`printk`) | µs into the ring buffer | Its level is more urgent than the console log level: printed synchronously to every console | ~7 ms per line on a 115200-baud serial console |
 
 The common case is fast, which is why logging passes every benchmark. The blocking cases are rare and depend on what the rest of the host is doing: another process filling the page cache, journald rotating, a disk busy with a backup. They set the maximum, not the median.
 

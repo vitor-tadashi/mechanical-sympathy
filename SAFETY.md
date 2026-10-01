@@ -7,7 +7,7 @@ Tuning a kernel feels risky when you have never done it. This page explains what
 ## At a glance
 
 - **Nothing changes until you say so.** `--plan` and `--dry-run` show every command and file first. Only `--apply`, run as root, changes the host.
-- **Every change is recorded and can be undone.** The first time a script touches a file, it keeps the original. `sudo scripts/apply-all --rollback` restores the host, with the few exceptions listed in [section 6](#6-what-this-project-does-not-do-yet).
+- **Every change is recorded and can be undone.** The first time a script touches a file, it keeps the original. `sudo scripts/apply-all --rollback` restores the host, with the few exceptions listed in [§6](#6-what-this-project-does-not-do-yet).
 - **Only one kind of change can stop a boot:** the kernel command line (Guide 01). It has a documented way back through the out-of-band console, so test that console before you start.
 
 ```mermaid

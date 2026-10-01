@@ -1,6 +1,6 @@
 # Concept — Network Buffers, Rings and Where Bursts Die
 
-> Used by: [Guide 04 §5.7](../guides/04-network-optimization.md), [Guide 06 §4](../guides/06-kernel-sysctl-tuning.md#4-socket-buffers), [Guide 08](../guides/08-kernel-bypass.md). Related: [network-tuning](network-tuning.md), [ethtool](ethtool.md), [huge-pages](huge-pages.md). Terms: [Glossary](../GLOSSARY.md).
+> Used by: [Guide 04 §5.7](../guides/04-network-optimization.md#ring-sizes), [Guide 06 §4](../guides/06-kernel-sysctl-tuning.md#4-socket-buffers), [Guide 08](../guides/08-kernel-bypass.md). Related: [network-tuning](network-tuning.md), [ethtool](ethtool.md), [huge-pages](huge-pages.md). Terms: [Glossary](../GLOSSARY.md).
 
 ## At a glance
 
@@ -24,7 +24,7 @@ Typical defaults, and the values the guides set:
 
 | Queue | Typical default | This repository | Where |
 |---|---|---|---|
-| RX ring | 512 to 2048 descriptors, depending on the driver | the hardware maximum (4096 to 8160) on critical NICs | [Guide 04 §5.7](../guides/04-network-optimization.md) |
+| RX ring | 512 to 2048 descriptors, depending on the driver | the hardware maximum (4096 to 8160) on critical NICs | [Guide 04 §5.7](../guides/04-network-optimization.md#ring-sizes) |
 | TX ring | 256 to 1024 | the hardware maximum | same |
 | `txqueuelen` (qdisc) | 1000 packets | default on critical NICs, 300000 on bulk NICs | [Guide 04 §5.8](../guides/04-network-optimization.md#58-txqueuelen-bulk-nics) |
 | `netdev_budget` | 300 packets per round | not changed | [Concept: network tuning §4](network-tuning.md#4-napi-softirq-budget-and-ksoftirqd) |
@@ -101,7 +101,7 @@ The **socket receive buffer** is the last queue before your code. It is set per 
 
 *Drawn to scale: the kernel default buffer covers a stopped reader for a fraction of a millisecond, and the tuned buffer for several.*
 
-The rules, in the order that bites:
+The rules, in the order in which they take effect:
 
 1. **The kernel doubles what you ask for.** `setsockopt(SO_RCVBUF, v)` stores `2 × min(v, rmem_max)`, and `getsockopt` returns the doubled value. The doubling pays for the bookkeeping.
 2. **A request above `rmem_max` is clamped silently.** The call succeeds, and you get less than you asked for. `SO_RCVBUFFORCE` (needs `CAP_NET_ADMIN`) skips the cap.
@@ -116,7 +116,7 @@ Read a live socket with `ss`:
 ss -umn 'sport = :5000'
 # skmem:(r0,rb8388608,t0,tb212992,f0,w0,o0,bl0,d0)
 #   r  = bytes now queued for the reader (charged as truesize)
-#   rb = the limit (twice what SO_RCVBUF asked for)
+#   rb = the limit: rmem_default here, or twice what SO_RCVBUF asked for
 #   d  = datagrams this socket dropped because it was full
 ```
 

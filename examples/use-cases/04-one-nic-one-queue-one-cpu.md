@@ -11,13 +11,13 @@
 **Time:** ~20 min, no reboot (the queue change resets the link for 1 to 3 s) · **You need:** out-of-band console, a maintenance window.
 
 > [!NOTE]
-> **Illustrative.** The interface names and addresses are made up. The 1 to 50 µs per interrupt is the cost quoted in [Guide 02 §1](../../guides/02-cpu-core-isolation.md#1-the-problem-everything-else-that-wants-your-cpu).
+> **Illustrative.** The interface names and addresses are made up. The 1 to 50 µs per interrupt, softirq included, is the cost quoted in [Guide 02 §1](../../guides/02-cpu-core-isolation.md#1-the-problem-everything-else-that-wants-your-cpu).
 
 ## 1. Situation
 
 On a kernel-stack host, the CPU that takes a NIC's interrupt also runs the softirq: the protocol work that turns descriptors into a socket buffer. If that CPU is the isolated one where `net.rx` spins, every packet cuts into the spin.
 
-<img src="../../assets/diagrams/irq-placement.svg" alt="Animation: with the NIC interrupt on isolated CPU 3, every packet cuts into the spinning net.rx thread; with the interrupt on housekeeping CPU 1, the spin is never cut and the data reaches CPU 3 as one cache-line transfer" width="720">
+<img src="../../assets/diagrams/irq-placement.svg" alt="Animation: with the NIC interrupt on isolated CPU 3, every packet cuts into the spinning net.rx thread; with the interrupt on housekeeping CPU 1, the spin is never cut and the data reaches CPU 3 through the cache" width="720">
 
 *Where the interrupt lands decides whether the spinning thread is interrupted. Housekeeping CPU 1 takes the work, and CPU 3 only ever spins.*
 
@@ -73,7 +73,7 @@ ethtool -L ens1f0 combined 2                                                # qu
 ethtool -X ens1f0 weight 0 1                                                # RSS spreads hashed traffic to queue 1 only
 ethtool -N ens1f0 flow-type udp4 dst-ip 10.10.1.10 dst-port 5000 action 0   # the critical flow goes to queue 0
 ethtool -n ens1f0                                                           # list the rules
-# then place queue 0's IRQ on one housekeeping CPU and queue 1's IRQ on another
+# then place both IRQs: queue 0 on CPU 1, queue 1 on CPU 1 too, or on a node-0 OS CPU if CPU 1 gets busy
 ```
 
 > [!IMPORTANT]
@@ -103,10 +103,10 @@ Illustrative:
 
 | | Before | After |
 |---|---|---|
-| Interrupts on the isolated CPU | one per packet burst, 1 to 50 µs each | none |
+| Interrupts on the isolated CPU | one per packet burst, 1 to 50 µs each with its softirq | none |
 | Softirq work | preempts `net.rx`, or waits in `ksoftirqd` behind it | runs on CPU 1 |
 | Queues | 63 (driver default), each with an interrupt to place | as many as there are IRQ CPUs |
-| Data path to `net.rx` | packet processed on the same CPU | one cache-line transfer from CPU 1 to CPU 3 |
+| Data path to `net.rx` | packet processed on the same CPU | a few cache-line transfers from CPU 1 to CPU 3 |
 
 ## 6. Roll back
 

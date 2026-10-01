@@ -66,7 +66,7 @@ The Guide 06 profile sets all three values:
 
 | Key | Guide 06 value | Effect here |
 |---|---|---|
-| `vm.min_free_kbytes` | `1048576` (1 GiB) | Raises the min watermark to 1 GiB, and low and high with it. `kswapd` starts much earlier, and a burst has a large cushion before it reaches min. |
+| `vm.min_free_kbytes` | `1048576` (1 GiB) | Raises the min watermarks, summed over all zones, to 1 GiB, and low and high with them. `kswapd` starts much earlier, and a burst has a large cushion before it reaches min. |
 | `vm.dirty_background_ratio` | `3` | Background writeback starts once 3 % of dirtyable memory is dirty. On a host with hundreds of GiB that is more than one 1 GiB rotation, so it does not flush every rotation: it stops dirty pages from piling up over many of them. Pages older than `vm.dirty_expire_centisecs` (30 s by default) are written back anyway. |
 | `vm.dirty_ratio` | `10` | The level where a writer is throttled synchronously. With early background writeback, the journal rarely gets there. |
 
@@ -86,7 +86,7 @@ Illustrative:
 
 | | Before | After |
 |---|---|---|
-| min watermark | tens of MiB | 1 GiB |
+| min watermarks, summed over the zones | tens of MiB | 1 GiB |
 | Who reclaims when the journal rotates | `event.loop`, inline, for milliseconds | `kswapd`, in the background, on a housekeeping CPU |
 | `allocstall_*` during a rotation | rises | flat |
 | PSI memory `some` | above 0 around the stalls | 0 |

@@ -11,7 +11,7 @@
 **Time:** ~15 min to find, ~1 h + reboot to turn HT off · **You need:** root, the application's affinity file, out-of-band console for the BIOS.
 
 > [!NOTE]
-> **Illustrative.** How much a busy sibling slows your thread depends on what both threads do: two threads that stream memory hurt each other more than two that wait on the network. The figures below show the shape, not a measurement. Measure it for your workload: it with the sibling busy and idle ([Guide 09](../../guides/09-measuring-latency.md)).
+> **Illustrative.** How much a busy sibling slows your thread depends on what both threads do: two threads that stream memory hurt each other more than two that wait on the network. The figures below show the shape, not a measurement. Measure it for your workload, once with the sibling busy and once with it idle ([Guide 09](../../guides/09-measuring-latency.md)).
 
 ## 1. Situation
 

@@ -1,6 +1,6 @@
 # Agent guidance
 
-Generic low-latency tuning guides for RHEL 8/9 bare metal and VMs. Each guide in `guides/NN-*.md` has one script `scripts/NN-*` that applies, verifies and rolls it back. `concepts/` explains the mechanisms, and `examples/` holds worked examples, including a runnable Java probe (`examples/java-latency-probe/`, which has its own `CLAUDE.md`).
+Generic low-latency tuning guides for RHEL 8, 9 and 10 bare metal and VMs. Each guide in `guides/NN-*.md` has one script `scripts/NN-*` that applies, verifies and rolls it back. `concepts/` explains the mechanisms, and `examples/` holds worked examples, including a runnable Java probe (`examples/java-latency-probe/`, which has its own `CLAUDE.md`).
 
 These rules apply to every change, whoever makes it. If a rule and a request conflict, say so before acting.
 
@@ -73,8 +73,8 @@ These rules apply to every change, whoever makes it. If a rule and a request con
 | `make check-vm` | the guides on a real kernel (Level 3): each cloud image (Rocky 8 and 9, AlmaLinux 10, and CentOS Stream 10 as advisory; Stream 9 is left out while CentOS publishes no checksum for it) boots in QEMU/KVM with 4 vCPUs on 2 NUMA nodes and two virtio-net NICs. Twice, as a VM and forced to `bare_metal`: apply, reboot, check `/proc/cmdline`, per-node huge pages and `verify-tuning --report`, roll back every guide, reboot, and compare with the state before apply. Known script bugs are in `scripts/fixtures/vm/known-issues` (same rules as the containers list), the WARNs a VM is expected to show in `scripts/fixtures/vm/expected-warnings`. Linux with `/dev/kvm` only, so it is not part of `make lint`. CI runs it in `.github/workflows/vm.yml` on script and tool changes and nightly |
 | `doc-health` workflow | CI only, `.github/workflows/doc-health.yml`: on every PR and push to `main`, Lychee checks the links and fragments of the Markdown files and of the assembled site offline, and misspell (US locale) checks their text. Weekly and on demand it also checks the live external links. Both tools are pinned release binaries with a checked SHA-256 |
 | `make install-git-hooks` | opt-in hooks: pre-commit runs `make lint`, commit-msg runs `tools/check-commit-title` and `tools/check-description` |
-| `tools/check-commit-title` | Conventional Commits titles with a Google-style subject (section 8). CI checks every PR title and commit |
-| `tools/check-description` | no emojis, tool footers or tool co-author trailers in PR and commit descriptions (section 8). CI checks the PR body and every commit |
+| `tools/check-commit-title` | Conventional Commits titles with a Google-style subject (§8). CI checks every PR title and commit |
+| `tools/check-description` | no emojis, tool footers or tool co-author trailers in PR and commit descriptions (§8). CI checks the PR body and every commit |
 
 ## 8. Git
 

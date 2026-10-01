@@ -4,7 +4,7 @@
 
 ## At a glance
 
-- **Situation:** one busy-spinning thread on CPU 5 has a clean median and a ragged tail.
+- **Situation:** one busy-spinning thread on CPU 5 has a clean median and a tail full of spikes.
 - **Cause:** the CPU is shared with the scheduler tick, RCU callbacks and any task the scheduler decides to place there.
 - **Fix:** three kernel arguments make the CPU eligible to be quiet, and pinning exactly one thread on it makes it quiet.
 
@@ -19,7 +19,7 @@ A request loop spins on CPU 5 and answers in about 2 µs. The p50 is fine. The p
 
 <img src="../../assets/diagrams/tick-nohz.svg" alt="Animation: a busy CPU is interrupted by a timer tick many times per second; with nohz_full the same CPU runs uninterrupted except for one residual tick" width="720">
 
-*The comb is the scheduler tick. Every tick is a timer interrupt that takes the CPU away for 1 to 5 µs, 250 to 1000 times a second.*
+*The comb is the scheduler tick. Every tick is a timer interrupt that takes the CPU away for 1 to 5 µs, 1000 times a second.*
 
 ## 2. Diagnose
 
@@ -41,7 +41,7 @@ ps -eLo psr,pid,tid,comm --sort=psr | awk '$1 == 5'
 
 # 2. Tick rate: sample the LOC (local timer) row twice, 10 s apart. Column 7 is CPU 5.
 awk '/LOC:/{print $7}' /proc/interrupts; sleep 10; awk '/LOC:/{print $7}' /proc/interrupts
-# before: a delta of ~2500 at 250 Hz, or ~10000 at 1000 Hz
+# before: a delta of ~10000 (1000 Hz)
 # after:  a delta of ~10 (the 1 Hz residual tick)
 
 # 3. Which source interrupts the CPU, and for how long (RHEL 9: dnf install rtla)
@@ -76,7 +76,7 @@ What each argument does to CPU 5:
 Then pin the thread. Isolation only makes the CPU quiet, and nothing runs there until you ask. The spinner and the tick check below both need it:
 
 ```bash
-taskset -c 5 ./my-spinning-loop        # or pin inside the application, Guide 02 section 6
+taskset -c 5 ./my-spinning-loop        # or pin inside the application, Guide 02 §6
 ```
 
 > [!IMPORTANT]
@@ -88,8 +88,8 @@ Illustrative, from the mechanism costs above:
 
 | | Before | After |
 |---|---|---|
-| Ticks on CPU 5 | 250 to 1000 per second | about 1 per second |
-| Time taken by ticks | 1 to 5 µs each, so up to 1 to 5 ms every second at 1000 Hz | about 5 µs every second |
+| Ticks on CPU 5 | 1000 per second | about 1 per second |
+| Time taken by ticks | 1 to 5 µs each, so 1 to 5 ms every second | about 5 µs every second |
 | Other tasks on the CPU | placed by the scheduler | none, unless pinned there |
 | Histogram | tight body with a comb of spikes | tight body, the comb gone |
 

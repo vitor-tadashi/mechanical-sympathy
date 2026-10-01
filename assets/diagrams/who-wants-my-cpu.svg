@@ -41,7 +41,7 @@
 <line class="ok" x1="548" y1="66" x2="590" y2="66" marker-end="url(#g)"/>
 <rect class="wait" x="20" y="96" width="236" height="40" rx="5"/>
 <text class="lbl" x="32" y="113">Scheduler tick</text>
-<text class="role" x="32" y="128">1-5 µs, 250-1000 times a second</text>
+<text class="role" x="32" y="128">1-5 µs, 1000 times a second</text>
 <line class="arr" x1="258" y1="116" x2="296" y2="116" marker-end="url(#a)"/>
 <rect class="box" x="300" y="96" width="246" height="40" rx="5"/>
 <text class="lbl" x="312" y="113">nohz_full</text>

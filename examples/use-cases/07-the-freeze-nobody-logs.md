@@ -5,7 +5,7 @@
 ## At a glance
 
 - **Situation:** the maximum latency shows a rare spike of hundreds of microseconds, while `rtla osnoise` is clean and the OS logs nothing.
-- **Cause:** firmware. An SMI stops every CPU and runs code the operating system cannot see, or a CPU wakes from a deep C-state.
+- **Cause:** firmware. An SMI stops every CPU and runs code the operating system cannot see. On CPUs that sleep between messages (a thread that blocks, not one that spins), a deep C-state exit looks the same.
 - **Fix:** count SMIs, remove their sources in the BIOS one change at a time, and keep the CPUs out of deep idle states.
 
 **Time:** ~2 h, because each BIOS change needs a reboot · **You need:** out-of-band console access and bare metal. A VM cannot see this.
@@ -48,7 +48,7 @@ grep -s . /sys/devices/system/cpu/cpu0/cpuidle/state*/name  # none with idle=pol
 sudo rtla osnoise top -c 3 -d 60s                            # clean: the noise is not in the OS
 ```
 
-`rtla osnoise` sees only a gap it cannot attribute, and the hwlat tracer (`rtla hwnoise`) measures the time stolen with interrupts disabled ([Guide 09 §4](../../guides/09-measuring-latency.md#4-the-tools-by-question)). Pair it with `turbostat`, which is the only tool that counts SMIs.
+`rtla osnoise` sees only a gap it cannot attribute, and `rtla hwnoise` measures the time stolen with interrupts disabled, as the older hwlat tracer does ([Guide 09 §4](../../guides/09-measuring-latency.md#4-the-tools-by-question)). Pair it with `turbostat`, which is the only tool that counts SMIs.
 
 ## 3. Change
 

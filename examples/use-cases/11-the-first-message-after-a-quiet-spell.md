@@ -86,7 +86,7 @@ sudo systemctl reboot
 For the BIOS layer, follow [Guide 00 §4.2](../../guides/00-bios-firmware.md#42-who-controls-the-idle-states): do both on a dedicated host. The kernel argument can be lost after a kernel update, and the BIOS setting cannot.
 
 > [!WARNING]
-> With `idle=poll` every CPU runs at 100 % all the time. Power draw and heat go up, and hot CPUs lower their frequency. Set the fan profile to maximum cooling ([Guide 00 §4.8](../../guides/00-bios-firmware.md#48-cooling)), and agree the power budget with whoever runs the data center.
+> With `idle=poll` every CPU runs at 100 % all the time. Power draw and heat go up, and hot CPUs lower their frequency. Set the fan profile to maximum cooling ([Guide 00 §4.8](../../guides/00-bios-firmware.md#48-cooling)), and agree on the power budget with whoever runs the data center.
 
 Spinning is the thread-level fix, and it works only where the thread owns its CPU. On a shared CPU or in a VM, keep the back-off strategy and rely on the other layers ([Guide 02 §6.4](../../guides/02-cpu-core-isolation.md#64-busy-spin-vs-back-off)).
 

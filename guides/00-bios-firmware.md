@@ -15,7 +15,7 @@
 - **Why:** everything in Guides 01–08 runs on top of the firmware. A deep package C-state, a turbo transition or an SMI costs tens to hundreds of µs, and no kernel setting can remove it.
 - **Cost:** more power and heat, fewer logical CPUs (Hyper-Threading off), and some corrected-error reporting moved to the BMC.
 
-**Time:** ~1 h per server model + 1 reboot · **Do this if:** bare metal, before Guide 01 · **Skip if:** it's a VM. Ask the hypervisor owner for the equivalent (§10).
+**Time:** ~30–60 min per server model + 1 reboot · **Do this if:** bare metal, before Guide 01 · **Skip if:** it's a VM. Ask the hypervisor owner for the equivalent (§10).
 
 ```mermaid
 flowchart LR
@@ -118,7 +118,7 @@ If Hyper-Threading must stay on, isolate **both** siblings of each critical core
 | Patrol scrub | "Memory Patrol Scrub" | Vendor default, or a slower scrub rate | Scrubbing prevents uncorrectable errors. Do not disable it on production hosts. |
 
 > [!IMPORTANT]
-> Changing NUMA interleaving or SNC/NPS changes the node numbers and the CPU-to-node map. Update `ISOLATED_CPUS`, `OS_CPUS`, `HUGEPAGES_PER_NODE` and `NICS` in `lowlat.conf` afterwards.
+> Changing NUMA interleaving or SNC/NPS changes the node numbers and the CPU-to-node map. Update `ISOLATED_CPUS`, `OS_CPUS`, `HUGEPAGES_PER_NODE` and `NICS` in `lowlat.conf` afterward.
 
 ### 4.6 System Management Interrupts
 

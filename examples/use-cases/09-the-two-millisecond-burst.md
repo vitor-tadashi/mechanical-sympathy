@@ -45,7 +45,7 @@ The number is the diagnosis. The ring holds 512 packets, the burst brings 6,000 
 
 ## 3. Change
 
-**Step 1: the ring.** [`04-network`](../../scripts/04-network) sets the rings to the hardware maximum, together with coalescing 0 and the other critical-NIC settings ([Guide 04 §5.7](../../guides/04-network-optimization.md)). The `NICS` entry in `lowlat.conf` does not change:
+**Step 1: the ring.** [`04-network`](../../scripts/04-network) sets the rings to the hardware maximum, together with coalescing 0 and the other critical-NIC settings ([Guide 04 §5.7](../../guides/04-network-optimization.md#ring-sizes)). The `NICS` entry in `lowlat.conf` does not change:
 
 ```bash
 scripts/04-network --dry-run | less
@@ -90,7 +90,7 @@ sysctl net.core.rmem_max net.core.rmem_default
 # net.core.rmem_default = 8388608
 ```
 
-A receiver that never calls `setsockopt` now gets 8 MiB, which covers 4.4 MiB. A receiver that sets its own size should ask for 4 MiB: the kernel doubles the request to 8 MiB, and it clamps anything above `rmem_max` without an error.
+A receiver that never calls `setsockopt` now gets 8 MiB, which covers 4.4 MiB. A receiver that sets its own size should ask for at least the 2250 KiB that `size-buffers` prints, because the kernel doubles the request to 4.4 MiB. Asking for 4 MiB (8 MiB after doubling) leaves room for a longer burst. The kernel clamps anything above `rmem_max` without an error.
 
 ## 4. Verify
 
@@ -115,9 +115,9 @@ Illustrative:
 | Packets dropped per batch | about 3,240 in the ring | 0 |
 | Socket buffer | 208 KiB, 92 to 277 datagrams | 8 MiB, 3,640 to 10,920 datagrams |
 | Latency of a packet while the ring is empty | unchanged | unchanged |
-| Latency of the last packet of the burst | not delivered | up to 2.5 ms: it waits behind the others |
+| Latency of the last packet of the burst | not delivered | about 4.5 ms: it waits behind the others |
 
-The last row is the honest cost. The burst is not lost, and its tail waits in the ring. To shorten that wait, drain faster ([use case 4](04-one-nic-one-queue-one-cpu.md)), because a bigger ring only buys time.
+The last row is the honest cost. The burst is not lost, but its tail waits: the last packet arrives at 1.5 ms and the application, at 1.0 Mpps, reads it at about 6 ms. To shorten that wait, drain faster ([use case 4](04-one-nic-one-queue-one-cpu.md)), because a bigger ring only buys time.
 
 ## 6. Roll back
 

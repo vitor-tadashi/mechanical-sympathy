@@ -1,6 +1,6 @@
 # Guide 01 — Kernel Command Line (GRUB) Tuning
 
-> **Script:** [`scripts/01-grub-bootloader`](../scripts/01-grub-bootloader) · **Concept:** [concepts/bootloader.md](../concepts/bootloader.md) · **Next:** [Guide 02 — CPU core isolation](02-cpu-core-isolation.md) · **Terms:** [Glossary](../GLOSSARY.md)
+> **Script:** [`scripts/01-grub-bootloader`](../scripts/01-grub-bootloader) · **Concept:** [concepts/bootloader.md](../concepts/bootloader.md) · **Previous:** [Guide 00](00-bios-firmware.md) · **Next:** [Guide 02 — CPU core isolation](02-cpu-core-isolation.md) · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|
@@ -15,17 +15,17 @@
 - **Why:** several of them (`isolcpus`, `nohz_full`, `rcu_nocbs`) can only be set at boot, and they remove the rare 20–200 µs interruptions that dominate p99.9.
 - **Cost:** a reboot, 100 % CPU and higher power from `idle=poll`, and, only if you opt in, weaker CPU vulnerability protection.
 
-**Time:** ~45 min + 1 reboot · **Do this if:** you run a latency-critical application on RHEL 8/9 (full set on bare metal, subset in a VM) · **Skip if:** it's a container, or nobody has profiled the application yet.
+**Time:** ~45 min + 1 reboot · **Do this if:** you run a latency-critical application on RHEL 8, 9 or 10 (full set on bare metal, subset in a VM) · **Skip if:** it's a container, or nobody has profiled the application yet.
 
 ```mermaid
 flowchart LR
-  g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g00["00<br/>BIOS"] --> g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
   g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
   class g01 focus
   classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
 ```
 
-*Guide 01 is the first step. Every later guide assumes these boot arguments are in place.*
+*Guide 01 is the first step on the operating system, right after the firmware. Every later guide assumes these boot arguments are in place.*
 
 ---
 
@@ -113,7 +113,7 @@ node 1: 1                     -> node-1 housekeeping (critical NIC IRQs)
         3 5 7 ... 31          -> ISOLATED, latency-critical threads
 ```
 
-## 4. How the arguments are applied (RHEL 8 / 9)
+## 4. How the arguments are applied (RHEL 8, 9 and 10)
 
 RHEL 8 and 9 use **BootLoaderSpec (BLS)** entries in `/boot/loader/entries/*.conf`. The supported tool to edit kernel arguments is `grubby`:
 
@@ -141,10 +141,10 @@ sequenceDiagram
 
 *The script removes and re-adds each argument through `grubby`, which rewrites every BLS entry. Nothing changes until the reboot, when GRUB hands the new line to the kernel.*
 
-`--update-kernel=ALL` updates every installed kernel, and new kernels installed by `dnf` inherit the arguments of the default entry. After editing, the script also regenerates `grub.cfg` (`/boot/grub2/grub.cfg`, or the EFI path on RHEL 8 UEFI hosts), the same way the reference implementation does.
+`--update-kernel=ALL` updates every installed kernel, and new kernels installed by `dnf` inherit the arguments of the default entry. After editing, the script also regenerates `grub.cfg` (`/boot/grub2/grub.cfg`, or the EFI path on RHEL 8 UEFI hosts), so that both copies of the arguments agree (§4.1).
 
 > [!IMPORTANT]
-> Editing `GRUB_CMDLINE_LINUX` in `/etc/default/grub` alone is **not enough** on BLS systems. It only affects kernels installed afterwards, or a `grub2-mkconfig` run with `GRUB_ENABLE_BLSCFG=false`. Use `grubby`.
+> Editing `GRUB_CMDLINE_LINUX` in `/etc/default/grub` alone is **not enough** on BLS systems. It only affects kernels installed afterward, or a `grub2-mkconfig` run with `GRUB_ENABLE_BLSCFG=false`. Use `grubby`.
 
 ### 4.1 grubby versus grub2-mkconfig on RHEL 8
 
@@ -185,7 +185,7 @@ If the fallback line in `grub.cfg` and `/proc/cmdline` disagree with `grub2-edit
 | Parameter | What the kernel does | Why |
 |---|---|---|
 | `idle=poll` | Replaces the idle loop with a busy loop. An idle CPU never executes `HLT`/`MWAIT`, so it never enters any C-state. | Waking from C1 costs ~1–2 µs, and from C6 up to ~100 µs. With polling, the wake-up cost is gone. |
-| `processor.max_cstate=0` | Caps the ACPI idle driver at its shallowest state. | Belt and braces. If `idle=poll` is ever dropped, the CPU still cannot sleep deeply. |
+| `processor.max_cstate=0` | Caps the ACPI idle driver at its shallowest state. | A second safeguard. If `idle=poll` is ever dropped, the CPU still cannot sleep deeply. |
 | `intel_idle.max_cstate=0` | Disables the `intel_idle` driver entirely, so the kernel falls back to `acpi_idle` (capped above). | `intel_idle` ignores BIOS C-state limits and uses deep states directly. |
 | `transparent_hugepage=never` | Turns off THP. The kernel will never promote 4 KiB pages to 2 MiB pages, and `khugepaged` has nothing to scan. | THP allocation can trigger **synchronous memory compaction** inside a page fault (ms-scale stalls), and `khugepaged` runs on arbitrary CPUs. Huge pages are still used, but only **explicitly** (see [Guide 03](03-huge-pages-configuration.md)). |
 
@@ -196,7 +196,7 @@ If the fallback line in `grub.cfg` and `/proc/cmdline` disagree with `grub2-edit
 | Parameter | Value (reference host) | What the kernel does |
 |---|---|---|
 | `isolcpus` | `3,5,…,31` | Removes the CPUs from the scheduler's load-balancing domains. Nothing runs there unless its affinity **explicitly** includes those CPUs. |
-| `nohz_full` | `3,5,…,31` | *Adaptive ticks*: when exactly one runnable task is on the CPU, the periodic tick (250–1000 Hz) stops. The remaining time-keeping duty moves to housekeeping CPUs. |
+| `nohz_full` | `3,5,…,31` | *Adaptive ticks*: when exactly one runnable task is on the CPU, the periodic tick (1000 Hz on RHEL x86_64) stops. The remaining time-keeping duty moves to housekeeping CPUs. |
 | `rcu_nocbs` | `3,5,…,31` | RCU callbacks for these CPUs are not run in softirq context on the CPU itself. They run in `rcuo*` kernel threads, which the scheduler keeps on housekeeping CPUs. |
 | `rcu_nocb_poll` | *(flag)* | The `rcuo*` threads poll for new callbacks, so the isolated CPU does not have to send a wake-up to them. |
 | `nohz` | `off` | Disables *idle* dynticks (`CONFIG_NO_HZ_IDLE`). See the note below. |
@@ -345,7 +345,7 @@ ps -eLo psr,comm | awk '$2 ~ /^rcuo/' | sort -n | uniq -c
 taskset -c 5 bash -c 'while :; do :; done' & SPIN=$!
 awk '/LOC:/{print $7}' /proc/interrupts; sleep 10; awk '/LOC:/{print $7}' /proc/interrupts
 kill $SPIN
-#    column 7 = CPU5 (column 2 is CPU0). Expect a delta of ~10 (1 Hz residual), NOT ~2500 (250 Hz).
+#    column 7 = CPU5 (column 2 is CPU0). Expect a delta of ~10 (1 Hz residual), NOT ~10000 (1000 Hz).
 ```
 
 `scripts/verify-tuning` runs checks 1–5 for every guide and prints a PASS/WARN/FAIL report.
@@ -389,7 +389,7 @@ flowchart TD
 
 - [ ] Remove every argument this guide manages and restore the original graphical consoles: `sudo scripts/01-grub-bootloader --rollback`
 - [ ] Or remove a single one: `sudo grubby --update-kernel=ALL --remove-args="nohz_full"`
-- [ ] Check every stored line: `sudo grubby --info=ALL`. Entries that originally had `console=tty0` must have it again; serial consoles stay intact.
+- [ ] Check every stored line: `sudo grubby --info=ALL`. Entries that originally had `console=tty0` must have it again. On RHEL 10, also check that your serial `console=ttyS…` argument is still there, and add it back if not ([SAFETY.md](../SAFETY.md)).
 - [ ] RHEL 8: regenerate `grub.cfg`, so that GRUB does not boot with a stale copy of the old arguments: `sudo grub2-mkconfig -o /boot/grub2/grub.cfg` (§4.1)
 - [ ] Reboot: `sudo systemctl reboot`
 - [ ] Confirm: `cat /proc/cmdline` no longer shows the arguments, and `cat /sys/devices/system/cpu/isolated` is empty
@@ -412,7 +412,7 @@ recorded kernel was removed, inspect the installed entries before retrying.
 | `idle=poll`, C-state caps, `transparent_hugepage=never` | ✅ | ✅ (tell the hypervisor team) |
 | `isolcpus`, `nohz_full`, `rcu_nocbs`, `rcu_nocb_poll`, `skew_tick`, `nohz=off` | ✅ | ❌ The hypervisor still schedules the vCPU. Ask for **dedicated pCPUs + vCPU pinning** on the host instead. |
 | `intel_pstate=disable` | ✅ | ❌ The guest does not control frequency. |
-| `nosoftlockup`, `nmi_watchdog=0`, `mce=ignore_ce` | ✅ | ❌ Watchdogs are useful for detecting host steal. |
+| `nosoftlockup`, `nmi_watchdog=0`, `mce=ignore_ce` | ✅ | ❌ on the command line: the soft-lockup watchdog helps detect host steal. [Guide 06 §2](06-kernel-sysctl-tuning.md#2-kernel-logging-and-debug) still sets `kernel.nmi_watchdog=0` at runtime. |
 | `hugepagesz` | ✅ | ❌ in this configuration. Possible only if the hypervisor backs guest memory with huge pages. |
 | IOMMU / mitigations | Opt-in | ❌ Never in a shared hypervisor. |
 

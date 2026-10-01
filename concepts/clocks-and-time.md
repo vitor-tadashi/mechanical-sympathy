@@ -63,7 +63,7 @@ A busy or stalled host can trigger a false alarm (an SMI that stops the watchdog
 | `CLOCK_MONOTONIC_RAW` | never | no: raw TSC rate | comparing against the hardware itself | — |
 | `CLOCK_BOOTTIME` | never | yes | like MONOTONIC, but it counts suspend too | — |
 | `CLOCK_TAI` | only when set | yes | timestamps without leap seconds (PTP runs on TAI) | — |
-| `*_COARSE` | as their base clock | yes | cheap reads with tick resolution (1–4 ms) | — |
+| `*_COARSE` | as their base clock | yes | cheap reads with tick resolution (1 ms at `HZ=1000`) | — |
 
 The rule is short: **measure durations with MONOTONIC, label events with REALTIME.** A duration taken from REALTIME is wrong whenever the daemon steps the clock between the two readings.
 
@@ -114,7 +114,7 @@ Typical orders of magnitude, not measurements.
 |---|---|
 | `clock_gettime()` through the vDSO, `tsc` clocksource | ~20–40 ns |
 | `clock_gettime()` with `hpet` or `acpi_pm` | ~0.5–2 µs, often a system call |
-| `*_COARSE` read | a few ns, but 1–4 ms resolution |
+| `*_COARSE` read | a few ns, but 1 ms resolution |
 | Maximum kernel slew | 500 ppm, 0.5 ms per second |
 | A leap second | 1 s step of REALTIME, or a smear over hours |
 | Offset between hosts: NTP LAN / PTP | ~10–100 µs / ~0.1–1 µs |
@@ -162,7 +162,7 @@ perf stat -e syscalls:sys_enter_clock_gettime -- date +%s.%N
 
 ## 12. Illustrative scenario
 
-An illustrative case, not a measurement. After a firmware update, a latency report showed every handler 1.1 µs slower, and `perf top` on the critical CPU showed `read_hpet` near the top. The kernel log had `Marking clocksource 'tsc' as unstable` from the first minute after boot: a long SMI during start-up had stopped the watchdog CPU, and the watchdog read that as TSC skew. The application took four timestamps per message, each now a 0.3 µs HPET read. The team removed the SMI source in the BIOS, confirmed `current_clocksource` was `tsc` after the next reboot, and added the clocksource check to their day-2 verification ([Guide 11](../guides/11-day2-operations.md)).
+An illustrative case, not a measurement. After a firmware update, a latency report showed every handler about 2 µs slower, and `perf top` on the critical CPU showed `read_hpet` near the top. The kernel log had `Marking clocksource 'tsc' as unstable` from the first minute after boot: a long SMI during start-up had stopped the watchdog CPU, and the watchdog read that as TSC skew. The application took four timestamps per message, each now a 0.5 µs HPET read instead of a 30 ns TSC read. The team removed the SMI source in the BIOS, confirmed `current_clocksource` was `tsc` after the next reboot, and added the clocksource check to their day-2 verification ([Guide 11](../guides/11-day2-operations.md)).
 
 ## 13. Key takeaways
 

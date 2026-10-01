@@ -131,7 +131,7 @@ MemorySwapMax=0          # cgroup v2 only
 | `OOMScoreAdjust=-900` | The kernel kills almost any other process first |
 | Not `-1000` | `-1000` makes the service unkillable. If the service itself leaks, the kernel kills everything else (agents, `sshd`, the journal) and then panics. `-900` keeps it last while the host stays reachable. |
 
-The agents need no positive score when they are capped: their own `MemoryMax=` in [Guide 05](05-cgroup-isolation.md#4-design-three-slices) ends a leak inside their slice before the host runs out. [Guide 05](05-cgroup-isolation.md#4-design-three-slices) already shows `lowlat-app.service` with these values, and this guide applies them to whatever units you list.
+The agents need no positive score when they are capped: their own `MemoryMax=` in [Guide 05](05-cgroup-isolation.md#4-design-three-slices) ends a leak inside their slice before the host runs out. [Guide 05](05-cgroup-isolation.md#4-design-three-slices) already shows `lowlat-app.service` with `OOMScoreAdjust=-900` and `LimitMEMLOCK=infinity`. This guide writes both, plus `MemorySwapMax=0` on cgroup v2, as a drop-in for every unit you list.
 
 ```bash
 systemctl show -p OOMScoreAdjust,LimitMEMLOCK,MemorySwapMax lowlat-app.service
@@ -165,7 +165,7 @@ The default threshold (`1.00` %) is illustrative: set it from a week of your own
 ```bash
 scripts/12-memory-pressure --dry-run            # every command and file, nothing changed
 sudo scripts/12-memory-pressure --apply         # apply the policy now
-scripts/12-memory-pressure --verify             # the checks of section 6
+scripts/12-memory-pressure --verify             # the checks of §6
 sudo scripts/12-memory-pressure --rollback      # swap back on, drop-ins and settings removed
 ```
 
@@ -206,7 +206,7 @@ flowchart TD
   q2 -- "an agent" --> f2["Working as intended:<br/>raise its MemoryMax or fix the leak"]
   q2 -- "the latency service" --> f3["It is the one growing:<br/>check its heap and off-heap memory"]
   q2 -- no --> q3{"PSI or pswpin<br/>WARN?"}
-  q3 -- yes --> f4["Pressure without OOM:<br/>size the host, section 3"]
+  q3 -- yes --> f4["Pressure without OOM:<br/>size the host, §3"]
   q3 -- no --> t["See the table below"]
 ```
 

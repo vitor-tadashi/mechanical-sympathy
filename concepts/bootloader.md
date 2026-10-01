@@ -5,14 +5,14 @@
 ## At a glance
 
 - A few kernel decisions happen only once, at boot: scheduler domains, the tick, where RCU work runs, the idle driver, and the huge page sizes.
-- On RHEL 8/9 the arguments live in BootLoaderSpec entries, one per kernel, and `grubby` is the tool that edits them.
+- On RHEL 8, 9 and 10 the arguments live in BootLoaderSpec entries, one per kernel, and `grubby` is the tool that edits them.
 - `isolcpus`, `nohz_full` and `rcu_nocbs` each move a different kind of work to housekeeping CPUs, so they are used together with the same CPU list.
 
 ## 1. Why it matters
 
 A handful of kernel decisions can only be made **once**, while the kernel initializes: how the scheduler groups CPUs, which CPUs run the timekeeping duty, where RCU callbacks run, which idle driver is registered, and which huge page sizes exist. The kernel command line is the only way to influence them. Getting it right is the foundation for every other latency setting. Getting it wrong can mean a host that does not boot, or one that boots and silently ignores what you asked for.
 
-## 2. From power-on to `/proc/cmdline` (RHEL 8/9)
+## 2. From power-on to `/proc/cmdline` (RHEL 8, 9 and 10)
 
 ```mermaid
 flowchart TD
@@ -54,7 +54,7 @@ Three details matter in practice:
 
 1. **BLS entries hold the arguments per kernel.** On RHEL 8 the `options` line often contains `$kernelopts`, a variable stored in `/boot/grub2/grubenv`. On RHEL 9 the arguments are written into each entry. `grubby` knows both layouts, which is why it is the supported tool. Editing `/etc/default/grub` alone changes neither.
 2. **New kernels inherit the default entry's arguments.** `kernel-install` (run by `dnf` when a kernel is installed) copies the arguments of the current default entry, or `/etc/kernel/cmdline` if it exists. After a kernel update, verify with `grubby --info=ALL` that the new entry carries your isolation arguments.
-3. **Unknown parameters fail silently.** A typo like `isolcpu=3` does not produce an error. The kernel passes it to init as an environment variable. The only reliable check is to read the kernel's own view afterwards: `/sys/devices/system/cpu/isolated`, `/sys/devices/system/cpu/nohz_full`, `/sys/kernel/mm/transparent_hugepage/enabled`.
+3. **Unknown parameters fail silently.** A typo like `isolcpu=3` does not produce an error. The kernel passes it to init as an environment variable. The only reliable check is to read the kernel's own view afterward: `/sys/devices/system/cpu/isolated`, `/sys/devices/system/cpu/nohz_full`, `/sys/kernel/mm/transparent_hugepage/enabled`.
 
 ## 3. The housekeeping model
 
@@ -110,11 +110,11 @@ The cost: every user↔kernel transition on a `nohz_full` CPU is slightly more e
 
 ### `rcu_nocbs=<list>` and `rcu_nocb_poll`
 
-RCU (Read-Copy-Update) lets readers run without locks; writers defer freeing old data until every CPU has passed a quiescent state, then run **callbacks**. By default those callbacks run in softirq context on the CPU that queued them, in batches that can take hundreds of µs. `rcu_nocbs` offloads callback execution for the listed CPUs to `rcuo<type>/<cpu>` kthreads, which the scheduler keeps on housekeeping CPUs. `rcu_nocb_poll` makes those kthreads poll periodically instead of being woken by the isolated CPU, which removes a wake-up IPI. It is a boolean flag and takes no value.
+RCU (Read-Copy-Update) lets readers run without locks; writers defer freeing old data until every CPU has passed a quiescent state, then run **callbacks**. By default those callbacks run in softirq context on the CPU that queued them, in batches that take from tens of µs to milliseconds ([interrupts §5](interrupts-and-deferred-work.md#5-rcu-freeing-memory-later-safely)). `rcu_nocbs` offloads callback execution for the listed CPUs to `rcuo<type>/<cpu>` kthreads, which the scheduler keeps on housekeeping CPUs. `rcu_nocb_poll` makes those kthreads poll periodically instead of being woken by the isolated CPU, which removes a wake-up IPI. It is a boolean flag and takes no value.
 
 ### `idle=poll`, `processor.max_cstate`, `intel_idle.max_cstate`
 
-When a CPU has nothing to run, the idle loop picks a C-state through the cpuidle governor. Deeper states save more power, but on wake-up the core has to restore voltage, clocks and possibly flushed caches. Exit latencies range from ~1 µs (C1) to ~100+ µs (C6 package states), and the wake-up is on the critical path of the next interrupt. `idle=poll` replaces the idle loop with a spin, so the CPU never enters any C-state. The two `max_cstate` parameters cap the idle drivers in case polling is ever turned off.
+When a CPU has nothing to run, the idle loop picks a C-state through the cpuidle governor. Deeper states save more power, but on wake-up the core has to restore voltage, clocks and possibly flushed caches. Exit latencies range from ~1–2 µs (C1) to ~100 µs (core C6) and more for package C-states ([power and frequency §2](power-and-frequency.md#2-idle-c-states)), and the wake-up is on the critical path of the next interrupt. `idle=poll` replaces the idle loop with a spin, so the CPU never enters any C-state. The two `max_cstate` parameters cap the idle drivers in case polling is ever turned off.
 
 ### `transparent_hugepage=never`, `default_hugepagesz`, `hugepagesz`
 
@@ -128,8 +128,8 @@ They are read in `setup_arch()`, and the kernel **patches its own code** at boot
 
 | Parameter group | Removes | Order of magnitude |
 |---|---|---|
-| `nohz_full` | 250–1000 tick interrupts/s | 1–5 µs each |
-| `rcu_nocbs` | RCU callback batches in softirq | 10–500 µs, occasionally |
+| `nohz_full` | 1000 tick interrupts/s | 1–5 µs each |
+| `rcu_nocbs` | RCU callback batches in softirq | tens of µs to ms, occasionally |
 | `isolcpus` + systemd affinity | other tasks' time slices | ms |
 | `idle=poll` / C-state caps | wake-up latency after idle | 1–100 µs per wake-up |
 | `nosoftlockup`, `nmi_watchdog=0` | watchdog hrtimer + NMI | µs, periodic |

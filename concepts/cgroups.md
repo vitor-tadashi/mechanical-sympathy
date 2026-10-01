@@ -53,7 +53,7 @@ flowchart LR
 
 - `cpu.weight` (1–10000, default 100): proportional share under contention (`CPUWeight=`).
 - `cpu.max` = `quota period` (for example `150000 100000` for 1.5 CPUs): a hard cap enforced by CFS bandwidth control (`CPUQuota=150%`). When a group exhausts its quota within a period, **all its threads are throttled until the next period**. That is the right outcome for agents, and a disaster if it ever applies to the latency-critical application. Never put a quota on it.
-- `cpu.stat`: `nr_throttled`, `throttled_usec` show whether the quota bites.
+- `cpu.stat`: `nr_throttled`, `throttled_usec` show whether the quota is reached.
 
 ### memory
 

@@ -8,7 +8,7 @@
 - Every setting is a request to the driver, lost at reboot or driver reload. Some of them reset the link.
 - Apply in a fixed order: channels, rings, coalescing and features, RSS and ntuple, then IRQ affinity.
 
-`ethtool` is the one tool that talks to the NIC **driver** about the hardware under a network interface: its queues, rings, interrupt timers, offloads, flow control, hash tables, filters, counters and clocks. `ip` configures the network stack above it (addresses, routes, MTU, qdiscs), and `ethtool` configures the device below it. This page explains every `ethtool` option these guides use, and a few more you will meet while debugging, so that a line like `ethtool -L ens1f0 combined 1` never has to be taken on faith.
+`ethtool` is the one tool that talks to the NIC **driver** about the hardware under a network interface: its queues, rings, interrupt timers, offloads, flow control, hash tables, filters, counters and clocks. `ip` configures the network stack above it (addresses, routes, MTU, qdiscs), and `ethtool` configures the device below it. This page explains every `ethtool` option these guides use, and a few more you will meet while debugging, so that a line like `ethtool -L ens1f0 combined 1` is never a mystery.
 
 ## 1. How `ethtool` works (and why answers differ between NICs)
 
@@ -72,7 +72,7 @@ flowchart TD
 
 *The options fall into four groups. The ones marked "resets link" (in red) stop traffic briefly and bring the queue interrupts back with default affinity. The observe-only group changes nothing.*
 
-"Resets the link" means the driver tears down and rebuilds its queues. Traffic stops for roughly 0.1–3 s, and every queue interrupt comes back with default affinity. Never do this on the interface you are logged in through, and always re-apply IRQ placement afterwards ([Guide 04 §6](../guides/04-network-optimization.md#6-interrupt-affinity-set_nic_irq_affinity)).
+"Resets the link" means the driver tears down and rebuilds its queues. Traffic stops for roughly 0.1–3 s, and every queue interrupt comes back with default affinity. Never do this on the interface you are logged in through, and always re-apply IRQ placement afterward ([Guide 04 §6](../guides/04-network-optimization.md#6-interrupt-affinity-set_nic_irq_affinity)).
 
 ## 3. `-i`: driver information
 

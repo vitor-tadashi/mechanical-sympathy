@@ -7,7 +7,7 @@
 | **Risk level** | **1 / 5**. The timer runs the read-only report. Nothing else changes. |
 | **Reboot required** | No |
 | **Applies to** | Bare metal and VMs (the report checks what applies to the host class) |
-| **Depends on** | Guides 00 to 10 applied: the report checks them |
+| **Depends on** | Guides 00 to 10 and 12 applied: the report checks them |
 | **Time** | 20 min to install and read the first report. The update routine is a habit, not a task. |
 
 ## At a glance
@@ -16,7 +16,7 @@
 - **Why:** tuning drifts silently. A kernel update installs an entry without your arguments, a firmware update resets the BIOS, a driver reload restores NIC defaults, an agent update resets its affinity. Each one shows up weeks later as a worse tail, with no change in the application.
 - **Cost:** one short oneshot job a day on the OS CPUs, and the discipline of a canary host for updates.
 
-**Time:** 20 min · **Do this if:** always, after Guides 00 to 10 · **Skip if:** the host is throwaway.
+**Time:** 20 min · **Do this if:** always, after Guides 00 to 10 and 12 · **Skip if:** the host is throwaway.
 
 ```mermaid
 flowchart LR
@@ -35,7 +35,7 @@ flowchart LR
 
 ## 1. Why tuning drifts
 
-Guides 00 to 10 set things once. The host then keeps changing under them:
+Guides 00 to 10 and 12 set things once. The host then keeps changing under them:
 
 | Event | What can silently revert | How you notice | Where the fix is |
 |---|---|---|---|
@@ -45,6 +45,7 @@ Guides 00 to 10 set things once. The host then keeps changing under them:
 | **Agent update** (endpoint security, monitoring) | The agent resets its own affinity and leaves the fence | Where every thread of each agent runs | [Guide 05 §7](05-cgroup-isolation.md#7-troubleshooting) |
 | **Package updates of tuned or sysctl files** | The order in which profiles and `sysctl.d` files apply | `scripts/06-kernel-sysctl --verify` | [Guide 07 §5](07-os-hygiene.md#5-tuned-profile) |
 | **Application release** | New threads, or changed pinning | `show_affinity` of the running process | §5 |
+| **New swap or a memory leak** | A swap volume returns (an installer, an `fstab` edit), or an agent leaks until the latency service is paged out | `scripts/12-memory-pressure --verify`: `pswpin` and memory pressure (PSI) | [Guide 12 §7](12-memory-pressure.md#7-troubleshooting) |
 | **Hardware swap** | CPU and NUMA numbering | `scripts/plan-layout --check` | [Guide 02 §3](02-cpu-core-isolation.md#3-designing-the-cpu-layout) |
 
 Every row has a command that answers "did it revert?". This guide runs the ones a script can run, and lists the rest.
@@ -211,9 +212,10 @@ systemctl show -p Result --value lowlat-verify.service    # success (or exit-cod
 ```mermaid
 flowchart TD
   s(["lowlat-verify.service failed"]) --> sec{"Which section<br/>has the FAIL?"}
-  sec -- "01 or 02" --> f1["Boot arguments or affinity lost:<br/>kernel entries (section 3), Guide 01"]
+  sec -- "01 or 02" --> f1["Boot arguments or affinity lost:<br/>kernel entries (§3), Guide 01"]
   sec -- "04" --> f2["NIC defaults after a driver change:<br/>apply-all --runtime"]
-  sec -- "00 or 09" --> f3["Firmware reset or SMIs:<br/>Guide 00 section 8"]
+  sec -- "00 or 09" --> f3["Firmware reset or SMIs:<br/>Guide 00 §8"]
+  sec -- "12" --> f6["Swap back or memory pressure:<br/>Guide 12 §7"]
   sec -- "11" --> f4["The timer itself:<br/>systemctl status, the table below"]
   sec -- "other" --> f5["Open that guide's troubleshooting section"]
 ```

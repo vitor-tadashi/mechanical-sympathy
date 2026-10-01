@@ -45,13 +45,16 @@ Now the budget: `1 / 1.5 Mpps = 667 ns` per packet on one core. Six Mpps needs f
 
 ## 3. Change
 
-**Step 1: more queues on more IRQ CPUs.** The kernel stack scales by adding queues, as long as [RSS](../../GLOSSARY.md#rss) spreads the flows. `irq_cpus` lists the housekeeping CPUs of the NIC's node, and `04-network` creates one queue per listed CPU ([Guide 04 §5.1](../../guides/04-network-optimization.md#51-queues-channels-ethtool--l)):
+**Step 1: more queues on more IRQ CPUs.** The kernel stack scales by adding queues, as long as [RSS](../../GLOSSARY.md#rss) spreads the flows. `irq_cpus` lists OS CPUs of the NIC's node, never isolated ones, and `04-network` creates one queue per listed CPU ([Guide 04 §5.1](../../guides/04-network-optimization.md#51-queues-channels-ethtool--l)):
 
 ```bash
 NICS=(
 	"ens1f0|critical|1,3,5,7,9|0"      # five IRQ CPUs, so five queues (illustrative numbers)
 )
+ISOLATED_CPUS=(11 13 15 17 19 21 23 25 27 29 31)   # 3, 5, 7 and 9 are no longer isolated
 ```
+
+Unlike the reference host, this one keeps five OS CPUs on node 1, because the softirq work needs them. Take CPUs 3, 5, 7 and 9 out of `ISOLATED_CPUS` and add them to `OS_CPUS`, re-run `scripts/plan-layout --check`, and reboot once for [Guide 01](../../guides/01-grub-bootloader-tuning.md).
 
 ```bash
 scripts/04-network --dry-run | less

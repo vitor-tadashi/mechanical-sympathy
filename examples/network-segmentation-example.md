@@ -190,10 +190,11 @@ for irq in $(ls /sys/class/net/ens1f0/device/msi_irqs); do
 
 ### 6.1 Critical NICs: keep the qdisc out of the way
 
-Critical links carry small messages at modest rates. The qdisc should never hold a packet. `fq_codel` (the default) is fine as long as it is never backlogged. `noqueue` is not possible on physical NICs, so the smallest-overhead choice is a plain multi-queue `pfifo_fast`/`mq`:
+Critical links carry small messages at modest rates. The qdisc should never hold a packet. `fq_codel` (the default) is fine as long as it is never backlogged. `noqueue` is not possible on physical NICs, so the smallest-overhead choice is a multi-queue `mq` root with a plain FIFO child per TX queue. The children take `net.core.default_qdisc`, which is `fq_codel` on RHEL, so set it to `pfifo_fast` first if you want plain FIFOs:
 
 ```bash
-tc qdisc replace dev ens1f0 root mq           # one child per TX queue, default child qdiscs
+sysctl -w net.core.default_qdisc=pfifo_fast  # children created from now on are plain FIFOs
+tc qdisc replace dev ens1f0 root mq           # one child per TX queue, of the default_qdisc type
 tc -s qdisc show dev ens1f0                   # "backlog 0b 0p" and "dropped 0" at all times
 ```
 
@@ -201,7 +202,7 @@ A backlog on a critical NIC means something is sending bulk data on it. Fix the 
 
 ### 6.2 Bulk NICs: flow fairness and pacing
 
-Replication and log shipping are throughput traffic. Make them behave well towards each other and towards the network:
+Replication and log shipping are throughput traffic. Make them behave well toward each other and toward the network:
 
 ```bash
 # Long queue (txqueuelen 300000 set by the script) so bursts are queued, not dropped
