@@ -125,5 +125,5 @@
 <circle class="evt" cx="492" cy="416.0" r="5" style="animation-delay:-2.40s"/>
 <circle class="evt" cx="642" cy="352.0" r="5" style="animation-delay:-0.82s"/>
 <line class="head" x1="150" y1="26" x2="150" y2="436"/>
-<text class="sub" x="380" y="458" text-anchor="middle">Illustrative. DPDK is not proven in production in this repository: mark every number as one to measure.</text>
+<text class="sub" x="380" y="458" text-anchor="middle">Illustrative. Measure every number on your own hardware.</text>
 </svg>

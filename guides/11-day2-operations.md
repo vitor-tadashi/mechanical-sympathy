@@ -137,7 +137,7 @@ sudo systemctl reboot
 ```
 
 > [!NOTE]
-> **Not proven in production.** Whether a new kernel inherits the arguments differs between RHEL 8 and 9 and between installation paths, so the check reads the entries and does not model the mechanism. Treat a WARN as a fact about the boot loader, and a clean result as a fact about today's entries.
+> **Validate on your hardware.** Whether a new kernel inherits the arguments differs between RHEL 8 and 9 and between installation paths, so the check reads the entries and does not model the mechanism. Treat a WARN as a fact about the boot loader, and a clean result as a fact about today's entries.
 
 ## 4. What to alert on
 
@@ -170,7 +170,7 @@ When the spares are gone, the layout needs more isolated CPUs. That changes `iso
 ## 6. An update routine
 
 > [!NOTE]
-> **Not proven in production.** This is a process suggestion, not a measured procedure. The steps are the ones that make the drift in §1 visible.
+> **Validate on your hardware.** This is a process suggestion, not a measured procedure. The steps are the ones that make the drift in §1 visible.
 
 | Step | Action |
 |---|---|

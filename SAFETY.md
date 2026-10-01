@@ -116,7 +116,7 @@ Two open entries matter for recovery. Read them before you roll back on these ve
 <summary><b>What the tests cannot prove</b></summary>
 
 - **Your hardware.** NIC drivers, firmware, BIOS settings and SMIs differ between vendors. The VMs use virtio-net, not your NIC.
-- **Production behavior.** Advice that has not run on production hosts is marked "not proven in production" in the text. RHEL 10 has not run on production hardware yet.
+- **Unmeasured advice.** Advice that follows documentation, and that this repository does not measure, is marked "validate on your hardware" in the text. RHEL 10 is checked in CI only, not on real hardware.
 - **Your workload.** A configuration that verifies correctly is not a latency improvement until you measure it.
 - **Lost work.** Apply and rollback can reset NIC queues and restart services. Connections that drop cannot be brought back. Plan a maintenance window.
 
@@ -131,7 +131,7 @@ Two open entries matter for recovery. Read them before you roll back on these ve
 - **No layout gate.** `apply-all --apply` does not run `plan-layout --check`. You run it.
 - **No tagged releases.** Review the commit you run and pin it, for example with `git checkout <commit>` on your hosts.
 - **Rollback does not restore a previous time-sync stack.** Guide 10's rollback removes its drop-ins and enables `chronyd`, the RHEL default. If the host ran something else before, for example a vendor PTP stack, restore that by hand ([Guide 10 §11](guides/10-time-sync.md#11-rollback)).
-- **Rollback is tested, not proven in production** across every driver and tuned profile ([whole-host rollback](QUICK_START.md#whole-host-rollback)).
+- **Rollback is tested on fake hosts, containers and VMs, not on real hardware** across every driver and tuned profile ([whole-host rollback](QUICK_START.md#whole-host-rollback)).
 
 </details>
 

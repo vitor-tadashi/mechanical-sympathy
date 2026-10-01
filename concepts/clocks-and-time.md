@@ -52,7 +52,7 @@ clocksource: timekeeping watchdog on CPU5: Marking clocksource 'tsc' as unstable
 A busy or stalled host can trigger a false alarm (an SMI that stops the watchdog CPU, for example). The `tsc=reliable` kernel argument turns the watchdog off for the TSC.
 
 > [!NOTE]
-> **Not proven in production.** `tsc=reliable` is common advice for latency hosts with an invariant TSC, but it is not in [Guide 01](../guides/01-grub-bootloader-tuning.md). Add it only after the watchdog has switched the clocksource on your hardware, and check `current_clocksource` after every reboot.
+> **Validate on your hardware.** `tsc=reliable` is common advice for latency hosts with an invariant TSC, but it is not in [Guide 01](../guides/01-grub-bootloader-tuning.md). Add it only after the watchdog has switched the clocksource on your hardware, and check `current_clocksource` after every reboot.
 
 ## 4. Which clock to read
 

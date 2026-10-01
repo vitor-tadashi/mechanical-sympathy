@@ -22,7 +22,7 @@
 # Check mode sources CONF, and reports PASS or FAIL for the four rules above plus NUMA
 # locality. It exits 5 (EXIT_VERIFY) when a rule fails.
 #
-# Not proven in production: the proposal is a starting point for the owner to review.
+# The proposal is a starting point for the owner to review.
 
 set -Eeuo pipefail
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"

@@ -66,7 +66,7 @@ Each memory zone (on x86-64, mainly `Normal` on each NUMA node) has three waterm
 `vm.min_free_kbytes` sets `min`, and `low` and `high` follow it: each gap is the larger of a quarter of `min` and the `vm.watermark_scale_factor` share of the zone. [Guide 06 §8](../guides/06-kernel-sysctl-tuning.md#8-virtual-memory) raises it, so `kswapd` starts early and a burst of allocations has a cushion. `vm.watermark_scale_factor` widens the gap between the marks without raising `min`.
 
 > [!NOTE]
-> **Not proven in production.** `vm.watermark_scale_factor` (default `10`, meaning a gap of at least 0.1 % of the zone, or a quarter of `min` if that is larger) is an alternative to a large `min_free_kbytes`. The guides use `min_free_kbytes` only.
+> **Validate on your hardware.** `vm.watermark_scale_factor` (default `10`, meaning a gap of at least 0.1 % of the zone, or a quarter of `min` if that is larger) is an alternative to a large `min_free_kbytes`. The guides use `min_free_kbytes` only.
 
 Reclaim is per NUMA node. With `vm.zone_reclaim_mode=0` (the RHEL default), a node that is short of memory takes pages from another node instead of reclaiming locally. Keep it at `0`: a value of `1` makes allocations stall to reclaim on their own node.
 

@@ -58,7 +58,7 @@ The [swap and OOM concept](../concepts/swap-and-oom.md#6-silent-stalls-versus-a-
 | Development box or laptop | Skip |
 
 > [!NOTE]
-> **Not proven in production.** "No swap" is the common choice for dedicated latency hosts, and it follows the "fail loudly" rule of this repository. It also makes a global OOM more likely on a host that is sized too tightly. Size the host first (§3), and watch `MemAvailable` and PSI for a week before you turn swap off on a host that uses it today.
+> **Validate on your hardware.** "No swap" is the common choice for dedicated latency hosts, and it follows the "fail loudly" rule of this repository. It also makes a global OOM more likely on a host that is sized too tightly. Size the host first (§3), and watch `MemAvailable` and PSI for a week before you turn swap off on a host that uses it today.
 
 ## 3. Before you start: is there room?
 

@@ -66,7 +66,7 @@ Use GitHub alerts instead of ad-hoc bold warnings or emoji. Keep each alert to o
 | Alert | Use for |
 |---|---|
 | `> [!TIP]` | A shortcut or a faster way to check something |
-| `> [!NOTE]` | Context the reader may skip. Also used for **advice not yet proven in production**: `> [!NOTE]` followed by `> **Not proven in production.** …` |
+| `> [!NOTE]` | Context the reader may skip. Also used for **advice that follows documentation and is not measured here**: `> [!NOTE]` followed by `> **Validate on your hardware.** …` |
 | `> [!IMPORTANT]` | A precondition the reader must meet before continuing |
 | `> [!WARNING]` | A step that can break the host, lock you out or hurt latency when done wrong |
 | `> [!CAUTION]` | A step that **removes a security control** (mitigations off, firewall removed) |
@@ -197,5 +197,5 @@ Embed it with an `<img>` that has an `alt` text, followed by the same one-senten
 - [ ] Headings are real headings, in order (no jump from `##` to `####`), so the GitHub outline works.
 - [ ] Every new abbreviation, product or unusual word has an entry in [`GLOSSARY.md`](GLOSSARY.md), in the same change (`make lint` keeps the entries sorted).
 - [ ] Link text says where the link goes ("Guide 05 §4.4, the cpuset trap"), never "here".
-- [ ] Unproven advice is marked (§2.1).
+- [ ] Unmeasured advice is marked (§2.1).
 - [ ] `make lint` passes (links, anchors, Mermaid, SVG rules).

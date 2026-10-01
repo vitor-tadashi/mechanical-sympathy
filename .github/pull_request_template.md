@@ -9,6 +9,6 @@
 - [ ] The page opens with the short answer, and each diagram has a one-sentence summary and `alt` text
 - [ ] No meaning is carried by color alone
 - [ ] Long output and deep dives are folded. Warnings and required commands are not
-- [ ] Unproven advice is marked, and numbers with no measurement are labeled illustrative
+- [ ] Unmeasured advice is marked, and numbers with no measurement are labeled illustrative
 - [ ] No real host names, addresses, employers, customers, logs or secrets
 - [ ] Description is plain text: no emojis, no tool attribution footer

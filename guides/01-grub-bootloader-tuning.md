@@ -213,7 +213,7 @@ If the fallback line in `grub.cfg` and `/proc/cmdline` disagree with `grub2-edit
 > **`rcu_nocb_poll` is a flag.** Writing `rcu_nocb_poll=10` is accepted, but the `10` is ignored. There is no poll-interval parameter.
 
 > [!NOTE]
-> **`nohz=off` together with `nohz_full`: verify on your kernel.** `nohz=off` only disables tickless *idle*. With `idle=poll` your CPUs are never idle anyway, so most of the time the parameter has no effect. It is kept for parity with proven production configurations. After the reboot, verify that the isolated CPUs really stopped ticking (§7). If the `LOC` counter keeps increasing at `HZ` on an isolated CPU that runs a single pinned busy thread, remove `nohz=off` and test again.
+> **`nohz=off` together with `nohz_full`: verify on your kernel.** `nohz=off` only disables tickless *idle*. With `idle=poll` your CPUs are never idle anyway, so most of the time the parameter has no effect. It is kept for parity with common low-latency configurations. After the reboot, verify that the isolated CPUs really stopped ticking (§7). If the `LOC` counter keeps increasing at `HZ` on an isolated CPU that runs a single pinned busy thread, remove `nohz=off` and test again.
 
 **What isolation does *not* do.** `isolcpus` does not move per-CPU kernel threads (`ksoftirqd/N`, `kworker/N:*`, `migration/N`, `cpuhp/N`), and it does not route interrupts. Those are handled by [Guide 02](02-cpu-core-isolation.md) (workqueues, irqbalance), [Guide 04](04-network-optimization.md) (NIC IRQ affinity) and [Guide 05](05-cgroup-isolation.md) (user-space daemons).
 
@@ -226,7 +226,7 @@ If the fallback line in `grub.cfg` and `/proc/cmdline` disagree with `grub2-edit
 `intel_pstate=performance` is **not** a valid value. The valid choices are `disable`, `passive`, `active`, `no_hwp`, `hwp_only`, `force`, and a few others. On AMD hosts this parameter has no effect; use `amd_pstate=passive` or keep `acpi-cpufreq`, and set the governor through tuned.
 
 > [!NOTE]
-> **Not proven in production.** The reference hosts are Intel Xeon. The AMD advice above follows the kernel documentation and has not been measured on a production AMD EPYC host.
+> **Validate on your hardware.** The examples use Intel Xeon names. The AMD advice above follows the kernel documentation and this repository does not measure it on AMD EPYC.
 
 ### 5.4 Silence the watchdogs and error pollers
 
@@ -401,7 +401,7 @@ apply leaves consoles alone. Keep the record for subsequent rollbacks; if a
 recorded kernel was removed, inspect the installed entries before retrying.
 
 > [!NOTE]
-> **Not proven in production.** Console restoration is checked against fake
+> **Validate on your hardware.** Console restoration is checked against fake
 > boot entries and real grubby in containers. Verify the running command line
 > after reboot before relying on it for production recovery.
 

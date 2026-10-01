@@ -50,7 +50,7 @@ Cores exchange data through the cache hierarchy. When a thread on CPU 3 writes a
 On EPYC, two threads that hand messages to each other (`net.rx` → `event.loop`, say) belong in **one CCX**. In two CCXs, every handoff pays the fabric trip, even though both threads are "on the right NUMA node".
 
 > [!NOTE]
-> **Not proven in production.** `plan-layout` models NUMA nodes and SMT siblings, not L3 domains. On a CPU with several L3 domains per node, check `shared_cpu_list` (§4) and keep handoff pairs inside one domain by hand.
+> **Validate on your hardware.** `plan-layout` models NUMA nodes and SMT siblings, not L3 domains. On a CPU with several L3 domains per node, check `shared_cpu_list` (§4) and keep handoff pairs inside one domain by hand.
 
 ### 2.3 NUMA nodes and the socket link
 

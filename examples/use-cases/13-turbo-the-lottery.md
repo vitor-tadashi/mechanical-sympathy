@@ -11,7 +11,7 @@
 **Time:** ~2 h, because each run needs a warm-up and each BIOS change needs a reboot · **You need:** root, bare metal, out-of-band console, `turbostat` (`kernel-tools`).
 
 > [!NOTE]
-> **Illustrative, and not proven in production.** The clocks below are invented to show the shape. Turbo behavior depends on the CPU model, the power limits the vendor sets and the cooling. [Guide 00 §4.3](../../guides/00-bios-firmware.md#43-turbo-a-measured-decision) gives the common reasoning, and only your own measurement decides.
+> **Illustrative.** The clocks below are invented to show the shape. Turbo behavior depends on the CPU model, the power limits the vendor sets and the cooling. [Guide 00 §4.3](../../guides/00-bios-firmware.md#43-turbo-a-measured-decision) gives the common reasoning, and only your own measurement decides.
 
 ## 1. Situation
 
