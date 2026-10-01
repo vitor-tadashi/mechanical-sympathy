@@ -1,6 +1,6 @@
 # Guide 11 — Day-2 Operations: Keeping a Host Tuned
 
-> **Script:** [`scripts/11-day2-operations`](../scripts/11-day2-operations) · **Previous:** [Guide 10 — Time synchronization](10-time-sync.md) · **Measure with:** [Guide 09](09-measuring-latency.md) · **Story:** [Capstone use case](../examples/use-cases/08-stock-to-tuned-in-one-afternoon.md) · **Terms:** [Glossary](../GLOSSARY.md)
+> **Script:** [`scripts/11-day2-operations`](../scripts/11-day2-operations) · **Previous:** [Guide 10 — Time synchronization](10-time-sync.md) · **Next:** [Guide 12 — Memory pressure](12-memory-pressure.md) · **Measure with:** [Guide 09](09-measuring-latency.md) · **Story:** [Capstone use case](../examples/use-cases/08-stock-to-tuned-in-one-afternoon.md) · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|

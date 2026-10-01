@@ -17,7 +17,8 @@
 #
 # The host file sets OS_PRETTY_NAME, KERNEL, VIRTUAL (yes|no), SOCKETS, CPUS, CGROUP
 # (1|2), ABSENT_SYSCTLS, FAKE_NICS ("name|driver|numa node|combined max|ring max|ptp"),
-# SERVICES (installed, enabled and running) and PROCESSES (running, not systemd units).
+# SERVICES (installed, enabled and running), PROCESSES (running, not systemd units) and
+# SWAP_KB (the size of the swap device in fstab, 0 for none).
 # Everything is a model: only what the guide scripts read or write is there.
 
 # The host file sets the upper-case variables above; ShellCheck cannot see them.
@@ -30,7 +31,7 @@ HOST_FAKE_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)/fake"
 # Read by tools/check-scripts and tools/check-container-image, which source this file.
 # shellcheck disable=SC2034
 HOST_APPLY_ORDER=(00-bios-firmware 01-grub-bootloader 02-cpu-isolation 03-huge-pages 06-kernel-sysctl
-	07-os-hygiene 10-time-sync 05-cgroup-isolation 08-kernel-bypass 04-network 11-day2-operations)
+	07-os-hygiene 12-memory-pressure 10-time-sync 05-cgroup-isolation 08-kernel-bypass 04-network 11-day2-operations)
 
 # host_hybrid_root <root> - an empty root whose /etc, /boot, /usr and /var are links to
 # the real ones. A real systemctl or grubby, which know nothing of LOWLAT_ROOT, then see
@@ -115,7 +116,16 @@ host_build_memory() {
 		done
 	done
 	host_write "${root}" /sys/kernel/mm/transparent_hugepage/enabled "[always] madvise never"
-	host_write "${root}" /proc/meminfo "$(printf 'MemTotal:       263921000 kB\nSwapTotal:        4194300 kB\nSwapFree:         4194300 kB\nAnonHugePages:          0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB')"
+	host_write "${root}" /proc/meminfo "$(printf 'MemTotal:       263921000 kB\nMemFree:        251658240 kB\nMemAvailable:   255852544 kB\nSwapTotal:      %s kB\nSwapFree:       %s kB\nAnonHugePages:          0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB' "${SWAP_KB}" "${SWAP_KB}")"
+	host_write "${root}" /proc/swaps "$(printf 'Filename\t\t\t\tType\t\tSize\t\tUsed\t\tPriority')"
+	if ((SWAP_KB > 0)); then
+		printf '/dev/mapper/rhel-swap\tpartition\t%s\t\t0\t\t-2\n' "${SWAP_KB}" >>"${root}/proc/swaps"
+		host_write "${root}" /run/fake-swap-devices "/dev/mapper/rhel-swap ${SWAP_KB}"
+	fi
+	host_write "${root}" /proc/vmstat "$(printf 'pgmajfault 0\npswpin 0\npswpout 0\nallocstall_normal 0')"
+	# RHEL 8 builds PSI in but leaves it off unless psi=1 is on the command line.
+	[[ "${OS_VERSION%%.*}" == 8 ]] || host_write "${root}" /proc/pressure/memory "$(printf 'some avg10=0.00 avg60=0.00 avg300=0.00 total=0\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0')"
+	host_write "${root}" /sys/module/zswap/parameters/enabled N
 }
 
 host_build_sysctls() {
@@ -139,6 +149,7 @@ host_build_sysctls() {
 	host_write "${root}" /proc/sys/kernel/sched_rt_runtime_us 950000
 	host_write "${root}" /proc/sys/kernel/shmmni 4096
 	host_write "${root}" /proc/sys/vm/nr_hugepages 0
+	host_write "${root}" /proc/sys/vm/swappiness 60
 	host_write "${root}" /proc/sys/vm/nr_overcommit_hugepages 0
 	host_write "${root}" /proc/sys/vm/hugetlb_shm_group 0
 	host_write "${root}" /proc/sys/kernel/osrelease "${KERNEL}"
@@ -245,7 +256,10 @@ host_build_userland() {
 	local root="$1" config="$2"
 	mkdir -p "${root}/var/lib"
 	host_write "${root}" /etc/os-release "$(printf 'NAME="%s"\nVERSION_ID="%s"\nPRETTY_NAME="%s %s"' "${OS_PRETTY_NAME}" "${OS_VERSION}" "${OS_PRETTY_NAME}" "${OS_VERSION}")"
-	host_write "${root}" /etc/fstab "$(printf '/dev/mapper/rhel-root  /      xfs   defaults  0 0\nUUID=0000-boot         /boot  xfs   defaults  0 0\n/dev/mapper/rhel-swap  none   swap  defaults  0 0')"
+	host_write "${root}" /etc/fstab "$(printf '/dev/mapper/rhel-root  /      xfs   defaults  0 0\nUUID=0000-boot         /boot  xfs   defaults  0 0')"
+	if ((SWAP_KB > 0)); then
+		printf '/dev/mapper/rhel-swap  none   swap  defaults  0 0\n' >>"${root}/etc/fstab"
+	fi
 	host_write "${root}" /etc/group "$(printf 'root:x:0:\napp-user:x:1001:')"
 	host_write "${root}" /etc/sysctl.conf "# System default settings live in /usr/lib/sysctl.d/00-system.conf."
 	host_write "${root}" /etc/lowlat/lowlat.conf "$(<"${config}")"
@@ -294,6 +308,9 @@ host_mount_fstab() {
 host_kernel_boot() {
 	local root="$1" cmdline value entry kernel device
 	host_mount_fstab "${root}"
+	# systemd activates the swap lines of fstab at boot, and nothing else.
+	LOWLAT_ROOT="${root}" swapoff -a
+	LOWLAT_ROOT="${root}" swapon -a
 	kernel="$(<"${root}/proc/sys/kernel/osrelease")"
 	entry="$(LOWLAT_ROOT="${root}" grubby --info=DEFAULT)"
 	device="$(awk -F'"' '/^root=/ {print $2}' <<<"${entry}")"

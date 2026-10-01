@@ -1,6 +1,6 @@
 # Concept — Swap and the OOM Killer: Silent Stalls or a Loud Failure
 
-> Used by: [Guide 05 §4](../guides/05-cgroup-isolation.md#4-design-three-slices), [Guide 06 §8](../guides/06-kernel-sysctl-tuning.md#8-virtual-memory), `verify-tuning` ("no swap in use"). Related: [memory reclaim and faults](memory-reclaim.md), [cgroups](cgroups.md), [huge pages and NUMA](huge-pages.md). Use case: [17](../examples/use-cases/17-memory-pressure-on-a-latency-host.md). Terms: [Glossary](../GLOSSARY.md).
+> Used by: [Guide 12](../guides/12-memory-pressure.md), [Guide 05 §4](../guides/05-cgroup-isolation.md#4-design-three-slices), [Guide 06 §8](../guides/06-kernel-sysctl-tuning.md#8-virtual-memory). Related: [memory reclaim and faults](memory-reclaim.md), [cgroups](cgroups.md), [huge pages and NUMA](huge-pages.md). Use case: [17](../examples/use-cases/17-memory-pressure-on-a-latency-host.md). Terms: [Glossary](../GLOSSARY.md).
 
 ## At a glance
 
@@ -98,7 +98,7 @@ The argument for no swap on a latency host follows the Unix rule "fail loudly an
 - With swap, a leak in an agent becomes millisecond stalls in the critical process, hours later, with no message. The usual tools see a slow application, not a memory problem.
 - Without swap, the same leak ends the agent within seconds, with a kernel log line that names it. The critical process is untouched.
 
-Pair it with a memory cap on the agents ([Guide 05](../guides/05-cgroup-isolation.md#4-design-three-slices)), so most leaks end in a cgroup OOM inside the agents' slice and never reach the global OOM killer.
+Pair it with a memory cap on the agents ([Guide 05](../guides/05-cgroup-isolation.md#4-design-three-slices)), so most leaks end in a cgroup OOM inside the agents' slice and never reach the global OOM killer. [Guide 12](../guides/12-memory-pressure.md) applies this policy with one script.
 
 > [!NOTE]
 > **Not proven in production.** Turning swap off makes a global OOM more likely when the host is sized too tightly. Size memory for the peak, cap the agents, and watch PSI and `MemAvailable` before you remove swap from a host that has it.

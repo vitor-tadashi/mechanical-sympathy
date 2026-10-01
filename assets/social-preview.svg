@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-labelledby="t d">
 <title id="t">Mechanical Sympathy: low-latency tuning for RHEL</title>
-<desc id="d">Repository card. The title Mechanical Sympathy, the line low-latency tuning for RHEL, a summary of twelve guides, twelve scripts, eight use cases and a CPU layout explorer, and a small map of a two-node host with isolated CPUs on the node that holds the critical network cards.</desc>
+<desc id="d">Repository card. The title Mechanical Sympathy, the line low-latency tuning for RHEL, a summary of thirteen guides, thirteen scripts, nineteen use cases and a CPU layout explorer, and a small map of a two-node host with isolated CPUs on the node that holds the critical network cards.</desc>
 <style>
   .bg { fill: #0d1117; }
   .t1 { font: 700 76px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #ffffff; }
@@ -21,7 +21,7 @@
 <text class="t1" x="72" y="314">Sympathy</text>
 <text class="t2" x="72" y="384">Low-latency tuning for RHEL</text>
 <line class="rule" x1="72" y1="420" x2="560" y2="420"/>
-<text class="t3" x="72" y="466">12 guides · 12 scripts · 8 use cases</text>
+<text class="t3" x="72" y="466">13 guides · 13 scripts · 19 use cases</text>
 <text class="t3" x="72" y="504">and a CPU layout explorer</text>
 <text class="q" x="72" y="580">The tail is the sum of rare events.</text>
 

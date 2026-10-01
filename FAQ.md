@@ -115,6 +115,13 @@ Start from the NUMA node of the critical NIC. Isolate the cores of that node exc
 </details>
 
 <details>
+<summary><b>Should I turn swap off?</b></summary>
+
+On a dedicated latency host, yes, with the agents capped. With swap, a leak anywhere becomes millisecond swap-in stalls in the critical threads, with nothing logged. Without swap, it ends in one logged OOM kill of the process that grew, and `OOMScoreAdjust=-900` keeps the latency service last. Size the host for its peak first. If the host must keep swap, `SWAP_POLICY=protect` keeps the latency services out of it. See [Guide 12](guides/12-memory-pressure.md) and the [swap and OOM concept](concepts/swap-and-oom.md).
+
+</details>
+
+<details>
 <summary><b>How do I keep the host tuned after a kernel or firmware update?</b></summary>
 
 Let it check itself. `scripts/11-day2-operations` installs a timer that runs `verify-tuning` daily and 10 minutes after every boot, and a failed run leaves a failed unit. Before rebooting into a new kernel, check that its boot entry kept `isolcpus`, `nohz_full` and `rcu_nocbs`. See [Guide 11](guides/11-day2-operations.md).

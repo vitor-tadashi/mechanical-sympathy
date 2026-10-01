@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# apply-all - applies Guides 00-08, 10 and 11 in order, or re-applies their runtime part.
+# apply-all - applies Guides 00-08 and 10-12 in order, or re-applies their runtime part.
 #
 #   --plan      print what each capability would do on this host class, change nothing
 #   --dry-run   print every command and file, change nothing
@@ -39,6 +39,8 @@ SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 . "${SCRIPTS_DIR}/10-time-sync"
 # shellcheck source=11-day2-operations
 . "${SCRIPTS_DIR}/11-day2-operations"
+# shellcheck source=12-memory-pressure
+. "${SCRIPTS_DIR}/12-memory-pressure"
 
 RUNTIME_UNIT="${LOWLAT_ROOT}"/etc/systemd/system/lowlat-runtime.service
 
@@ -61,7 +63,7 @@ print_plan() {
 	local capability decision
 	printf 'host_class=%s\n' "${HOST_CLASS}"
 	for capability in bios_firmware latency_grub isolation_grub core_isolation irqbalance_disable rt_throttling \
-		huge_pages sysctl os_hygiene time_sync cgroup_isolation nic_tuning nic_irq_affinity kernel_bypass day2_operations; do
+		huge_pages sysctl os_hygiene memory_pressure time_sync cgroup_isolation nic_tuning nic_irq_affinity kernel_bypass day2_operations; do
 		decision="$(capability_decision "${capability}")"
 		printf '%-20s %s\n' "${capability}" "${decision}"
 	done
@@ -70,6 +72,7 @@ print_plan() {
 	printf '%-20s %s\n' bypass_stack "${KERNEL_BYPASS_STACK:-none}"
 	printf '%-20s %s\n' time_sync_mode "${TIME_SYNC_MODE:-none}"
 	printf '%-20s %s\n' day2_verify_timer "${DAY2_VERIFY_TIMER:-yes}"
+	printf '%-20s %s\n' swap_policy "${SWAP_POLICY:-off}"
 }
 
 install_runtime_unit() {
@@ -113,6 +116,7 @@ guide_capabilities() {
 	08-kernel-bypass) printf 'kernel_bypass\n' ;;
 	10-time-sync) printf 'time_sync\n' ;;
 	11-day2-operations) printf 'day2_operations\n' ;;
+	12-memory-pressure) printf 'memory_pressure\n' ;;
 	*) die "no capabilities known for ${1}" ;;
 	esac
 }
@@ -162,7 +166,7 @@ rollback_all() {
 	local guide value complete=no
 	local -a failed=()
 	local -a guides=(11-day2-operations 08-kernel-bypass 04-network 05-cgroup-isolation
-		10-time-sync 07-os-hygiene 06-kernel-sysctl 03-huge-pages 02-cpu-isolation
+		10-time-sync 12-memory-pressure 07-os-hygiene 06-kernel-sysctl 03-huge-pages 02-cpu-isolation
 		01-grub-bootloader 00-bios-firmware)
 	if [[ ! -f "${LOWLAT_FACTORY_DIR}/.values/apply-all/started" ]]; then
 		# An apply-all from before this rollback existed left the unit and no record. Its guides
@@ -217,6 +221,7 @@ apply_all() {
 	apply_stage 03-huge-pages apply_huge_pages                    # 03 (reboot for reliable reservation)
 	apply_stage 06-kernel-sysctl apply_kernel_sysctl                 # 06
 	apply_stage 07-os-hygiene apply_os_hygiene                    # 07 (tuned re-applies sysctl.d after its own)
+	apply_stage 12-memory-pressure apply_memory_pressure               # 12 (swap off, OOM order of the latency services)
 	apply_stage 10-time-sync apply_time_sync                     # 10 (chrony or ptp4l/phc2sys, pinned)
 	apply_stage 05-cgroup-isolation apply_cgroup_isolation              # 05
 	apply_stage 08-kernel-bypass apply_kernel_bypass                 # 08 (before 04: a driver reload resets the NICs)
@@ -238,6 +243,7 @@ apply_all_runtime() {
 	apply_network                       # 04 NIC settings + IRQ affinity
 	apply_cgroup_isolation_runtime      # 05 pin agents
 	apply_os_hygiene_runtime            # 07 opt-in firewall / modules
+	apply_memory_pressure_runtime       # 12 zswap off
 	print_step_timing_table
 }
 

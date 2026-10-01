@@ -16,7 +16,7 @@ Every guide explains **what the kernel does**, **why each value is chosen**, **h
 
 ## Start here (5 minutes)
 
-- **What it is:** twelve guides, and one script per guide, that make a RHEL 8, 9 or 10 host quiet and predictable for a few latency-critical threads.
+- **What it is:** thirteen guides, and one script per guide, that make a RHEL 8, 9 or 10 host quiet and predictable for a few latency-critical threads.
 - **What you get:** a much shorter tail. p99.9 and max typically drop several-fold, and p50 improves modestly. You measure it on your own workload.
 - **What it costs:** power, throughput, flexibility, and in places security. Read [Read this first](#read-this-first) before applying anything.
 
@@ -29,6 +29,7 @@ Every guide explains **what the kernel does**, **why each value is chosen**, **h
 | Decide which CPUs to isolate | [Layout explorer](https://vitor-tadashi.github.io/mechanical-sympathy/explorer.html) or `scripts/plan-layout`, then [Guide 02 §3](guides/02-cpu-core-isolation.md#3-designing-the-cpu-layout) |
 | See a problem solved from symptom to result | [Use cases](examples/use-cases/README.md) |
 | Keep a host tuned after updates | [Guide 11](guides/11-day2-operations.md) |
+| Decide what happens when memory runs out (swap, OOM order) | [Guide 12](guides/12-memory-pressure.md) |
 | Make my application behave on a tuned host | [Java on a tuned host](examples/hugepages-java-example.md) |
 | Check a host that is already tuned | `scripts/verify-tuning`, see [the scripts](INDEX.md#scripts) |
 
@@ -97,6 +98,7 @@ If that sounds like your application, fix the application first. These guides wi
 | 09 | [Measuring latency](guides/09-measuring-latency.md) (first, and after every guide) | [`09-measure-latency`](scripts/09-measure-latency) | 1 | no | ✅ | ✅ (no SMI count) |
 | 10 | [Time synchronization (chrony, PTP)](guides/10-time-sync.md) | [`10-time-sync`](scripts/10-time-sync) | 2 | no | ✅ | chrony / `ptp_kvm` |
 | 11 | [Day-2 operations: keeping a host tuned](guides/11-day2-operations.md) | [`11-day2-operations`](scripts/11-day2-operations) | 1 | no | ✅ | ✅ |
+| 12 | [Memory pressure: swap, mlock and the OOM killer](guides/12-memory-pressure.md) | [`12-memory-pressure`](scripts/12-memory-pressure) | 3 | no | ✅ | ✅ |
 
 Plus:
 
@@ -175,7 +177,7 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 .
 ├── README.md  QUICK_START.md  INDEX.md  CHEATSHEET.md  FAQ.md  STYLE.md
 ├── SAFETY.md  CONTRIBUTING.md  SECURITY.md  CITATION.cff  AGENTS.md
-├── guides/          00..11 step-by-step guides
+├── guides/          00..12 step-by-step guides
 ├── concepts/        19 deep dives
 ├── examples/        use-cases/ (19 stories), Java on a tuned host (+ runnable probe), multi-NIC segmentation
 ├── assets/          diagrams/ (50 hand-written SVGs), social-preview.svg (source of the repository card)
@@ -185,7 +187,7 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 └── scripts/
     ├── lib/common            logging, dry-run, host class, backups, CPU list helpers
     ├── lowlat.conf.example    the host description
-    ├── 00..11-*               one script per guide (--apply / --dry-run / --verify / --rollback)
+    ├── 00..12-*               one script per guide (--apply / --dry-run / --verify / --rollback)
     ├── apply-all              sequencing + step timing, and the whole-host --rollback
     ├── verify-tuning          read-only report
     ├── plan-layout            propose or check the CPU layout of lowlat.conf

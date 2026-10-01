@@ -24,3 +24,5 @@ FAKE_NICS=(
 )
 SERVICES=(chronyd crond firewalld irqbalance node_exporter rsyslog sshd tuned)
 PROCESSES=(edr-agentd)
+# The installer's default swap volume: Guide 12 turns it off.
+SWAP_KB=4194300

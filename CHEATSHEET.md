@@ -106,6 +106,16 @@ The "I have two minutes" page. One command per check, with the answer you want t
 
 Always compare against the baseline you took before tuning.
 
+## Memory pressure — [Guide 12](guides/12-memory-pressure.md#6-verification)
+
+| Check | Command | Want |
+|---|---|---|
+| No swap (`SWAP_POLICY=off`) | `swapon --show` | nothing |
+| Nothing swapped in since boot | `grep pswpin /proc/vmstat` | `pswpin 0` |
+| OOM order of the latency service | `systemctl show -p OOMScoreAdjust lowlat-app.service` | `OOMScoreAdjust=-900` |
+| `mlockall` can work | `systemctl show -p LimitMEMLOCK lowlat-app.service` | `LimitMEMLOCK=infinity` |
+| No memory stalls | `cat /proc/pressure/memory` | `full avg300=0.00` or close |
+
 ## Staying tuned — [Guide 11](guides/11-day2-operations.md#8-verification)
 
 | Check | Command | Want |

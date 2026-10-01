@@ -92,7 +92,7 @@ The reference list, and why each entry is there:
 
 Scope matters. Some scripts truncate `/etc/security/limits.conf` and write `* - rtprio 99` for **every** user. Here the limits apply only to the application's group, in a separate file, and `limits.conf` is left alone.
 
-These limits apply to **PAM sessions** (SSH logins, `su -`). Services started by systemd do **not** read `limits.d`. Use `LimitNOFILE=`, `LimitRTPRIO=`, `LimitMEMLOCK=` in the unit ([Guide 05 §4.4](05-cgroup-isolation.md#44-the-cpuset-trap)), or `DefaultLimit*=` in `system.conf` ([Guide 02 §4.1](02-cpu-core-isolation.md#41-systemd-cpuaffinity-persistent)).
+These limits apply to **PAM sessions** (SSH logins, `su -`). Services started by systemd do **not** read `limits.d`. Use `LimitNOFILE=`, `LimitRTPRIO=`, `LimitMEMLOCK=` in the unit ([Guide 05 §4.4](05-cgroup-isolation.md#44-the-cpuset-trap)), or `DefaultLimit*=` in `system.conf` ([Guide 02 §4.1](02-cpu-core-isolation.md#41-systemd-cpuaffinity-persistent)). [Guide 12](12-memory-pressure.md#45-the-memlock-limit-why-limitsd-is-not-enough) sets `LimitMEMLOCK=infinity` for the services in `LATENCY_UNITS`.
 
 ## 4. `noatime`
 
