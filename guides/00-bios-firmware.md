@@ -67,6 +67,8 @@ Menu names differ between vendors and generations. The table describes each sett
 
 ### 4.1 Power and performance profile
 
+[Concept: power, frequency and firmware](../concepts/power-and-frequency.md) explains what each of these settings changes inside the CPU.
+
 | Setting | Common names | Recommended | Why |
 |---|---|---|---|
 | System profile | "System Profile", "Workload Profile", "Power Regulator", "Power Policy" | **Maximum performance** or a **latency-focused** profile | The vendor presets set most of the items below in one step. Start from one, then check each item. |

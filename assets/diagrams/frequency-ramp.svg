@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" width="760" height="300" role="img" aria-labelledby="t d">
+<title id="t">A burst on a core whose clock follows the load starts slow</title>
+<desc id="d">Two timelines for the same burst of six messages on CPU 7. When the frequency follows the load, the idle core sits at a low clock, and the first messages of the burst take two to three times longer while the governor raises the clock. With a fixed high frequency, every message of the burst takes the same short time.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .clk { fill: none; stroke: #1f4e8c; stroke-width: 2; }
+  .msg { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; transform-box: fill-box; transform-origin: left center; animation: pulse 6s linear infinite; }
+  .slow { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; transform-box: fill-box; transform-origin: left center; animation: pulse 6s linear infinite; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @keyframes pulse {
+    0%, 4%   { transform: scaleY(1.25); }
+    8%, 100% { transform: scaleY(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .msg, .slow, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="300" rx="8"/>
+
+<!-- Lane 1: frequency follows load -->
+<rect class="lane" x="10" y="10" width="740" height="135" rx="6"/>
+<text class="cap" x="24" y="34">Clock follows the load (powersave or schedutil, HWP)</text>
+<text class="sub" x="24" y="52">The idle core sits at a low clock. The first messages of a burst run slow while the clock climbs.</text>
+<text class="lbl" x="24" y="105">CPU 7</text>
+<path class="clk" d="M150 78 L300 78 L300 72 L340 72 L340 66 L380 66 L380 62 L720 62"/>
+<text class="axis" x="154" y="74">1.2 GHz</text>
+<text class="axis" x="670" y="58">3.0 GHz</text>
+<rect class="slow" x="300" y="88" width="42" height="28" rx="3" style="animation-delay:-4.42s"/>
+<rect class="slow" x="350" y="88" width="32" height="28" rx="3" style="animation-delay:-3.89s"/>
+<rect class="msg" x="400" y="88" width="20" height="28" rx="3" style="animation-delay:-3.37s"/>
+<rect class="msg" x="450" y="88" width="16" height="28" rx="3" style="animation-delay:-2.84s"/>
+<rect class="msg" x="500" y="88" width="16" height="28" rx="3" style="animation-delay:-2.32s"/>
+<rect class="msg" x="550" y="88" width="16" height="28" rx="3" style="animation-delay:-1.79s"/>
+<text class="axis" x="300" y="134">slow: clock still low</text>
+<text class="axis" x="450" y="134">fast once the clock is up</text>
+
+<!-- Lane 2: fixed frequency -->
+<rect class="lane" x="10" y="155" width="740" height="135" rx="6"/>
+<text class="cap" x="24" y="179">Fixed clock (performance governor, HWP off)</text>
+<text class="sub" x="24" y="197">The clock is already high when the burst arrives, so every message takes the same time.</text>
+<text class="lbl" x="24" y="250">CPU 7</text>
+<path class="clk" d="M150 207 L720 207"/>
+<text class="axis" x="670" y="203">3.0 GHz</text>
+<rect class="msg" x="300" y="233" width="16" height="28" rx="3" style="animation-delay:-4.42s"/>
+<rect class="msg" x="350" y="233" width="16" height="28" rx="3" style="animation-delay:-3.89s"/>
+<rect class="msg" x="400" y="233" width="16" height="28" rx="3" style="animation-delay:-3.37s"/>
+<rect class="msg" x="450" y="233" width="16" height="28" rx="3" style="animation-delay:-2.84s"/>
+<rect class="msg" x="500" y="233" width="16" height="28" rx="3" style="animation-delay:-2.32s"/>
+<rect class="msg" x="550" y="233" width="16" height="28" rx="3" style="animation-delay:-1.79s"/>
+<text class="axis" x="300" y="279">same burst; bar length = time to handle one message (illustrative)</text>
+
+<line class="head" x1="150" y1="60" x2="150" y2="268"/>
+</svg>

@@ -71,6 +71,7 @@ flowchart TD
 | Concept | Read | Questions it answers |
 |---|---|---|
 | [Hardware topology](concepts/hardware-topology.md) | ~9 min | Which CPUs share a core, an L3, a node? How far is the NIC from my thread? How do I read the topology before writing a layout? |
+| [Power, frequency & firmware](concepts/power-and-frequency.md) | ~10 min | Why is the first message after a pause slow? Who chooses the clock? Is turbo worth it? Why does an SMI leave no trace? |
 | [Boot path](concepts/bootloader.md) | ~7 min | How do arguments reach the kernel? What is the housekeeping mask? Why can't these be changed at runtime? |
 | [CPU isolation](concepts/cpu-isolation.md) | ~7 min | What interrupts a CPU? What does a context switch really cost? Spin or block? |
 | [Network path](concepts/network-tuning.md) | ~8 min | Where does a packet wait between the wire and `recv()`? What do coalescing, NAPI, RSS, and bypass change? |
