@@ -75,6 +75,7 @@ flowchart TD
 | [Clocks and time](concepts/clocks-and-time.md) | ~9 min | Which clock do I read for a duration? Why can a latency be negative? What does the clocksource cost? How good is a one-way latency across hosts? |
 | [Security mitigations](concepts/security-mitigations.md) | ~8 min | What do Spectre and Meltdown fixes cost, and where? Who pays: a spinning thread or a blocking one? How do I measure it before opting out? |
 | [Interrupts & deferred work](concepts/interrupts-and-deferred-work.md) | ~10 min | What runs after an interrupt, and where? When does ksoftirqd take over? Which IPIs reach an isolated CPU, and why? Where do RCU callbacks and kworkers run? |
+| [Tail latency](concepts/tail-latency.md) | ~9 min | Why does p99 matter to every user? How many samples does a percentile need? Why can percentiles not be averaged? What does the histogram shape say? |
 | [Boot path](concepts/bootloader.md) | ~7 min | How do arguments reach the kernel? What is the housekeeping mask? Why can't these be changed at runtime? |
 | [CPU isolation](concepts/cpu-isolation.md) | ~7 min | What interrupts a CPU? What does a context switch really cost? Spin or block? |
 | [Network path](concepts/network-tuning.md) | ~8 min | Where does a packet wait between the wire and `recv()`? What do coalescing, NAPI, RSS, and bypass change? |

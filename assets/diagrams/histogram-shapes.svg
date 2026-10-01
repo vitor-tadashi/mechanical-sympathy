@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 410" width="760" height="410" role="img" aria-labelledby="t d">
+<title id="t">Four histogram shapes and what usually causes each</title>
+<desc id="d">Four latency histograms on a logarithmic latency axis. Healthy: one narrow peak and a short tail, from a quiet host and code. Bimodal: a second hump, from two paths such as memory on the wrong NUMA node or a busy SMT sibling. Comb: isolated spikes at fixed latencies, from a fixed wait such as a timer, interrupt coalescing or a polling interval. Long tail: a smooth slope over several decades, from queueing behind earlier work or rare stalls such as garbage collection or memory reclaim.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .base { stroke: #57606a; stroke-width: 1.5; }
+  .bar { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1; }
+  .tail { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="410" rx="8"/>
+<rect class="lane" x="10" y="10" width="360" height="180" rx="6"/>
+<text class="cap" x="24" y="34">Healthy: one narrow peak, short tail</text>
+<rect class="bar" x="63.8" y="129.6" width="8.6" height="2.4"/>
+<rect class="bar" x="74.4" y="115.2" width="8.6" height="16.8"/>
+<rect class="bar" x="85.0" y="77.9" width="8.6" height="54.1"/>
+<rect class="bar" x="95.6" y="52.0" width="8.6" height="80.0"/>
+<rect class="bar" x="106.2" y="74.9" width="8.6" height="57.1"/>
+<rect class="bar" x="116.8" y="112.2" width="8.6" height="19.8"/>
+<rect class="bar" x="127.4" y="126.6" width="8.6" height="5.4"/>
+<rect class="bar" x="138.0" y="128.8" width="8.6" height="3.2"/>
+<rect class="bar" x="148.6" y="129.0" width="8.6" height="3.0"/>
+<rect class="bar" x="159.2" y="129.0" width="8.6" height="3.0"/>
+<line class="base" x1="30" y1="132" x2="352" y2="132"/>
+<text class="axis" x="352" y="146">latency, log scale →</text>
+<text class="sub" x="24" y="174">The host and the code are quiet.</text>
+<rect class="lane" x="390" y="10" width="360" height="180" rx="6"/>
+<text class="cap" x="404" y="34">Bimodal: two humps</text>
+<rect class="bar" x="443.8" y="129.6" width="8.6" height="2.4"/>
+<rect class="bar" x="454.4" y="115.2" width="8.6" height="16.8"/>
+<rect class="bar" x="465.0" y="77.9" width="8.6" height="54.1"/>
+<rect class="bar" x="475.6" y="52.0" width="8.6" height="80.0"/>
+<rect class="bar" x="486.2" y="77.9" width="8.6" height="54.1"/>
+<rect class="bar" x="496.8" y="115.2" width="8.6" height="16.8"/>
+<rect class="bar" x="507.4" y="129.6" width="8.6" height="2.4"/>
+<rect class="tail" x="581.6" y="130.9" width="8.6" height="1.1"/>
+<rect class="tail" x="592.2" y="124.0" width="8.6" height="8.0"/>
+<rect class="tail" x="602.8" y="106.3" width="8.6" height="25.7"/>
+<rect class="tail" x="613.4" y="94.0" width="8.6" height="38.0"/>
+<rect class="tail" x="624.0" y="106.3" width="8.6" height="25.7"/>
+<rect class="tail" x="634.6" y="124.0" width="8.6" height="8.0"/>
+<rect class="tail" x="645.2" y="130.9" width="8.6" height="1.1"/>
+<line class="base" x1="410" y1="132" x2="732" y2="132"/>
+<text class="axis" x="732" y="146">latency, log scale →</text>
+<text class="sub" x="404" y="174">Two paths: a remote NUMA node, an SMT sibling.</text>
+<rect class="lane" x="10" y="200" width="360" height="180" rx="6"/>
+<text class="cap" x="24" y="224">Comb: spikes at fixed latencies</text>
+<rect class="bar" x="53.2" y="321.2" width="8.6" height="0.8"/>
+<rect class="bar" x="63.8" y="311.6" width="8.6" height="10.4"/>
+<rect class="bar" x="74.4" y="274.0" width="8.6" height="48.0"/>
+<rect class="bar" x="85.0" y="242.0" width="8.6" height="80.0"/>
+<rect class="bar" x="95.6" y="274.0" width="8.6" height="48.0"/>
+<rect class="bar" x="106.2" y="311.6" width="8.6" height="10.4"/>
+<rect class="bar" x="116.8" y="321.2" width="8.6" height="0.8"/>
+<rect class="tail" x="159.2" y="296.0" width="8.6" height="26.0"/>
+<rect class="tail" x="222.8" y="304.0" width="8.6" height="18.0"/>
+<rect class="tail" x="286.4" y="310.0" width="8.6" height="12.0"/>
+<line class="base" x1="30" y1="322" x2="352" y2="322"/>
+<text class="axis" x="352" y="336">latency, log scale →</text>
+<text class="sub" x="24" y="364">A fixed wait: a timer, coalescing, polling.</text>
+<rect class="lane" x="390" y="200" width="360" height="180" rx="6"/>
+<text class="cap" x="404" y="224">Long tail: a smooth slope over decades</text>
+<rect class="bar" x="433.2" y="321.2" width="8.6" height="0.8"/>
+<rect class="bar" x="443.8" y="311.6" width="8.6" height="10.4"/>
+<rect class="bar" x="454.4" y="274.0" width="8.6" height="48.0"/>
+<rect class="bar" x="465.0" y="242.0" width="8.6" height="80.0"/>
+<rect class="bar" x="475.6" y="285.9" width="8.6" height="36.1"/>
+<rect class="bar" x="486.2" y="299.4" width="8.6" height="22.6"/>
+<rect class="bar" x="496.8" y="305.8" width="8.6" height="16.2"/>
+<rect class="bar" x="507.4" y="309.4" width="8.6" height="12.6"/>
+<rect class="tail" x="518.0" y="311.8" width="8.6" height="10.2"/>
+<rect class="tail" x="528.6" y="313.5" width="8.6" height="8.5"/>
+<rect class="tail" x="539.2" y="314.7" width="8.6" height="7.3"/>
+<rect class="tail" x="549.8" y="315.6" width="8.6" height="6.4"/>
+<rect class="tail" x="560.4" y="316.3" width="8.6" height="5.7"/>
+<rect class="tail" x="571.0" y="316.9" width="8.6" height="5.1"/>
+<rect class="tail" x="581.6" y="317.4" width="8.6" height="4.6"/>
+<rect class="tail" x="592.2" y="317.8" width="8.6" height="4.2"/>
+<rect class="tail" x="602.8" y="318.2" width="8.6" height="3.8"/>
+<rect class="tail" x="613.4" y="318.4" width="8.6" height="3.6"/>
+<rect class="tail" x="624.0" y="318.7" width="8.6" height="3.3"/>
+<rect class="tail" x="634.6" y="318.9" width="8.6" height="3.1"/>
+<rect class="tail" x="645.2" y="319.1" width="8.6" height="2.9"/>
+<rect class="tail" x="655.8" y="319.3" width="8.6" height="2.7"/>
+<rect class="tail" x="666.4" y="319.4" width="8.6" height="2.6"/>
+<rect class="tail" x="677.0" y="319.6" width="8.6" height="2.4"/>
+<rect class="tail" x="687.6" y="319.7" width="8.6" height="2.3"/>
+<rect class="tail" x="698.2" y="319.8" width="8.6" height="2.2"/>
+<rect class="tail" x="708.8" y="319.9" width="8.6" height="2.1"/>
+<rect class="tail" x="719.4" y="320.0" width="8.6" height="2.0"/>
+<line class="base" x1="410" y1="322" x2="732" y2="322"/>
+<text class="axis" x="732" y="336">latency, log scale →</text>
+<text class="sub" x="404" y="364">Queueing, or rare stalls such as GC or reclaim.</text>
+<text class="note" x="14" y="400">Count of samples per latency bucket. Shapes are illustrative. Red marks the part of the shape that points at the cause.</text>
+</svg>

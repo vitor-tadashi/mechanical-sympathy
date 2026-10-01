@@ -187,7 +187,7 @@ A bundle is a directory named after its timestamp under `/var/lib/lowlat/measure
 
 ## 7. Reading the results
 
-Look at the **shape** first, then the numbers:
+Look at the **shape** first, then the numbers. [Concept: tail latency](../concepts/tail-latency.md#7-reading-the-shape) explains the statistics behind this section and what each histogram shape means.
 
 ```mermaid
 flowchart LR
