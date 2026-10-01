@@ -176,6 +176,7 @@ net.ipv4.conf.ens1f0.arp_ignore = 1
 sysctl --system 2>&1 | grep -iE 'error|invalid|cannot'   # should print nothing relevant
 sysctl net.core.rmem_max net.ipv4.tcp_rmem vm.stat_interval kernel.numa_balancing
 systemd-analyze cat-config sysctl.d | grep -n 'rmem_max'  # who sets it, in which order
+sysctl kernel.printk; cat /proc/consoles                  # 1 4 1 7, and the consoles printk writes to (no tty0 after Guide 01)
 
 # Is anything else overriding us? (tuned, other sysctl.d files)
 tuned-adm active; grep -r rmem_max /etc/sysctl.d /usr/lib/sysctl.d /etc/tuned 2>/dev/null
@@ -201,6 +202,7 @@ flowchart TD
 | Connections fail to peers across a lossy WAN | `tcp_syn_retries=1` | Raise to 2–3 for those hosts |
 | Local service on `::1` stopped working | IPv6 disabled | Keep IPv6 on `lo`, or bind to `127.0.0.1` |
 | OOM on a small host | `vm.min_free_kbytes` too high | Scale it down (§8) |
+| Rare millisecond stalls that line up with kernel messages in `dmesg` | Console log level above 1 (`kernel.printk` reverted), or a graphical console still set | §2; check `cat /proc/consoles`, and remove `console=tty0` ([Guide 01 §5.7](01-grub-bootloader-tuning.md#57-miscellaneous)) |
 
 ## 12. Rollback
 
