@@ -4,7 +4,7 @@
 
 ## At a glance
 
-- **Situation:** the load test of a release reports a clean p99.9 of a few microseconds. In production, the same release shows a p99.9 of about 10 ms.
+- **Situation:** the load test of a release reports a clean p99.9 of a few microseconds. In production, the same release shows a p99.9 of about 12 ms.
 - **Cause:** [coordinated omission](../../GLOSSARY.md#coordinated-omission). The load test is closed-loop: it waits for each answer before it sends the next request, so during a stall it sends nothing, and a 20 ms stall becomes one slow sample. Production traffic keeps arriving at its own rate, and every request that arrives during the stall is late.
 - **Fix:** measure with open-loop load at the production rate, and time each request from its **intended** send time. Where the client cannot change, correct the histogram with the expected interval.
 
@@ -17,7 +17,7 @@
 
 The release is load-tested before it ships. The load generator runs one connection that sends a request, waits for the answer, records the time, and sends the next one. After ten minutes it reports p50 = 2 µs, p99.9 = 4 µs and max = 20 ms. The team files the max as a one-off.
 
-In production, requests come from upstream at about 100,000 per second, whatever the host is doing. The production histogram, timed from when each request was sent, shows p99.9 = 10 ms. Nothing in the release changed between the two runs. The host has a 20 ms stall every 10 s in both.
+In production, requests come from upstream at about 100,000 per second, whatever the host is doing. The production histogram, timed from when each request was sent, shows p99.9 = 12 ms. Nothing in the release changed between the two runs. The host has a 20 ms stall every 10 s in both.
 
 <img src="../../assets/diagrams/coordinated-omission.svg" alt="Animation: a closed-loop sender records one slow sample for a stall, an open-loop sender records six because every request due during the stall is timed from its intended send time" width="720">
 
@@ -51,10 +51,12 @@ The arithmetic for one 10 s window, with the numbers above:
 | | Closed loop | Open loop at 100,000/s |
 |---|---|---|
 | Requests sent in 10 s | ~4.99 million, back to back | 1 million, on schedule |
-| Requests due during the 20 ms stall | 1 (the client stops) | 2,000 |
+| Requests delayed by the 20 ms stall | 1 (the client stops) | ~2,500: 2,000 due during the stall, and ~500 more while the backlog drains |
 | Their latency | 20 ms, once | from 20 ms down to ~0, falling |
-| Share of slow samples | 0.00002 % | 0.2 % |
-| p99.9 | ~4 µs | ~10 ms: the middle of the 2,000 slow samples |
+| Share of slow samples | 0.00002 % | 0.25 % |
+| p99.9 | ~4 µs | ~12 ms: the 1,000th slowest of the ~2,500 |
+
+The drain is the part that is easy to forget. When the stall ends, the server works through the backlog at one request per 2 µs while new ones keep arriving every 10 µs, so it gains only 8 µs per request. The 2,000 waiting requests take about 5 ms to clear, and the ~500 that arrive meanwhile are late too. Request *n* of the backlog waits about 20 ms − *n* × 8 µs, so the 1,000th slowest waits about 12 ms.
 
 ## 3. Change
 
@@ -80,13 +82,13 @@ histogram.recordValue(System.nanoTime() - answer.intendedSendTime());
 
 If the sender itself falls behind, it still stamps the intended time, so its own delay shows up in the numbers instead of hiding.
 
-**B. Correct a closed-loop histogram.** When the client cannot change, tell HdrHistogram the interval the requests should have had. It back-fills the samples a long answer would have delayed:
+**B. Pace the closed loop, then correct it.** When the client must keep waiting for each answer, at least pace it at the production rate: one request per 10 µs slot, and after an answer, wait for the next slot instead of sending at once. Then tell HdrHistogram the interval the requests should have had, so it back-fills the samples a long answer would have delayed:
 
 ```java
 histogram.recordValueWithExpectedInterval(latencyNs, 10_000L);   // expected interval: 10 µs
 ```
 
-The correction assumes a steady rate. It is a good estimate, and option A is the measurement.
+Both halves matter. The back-to-back client of §1 records ~5 million fast samples per 10 s, and the correction adds only the ~2,000 that the stall delayed, so the slow share stays near 0.04 % and p99.9 stays clean. Paced at 100,000 per second, the fast samples drop to ~1 million and the corrected share approaches the open loop's. The correction assumes a steady rate and does not model the drain, so it is an estimate: option A is the measurement.
 
 Then run the protocol again ([Guide 09 §5](../../guides/09-measuring-latency.md#5-a-measurement-protocol)): the same rate, the same duration, a host bundle first (`sudo scripts/09-measure-latency --run`), and the application histogram.
 
@@ -100,16 +102,16 @@ Illustrative:
 | | Closed-loop load test | Open-loop load test | Production |
 |---|---|---|---|
 | p50 | 2 µs | 2 µs | 2 µs |
-| p99.9 | 4 µs | ~10 ms | ~10 ms |
+| p99.9 | 4 µs | ~12 ms | ~12 ms |
 | max | 20 ms | 20 ms | 20 ms |
-| Slow samples per stall | 1 | ~2,000 | ~2,000 |
+| Slow samples per stall | 1 | ~2,500 | ~2,500 |
 | Agrees with production | no | yes | — |
 
 ## 5. Verify and roll back
 
 - [ ] Two open-loop runs of the same length record the same number of samples (duration × rate)
 - [ ] The load test's p99.9 and p99.99 match production's within the run-to-run spread
-- [ ] A known pause shows up as rate × pause slow samples, not as one: stopping the server for one second (`kill -STOP <pid>; sleep 1; kill -CONT <pid>`) adds about 100,000 slow samples at 100,000 per second
+- [ ] A known pause shows up as at least rate × pause slow samples, not as one: stopping the server for one second (`kill -STOP <pid>; sleep 1; kill -CONT <pid>`) adds about 100,000 slow samples at 100,000 per second, plus ~25,000 more while the backlog drains
 - [ ] The results table ([Guide 09 §5](../../guides/09-measuring-latency.md#5-a-measurement-protocol)) says which load model each row used
 - [ ] Roll back: nothing on the host changed. Keep the closed-loop probe for host noise, next to the open-loop test for user latency
 
