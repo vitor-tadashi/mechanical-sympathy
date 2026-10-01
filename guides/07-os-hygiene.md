@@ -257,8 +257,8 @@ Missing or invalid saved state, a failed remount, or a rejected restore command
 is an error. Keep the baseline, correct the reported problem, and rerun
 rollback. Reboot if a mount cannot be remounted safely, then check its options
 against the restored fstab. Reapply with `sudo scripts/07-os-hygiene --apply`
-when needed. Automated restoration has harness coverage and is not yet proven
-in production for every filesystem, tuned plugin, or firewall backend.
+when needed. Automated restoration has harness coverage. Filesystems, tuned
+plugins and firewall backends differ, so check the result on your host.
 
 Rollback cannot recreate lost connections, expired conntrack entries, or
 work interrupted when services stopped. It restores configuration and

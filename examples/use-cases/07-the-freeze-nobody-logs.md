@@ -11,7 +11,7 @@
 **Time:** ~2 h, because each BIOS change needs a reboot · **You need:** out-of-band console access and bare metal. A VM cannot see this.
 
 > [!NOTE]
-> **Illustrative.** The cost is the one stated in [Guide 00](../../guides/00-bios-firmware.md): an SMI or a deep C-state exit costs tens to hundreds of µs. Which settings remove SMIs differs between vendors, so this is **not proven in production** for your hardware.
+> **Illustrative.** The cost is the one stated in [Guide 00](../../guides/00-bios-firmware.md): an SMI or a deep C-state exit costs tens to hundreds of µs. Which settings remove SMIs differs between vendors, so measure it on your hardware.
 
 ## 1. Situation
 

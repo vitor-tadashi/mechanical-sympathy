@@ -78,7 +78,7 @@ sudo scripts/06-kernel-sysctl --apply          # takes effect at once, and at ev
 > [!WARNING]
 > `vm.min_free_kbytes` is memory the kernel keeps free, so 1 GiB is 1 GiB less for everything else. It fits a host with hundreds of GiB. On a small host it can cause OOM kills: scale it down ([Guide 06 §11](../../guides/06-kernel-sysctl-tuning.md#11-troubleshooting)). Count the huge-page pool too: pages in the pool are never reclaimed, so the cushion has to come out of what is left ([Guide 03 §3](../../guides/03-huge-pages-configuration.md#3-sizing-the-pool)).
 
-Two more changes remove the allocation from the hot path altogether. They are application design, **not proven in production** here: map and pre-fault the next journal file on a housekeeping thread before `event.loop` switches to it, and keep the journal on a local filesystem mounted `noatime` ([Guide 07 §4](../../guides/07-os-hygiene.md#4-noatime)).
+Two more changes remove the allocation from the hot path altogether. They are application design, **not tested** here: map and pre-fault the next journal file on a housekeeping thread before `event.loop` switches to it, and keep the journal on a local filesystem mounted `noatime` ([Guide 07 §4](../../guides/07-os-hygiene.md#4-noatime)).
 
 ## 4. Result
 

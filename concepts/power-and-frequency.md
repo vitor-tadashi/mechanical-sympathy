@@ -61,7 +61,7 @@ A **P-state** is a pair of clock frequency and voltage. A lower clock uses much 
 | `amd-pstate` (`active`, `passive`, `guided`) | The CPU (active) or the governor (passive) | `amd_pstate=passive` or `acpi-cpufreq`, with `performance` |
 
 > [!NOTE]
-> **Not proven in production.** The reference hosts are Intel Xeon. The AMD rows follow the kernel documentation and have not been measured on a production AMD EPYC host ([Guide 01 §5](../guides/01-grub-bootloader-tuning.md#5-the-parameters-one-by-one)).
+> **Validate on your hardware.** The examples use Intel Xeon names. The AMD rows follow the kernel documentation and this repository does not measure them on AMD EPYC ([Guide 01 §5](../guides/01-grub-bootloader-tuning.md#5-the-parameters-one-by-one)).
 
 The **governor** is the Linux policy. `performance` asks for the highest P-state all the time. `powersave`, `ondemand` and `schedutil` follow the load: they raise the clock only after they see the CPU busy, which takes milliseconds. A burst that arrives on a slow core is handled at the slow clock until the governor reacts.
 

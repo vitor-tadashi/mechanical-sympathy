@@ -11,7 +11,7 @@
 **Time:** ~15 min + one reboot · **You need:** root, out-of-band console access.
 
 > [!NOTE]
-> **Illustrative.** The cost per line is arithmetic, not a measurement: a serial console at 115200 baud sends about 11,500 characters per second, so an 80-character line takes about 7 ms. A graphical console is faster per line and still synchronous. [Guide 06 §2](../../guides/06-kernel-sysctl-tuning.md#2-kernel-logging-and-debug) states the mechanism. Newer kernels can print from a separate console thread for some drivers; **not proven** on RHEL 10.
+> **Illustrative.** The cost per line is arithmetic, not a measurement: a serial console at 115200 baud sends about 11,500 characters per second, so an 80-character line takes about 7 ms. A graphical console is faster per line and still synchronous. [Guide 06 §2](../../guides/06-kernel-sysctl-tuning.md#2-kernel-logging-and-debug) states the mechanism. Newer kernels can print from a separate console thread for some drivers; **not tested** on RHEL 10.
 
 ## 1. Situation
 

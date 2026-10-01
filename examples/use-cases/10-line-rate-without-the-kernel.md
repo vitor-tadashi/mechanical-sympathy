@@ -80,7 +80,7 @@ The `rx-flow-hash` change is runtime-only and is not managed by `04-network`, so
 > [!IMPORTANT]
 > Busy polling ([Concept: network tuning §8](../../concepts/network-tuning.md#8-busy-polling)) does not help here. It removes the interrupt and the wake-up, and it does not remove the per-packet stack work that the budget above is made of.
 
-**Step 2: kernel bypass, when step 1 does not fit.** Use it when the tail target is tens of microseconds, or when you cannot spare five CPUs for interrupts. The proven path is Onload on Solarflare or AMD NICs ([Guide 08 §5](../../guides/08-kernel-bypass.md#5-onload-on-solarflare--amd-nics-field-proven)):
+**Step 2: kernel bypass, when step 1 does not fit.** Use it when the tail target is tens of microseconds, or when you cannot spare five CPUs for interrupts. The path this repository scripts is Onload on Solarflare or AMD NICs ([Guide 08 §5](../../guides/08-kernel-bypass.md#5-onload-on-solarflare--amd-nics)):
 
 ```bash
 # lowlat.conf
@@ -107,7 +107,7 @@ EF_USE_HUGE_PAGES=2         # fail at start-up if huge pages are missing
 At 6 Mpps the budget is `1 / 6 Mpps = 167 ns` per packet for your own code on the polling thread. If your code needs longer, split the flows across several stacks with one thread each. Do not assume that one thread can drain 6 Mpps: measure it.
 
 > [!NOTE]
-> **Not proven in production, and not tested by this repository:** the DPDK path ([Guide 08 §6](../../guides/08-kernel-bypass.md#6-dpdk-on-intel-nics-not-field-proven-in-the-reference-setup)). It follows the same idea with a poll-mode driver and a mempool, and its sizing rule is in [Concept: network buffers §7.1](../../concepts/network-buffers.md#71-dpdk).
+> **Not tested by this repository:** the DPDK path ([Guide 08 §6](../../guides/08-kernel-bypass.md#6-dpdk-on-intel-nics)). It follows the same idea with a poll-mode driver and a mempool, and its sizing rule is in [Concept: network buffers §7.1](../../concepts/network-buffers.md#71-dpdk).
 
 ## 4. Verify
 

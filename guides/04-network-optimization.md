@@ -389,7 +389,7 @@ Nothing in this guide survives a reboot or a driver reload. Two supported ways t
 **B. NetworkManager `ethtool.*` properties (RHEL 9)**: NetworkManager applies them every time the connection comes up, including after a link flap.
 
 > [!NOTE]
-> **Not proven in production.** The reference hosts use option A. Option B follows the NetworkManager documentation.
+> **Validate on your hardware.** Option A is the one the script uses. Option B follows the NetworkManager documentation.
 
 
 ```bash
@@ -497,8 +497,8 @@ saved state, or rejected restoration command fails visibly. Inspect the error
 and the saved baseline before retrying; do not replace it with assumed driver
 defaults. Unsupported settings that the driver cannot report are left unchanged
 on apply. Channel and ring changes can interrupt traffic: use a maintenance
-window. This automatic restoration has harness coverage and has not been
-proven in production across every supported driver.
+window. This automatic restoration has harness coverage. Drivers differ, so
+check the result on your host.
 
 Verify with `ethtool -l`, `-g`, `-c`, `-a`, `-k`,
 `ip link show dev <iface>`, and the discovered IRQs' `smp_affinity_list` and

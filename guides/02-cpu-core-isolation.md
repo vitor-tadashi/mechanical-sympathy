@@ -157,7 +157,7 @@ scripts/plan-layout --nic-node 1 --check /etc/lowlat/lowlat.conf   # PASS, WARN 
 The [layout explorer](https://vitor-tadashi.github.io/mechanical-sympathy/explorer.html) does the same in a browser, draws the map, and accepts a pasted `lscpu` output.
 
 > [!NOTE]
-> **Not proven in production.** The proposal is a starting point that applies the rules of this section mechanically. Review it against your application's thread roles before you write it into `lowlat.conf`.
+> **Validate on your hardware.** The proposal is a starting point that applies the rules of this section mechanically. Review it against your application's thread roles before you write it into `lowlat.conf`.
 
 ## 4. Moving the operating system away
 
@@ -494,7 +494,7 @@ boot: use `apply-all --rollback`, or disable that unit before
 rebooting during a whole-host rollback.
 
 > [!NOTE]
-> **Not proven in production.** Restoration is checked on fake hosts and
+> **Validate on your hardware.** Restoration is checked on fake hosts and
 > systemd containers. Verify the saved values and post-reboot affinity on
 > your host before using it for production recovery.
 

@@ -11,7 +11,7 @@
 | **Optional** | Yes. Everything in Guides 01–07 works without it. `apply-all` runs this guide only when `KERNEL_BYPASS_STACK` is set. |
 
 > [!NOTE]
-> **Field status.** Onload on Solarflare/AMD NICs (§5) is the configuration the reference tuning was proven with. DPDK on Intel NICs (§6), XLIO, AF_XDP, ADQ and Onload over AF_XDP (§7) are described from vendor documentation and common practice, **not** from the reference deployment. Validate them on your hardware before relying on them.
+> **Sources.** Onload (§5) follows the [Onload repository](https://github.com/Xilinx-CNS/onload) and the *Onload User Guide*. DPDK (§6) and the stacks in §7 follow their upstream documentation, listed in §14. Behavior depends on the NIC, firmware, driver and kernel versions, so validate each stack on your hardware before relying on it.
 
 ## At a glance
 
@@ -86,7 +86,7 @@ Which one fits depends on the NIC and on whether the application can change:
 flowchart TD
   s(["Pick a stack"]) --> c{"NIC?"}
   c -- "Solarflare / AMD (sfc)" --> sa{"App can<br/>change?"}
-  sa -- "no" --> on["Onload<br/>(field-proven, §5)"]
+  sa -- "no" --> on["Onload<br/>(§5)"]
   sa -- "yes" --> ef["ef_vi or DPDK"]
   c -- "NVIDIA ConnectX (mlx5)" --> na{"App can<br/>change?"}
   na -- "no" --> xl["XLIO (§7)"]
@@ -99,11 +99,11 @@ flowchart TD
   class on iso
 ```
 
-*Only Onload on Solarflare/AMD is field-proven here. An unmodified application on an Intel NIC has no vendor socket-acceleration stack, so start with busy polling.*
+*An unmodified application on an Intel NIC has no vendor socket-acceleration stack, so start with busy polling.*
 
 | NIC | Unmodified socket application (for example a JVM) | Custom packet-processing code |
 |---|---|---|
-| **Solarflare / AMD** (X2, X3, `sfc`) | **Onload** (§5), field-proven | ef_vi, or DPDK |
+| **Solarflare / AMD** (X2, X3, `sfc`) | **Onload** (§5) | ef_vi, or DPDK |
 | **NVIDIA ConnectX** (`mlx5`) | **XLIO** (successor of VMA) (§7) | DPDK (bifurcated: the netdev stays) |
 | **Intel** (E810 `ice`, X710 `i40e`, 82599/X5xx `ixgbe`) | No vendor socket-acceleration stack. Use a **tuned kernel stack + busy polling**, **ADQ** on E810, or evaluate **Onload over AF_XDP** (§7). | **DPDK** (§6), or AF_XDP |
 | virtio / cloud NICs | Tuned kernel stack + busy polling | DPDK (virtio or vendor PMD), AF_XDP |
@@ -144,7 +144,7 @@ The equivalent at driver load time for `sfc` is the module option `rss_cpus=1`, 
 
 On `iommu=pt`: in passthrough mode, devices that stay with kernel drivers use identity DMA mappings and pay almost nothing for the IOMMU. Only the devices bound to `vfio-pci` get real translation. VFIO also has an "unsafe no-IOMMU" mode (`vfio.enable_unsafe_noiommu_mode=1`). It removes the protection that makes VFIO safe, so do not use it outside a lab.
 
-## 5. Onload on Solarflare / AMD NICs (field-proven)
+## 5. Onload on Solarflare / AMD NICs
 
 ### 5.1 How Onload works
 
@@ -219,10 +219,10 @@ onload_tcpdump -i ens1f0             # packet capture of accelerated traffic (tc
 
 An application that starts but shows **no stack** in `onload_stackdump` is running on the kernel path: see §11.
 
-## 6. DPDK on Intel NICs (not field-proven in the reference setup)
+## 6. DPDK on Intel NICs
 
 > [!NOTE]
-> **Not proven in production.** This section follows the DPDK and Intel documentation. Validate it on your hardware before relying on it.
+> **Source.** This section follows the [DPDK documentation](https://doc.dpdk.org/guides/linux_gsg/), the [DPDK repository](https://github.com/DPDK/dpdk) and the Intel NIC guides. Validate it on your hardware before relying on it.
 
 ### 6.1 How it works
 
@@ -289,7 +289,7 @@ dpdk-testpmd -l 3,5 -a 0000:3b:00.0 --socket-mem 0,1024 -- \
 ## 7. Other stacks, briefly
 
 > [!NOTE]
-> **Not proven in production.** These stacks are not scripted by `08-kernel-bypass`, and none of them ran in the reference deployment.
+> **Sources.** `08-kernel-bypass` does not script these stacks. Each follows its upstream documentation: [libxlio](https://github.com/Mellanox/libxlio), [Onload](https://github.com/Xilinx-CNS/onload), [AF_XDP](https://docs.kernel.org/networking/af_xdp.html) with [xdp-tools](https://github.com/xdp-project/xdp-tools) (`libxdp`), and Intel's ADQ guide. Validate each on your hardware before relying on it.
 
 - **XLIO (NVIDIA ConnectX, `mlx5`)**: the counterpart of Onload for NVIDIA NICs, loaded with `LD_PRELOAD=libxlio.so` and configured with `XLIO_*` variables. The kernel netdev stays, so apply the same reasoning as §3: keep the kernel queue count small and place its interrupts. It depends on NVIDIA's OFED/DOCA driver stack.
 - **Onload over AF_XDP (non-Solarflare NICs)**: recent Onload releases can accelerate sockets on other vendors' NICs (for example Intel `ice`/`i40e`, NVIDIA `mlx5`) through AF_XDP, with zero copy where the driver supports it. This is the closest thing to "Onload on an Intel card". Latency is typically above native Onload on `sfc`, and support depends on the Onload and kernel versions, so measure it against a tuned kernel stack before adopting it.
@@ -385,9 +385,9 @@ flowchart TD
 ## 14. References
 
 - Onload: <https://github.com/Xilinx-CNS/onload> and the *Onload User Guide* (AMD), for the `EF_*` variables, profiles, `onload_stackdump`, and AF_XDP support
-- DPDK: <https://doc.dpdk.org/guides/linux_gsg/> (system requirements, VFIO, huge pages), and the `ice`/`i40e`/`ixgbe` NIC guides
+- DPDK: <https://doc.dpdk.org/guides/linux_gsg/> and the source at <https://github.com/DPDK/dpdk> (system requirements, VFIO, huge pages), and the `ice`/`i40e`/`ixgbe` NIC guides
 - VFIO: <https://docs.kernel.org/driver-api/vfio.html>
-- AF_XDP: <https://docs.kernel.org/networking/af_xdp.html>
+- AF_XDP: <https://docs.kernel.org/networking/af_xdp.html>, and `libxdp` in <https://github.com/xdp-project/xdp-tools>
 - Busy polling and IRQ deferral: <https://docs.kernel.org/networking/napi.html>
-- NVIDIA XLIO: the *XLIO User Manual*
+- NVIDIA XLIO: <https://github.com/Mellanox/libxlio> and the *XLIO User Manual*
 - Intel ADQ: *E810 Application Device Queues (ADQ) Configuration Guide*

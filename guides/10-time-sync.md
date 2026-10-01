@@ -119,7 +119,7 @@ Settings worth checking in `/etc/chrony.conf`:
 | `rtcsync` | The RHEL default | Keeps the hardware RTC close, for the next boot |
 
 > [!NOTE]
-> **Not proven in production.** `hwtimestamp` with chrony follows the chrony documentation. Check the improvement with `chronyc sourcestats` before relying on it.
+> **Validate on your hardware.** `hwtimestamp` with chrony follows the chrony documentation. Check the improvement with `chronyc sourcestats` before relying on it.
 
 ## 7. PTP with linuxptp
 
@@ -228,7 +228,7 @@ The rollback re-enables `chronyd`, the RHEL default. If the host ran something e
 | Pinning the daemon | ✅ | ✅ (inside the guest) |
 
 > [!NOTE]
-> **Not proven in production.** The `ptp_kvm` approach follows the kernel and chrony documentation. It depends on the host itself being synchronized.
+> **Validate on your hardware.** The `ptp_kvm` approach follows the kernel and chrony documentation. It depends on the host itself being synchronized.
 
 ## 13. Key takeaways
 

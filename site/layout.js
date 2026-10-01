@@ -7,7 +7,7 @@
  * tools/check-explorer feeds it the fixtures in scripts/fixtures and compares the result
  * with the golden files that tools/check-plan-layout uses for the shell script.
  *
- * Not proven in production: the proposal is a starting point that applies the rules
+ * The proposal is a starting point that applies the rules
  * mechanically. Review it against the application's thread roles.
  */
 (function (root, factory) {

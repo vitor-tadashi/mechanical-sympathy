@@ -240,7 +240,7 @@ WantedBy=multi-user.target
 Newer kernels let a cgroup v2 cpuset become an **isolated partition** (`echo isolated > cpuset.cpus.partition`). The CPUs are removed from the scheduler's load-balancing domains **at runtime**, which is the same effect as `isolcpus=domain`, with no reboot, and reversible. Support arrived in kernel 6.x and has been backported to recent RHEL 9 minor releases. Check `cat /sys/fs/cgroup/<slice>/cpuset.cpus.partition` after writing it: if it says `isolated invalid`, your kernel or layout does not support it. It does **not** replace `nohz_full` and `rcu_nocbs`, which are still boot-time only. For now, `isolcpus` ([Guide 01](01-grub-bootloader-tuning.md)) remains the reference approach in this documentation.
 
 > [!NOTE]
-> **Not proven in production.** Cpuset partitions have not replaced `isolcpus` on a production host in this setup. Treat this section as a direction to evaluate, not a recipe.
+> **Validate on your hardware.** The scripts do not use cpuset partitions in place of `isolcpus`. Treat this section as a direction to evaluate, not a recipe.
 
 ## 5. Real-world examples
 

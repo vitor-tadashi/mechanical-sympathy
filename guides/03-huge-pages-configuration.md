@@ -330,7 +330,7 @@ grubby --update-kernel=ALL --args="default_hugepagesz=1G hugepagesz=1G hugepages
 Boot-time `hugepages=N` is split evenly across nodes. To skew it, over-reserve and then *free* pages on the non-critical node from the reservation script (freeing always works). Set `HUGEPAGE_SIZE=1G` in `lowlat.conf`, and the script writes to `hugepages-1048576kB` instead. The JVM uses 1 GiB pages with `-XX:+UseLargePages -XX:LargePageSizeInBytes=1g`.
 
 > [!NOTE]
-> **Not proven in production.** The reference hosts use 2 MiB pages. The 1 GiB procedure follows the kernel documentation and has not been measured on a production host.
+> **Validate on your hardware.** The scripts use 2 MiB pages. The 1 GiB procedure follows the kernel documentation and this repository does not measure it.
 
 ## 8. Verification
 

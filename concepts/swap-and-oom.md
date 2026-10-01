@@ -101,7 +101,7 @@ The argument for no swap on a latency host follows the Unix rule "fail loudly an
 Pair it with a memory cap on the agents ([Guide 05](../guides/05-cgroup-isolation.md#4-design-three-slices)), so most leaks end in a cgroup OOM inside the agents' slice and never reach the global OOM killer. [Guide 12](../guides/12-memory-pressure.md) applies this policy with one script.
 
 > [!NOTE]
-> **Not proven in production.** Turning swap off makes a global OOM more likely when the host is sized too tightly. Size memory for the peak, cap the agents, and watch PSI and `MemAvailable` before you remove swap from a host that has it.
+> **Validate on your hardware.** Turning swap off makes a global OOM more likely when the host is sized too tightly. Size memory for the peak, cap the agents, and watch PSI and `MemAvailable` before you remove swap from a host that has it.
 
 ## 7. Watching for pressure
 

@@ -82,14 +82,14 @@ Not to start. Tune the kernel path first (Guides 01–07) and measure it. Bypass
 <details>
 <summary><b>Does this work on AMD CPUs?</b></summary>
 
-Most of it does. The examples use Intel names, and the guides note where AMD differs (for example `amd_pstate` instead of `intel_pstate`). AMD-specific advice is marked as not proven in production.
+Most of it does. The examples use Intel names, and the guides note where AMD differs (for example `amd_pstate` instead of `intel_pstate`). AMD-specific advice follows the kernel documentation and is marked "validate on your hardware".
 
 </details>
 
 <details>
-<summary><b>What does "not proven in production" mean?</b></summary>
+<summary><b>What does "validate on your hardware" mean?</b></summary>
 
-The advice follows the vendor or kernel documentation but did not run on the reference production hosts. Treat it as a direction to test on your hardware, not as a recipe. See [AGENTS.md §3](AGENTS.md#3-documentation).
+The advice follows the vendor or kernel documentation, and this repository does not measure its effect. Treat it as a direction to test on your hardware, not as a recipe. See [AGENTS.md §3](AGENTS.md#3-documentation).
 
 </details>
 

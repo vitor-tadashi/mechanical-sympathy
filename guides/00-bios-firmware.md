@@ -90,7 +90,7 @@ Do both on dedicated hosts. The BIOS setting is the backstop if a kernel argumen
 ### 4.3 Turbo: a measured decision
 
 > [!NOTE]
-> **Not proven in production.** The trade-off below is the common reasoning. Decide it on your hardware by measuring p99.9 both ways ([Guide 09](09-measuring-latency.md)).
+> **Validate on your hardware.** The trade-off below is the common reasoning. Decide it on your hardware by measuring p99.9 both ways ([Guide 09](09-measuring-latency.md)).
 
 | | Turbo on | Turbo off |
 |---|---|---|
@@ -132,7 +132,7 @@ SMIs come from firmware features, and which features generate them depends on th
 | Dynamic power capping | "Power Capping", "Dynamic Power Capping" | **Disabled** |
 
 > [!NOTE]
-> **Not proven in production.** Which settings remove SMIs differs between vendors and firmware versions. Count SMIs with `turbostat` before and after each change, and keep only the changes that lower the count.
+> **Validate on your hardware.** Which settings remove SMIs differs between vendors and firmware versions. Count SMIs with `turbostat` before and after each change, and keep only the changes that lower the count.
 
 ### 4.7 PCIe and devices
 

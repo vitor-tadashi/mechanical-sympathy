@@ -223,6 +223,6 @@ the wrapper with an error. Boot reapplication stays disabled while you correct
 the problem and retry; keep the backups. Some effects require the reboot:
 GRUB arguments, PID 1 and inherited service affinity, and pages still held by
 applications. Lost connections and interrupted work cannot be recreated.
-This rollback path is covered by the harnesses and is not yet proven in
-production across all drivers and tuned profiles. To tune the host again,
+This rollback path is covered by the harnesses. Drivers and tuned profiles
+differ, so check the result on your host. To tune the host again,
 run `sudo scripts/apply-all --apply`, reboot, and verify as above.

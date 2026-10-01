@@ -60,7 +60,7 @@ memory per NIC    = 8 MiB x 63 queues   = 504 MiB   (a driver default of one que
 That is why [Guide 04 §5.1](../guides/04-network-optimization.md#51-queues-channels-ethtool--l) cuts the queue count before raising the rings. The buffer size is typically 2 KiB, or a page fragment on drivers that use page pools, so check yours.
 
 > [!NOTE]
-> **Not proven in production.** A very large ring can hold more packet data than the part of the last-level cache that [DDIO](../GLOSSARY.md#ddio) writes into (a small part of it, commonly two of its ways). Then arriving packets are written to memory, and the CPU reads them from there. If p99.9 gets worse after you raise a ring to the maximum, measure the same load with half of the maximum before you decide.
+> **Validate on your hardware.** A very large ring can hold more packet data than the part of the last-level cache that [DDIO](../GLOSSARY.md#ddio) writes into (a small part of it, commonly two of its ways). Then arriving packets are written to memory, and the CPU reads them from there. If p99.9 gets worse after you raise a ring to the maximum, measure the same load with half of the maximum before you decide.
 
 </details>
 
@@ -206,7 +206,7 @@ flowchart LR
 *When the application holds buffers too long, the mempool empties first, then the ring fills, and only then does the NIC drop. `rx_nombuf` warns before `imissed`.*
 
 > [!NOTE]
-> **Not proven in production.** [Guide 08 §6](../guides/08-kernel-bypass.md#6-dpdk-on-intel-nics-not-field-proven-in-the-reference-setup) marks DPDK as not field-proven in the reference setup. Read the DPDK numbers here as the library's defaults and formulas, and size your own pool under your own load.
+> **Source.** [Guide 08 §6](../guides/08-kernel-bypass.md#6-dpdk-on-intel-nics) follows the [DPDK documentation](https://doc.dpdk.org/guides/). Read the DPDK numbers here as the library's defaults and formulas, and size your own pool under your own load.
 
 ### 7.2 Solarflare: ef_vi and Onload
 

@@ -168,14 +168,14 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 
 | | Design target |
 |---|---|
-| OS | RHEL 8.x, 9.x and 10.x, and rebuilds (Rocky, Alma, Oracle Linux). RHEL 10 support is not yet proven on production hardware (see the note below). |
+| OS | RHEL 8.x, 9.x and 10.x, and rebuilds (Rocky, Alma, Oracle Linux). RHEL 10 is checked in CI only, not on real hardware (see the note below). |
 | Kernel | Stock RHEL kernels (4.18 / 5.14 / 6.12). Notes where newer kernels differ. |
 | CPUs | Intel Xeon (most examples). AMD EPYC notes where parameters differ. |
 | Shell | bash ≥ 4.4. Scripts are `shellcheck`-clean. |
 | Java | JDK 25 (ZGC, FFM API for thread affinity). Example built with Gradle; no third-party affinity library. |
 
 > [!NOTE]
-> **What CI covers.** Every guide script runs end to end (apply, reboot, verify, rollback) on fake hosts for RHEL 8, 9 and 10, and in systemd containers of UBI 8, 9 and 10, Rocky Linux 8 and 9, and AlmaLinux 10. CentOS Stream 9 and 10 run as advisory jobs. This proves the logic of the scripts. It does **not** prove the latency effect on real RHEL 10 hardware: **not proven in production**, so measure on your own host ([Guide 09](guides/09-measuring-latency.md)).
+> **What CI covers.** Every guide script runs end to end (apply, reboot, verify, rollback) on fake hosts for RHEL 8, 9 and 10, and in systemd containers of UBI 8, 9 and 10, Rocky Linux 8 and 9, and AlmaLinux 10. CentOS Stream 9 and 10 run as advisory jobs. This proves the logic of the scripts. It does **not** prove the latency effect on real RHEL 10 hardware: so measure on your own host ([Guide 09](guides/09-measuring-latency.md)).
 
 ## Repository layout
 

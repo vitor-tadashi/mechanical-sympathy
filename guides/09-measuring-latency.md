@@ -130,7 +130,7 @@ flowchart LR
 *Why `turbostat` is on the list: the SMI counter is the only tool that notices a stall the operating system cannot see.*
 
 > [!NOTE]
-> **Not proven in production.** The reference measurements used `rtla osnoise`, `/proc/interrupts` deltas, `perf stat` and the application's own histograms. `rtla hwnoise`, `rtla timerlat` and `cyclictest` are listed from their documentation.
+> **Validate on your hardware.** The guide's own measurements use `rtla osnoise`, `/proc/interrupts` deltas, `perf stat` and the application's own histograms. `rtla hwnoise`, `rtla timerlat` and `cyclictest` are listed from their documentation.
 
 ## 5. A measurement protocol
 
