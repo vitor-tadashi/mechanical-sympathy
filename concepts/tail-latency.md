@@ -4,7 +4,7 @@
 
 ## At a glance
 
-- The tail is not rare for your users. A client that makes 100 calls sees at least one above p99 almost two times out of three.
+- The tail is not rare for your users. When calls are independent, a client that makes 100 calls sees at least one above p99 almost two times out of three.
 - Percentiles cannot be averaged. To combine hosts or time windows, merge the histograms, then read the percentile.
 - The shape of the histogram names the cause: two humps, a comb, a long slope. Read the shape before the numbers.
 
@@ -14,7 +14,7 @@ Tuning in these guides moves the high percentiles far more than the median. To s
 
 ## 2. Why the tail is everyone's problem
 
-A percentile describes one event. Users and downstream systems see many. If a single call is above p99 with probability 1 %, the chance that a sequence of *n* calls has at least one above p99 is 1 − 0.99ⁿ:
+A percentile describes one event. Users and downstream systems see many. If a single call is above p99 with probability 1 %, and the calls are independent, the chance that a sequence of *n* calls has at least one above p99 is 1 − 0.99ⁿ:
 
 | Calls per user action | At least one above p99 | At least one above p99.9 |
 |---|---|---|
@@ -22,6 +22,8 @@ A percentile describes one event. Users and downstream systems see many. If a si
 | 10 | 9.6 % | 1 % |
 | 100 | 63 % | 9.5 % |
 | 1,000 | ~100 % | 63 % |
+
+The table is the independent case. Calls of one user action often share a host, a queue or a stall, so they are correlated: if one stall delays all of them or none, 100 calls see the tail with the same 1 % as one call. Real systems fall between the two, so read the table as an upper bound that is often close.
 
 The same holds over time. At 100,000 messages per second, p99.99 is crossed **10 times every second**, 864,000 times a day. A "rare" event at that rate is a steady stream.
 
@@ -37,7 +39,7 @@ How many samples a percentile needs follows from how many samples lie **beyond**
 | 1,000,000 | 10,000 | 1,000 | 100 |
 | 100,000,000 | 1,000,000 | 100,000 | 10,000 |
 
-With only 1 or 10 samples beyond it, the percentile is the value of one or a few samples and changes from run to run. With about 100 beyond it, the count is stable to roughly ±10 %. That is the reason for the "100 times more" rule in [Guide 09 §3.2](../guides/09-measuring-latency.md#32-enough-samples).
+With only 1 or 10 samples beyond it, the percentile is the value of one or a few samples and changes from run to run. With about 100 beyond it, the count is stable to roughly ±10 %: a usable value. With about 1,000 beyond it, roughly ±3 %: the "comfortable" column of [Guide 09 §3.2](../guides/09-measuring-latency.md#32-enough-samples), which asks for 10,000,000 samples for p99.99.
 
 ## 4. Never average percentiles
 
@@ -98,8 +100,8 @@ A histogram has no time axis. When the shape suggests a periodic cause (a comb),
 |---|---|
 | P(at least one above p99 in 100 calls) | 63 % |
 | P(at least one above p99.9 in 1,000 calls) | 63 % |
-| Samples above the percentile for a stable value | ~100 |
-| Samples for a stable p99.99 | ~1,000,000 |
+| Samples above the percentile: usable / comfortable | ~100 (±10 %) / ~1,000 (±3 %) |
+| Samples for p99.99: usable / comfortable (Guide 09) | ~1,000,000 / ~10,000,000 |
 | p99.99 events per day at 100,000 messages/s | 864,000 |
 | HDR histogram precision with 3 significant digits | 0.1 % of the value |
 
@@ -144,7 +146,7 @@ An illustrative case, not a measurement. A team's dashboard showed the fleet's p
 ## 13. Key takeaways
 
 - The tail is the common case for anyone who makes many calls. Measure and report it.
-- Collect enough samples: about 100 beyond the percentile you report.
+- Collect enough samples: at least 100 beyond the percentile you report, and 1,000 to trust it.
 - Merge histograms, never average percentiles.
 - Time requests from when they were due, not from when they were sent.
 - Read the shape first: two humps, a comb or a long slope each point at a different family of causes.
