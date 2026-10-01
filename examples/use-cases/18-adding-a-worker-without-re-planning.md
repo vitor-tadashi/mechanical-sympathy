@@ -78,13 +78,24 @@ show_affinity "$(pgrep -f my-app)"      # worker.2: allowed 15, last CPU 15
 
 Nothing else changes: `isolcpus`, `nohz_full` and `rcu_nocbs` already cover CPU 15, and no script needs to run. Update the layout record ([Guide 02 §3](../../guides/02-cpu-core-isolation.md#3-designing-the-cpu-layout)) so that the next person knows CPU 15 is taken.
 
-**When the spares are gone**, a new thread needs a new layout, and `isolcpus` changes only at boot:
+**When the spares are gone**, check first whether there is anything left to re-plan. On this host there is not. With a second node to run the OS, `plan-layout` already isolates every core of the critical node except the housekeeping core, so node 1 holds at most 15 critical threads. Asking for more fails:
 
 ```bash
-scripts/plan-layout --nic-node 1 --threads <new total>   # propose a layout with room for the new threads
-sudoedit /etc/lowlat/lowlat.conf                  # paste it
-sudo scripts/01-grub-bootloader --apply
-sudo systemctl reboot                             # plan it: this is the price of no headroom
+scripts/plan-layout --nic-node 1 --threads 16
+# NUMA node 1 has 15 core(s) besides the housekeeping core, and 18 are needed (16 threads + 2 spare)
+```
+
+The options are then outside the layout: take a thread off the isolated set (does it really need to spin?), run the last threads without spares (`--spares 0`, up to 15 threads here), or move to a host with more cores on the critical NIC's node.
+
+On a host whose layout does leave free cores on the node (a single-node host, where only `--threads` plus `--spares` cores are isolated), re-plan and apply every guide whose CPU lists change, then reboot once. `isolcpus` changes only at boot, and Guide 02 writes systemd's `CPUAffinity` and the workqueue masks from the same lists:
+
+```bash
+scripts/plan-layout --nic-node 0 --threads <new total>   # propose a layout with room for the new threads
+sudoedit /etc/lowlat/lowlat.conf                           # paste it
+sudo scripts/01-grub-bootloader --apply                    # isolcpus, nohz_full, rcu_nocbs
+sudo scripts/02-cpu-isolation --apply                      # CPUAffinity, workqueue mask
+# also re-apply 04 and 05 if the IRQ CPUs or the slice CPUs changed
+sudo systemctl reboot                                      # plan it: this is the price of no headroom
 ```
 
 > [!TIP]
