@@ -140,9 +140,17 @@ ss -umn 'sport = :5000'
 
 ## 6. Where did the packet die?
 
-<img src="../assets/diagrams/drop-map.svg" alt="Five columns for the stages of the receive path, each listing the commands and counters that show a drop there: ethtool -S for the NIC and ring, softnet_stat for the softirq and backlog, nstat and ss -m for the socket, and no kernel counter for the application" width="720">
+Each stage of the receive path has its own counter. Counters only grow, so read them twice and subtract, or use `nstat`, which prints the change since its last run.
 
-*Each stage has its own counter. Fix the earliest stage that counts drops, because later stages only see what the earlier ones let through.*
+| Stage | Command | Counter that grows | What it means |
+|---|---|---|---|
+| NIC and RX ring | `ethtool -S <if>`, `ip -s link` | `rx_missed_errors`, `rx_no_buffer_count`, `rx_fifo_errors`, the RX `dropped` column (names differ by driver) | The NIC had no free descriptor |
+| NAPI softirq | `/proc/net/softnet_stat` | column 3, `time_squeeze` | Not a drop: the poll ran out of budget, so packets waited longer in the ring |
+| Backlog (RPS only) | `/proc/net/softnet_stat` | column 2, `dropped` | Stays 0 unless RPS, RFS, loopback or veth put a backlog in the path |
+| Socket | `nstat -az`, `ss -m` | `UdpRcvbufErrors`, `TCPRcvQDrop`, `TCPBacklogDrop`, `ListenOverflows`, `ListenDrops`; `d` in `skmem` | UDP loses the datagram. TCP slows the sender instead |
+| Application | none in the kernel | your sequence gaps and queue depth | Only your code can count its own queue |
+
+**Fix the earliest stage that counts drops.** Later stages only see what the earlier ones let through, so a full ring hides what the socket would have done.
 
 ```mermaid
 flowchart TD

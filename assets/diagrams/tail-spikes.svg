@@ -1,0 +1,203 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 478" width="760" height="478" role="img" aria-labelledby="t d">
+<title id="t">Where the tail comes from: rare events from every layer of the host</title>
+<desc id="d">Two traces of the latency of each message handled by one busy thread, on a log scale from 1 microsecond to 1 millisecond. On a stock host most messages take about 2 microseconds, but rare events from every layer stick out above them: the scheduler tick about every millisecond, an interrupt, a page fault, a kworker, a C-state exit and an SMI, from 5 microseconds up to about half a millisecond. On a tuned host the same messages take the same 2 microseconds, and only one small residual tick remains. The numbers are illustrative.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .ax { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .key { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .tag { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; text-anchor: middle; }
+  .grid { stroke: #d0d7de; stroke-dasharray: 3 3; }
+  .dot { fill: #1d6b33; }
+  .spk line { stroke: #9b1c1c; stroke-width: 2.5; }
+  .spk circle { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 2; }
+  .spk { transform-box: fill-box; transform-origin: center bottom; animation: pop 8s linear infinite; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 8s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @keyframes pop {
+    0%, 3%   { transform: scale(1.18); }
+    7%, 100% { transform: scale(1); }
+  }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .spk, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="478" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="196" rx="6"/>
+<text class="cap" x="24" y="34">Stock host: a clean median, and a tail made of rare events</text>
+<text class="sub" x="24" y="52">One dot per message. Most take about 2 µs. The spikes come from every layer of the machine.</text>
+<line class="grid" x1="150" y1="178.0" x2="720" y2="178.0"/>
+<text class="ax" x="140" y="182.0">1 µs</text>
+<line class="grid" x1="150" y1="142.7" x2="720" y2="142.7"/>
+<text class="ax" x="140" y="146.7">10 µs</text>
+<line class="grid" x1="150" y1="107.3" x2="720" y2="107.3"/>
+<text class="ax" x="140" y="111.3">100 µs</text>
+<line class="grid" x1="150" y1="72.0" x2="720" y2="72.0"/>
+<text class="ax" x="140" y="76.0">1 ms</text>
+<text class="lbl" x="24" y="120">latency of</text>
+<text class="lbl" x="24" y="136">each message</text>
+<circle class="dot" cx="152.0" cy="167.7" r="2.2"/>
+<circle class="dot" cx="161.8" cy="168.8" r="2.2"/>
+<circle class="dot" cx="171.6" cy="165.8" r="2.2"/>
+<circle class="dot" cx="181.4" cy="169.3" r="2.2"/>
+<circle class="dot" cx="191.2" cy="166.4" r="2.2"/>
+<circle class="dot" cx="201.0" cy="167.4" r="2.2"/>
+<circle class="dot" cx="210.8" cy="169.4" r="2.2"/>
+<circle class="dot" cx="220.6" cy="166.6" r="2.2"/>
+<circle class="dot" cx="230.4" cy="169.6" r="2.2"/>
+<circle class="dot" cx="240.2" cy="167.0" r="2.2"/>
+<circle class="dot" cx="250.0" cy="169.4" r="2.2"/>
+<circle class="dot" cx="259.8" cy="169.2" r="2.2"/>
+<circle class="dot" cx="269.6" cy="167.1" r="2.2"/>
+<circle class="dot" cx="279.4" cy="164.8" r="2.2"/>
+<circle class="dot" cx="289.2" cy="169.0" r="2.2"/>
+<circle class="dot" cx="299.0" cy="168.3" r="2.2"/>
+<circle class="dot" cx="308.8" cy="165.9" r="2.2"/>
+<circle class="dot" cx="318.6" cy="164.2" r="2.2"/>
+<circle class="dot" cx="328.4" cy="166.2" r="2.2"/>
+<circle class="dot" cx="338.2" cy="167.2" r="2.2"/>
+<circle class="dot" cx="348.0" cy="164.1" r="2.2"/>
+<circle class="dot" cx="357.8" cy="169.5" r="2.2"/>
+<circle class="dot" cx="367.6" cy="164.7" r="2.2"/>
+<circle class="dot" cx="377.4" cy="167.9" r="2.2"/>
+<circle class="dot" cx="387.2" cy="168.8" r="2.2"/>
+<circle class="dot" cx="397.0" cy="169.0" r="2.2"/>
+<circle class="dot" cx="406.8" cy="167.8" r="2.2"/>
+<circle class="dot" cx="416.6" cy="164.9" r="2.2"/>
+<circle class="dot" cx="426.4" cy="168.6" r="2.2"/>
+<circle class="dot" cx="436.2" cy="166.1" r="2.2"/>
+<circle class="dot" cx="446.0" cy="165.8" r="2.2"/>
+<circle class="dot" cx="455.8" cy="167.4" r="2.2"/>
+<circle class="dot" cx="465.6" cy="166.3" r="2.2"/>
+<circle class="dot" cx="475.4" cy="169.4" r="2.2"/>
+<circle class="dot" cx="485.2" cy="169.4" r="2.2"/>
+<circle class="dot" cx="495.0" cy="168.4" r="2.2"/>
+<circle class="dot" cx="504.8" cy="165.6" r="2.2"/>
+<circle class="dot" cx="514.6" cy="167.0" r="2.2"/>
+<circle class="dot" cx="524.4" cy="167.7" r="2.2"/>
+<circle class="dot" cx="534.2" cy="166.1" r="2.2"/>
+<circle class="dot" cx="544.0" cy="166.9" r="2.2"/>
+<circle class="dot" cx="553.8" cy="167.8" r="2.2"/>
+<circle class="dot" cx="563.6" cy="165.0" r="2.2"/>
+<circle class="dot" cx="573.4" cy="165.5" r="2.2"/>
+<circle class="dot" cx="583.2" cy="168.2" r="2.2"/>
+<circle class="dot" cx="593.0" cy="166.2" r="2.2"/>
+<circle class="dot" cx="602.8" cy="166.5" r="2.2"/>
+<circle class="dot" cx="612.6" cy="164.6" r="2.2"/>
+<circle class="dot" cx="622.4" cy="165.3" r="2.2"/>
+<circle class="dot" cx="632.2" cy="167.9" r="2.2"/>
+<circle class="dot" cx="642.0" cy="164.0" r="2.2"/>
+<circle class="dot" cx="651.8" cy="169.0" r="2.2"/>
+<circle class="dot" cx="661.6" cy="167.1" r="2.2"/>
+<circle class="dot" cx="671.4" cy="165.2" r="2.2"/>
+<circle class="dot" cx="681.2" cy="168.8" r="2.2"/>
+<circle class="dot" cx="691.0" cy="166.7" r="2.2"/>
+<circle class="dot" cx="700.8" cy="169.6" r="2.2"/>
+<circle class="dot" cx="710.6" cy="165.7" r="2.2"/>
+<g class="spk" style="animation-delay:-7.44s"><line x1="190" y1="167.4" x2="190" y2="153.3"/><circle cx="190" cy="153.3" r="4"/></g>
+<text class="tag" x="190" y="144.3">tick</text>
+<g class="spk" style="animation-delay:-6.46s"><line x1="260" y1="167.4" x2="260" y2="153.3"/><circle cx="260" cy="153.3" r="4"/></g>
+<g class="spk" style="animation-delay:-5.47s"><line x1="330" y1="167.4" x2="330" y2="153.3"/><circle cx="330" cy="153.3" r="4"/></g>
+<g class="spk" style="animation-delay:-4.49s"><line x1="400" y1="167.4" x2="400" y2="153.3"/><circle cx="400" cy="153.3" r="4"/></g>
+<g class="spk" style="animation-delay:-3.51s"><line x1="470" y1="167.4" x2="470" y2="153.3"/><circle cx="470" cy="153.3" r="4"/></g>
+<g class="spk" style="animation-delay:-2.53s"><line x1="540" y1="167.4" x2="540" y2="153.3"/><circle cx="540" cy="153.3" r="4"/></g>
+<g class="spk" style="animation-delay:-1.54s"><line x1="610" y1="167.4" x2="610" y2="153.3"/><circle cx="610" cy="153.3" r="4"/></g>
+<g class="spk" style="animation-delay:-0.56s"><line x1="680" y1="167.4" x2="680" y2="153.3"/><circle cx="680" cy="153.3" r="4"/></g>
+<g class="spk" style="animation-delay:-6.99s"><line x1="222" y1="167.4" x2="222" y2="125.8"/><circle cx="222" cy="125.8" r="4"/></g>
+<text class="tag" x="222" y="116.8">IRQ</text>
+<g class="spk" style="animation-delay:-5.95s"><line x1="296" y1="167.4" x2="296" y2="115.2"/><circle cx="296" cy="115.2" r="4"/></g>
+<text class="tag" x="296" y="106.2">page fault</text>
+<g class="spk" style="animation-delay:-5.00s"><line x1="364" y1="167.4" x2="364" y2="95.2"/><circle cx="364" cy="95.2" r="4"/></g>
+<text class="tag" x="364" y="86.2">kworker</text>
+<g class="spk" style="animation-delay:-3.85s"><line x1="446" y1="167.4" x2="446" y2="105.9"/><circle cx="446" cy="105.9" r="4"/></g>
+<text class="tag" x="446" y="96.9">C-state exit</text>
+<g class="spk" style="animation-delay:-1.85s"><line x1="588" y1="167.4" x2="588" y2="84.3"/><circle cx="588" cy="84.3" r="4"/></g>
+<text class="tag" x="588" y="75.3">SMI</text>
+<g class="spk" style="animation-delay:-1.01s"><line x1="648" y1="167.4" x2="648" y2="126.9"/><circle cx="648" cy="126.9" r="4"/></g>
+<text class="note" x="720" y="198">illustrative · time not to scale</text>
+<rect class="lane" x="10" y="216" width="740" height="196" rx="6"/>
+<text class="cap" x="24" y="240">Tuned host: the same messages, the same 2 µs</text>
+<text class="sub" x="24" y="258">Each layer had its own fix. What is left is one residual tick per second.</text>
+<line class="grid" x1="150" y1="384.0" x2="720" y2="384.0"/>
+<text class="ax" x="140" y="388.0">1 µs</text>
+<line class="grid" x1="150" y1="348.7" x2="720" y2="348.7"/>
+<text class="ax" x="140" y="352.7">10 µs</text>
+<line class="grid" x1="150" y1="313.3" x2="720" y2="313.3"/>
+<text class="ax" x="140" y="317.3">100 µs</text>
+<line class="grid" x1="150" y1="278.0" x2="720" y2="278.0"/>
+<text class="ax" x="140" y="282.0">1 ms</text>
+<text class="lbl" x="24" y="326">latency of</text>
+<text class="lbl" x="24" y="342">each message</text>
+<circle class="dot" cx="152.0" cy="371.1" r="2.2"/>
+<circle class="dot" cx="161.8" cy="372.2" r="2.2"/>
+<circle class="dot" cx="171.6" cy="370.6" r="2.2"/>
+<circle class="dot" cx="181.4" cy="373.7" r="2.2"/>
+<circle class="dot" cx="191.2" cy="371.5" r="2.2"/>
+<circle class="dot" cx="201.0" cy="372.1" r="2.2"/>
+<circle class="dot" cx="210.8" cy="372.2" r="2.2"/>
+<circle class="dot" cx="220.6" cy="372.9" r="2.2"/>
+<circle class="dot" cx="230.4" cy="370.7" r="2.2"/>
+<circle class="dot" cx="240.2" cy="370.2" r="2.2"/>
+<circle class="dot" cx="250.0" cy="372.8" r="2.2"/>
+<circle class="dot" cx="259.8" cy="371.7" r="2.2"/>
+<circle class="dot" cx="269.6" cy="375.4" r="2.2"/>
+<circle class="dot" cx="279.4" cy="371.5" r="2.2"/>
+<circle class="dot" cx="289.2" cy="371.8" r="2.2"/>
+<circle class="dot" cx="299.0" cy="370.0" r="2.2"/>
+<circle class="dot" cx="308.8" cy="370.8" r="2.2"/>
+<circle class="dot" cx="318.6" cy="373.9" r="2.2"/>
+<circle class="dot" cx="328.4" cy="373.3" r="2.2"/>
+<circle class="dot" cx="338.2" cy="371.7" r="2.2"/>
+<circle class="dot" cx="348.0" cy="375.7" r="2.2"/>
+<circle class="dot" cx="357.8" cy="372.8" r="2.2"/>
+<circle class="dot" cx="367.6" cy="374.7" r="2.2"/>
+<circle class="dot" cx="377.4" cy="375.0" r="2.2"/>
+<circle class="dot" cx="387.2" cy="375.4" r="2.2"/>
+<circle class="dot" cx="397.0" cy="371.1" r="2.2"/>
+<circle class="dot" cx="406.8" cy="375.0" r="2.2"/>
+<circle class="dot" cx="416.6" cy="374.2" r="2.2"/>
+<circle class="dot" cx="426.4" cy="373.3" r="2.2"/>
+<circle class="dot" cx="436.2" cy="370.6" r="2.2"/>
+<circle class="dot" cx="446.0" cy="375.3" r="2.2"/>
+<circle class="dot" cx="455.8" cy="372.9" r="2.2"/>
+<circle class="dot" cx="465.6" cy="372.3" r="2.2"/>
+<circle class="dot" cx="475.4" cy="370.5" r="2.2"/>
+<circle class="dot" cx="485.2" cy="370.9" r="2.2"/>
+<circle class="dot" cx="495.0" cy="370.6" r="2.2"/>
+<circle class="dot" cx="504.8" cy="374.0" r="2.2"/>
+<circle class="dot" cx="514.6" cy="373.1" r="2.2"/>
+<circle class="dot" cx="524.4" cy="373.5" r="2.2"/>
+<circle class="dot" cx="534.2" cy="370.5" r="2.2"/>
+<circle class="dot" cx="544.0" cy="370.1" r="2.2"/>
+<circle class="dot" cx="553.8" cy="374.8" r="2.2"/>
+<circle class="dot" cx="563.6" cy="374.6" r="2.2"/>
+<circle class="dot" cx="573.4" cy="374.3" r="2.2"/>
+<circle class="dot" cx="583.2" cy="374.3" r="2.2"/>
+<circle class="dot" cx="593.0" cy="372.7" r="2.2"/>
+<circle class="dot" cx="602.8" cy="372.1" r="2.2"/>
+<circle class="dot" cx="612.6" cy="374.1" r="2.2"/>
+<circle class="dot" cx="622.4" cy="375.8" r="2.2"/>
+<circle class="dot" cx="632.2" cy="373.1" r="2.2"/>
+<circle class="dot" cx="642.0" cy="373.4" r="2.2"/>
+<circle class="dot" cx="651.8" cy="372.2" r="2.2"/>
+<circle class="dot" cx="661.6" cy="370.2" r="2.2"/>
+<circle class="dot" cx="671.4" cy="371.5" r="2.2"/>
+<circle class="dot" cx="681.2" cy="372.5" r="2.2"/>
+<circle class="dot" cx="691.0" cy="371.9" r="2.2"/>
+<circle class="dot" cx="700.8" cy="371.6" r="2.2"/>
+<circle class="dot" cx="710.6" cy="375.5" r="2.2"/>
+<g class="spk" style="animation-delay:-4.00s"><line x1="435" y1="373.4" x2="435" y2="367.1"/><circle cx="435" cy="367.1" r="4"/></g>
+<text class="tag" x="435" y="358.1">1 residual tick</text>
+<text class="note" x="720" y="404">illustrative · time not to scale</text>
+<text class="key" x="24" y="436">tick, kworker → Guides 01, 02 (CPU isolation)  ·  IRQ → Guide 04 (network)  ·  page fault → Guide 03 (huge pages)</text>
+<text class="key" x="24" y="456">C-state exit, SMI → Guide 00 (firmware)  ·  swap → Guide 12  ·  a clock step → Guide 10</text>
+<line class="head" x1="150" y1="60" x2="150" y2="392"/>
+</svg>

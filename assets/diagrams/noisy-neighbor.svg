@@ -36,6 +36,9 @@
     0%, 6%   { fill: #3d7fd9; transform: scaleY(1.15); }
     7%, 100% { fill: #1f4e8c; transform: scaleY(1); }
   }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
   @media (prefers-reduced-motion: reduce) {
     .head, .agentr, .agentb { animation: none; }
     .head { display: none; }

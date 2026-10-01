@@ -11,6 +11,9 @@
   .bar { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1; }
   .tail { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1; }
   .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="410" rx="8"/>
 <rect class="lane" x="10" y="10" width="360" height="180" rx="6"/>

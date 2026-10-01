@@ -175,6 +175,28 @@ while IFS= read -r svg; do
 	if grep -q '@keyframes' "${svg}" && ! grep -q 'prefers-reduced-motion' "${svg}"; then
 		fail "${svg}: animates without a prefers-reduced-motion rule"
 	fi
+	# The rest of the STYLE.md §3.5 contract, one message per broken rule.
+	problems="$(perl -0777 -ne '
+		print "title and desc are not the first two children of <svg>\n"
+			unless /<svg\b[^>]*>\s*<title\b[^>]*>.*?<\/title>\s*<desc\b/s;
+		print "viewBox is not 760 wide\n" unless /<svg\b[^>]*viewBox="0 0 760 \d+"/s;
+		print "no background rect (class bg)\n" unless /<rect\b[^>]*class="bg"/;
+		print "no prefers-color-scheme: dark block\n" unless /prefers-color-scheme:\s*dark/;
+		while (/(?:font:[^;}]*?|font-size:\s*|font-size=")(\d+(?:\.\d+)?)px/g) {
+			print "font size $1px is below 10px\n" if $1 < 10;
+		}
+		print "class .muted or .focus: use .mut and .foc\n" if /\.(?:muted|focus)\b[^-]/;
+		if (/\@keyframes/) {
+			while (/animation:\s*[\w-]+\s+(\d+(?:\.\d+)?)s/g) {
+				print "loop of $1 s is outside 4 to 10 s\n" if $1 < 4 || $1 > 10;
+			}
+			print "the reduced-motion block does not stop the animations\n"
+				unless /prefers-reduced-motion:\s*reduce\)\s*\{[^@]*animation:\s*none/s;
+		}
+	' "${svg}")"
+	while IFS= read -r problem; do
+		[[ -n "${problem}" ]] && fail "${svg}: ${problem}"
+	done <<<"${problems}"
 done <<<"${svgs}"
 
 # 4. Orphan diagrams and images without alt text. Pages that embed a diagram are the

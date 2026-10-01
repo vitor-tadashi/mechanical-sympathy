@@ -46,6 +46,9 @@
   @keyframes w2 { 0%, 15% { fill: #ff6b6b; } 16%, 100% { fill: #ffc9c9; } }
   @keyframes w3 { 0%, 3.1% { fill: #ff6b6b; } 4.1%, 100% { fill: #ffc9c9; } }
 
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
   @media (prefers-reduced-motion: reduce) {
     .head, .pkt, .sw, .hw, .wait { animation: none; }
     .head { display: none; }

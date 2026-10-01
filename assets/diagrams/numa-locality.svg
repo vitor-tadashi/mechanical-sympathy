@@ -15,6 +15,9 @@
   .bad { stroke: #9b1c1c; stroke-width: 3; fill: none; stroke-dasharray: 7 4; }
   .gtxt { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; text-anchor: middle; }
   .btxt { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; text-anchor: middle; }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="300" rx="8"/>
 

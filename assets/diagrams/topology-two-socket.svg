@@ -7,7 +7,7 @@
   .llc { fill: #ffffff; stroke: #8c959f; stroke-width: 1.2; stroke-dasharray: 5 3; }
   .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
   .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
-  .focus { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
   .link { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
   .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
   .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
@@ -18,6 +18,9 @@
   .wire { fill: none; stroke: #1f4e8c; stroke-width: 2; }
   .num { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
   .numt { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="480" rx="8"/>
 
@@ -50,7 +53,7 @@
 <rect class="sock" x="420" y="50" width="320" height="246" rx="8"/>
 <text class="cap" x="724" y="72" text-anchor="end">Socket 1 · NUMA node 1</text>
 <rect class="llc" x="436" y="84" width="138" height="116" rx="5"/>
-<rect class="focus" x="446" y="104" width="56" height="32" rx="4"/><text class="lbl" x="474" y="118">CPU 3</text><text class="sub" x="474" y="131">net.rx</text>
+<rect class="foc" x="446" y="104" width="56" height="32" rx="4"/><text class="lbl" x="474" y="118">CPU 3</text><text class="sub" x="474" y="131">net.rx</text>
 <rect class="app" x="508" y="104" width="56" height="32" rx="4"/><text class="lbl" x="536" y="118">CPU 5</text><text class="sub" x="536" y="131">event.loop</text>
 <rect class="box" x="446" y="144" width="56" height="32" rx="4"/><text class="lbl" x="474" y="164">CPU 1</text>
 <rect class="app" x="508" y="144" width="56" height="32" rx="4"/><text class="lbl" x="536" y="164">CPU 7</text>

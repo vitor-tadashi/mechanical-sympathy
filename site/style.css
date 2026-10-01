@@ -1,6 +1,7 @@
 /* Shared styles for the site. No external fonts, images or scripts. Light and dark from the OS setting. */
 
 :root {
+	color-scheme: light dark;
 	--bg: #ffffff;
 	--fg: #1a1a1a;
 	--muted: #57606a;
@@ -21,6 +22,7 @@
 	--mut-bg: #eeeeee;
 	--mut-line: #777777;
 	--cell-fg: #14202b;
+	--figure-bg: #ffffff;
 	--radius: 10px;
 	--font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 	--mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -37,6 +39,7 @@
 		--accent-fg: #0d1117;
 		--warn-bg: #2d2412;
 		--warn-line: #d29922;
+		--figure-bg: #1f1f1f;
 	}
 }
 
@@ -102,7 +105,7 @@ section.hero { border-top: 0; padding-top: 48px; }
 }
 .btn.secondary { background: transparent; color: var(--accent); }
 
-.figure { background: #ffffff; border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; margin: 20px 0 8px; }
+.figure { background: var(--figure-bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; margin: 20px 0 8px; }
 .figure img { display: block; width: 100%; height: auto; }
 .figure.flush { margin: 0; padding: 4px; }
 @media (max-width: 640px) {

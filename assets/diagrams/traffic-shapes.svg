@@ -28,6 +28,9 @@
   .rate { fill: none; stroke: #1f4e8c; stroke-width: 2; }
   .capl { fill: none; stroke: #9b1c1c; stroke-width: 1.5; stroke-dasharray: 5 3; }
   .exc { fill: #ffc9c9; stroke: none; }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="500" rx="8"/>
 <text class="cap" x="24" y="28">The traffic shape decides which buffer matters</text>

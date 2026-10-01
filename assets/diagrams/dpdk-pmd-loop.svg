@@ -34,6 +34,9 @@
   .zero { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
   .ok { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
   .rxb { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
   @media (prefers-reduced-motion: reduce) {
     .head, .evt { animation: none; }
     .head { display: none; }

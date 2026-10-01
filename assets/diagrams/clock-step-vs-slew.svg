@@ -20,6 +20,9 @@
     0%, 4%   { transform: scale(1.6); }
     8%, 100% { transform: scale(1); }
   }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
   @media (prefers-reduced-motion: reduce) {
     .stamp, .stepdot, .head { animation: none; }
     .head { display: none; }

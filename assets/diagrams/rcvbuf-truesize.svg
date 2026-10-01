@@ -24,6 +24,9 @@
   .tick { stroke: #8c959f; stroke-width: 1; }
   .arrow { stroke: #57606a; stroke-width: 1.5; fill: none; marker-end: url(#ah); }
   .arrowr { stroke: #9b1c1c; stroke-width: 1.5; fill: none; marker-end: url(#ahr); }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="426" rx="8"/>
 <text class="cap" x="24" y="28">The kernel charges each datagram its truesize, not its payload size</text>

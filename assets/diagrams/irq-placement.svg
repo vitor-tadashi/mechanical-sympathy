@@ -39,6 +39,9 @@
     6%, 100% { stroke: #1d6b33; stroke-width: 2; }
   }
 
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
   @media (prefers-reduced-motion: reduce) {
     .head, .wait, .irq, .xfer { animation: none; }
     .head { display: none; }

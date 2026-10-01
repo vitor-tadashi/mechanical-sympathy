@@ -40,6 +40,9 @@
     6%, 100% { fill: #8a5a00; transform: scale(1); }
   }
 
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
   @media (prefers-reduced-motion: reduce) {
     .head, .thr, .msg, .pick { animation: none; }
     .head { display: none; }

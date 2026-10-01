@@ -23,6 +23,9 @@
   .grid { stroke: #d0d7de; stroke-width: 1; }
   .val { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
   .grp { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="489" rx="8"/>
 <text class="cap" x="20" y="28">One ruler, eight decades: from a cache hit to a throttled CPU</text>
