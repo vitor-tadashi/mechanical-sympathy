@@ -70,25 +70,11 @@ RHEL 8 can boot into v2 with the kernel argument `systemd.unified_cgroup_hierarc
 
 ## 4. Design: three slices
 
-```mermaid
-flowchart TD
-  root["-.slice (root)"] --> sys["system.slice<br/>OS services<br/>CPUAffinity = OS_CPUS (Guide 02)"]
-  root --> usr["user.slice<br/>SSH sessions<br/>CPUAffinity = OS_CPUS (Guide 02)"]
-  root --> hk["housekeeping.slice<br/>agents, shippers, EDR<br/>AllowedCPUs=4,6 · CPUQuota=150% · MemoryMax=4G · IOWeight=50"]
-  root --> lat["latency.slice (optional)<br/>the application<br/>AllowedCPUs = all · IOWeight=1000"]
-  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-  class sys,usr hk
-  class hk focus
-  class lat iso
-```
-
-*The OS and SSH keep Guide 02's inherited affinity. Agents go into `housekeeping.slice`, a hard fence on two quiet CPUs with CPU, memory and I/O caps. The application can get its own slice that spans every CPU.*
-
 <img src="../assets/diagrams/cgroup-slices.svg" alt="A row of 32 CPUs colored isolated or OS, with the CPUs each slice may use: system and user slices on the OS CPUs by advisory affinity, housekeeping.slice on CPUs 4 and 6 by a hard cpuset fence, latency.slice on all CPUs" width="720">
 
-*Which CPUs each slice may touch. Dashed cells are advisory affinity, and solid cells are a cpuset fence the kernel enforces.*
+*Which CPUs each slice may touch. The OS and SSH keep Guide 02's inherited affinity (dashed: advisory). Agents go into `housekeeping.slice`, a hard fence on two quiet CPUs with CPU, memory and I/O caps (solid: enforced). The application can get its own slice that spans every CPU.*
+
+> **Picture it.** A slice is a room with its own rules. `AllowedCPUs` says which desks the room may use, `CPUQuota` how many hours a day, and `MemoryMax` how many shelves.
 
 <details>
 <summary><b>The same tree as text</b></summary>
@@ -126,7 +112,11 @@ IOWeight=50
 
 Why those CPUs: 4 and 6 are node-0 OS CPUs that serve **no** NIC interrupts (0 does timing/mgmt IRQs, 1 does the critical NIC, 30 does bulk NICs) and no workqueues (0, 2). An agent that spikes to 100 % there hurts nothing that matters.
 
-Why `CPUQuota` in addition to the cpuset: the cpuset decides *where* the processes run, and the quota decides *how much*. Without the quota, a runaway agent keeps both CPUs at 100 %. That is harmless for the application, but it starves the other agents (monitoring included) at exactly the moment you need them.
+Why `CPUQuota` in addition to the cpuset: the cpuset decides *where* the processes run, and the quota decides *how much*. Without the quota, a runaway agent keeps both CPUs at 100 %. That is harmless for the application, but everything else on CPUs 4 and 6 (the other agents, monitoring, system services, per-CPU kernel threads) only runs in the short turns the scheduler takes from it, at exactly the moment you need them.
+
+<img src="../assets/diagrams/cpu-quota-throttle.svg" alt="Animation: without a quota a runaway agent keeps CPUs 4 and 6 at 100 percent and other work runs only in short turns; with CPUQuota=150% the slice is throttled after 150 ms of CPU time in each 100 ms period, a quarter of every period is free, and nr_throttled grows by one per period" width="720">
+
+*With the quota, the slice stops after its 150 ms of CPU time in each 100 ms period, and the rest of the period belongs to everything else. `nr_throttled` in `cpu.stat` counts the stops.*
 
 Why `MemoryMax` with `MemorySwapMax=0`: a leaking agent then ends in an OOM kill inside this slice, logged and restarted, instead of pushing the host into swap or a global OOM. [Concept: swap and the OOM killer](../concepts/swap-and-oom.md#6-silent-stalls-versus-a-loud-failure) explains the trade.
 
@@ -237,7 +227,9 @@ WantedBy=multi-user.target
 
 ### 4.5 Advanced: cpuset partitions instead of `isolcpus` (cgroup v2)
 
-Newer kernels let a cgroup v2 cpuset become an **isolated partition** (`echo isolated > cpuset.cpus.partition`). The CPUs are removed from the scheduler's load-balancing domains **at runtime**, which is the same effect as `isolcpus=domain`, with no reboot, and reversible. Support arrived in kernel 6.x and has been backported to recent RHEL 9 minor releases. Check `cat /sys/fs/cgroup/<slice>/cpuset.cpus.partition` after writing it: if it says `isolated invalid`, your kernel or layout does not support it. It does **not** replace `nohz_full` and `rcu_nocbs`, which are still boot-time only. For now, `isolcpus` ([Guide 01](01-grub-bootloader-tuning.md)) remains the reference approach in this documentation.
+Newer kernels let a cgroup v2 cpuset become an **isolated partition** (`echo isolated > cpuset.cpus.partition`). The CPUs leave the scheduler's load-balancing domains **at runtime**: the same effect as `isolcpus=domain`, with no reboot, and reversible.
+
+Support arrived in kernel 6.x and has been backported to recent RHEL 9 minor releases. Check `cat /sys/fs/cgroup/<slice>/cpuset.cpus.partition` after writing it: `isolated invalid` means your kernel or layout does not support it. It does **not** replace `nohz_full` and `rcu_nocbs`, which are still boot-time only, so `isolcpus` ([Guide 01](01-grub-bootloader-tuning.md)) stays the reference approach here.
 
 > [!NOTE]
 > **Validate on your hardware.** The scripts do not use cpuset partitions in place of `isolcpus`. Treat this section as a direction to evaluate, not a recipe.

@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 370" width="760" height="370" role="img" aria-labelledby="t d">
+<title id="t">Each boot argument removes interruptions from an isolated CPU</title>
+<desc id="d">Three timelines of CPU 5, which runs one busy thread. With no arguments, other tasks, the scheduler tick and RCU callbacks all interrupt it. isolcpus with systemd CPUAffinity removes the other tasks. nohz_full stops the tick, apart from about one residual tick per second, and also moves the RCU callbacks to rcuo threads on a housekeeping CPU; rcu_nocbs on the same CPUs states that explicitly. The thread then runs alone.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .mid { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .tag { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; text-anchor: middle; }
+  .tk { fill: #9b1c1c; }
+  .ev, .tsk { transform-box: fill-box; transform-origin: center; animation: pop 8s linear infinite; }
+  @keyframes pop { 0%, 3% { transform: scale(1.18); } 7%, 100% { transform: scale(1); } }
+  .head { transform: translateX(570px); animation: sweep 8s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ev, .tsk, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="370" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="108" rx="6"/>
+<text class="cap" x="24" y="34">No isolation arguments</text>
+<text class="sub" x="24" y="52">Other tasks get time slices, the tick fires 1000 times a second, and RCU callbacks run here.</text>
+<text class="lbl" x="24" y="95">CPU 5</text>
+<rect class="app" x="150" y="76" width="570" height="28" rx="4"/>
+<rect class="box tsk" x="228" y="76" width="64" height="28" rx="3" style="animation-delay:-6.91s"/>
+<rect class="box tsk" x="468" y="76" width="52" height="28" rx="3" style="animation-delay:-3.54s"/>
+<text class="mid" x="260.0" y="94">other task</text>
+<rect class="wait ev" x="330" y="72" width="30" height="36" rx="3" style="animation-delay:-5.47s"/>
+<rect class="wait ev" x="600" y="72" width="26" height="36" rx="3" style="animation-delay:-1.68s"/>
+<text class="tag" x="345" y="67">RCU callbacks</text>
+<rect class="tk ev" x="165.0" y="70" width="5" height="40" rx="2" style="animation-delay:-7.79s"/>
+<text class="tag" x="167.0" y="66">tick</text>
+<rect class="tk ev" x="200.6" y="70" width="5" height="40" rx="2" style="animation-delay:-7.29s"/>
+<rect class="tk ev" x="307.4" y="70" width="5" height="40" rx="2" style="animation-delay:-5.79s"/>
+<rect class="tk ev" x="378.6" y="70" width="5" height="40" rx="2" style="animation-delay:-4.79s"/>
+<rect class="tk ev" x="414.2" y="70" width="5" height="40" rx="2" style="animation-delay:-4.29s"/>
+<rect class="tk ev" x="449.8" y="70" width="5" height="40" rx="2" style="animation-delay:-3.79s"/>
+<rect class="tk ev" x="556.6" y="70" width="5" height="40" rx="2" style="animation-delay:-2.29s"/>
+<rect class="tk ev" x="592.2" y="70" width="5" height="40" rx="2" style="animation-delay:-1.79s"/>
+<rect class="tk ev" x="663.4" y="70" width="5" height="40" rx="2" style="animation-delay:-0.79s"/>
+<rect class="tk ev" x="699.0" y="70" width="5" height="40" rx="2" style="animation-delay:-0.29s"/>
+<rect class="lane" x="10" y="124" width="740" height="108" rx="6"/>
+<text class="cap" x="24" y="148">isolcpus (with systemd CPUAffinity)</text>
+<text class="sub" x="24" y="166">No other task runs here any more. The tick and the RCU callbacks still do.</text>
+<text class="lbl" x="24" y="209">CPU 5</text>
+<rect class="app" x="150" y="190" width="570" height="28" rx="4"/>
+<rect class="wait ev" x="330" y="186" width="30" height="36" rx="3" style="animation-delay:-5.47s"/>
+<rect class="wait ev" x="600" y="186" width="26" height="36" rx="3" style="animation-delay:-1.68s"/>
+<rect class="tk ev" x="165.0" y="184" width="5" height="40" rx="2" style="animation-delay:-7.79s"/>
+<rect class="tk ev" x="200.6" y="184" width="5" height="40" rx="2" style="animation-delay:-7.29s"/>
+<rect class="tk ev" x="236.2" y="184" width="5" height="40" rx="2" style="animation-delay:-6.79s"/>
+<rect class="tk ev" x="271.8" y="184" width="5" height="40" rx="2" style="animation-delay:-6.29s"/>
+<rect class="tk ev" x="307.4" y="184" width="5" height="40" rx="2" style="animation-delay:-5.79s"/>
+<rect class="tk ev" x="378.6" y="184" width="5" height="40" rx="2" style="animation-delay:-4.79s"/>
+<rect class="tk ev" x="414.2" y="184" width="5" height="40" rx="2" style="animation-delay:-4.29s"/>
+<rect class="tk ev" x="449.8" y="184" width="5" height="40" rx="2" style="animation-delay:-3.79s"/>
+<rect class="tk ev" x="485.4" y="184" width="5" height="40" rx="2" style="animation-delay:-3.29s"/>
+<rect class="tk ev" x="521.0" y="184" width="5" height="40" rx="2" style="animation-delay:-2.79s"/>
+<rect class="tk ev" x="556.6" y="184" width="5" height="40" rx="2" style="animation-delay:-2.29s"/>
+<rect class="tk ev" x="592.2" y="184" width="5" height="40" rx="2" style="animation-delay:-1.79s"/>
+<rect class="tk ev" x="663.4" y="184" width="5" height="40" rx="2" style="animation-delay:-0.79s"/>
+<rect class="tk ev" x="699.0" y="184" width="5" height="40" rx="2" style="animation-delay:-0.29s"/>
+<rect class="lane" x="10" y="238" width="740" height="108" rx="6"/>
+<text class="cap" x="24" y="262">+ nohz_full (and rcu_nocbs)</text>
+<text class="sub" x="24" y="280">The tick stops, apart from one residual tick per second. RCU callbacks move to rcuo threads elsewhere.</text>
+<text class="lbl" x="24" y="323">CPU 5</text>
+<rect class="app" x="150" y="304" width="570" height="28" rx="4"/>
+<rect class="tk" x="432" y="298" width="5" height="40" rx="2"/>
+<text class="note" x="720" y="362">nohz_full already moves the RCU callbacks; rcu_nocbs on the same CPUs states it explicitly · schematic, time not to scale</text>
+<line class="head" x1="150" y1="64" x2="150" y2="346"/>
+</svg>

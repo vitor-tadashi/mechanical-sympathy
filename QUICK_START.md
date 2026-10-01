@@ -205,7 +205,7 @@ What the wrapper does:
 Check the result:
 
 - [ ] `systemctl is-enabled lowlat-runtime.service` and `systemctl is-active lowlat-runtime.service`: disabled, inactive or absent if no unit existed before; otherwise the same state as before the apply.
-- [ ] NIC settings and IRQ placement: [Guide 04 §12](guides/04-network-optimization.md#12-rollback).
+- [ ] NIC settings and IRQ placement: [Guide 04 §11](guides/04-network-optimization.md#11-rollback).
 - [ ] Files, mounts and services: [Guide 07 §11](guides/07-os-hygiene.md#11-rollback).
 - [ ] After the reboot: `/proc/cmdline` and PID 1's `Cpus_allowed_list` match your baseline. `verify-tuning` now reports FAIL lines, which is expected.
 

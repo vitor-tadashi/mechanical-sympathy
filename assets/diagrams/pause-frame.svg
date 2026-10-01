@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" width="760" height="330" role="img" aria-labelledby="t d">
+<title id="t">PAUSE frames stop every flow of a port; without them one packet is dropped</title>
+<desc id="d">Two lanes show a host sending a critical flow and a bulk flow to a congested switch port. With Ethernet flow control on, the switch sends a PAUSE frame back, and the host stops every flow from that port, the critical one too, for up to 3.3 ms per frame at 10 Gb/s. With flow control off, the switch drops a packet instead; in this illustration it is a bulk packet that TCP retransmits, while the critical flow keeps moving. Which flow loses a packet depends on the switch.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .mid { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .wire { stroke: #d0d7de; stroke-width: 2; }
+  .tc { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .tb { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .pz { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 2; }
+  .warn { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; }
+  .x { font: 700 20px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; text-anchor: middle; }
+  .run { animation: run 8s linear infinite; }
+  .hold { animation: hold 8s linear infinite; }
+  .back { transform: translateX(-470px); animation: back 8s linear infinite; }
+  .drop { transform-box: fill-box; transform-origin: center; animation: drop 8s linear infinite; }
+  @keyframes run { from { transform: translateX(0); } to { transform: translateX(200px); } }
+  @keyframes hold {
+    0% { transform: translateX(0); }
+    45% { transform: translateX(120px); }
+    75% { transform: translateX(120px); }
+    100% { transform: translateX(200px); }
+  }
+  @keyframes back {
+    0%, 37% { transform: translateX(0); }
+    45%, 100% { transform: translateX(-470px); }
+  }
+  @keyframes drop {
+    0%, 44% { transform: scale(1); }
+    46%, 52% { transform: scale(1.6); }
+    56%, 100% { transform: scale(1); }
+  }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .run, .hold, .back, .drop { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="330" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="150" rx="6"/>
+<text class="cap" x="24" y="34">Flow control on: the switch sends PAUSE</text>
+<text class="sub" x="24" y="52">Every flow from this port stops, the critical one too, for up to 3.3 ms per PAUSE frame at 10 Gb/s.</text>
+<clipPath id="ca"><rect x="146" y="60" width="500" height="70"/></clipPath>
+<rect class="box" x="24" y="62" width="112" height="64" rx="6"/><text class="mid" x="80" y="90">host</text><text class="mid" x="80" y="106">transmits</text>
+<rect class="mut" x="650" y="62" width="86" height="64" rx="6"/><text class="mid" x="693" y="90">switch</text><text class="mid" x="693" y="106">congested</text>
+<line class="wire" x1="136" y1="78" x2="650" y2="78"/>
+<line class="wire" x1="136" y1="110" x2="650" y2="110"/>
+<g clip-path="url(#ca)"><g class="hold"><rect class="tc" x="-90" y="71" width="22" height="14" rx="3"/><rect class="tc" x="-50" y="71" width="22" height="14" rx="3"/><rect class="tc" x="-10" y="71" width="22" height="14" rx="3"/><rect class="tc" x="30" y="71" width="22" height="14" rx="3"/><rect class="tc" x="70" y="71" width="22" height="14" rx="3"/><rect class="tc" x="110" y="71" width="22" height="14" rx="3"/><rect class="tc" x="150" y="71" width="22" height="14" rx="3"/><rect class="tc" x="190" y="71" width="22" height="14" rx="3"/><rect class="tc" x="230" y="71" width="22" height="14" rx="3"/><rect class="tc" x="270" y="71" width="22" height="14" rx="3"/><rect class="tc" x="310" y="71" width="22" height="14" rx="3"/><rect class="tc" x="350" y="71" width="22" height="14" rx="3"/><rect class="tc" x="390" y="71" width="22" height="14" rx="3"/><rect class="tc" x="430" y="71" width="22" height="14" rx="3"/><rect class="tc" x="470" y="71" width="22" height="14" rx="3"/><rect class="tc" x="510" y="71" width="22" height="14" rx="3"/><rect class="tc" x="550" y="71" width="22" height="14" rx="3"/><rect class="tc" x="590" y="71" width="22" height="14" rx="3"/><rect class="tc" x="630" y="71" width="22" height="14" rx="3"/></g></g>
+<g clip-path="url(#ca)"><g class="hold"><rect class="tb" x="-90" y="103" width="22" height="14" rx="3"/><rect class="tb" x="-50" y="103" width="22" height="14" rx="3"/><rect class="tb" x="-10" y="103" width="22" height="14" rx="3"/><rect class="tb" x="30" y="103" width="22" height="14" rx="3"/><rect class="tb" x="70" y="103" width="22" height="14" rx="3"/><rect class="tb" x="110" y="103" width="22" height="14" rx="3"/><rect class="tb" x="150" y="103" width="22" height="14" rx="3"/><rect class="tb" x="190" y="103" width="22" height="14" rx="3"/><rect class="tb" x="230" y="103" width="22" height="14" rx="3"/><rect class="tb" x="270" y="103" width="22" height="14" rx="3"/><rect class="tb" x="310" y="103" width="22" height="14" rx="3"/><rect class="tb" x="350" y="103" width="22" height="14" rx="3"/><rect class="tb" x="390" y="103" width="22" height="14" rx="3"/><rect class="tb" x="430" y="103" width="22" height="14" rx="3"/><rect class="tb" x="470" y="103" width="22" height="14" rx="3"/><rect class="tb" x="510" y="103" width="22" height="14" rx="3"/><rect class="tb" x="550" y="103" width="22" height="14" rx="3"/><rect class="tb" x="590" y="103" width="22" height="14" rx="3"/><rect class="tb" x="630" y="103" width="22" height="14" rx="3"/></g></g>
+<text class="axis" x="150" y="144">green: critical flow · blue: bulk flow</text>
+<g class="back"><rect class="pz" x="604" y="64" width="46" height="18" rx="4"/><text class="warn" x="627" y="77" text-anchor="middle">PAUSE</text></g>
+<text class="warn" x="420" y="156" text-anchor="middle">every flow waits, the critical one too</text>
+<rect class="lane" x="10" y="170" width="740" height="150" rx="6"/>
+<text class="cap" x="24" y="194">Flow control off: the switch drops a packet instead</text>
+<text class="sub" x="24" y="212">Here a bulk packet is lost and TCP sends it again. Which flow loses one depends on the switch.</text>
+<clipPath id="cb"><rect x="146" y="220" width="500" height="70"/></clipPath>
+<rect class="box" x="24" y="222" width="112" height="64" rx="6"/><text class="mid" x="80" y="250">host</text><text class="mid" x="80" y="266">transmits</text>
+<rect class="mut" x="650" y="222" width="86" height="64" rx="6"/><text class="mid" x="693" y="250">switch</text><text class="mid" x="693" y="266">congested</text>
+<line class="wire" x1="136" y1="238" x2="650" y2="238"/>
+<line class="wire" x1="136" y1="270" x2="650" y2="270"/>
+<g clip-path="url(#cb)"><g class="run"><rect class="tc" x="-90" y="231" width="22" height="14" rx="3"/><rect class="tc" x="-50" y="231" width="22" height="14" rx="3"/><rect class="tc" x="-10" y="231" width="22" height="14" rx="3"/><rect class="tc" x="30" y="231" width="22" height="14" rx="3"/><rect class="tc" x="70" y="231" width="22" height="14" rx="3"/><rect class="tc" x="110" y="231" width="22" height="14" rx="3"/><rect class="tc" x="150" y="231" width="22" height="14" rx="3"/><rect class="tc" x="190" y="231" width="22" height="14" rx="3"/><rect class="tc" x="230" y="231" width="22" height="14" rx="3"/><rect class="tc" x="270" y="231" width="22" height="14" rx="3"/><rect class="tc" x="310" y="231" width="22" height="14" rx="3"/><rect class="tc" x="350" y="231" width="22" height="14" rx="3"/><rect class="tc" x="390" y="231" width="22" height="14" rx="3"/><rect class="tc" x="430" y="231" width="22" height="14" rx="3"/><rect class="tc" x="470" y="231" width="22" height="14" rx="3"/><rect class="tc" x="510" y="231" width="22" height="14" rx="3"/><rect class="tc" x="550" y="231" width="22" height="14" rx="3"/><rect class="tc" x="590" y="231" width="22" height="14" rx="3"/><rect class="tc" x="630" y="231" width="22" height="14" rx="3"/></g></g>
+<g clip-path="url(#cb)"><g class="run"><rect class="tb" x="-90" y="263" width="22" height="14" rx="3"/><rect class="tb" x="-50" y="263" width="22" height="14" rx="3"/><rect class="tb" x="-10" y="263" width="22" height="14" rx="3"/><rect class="tb" x="30" y="263" width="22" height="14" rx="3"/><rect class="tb" x="70" y="263" width="22" height="14" rx="3"/><rect class="tb" x="110" y="263" width="22" height="14" rx="3"/><rect class="tb" x="150" y="263" width="22" height="14" rx="3"/><rect class="tb" x="190" y="263" width="22" height="14" rx="3"/><rect class="tb" x="230" y="263" width="22" height="14" rx="3"/><rect class="tb" x="270" y="263" width="22" height="14" rx="3"/><rect class="tb" x="310" y="263" width="22" height="14" rx="3"/><rect class="tb" x="350" y="263" width="22" height="14" rx="3"/><rect class="tb" x="390" y="263" width="22" height="14" rx="3"/><rect class="tb" x="430" y="263" width="22" height="14" rx="3"/><rect class="tb" x="470" y="263" width="22" height="14" rx="3"/><rect class="tb" x="510" y="263" width="22" height="14" rx="3"/><rect class="tb" x="550" y="263" width="22" height="14" rx="3"/><rect class="tb" x="590" y="263" width="22" height="14" rx="3"/><rect class="tb" x="630" y="263" width="22" height="14" rx="3"/></g></g>
+<text class="axis" x="150" y="304">green: critical flow · blue: bulk flow</text>
+<text class="x drop" x="642" y="277">✕</text>
+<text class="warn" x="636" y="316" text-anchor="end">illustrative: here a bulk packet is dropped</text>
+
+</svg>

@@ -7,7 +7,7 @@
 | **Risk level** | **3 / 5**. A wrong BIOS setting rarely breaks the host, but it changes every CPU at once. Some settings (SNC/NPS, memory mode) change the NUMA layout that `lowlat.conf` describes. |
 | **Reboot required** | Yes, for every BIOS change. The script's PCIe ASPM policy applies immediately. |
 | **Applies to** | Bare metal only. In a VM the firmware belongs to the hypervisor owner (§10). |
-| **Time** | 30–60 min per server model the first time (the setup menu plus one reboot). Then minutes per host with a saved profile. |
+| **Depends on** | Nothing: it comes first. Take a baseline with [Guide 09](09-measuring-latency.md) before you change anything. |
 
 ## At a glance
 
@@ -15,7 +15,7 @@
 - **Why:** everything in Guides 01–08 runs on top of the firmware. A deep package C-state, a turbo transition or an SMI costs tens to hundreds of µs, and no kernel setting can remove it.
 - **Cost:** more power and heat, fewer logical CPUs (Hyper-Threading off), and some corrected-error reporting moved to the BMC.
 
-**Time:** ~30–60 min per server model + 1 reboot · **Do this if:** bare metal, before Guide 01 · **Skip if:** it's a VM. Ask the hypervisor owner for the equivalent (§10).
+**Time:** ~30–60 min per server model + 1 reboot, then minutes per host with a saved profile · **Do this if:** bare metal, before Guide 01 · **Skip if:** it's a VM. Ask the hypervisor owner for the equivalent (§10).
 
 ```mermaid
 flowchart LR
@@ -40,6 +40,8 @@ The firmware (UEFI/BIOS, plus the BMC that manages it) decides several things be
 - which events the firmware handles itself, through **System Management Interrupts (SMIs)**.
 
 SMIs are the worst kind of noise. An SMI stops **every** CPU and runs firmware code in System Management Mode, invisible to the OS. `rtla osnoise` sees only a gap it cannot attribute, and `/proc/interrupts` shows nothing. Only the SMI counter (`turbostat`) and the hwlat tracer reveal them.
+
+> **Picture it.** An SMI is a fire drill in an office: everyone stops at the same moment, nobody writes it down, and the clock on the wall keeps running. Afterward, every task simply took longer.
 
 <img src="../assets/diagrams/smi-freeze.svg" alt="Animation: an SMI stops four isolated CPUs at the same instant; /proc/interrupts shows nothing, rtla osnoise shows an unattributed gap, and only the turbostat SMI counter goes from N to N plus 1" width="720">
 
@@ -78,6 +80,12 @@ Menu names differ between vendors and generations. The table describes each sett
 | Uncore frequency | "Uncore Frequency Scaling", "Uncore Frequency", "Mesh/LLC frequency" | **Maximum** (fixed) | The uncore runs the L3 cache and the memory path. When it scales down, every L3 hit and memory access gets slower. |
 | Turbo | "Turbo Boost", "Core Performance Boost", "Turbo Mode" | **Measure both** (§4.3) | Turbo raises the frequency, but it varies with temperature and with how many cores are busy. |
 
+<img src="../assets/diagrams/cstate-depth.svg" alt="Animation: short gaps wake a CPU from C1 quickly, a quiet spell ends in a long C6 exit, and idle=poll handles every message at once" width="720">
+
+*The longer a CPU sits idle, the deeper it sleeps, and the longer the first message after the quiet spell waits for it to wake up.*
+
+> **Picture it.** A C-state is how far the CPU walked away from its desk. In C1 it is at the next desk; in C6 it went down to the car park. `idle=poll` keeps it in the chair.
+
 ### 4.2 Who controls the idle states
 
 There are two ways to keep the CPUs out of deep sleep:
@@ -100,11 +108,19 @@ Do both on dedicated hosts. The BIOS setting is the backstop if a kernel argumen
 
 Many latency-critical hosts run with turbo **off**, or with the frequency capped at a level every core can hold. Measure p99.9 both ways, under your real load, before choosing.
 
+<img src="../assets/diagrams/turbo-frequency.svg" alt="Animation: a turbo clock steps down as the chip warms up, while a fixed clock stays flat" width="720">
+
+*Turbo gives the fastest clock while the chip is cool, and then follows its temperature down. A fixed clock is slower, and the same all day.*
+
 ### 4.4 Hyper-Threading
 
 | Setting | Common names | Recommended | Why |
 |---|---|---|---|
 | Logical processors | "Hyper-Threading", "Logical Processor", "SMT Control" | **Disabled** | Two threads on one core share L1/L2, the TLBs and the execution ports. A busy sibling slows your thread, and with `idle=poll` the sibling is always busy. |
+
+<img src="../assets/diagrams/smt-sibling.svg" alt="Animation: a thread slows down while its Hyper-Threading sibling runs a batch, and stays steady with the sibling idle" width="720">
+
+*Two logical CPUs of one core share its caches and execution units. When the sibling works, your thread runs slower.*
 
 If Hyper-Threading must stay on, isolate **both** siblings of each critical core and leave one of them idle ([Guide 02 §3](02-cpu-core-isolation.md#3-designing-the-cpu-layout)).
 
@@ -116,6 +132,10 @@ If Hyper-Threading must stay on, isolate **both** siblings of each critical core
 | Sub-NUMA clustering | "SNC", "Sub-NUMA Clustering", "NPS" (AMD: NUMA nodes per socket), "Cluster on Die" | **Off** (one node per socket) unless you measured a gain | SNC halves the distance to local memory, but it doubles the number of nodes to plan for, and a thread on the wrong half pays more. |
 | Memory speed | "Memory Frequency", "Memory Operating Mode" | **Maximum performance**, not "power saving" or "balanced" | Lower speed means higher latency on every miss. |
 | Patrol scrub | "Memory Patrol Scrub" | Vendor default, or a slower scrub rate | Scrubbing prevents uncorrectable errors. Do not disable it on production hosts. |
+
+<img src="../assets/diagrams/topology-two-socket.svg" alt="A two-socket server with two L3 cache domains per socket, memory per socket and the critical NIC on socket 1; arcs from the net.rx thread on CPU 3 show about 20–40 ns to a core in the same L3 domain, 60–120 ns to the other domain, 130–200 ns to the other socket" width="720">
+
+*Distance is latency. These settings decide how the firmware presents this layout to Linux: with interleaving, every other cache line comes from the far socket.*
 
 > [!IMPORTANT]
 > Changing NUMA interleaving or SNC/NPS changes the node numbers and the CPU-to-node map. Update `ISOLATED_CPUS`, `OS_CPUS`, `HUGEPAGES_PER_NODE` and `NICS` in `lowlat.conf` afterward.
@@ -249,7 +269,7 @@ flowchart TD
 | Twice as many NUMA nodes as sockets | SNC/NPS on | §4.5: turn it off, or plan the layout per sub-node |
 | `energy_perf_bias` is not 0 | BIOS EPB, or tuned not active | §4.1, and [Guide 07 §5](07-os-hygiene.md#5-tuned-profile) |
 | `scaling_driver` is `intel_pstate` with HWP | BIOS hardware P-states in native mode, or `intel_pstate=disable` missing | §4.1, [Guide 01 §5.3](01-grub-bootloader-tuning.md#53-frequency-and-power) |
-| ASPM policy write fails | Firmware keeps ASPM control (no `_OSC` grant) | Disable ASPM in the BIOS (§4.7), or boot with `pcie_aspm=off` |
+| ASPM policy write fails | Firmware keeps ASPM control: its `_OSC` method did not hand PCIe power management to the OS | Disable ASPM in the BIOS (§4.7), or boot with `pcie_aspm=off` |
 | CPUs throttle under load | Cooling profile or power capping | §4.8, and power capping in §4.6 |
 
 ## 9. Rollback

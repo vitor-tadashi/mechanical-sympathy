@@ -111,7 +111,7 @@ Illustrative:
 ## 6. Roll back
 
 - [ ] Whole host: `sudo systemctl disable lowlat-runtime.service`, `sudo systemctl enable --now irqbalance`, reboot
-- [ ] One interface: the checklist in [Guide 04 §12](../../guides/04-network-optimization.md#12-rollback), including `ethtool -N ens1f0 delete <rule id>` for every ntuple rule
+- [ ] One interface: the checklist in [Guide 04 §11](../../guides/04-network-optimization.md#11-rollback), including `ethtool -N ens1f0 delete <rule id>` for every ntuple rule
 
 ## 7. Key takeaways
 

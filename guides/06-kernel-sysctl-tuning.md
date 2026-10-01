@@ -29,17 +29,17 @@ flowchart LR
 ```mermaid
 flowchart TD
   f[["90-lowlat.conf"]] --> g1["§2 logging<br/>printk,<br/>numa_balancing"]
-  f --> g2["§3 TCP<br/>SYN retries,<br/>keepalive"]
+  f --> g2["§3 TCP<br/>SYN retries,<br/>keepalive<br/>(risky value)"]
   f --> g3["§4 buffers<br/>rmem_max,<br/>tcp_rmem"]
   f --> g4["§5 queues<br/>backlog,<br/>qdisc"]
-  f --> g5["§6 endpoint<br/>forwarding,<br/>IPv6, ARP"]
+  f --> g5["§6 endpoint<br/>forwarding,<br/>IPv6, ARP<br/>(risky value)"]
   f --> g6["§7 BPF<br/>JIT"]
-  f --> g7["§8 memory<br/>dirty, min_free,<br/>stat_interval"]
+  f --> g7["§8 memory<br/>dirty, min_free,<br/>stat_interval<br/>(risky value)"]
   classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
   class g2,g5,g7 risk
 ```
 
-*The profile has seven groups, one section each. The three groups marked in red hold the riskiest values: §3 (SYN retries), §6 (IPv6) and §8 (`min_free_kbytes`).*
+*The profile has seven groups, one section each. The three groups marked "risky value" hold the values to check against your host: §3 (SYN retries), §6 (IPv6) and §8 (`min_free_kbytes`).*
 
 ---
 
@@ -69,6 +69,12 @@ flowchart LR
 | `kernel.ftrace_enabled` | `0` | Disables the function tracer's patching hooks. Re-enable temporarily (`sysctl -w kernel.ftrace_enabled=1`) when you need `trace-cmd`/`perf ftrace`. |
 | `kernel.numa_balancing` | `0` | Automatic NUMA balancing periodically **unmaps pages to sample accesses** (hint faults) and migrates them between nodes. On a host where placement is decided on purpose (pinned threads, per-node huge pages), it only adds faults and TLB shootdowns. Also set by the tuned `network-latency` profile. |
 
+<img src="../assets/diagrams/printk-console.svg" alt="Animation: a CPU is held by a console write while packets wait, and the same message is logged in microseconds with the console level at 1" width="720">
+
+*With a low console level, a kernel warning goes only to the log buffer, in microseconds. Without it, the CPU that printed it waits for every character to cross a slow console.*
+
+> **Picture it.** Printing to a serial console is reading a message aloud over a bad phone line: the CPU cannot hang up until the last character is through. Writing to the log buffer is dropping a note in a box.
+
 ## 3. TCP behavior
 
 | Key | Value | What it does, and why |
@@ -76,18 +82,22 @@ flowchart LR
 | `net.ipv4.tcp_timestamps` | `1` | RFC 7323 timestamps. They improve RTT estimation, protect against wrapped sequence numbers (PAWS), and are **required** by `tcp_tw_reuse`. Some scripts claim to *disable* timestamps here while setting `1`. `1` is correct. |
 | `net.ipv4.tcp_sack` | `1` | Selective ACKs let the sender retransmit only the missing segments, recovering several losses in one RTT. |
 | `net.ipv4.tcp_window_scaling` | `1` | Windows above 64 KiB. Needed for the socket buffer sizes in §4. |
-| `net.ipv4.tcp_slow_start_after_idle` | `0` | By default, after an idle period of one RTO, TCP resets the congestion window to its initial value. For a long-lived connection that is quiet for a few seconds, the next burst would then be throttled. `0` keeps the window. |
+| `net.ipv4.tcp_slow_start_after_idle` | `0` | By default, after an idle period of one retransmit timeout (RTO), TCP resets the congestion window to its initial value. For a long-lived connection that is quiet for a few seconds, the next burst would then be throttled. `0` keeps the window. |
 | `net.ipv4.tcp_fastopen` | `3` | TCP Fast Open for client (1) and server (2). On a reconnect, the first data travels in the SYN packet, which saves one round trip (RTT). Only helps if both ends support it. |
 | `net.ipv4.tcp_fin_timeout` | `5` | How long an **orphaned** socket stays in `FIN_WAIT_2` (default 60 s). It does **not** shorten `TIME_WAIT`, whatever many blog posts say. That is fixed at 60 s. |
 | `net.ipv4.tcp_tw_reuse` | `1` | Lets **new outgoing** connections reuse a `TIME_WAIT` socket's port when timestamps prove it is safe. Useful for gateways that reconnect often. It does not affect incoming connections. |
 | `net.ipv4.tcp_max_tw_buckets` | `262144` | Upper bound on `TIME_WAIT` sockets before the kernel destroys them early and logs a warning. |
 | `net.ipv4.tcp_max_orphans` | `32768` | Sockets not attached to any process (closed but not finished) allowed before the kernel resets them. |
-| `net.ipv4.tcp_syn_retries` | `1` | ⚠️ A `connect()` gives up after the initial SYN plus **one** retry (~3 s) instead of 6 retries (~127 s). For a latency-critical client, fast failure means fast failover to a backup peer or path. **Risk:** on a lossy path, a single lost SYN plus a lost retry fails the connection. Applications must retry `connect()` themselves. |
+| `net.ipv4.tcp_syn_retries` | `1` | **Risky.** A `connect()` gives up after the initial SYN plus **one** retry (~3 s) instead of 6 retries (~127 s). For a latency-critical client, fast failure means fast failover to a backup peer or path. **Risk:** on a lossy path, a single lost SYN plus a lost retry fails the connection. Applications must retry `connect()` themselves. |
 | `net.ipv4.tcp_syncookies` | `1` | Keep SYN-flood protection. Cookies are only used when the SYN queue overflows. |
 | `net.ipv4.tcp_abort_on_overflow` | `0` | When the accept queue is full, drop the final ACK instead of sending a RST, so the client's retransmission can succeed a moment later. |
 | `net.core.somaxconn` / `net.ipv4.tcp_max_syn_backlog` | `2048` | Accept queue and half-open queue limits. `listen(fd, backlog)` is capped by `somaxconn`. |
 | `net.ipv4.tcp_keepalive_time` / `_intvl` / `_probes` | `120` / `15` / `5` | Detect a dead peer after about 2 min + 5 × 15 s instead of 2 h 11 min. Applies only to sockets with `SO_KEEPALIVE`. Session protocols normally have their own heartbeats, which are faster and should be preferred. |
 | `net.ipv4.tcp_moderate_rcvbuf` | `1` | Receive buffer auto-tuning between the `tcp_rmem` min and max. |
+
+<img src="../assets/diagrams/syn-retries.svg" alt="Animation: connect() to a peer that does not answer; by default the SYN is sent again after 1, 2, 4, 8, 16, 32 and 64 s and connect() gives up after about 127 s; with tcp_syn_retries=1 it fails after 3 s" width="720">
+
+*By default, a connection to a dead peer hangs for about two minutes while the waits double. With one retry, it fails in 3 seconds and the application can try another peer.*
 | `net.ipv4.tcp_no_metrics_save` | `0` | Keep per-destination metrics (RTT, ssthresh) in the route cache, so a reconnect to the same peer starts with good estimates. |
 
 ## 4. Socket buffers
@@ -124,7 +134,7 @@ flowchart LR
 | Key | Value | Why |
 |---|---|---|
 | `net.ipv4.ip_forward`, `net.ipv6.conf.all.forwarding` | `0` | The host is an endpoint. Forwarding enabled by accident turns it into a router between segments that are meant to be separate ([Guide 04 §3](04-network-optimization.md#3-network-segmentation-give-each-traffic-class-its-own-nic)). |
-| `net.ipv6.conf.{all,default,lo,<each NIC>}.disable_ipv6` | `1` | ⚠️ IPv4-only host. It removes router advertisements, neighbor discovery, MLD reports, and their timers. **Do not apply if anything on the host uses IPv6** (including `::1` for local services). The Java property `-Djava.net.preferIPv4Stack=true` is still recommended. |
+| `net.ipv6.conf.{all,default,lo,<each NIC>}.disable_ipv6` | `1` | **Risky.** IPv4-only host. It removes router advertisements, neighbor discovery, multicast listener (MLD) reports, and their timers. **Do not apply if anything on the host uses IPv6** (including `::1` for local services). The Java property `-Djava.net.preferIPv4Stack=true` is still recommended. |
 | `net.ipv4.conf.{lo,<each NIC>}.arp_ignore` | `1` | Multi-homed host: answer ARP only for addresses configured **on the interface that received the request**. Without it, the host can answer ARP for its critical IP via the management NIC, and traffic flows over the wrong network. |
 | `arp_announce` / `arp_filter` / `arp_accept` | `0` | Kernel defaults, written explicitly so the file documents the complete ARP policy. For hosts with several NICs **in the same subnet**, consider `arp_announce=2` and `arp_filter=1`. |
 
@@ -146,6 +156,10 @@ The per-interface keys are generated from `NICS` in `lowlat.conf`, so no interfa
 | `vm.min_free_kbytes` | `1048576` (1 GiB) | Raises the free-memory watermarks. `kswapd` starts reclaiming earlier, in the background, so allocations rarely fall into **direct reclaim** (reclaim done inline by the allocating thread, costing ms). **Scale it to the host**, about 1–2 % of RAM: 1 GiB fits the reference host (two 32 GiB nodes) and anything larger. On a 16 GiB VM, use 128–256 MiB, or you waste memory and risk OOM. |
 | `vm.stat_interval` | `60` | Per-CPU VM counters are folded into global counters every `stat_interval` seconds by a per-CPU `kworker`. Going from 1 s to 60 s means 60× fewer wake-ups. With `nohz_full`, isolated CPUs are already mostly exempt, and this also quiets the housekeeping CPUs. Cost: `/proc/meminfo` counters can be up to a minute stale. |
 | `fs.file-max` | `13076444` | System-wide file handle limit. Per-process limits are in [Guide 07](07-os-hygiene.md#3-resource-limits). |
+
+<img src="../assets/diagrams/direct-reclaim.svg" alt="Animation: free memory falls below the min watermark and a thread stalls in direct reclaim, while higher watermarks let kswapd reclaim early in the background" width="720">
+
+*When free memory falls below the min watermark, the thread that asks for memory must reclaim it itself, for milliseconds. A higher `min_free_kbytes` wakes `kswapd` earlier, so it happens far less often on the hot path. A fast enough allocation burst can still outrun `kswapd`: watch `allocstall_*` in `/proc/vmstat` (§11).*
 
 [Concept: memory reclaim and faults](../concepts/memory-reclaim.md) explains the watermarks, `kswapd`, direct reclaim and dirty throttling behind these keys.
 
@@ -220,7 +234,16 @@ flowchart TD
 - [ ] Reboot to get the defaults back: `sudo systemctl reboot`. Or reload the remaining files with `sudo sysctl --system`, which does not reset keys that no file sets.
 - [ ] Confirm: `sysctl vm.stat_interval` shows `1`
 
-## 13. Key takeaways
+## 13. Bare metal vs VM
+
+| | Bare metal | VM |
+|---|---|---|
+| Logging, TCP, buffers, queues, endpoint, BPF | ✅ | ✅ The same file |
+| `kernel.nmi_watchdog=0` | ✅ | ✅ Applied at runtime, although Guide 01 leaves the boot argument out in a VM |
+| `vm.min_free_kbytes` | ✅ 1 GiB on the reference host | Scale it down: 128–256 MiB on a 16 GiB VM (§8) |
+| `kernel.numa_balancing=0` | ✅ | ✅ Harmless on a single-node VM |
+
+## 14. Key takeaways
 
 - One file in `/etc/sysctl.d/`, a reason above every key, and nothing in `/etc/sysctl.conf`.
 - The last writer wins: `systemd-sysctl`, then tuned (which re-applies `sysctl.d`), then udev for per-interface keys.
@@ -228,7 +251,7 @@ flowchart TD
 - `tcp_syn_retries=1`, IPv6 off and `min_free_kbytes` are host-specific. Check each one before applying.
 - `vm.stat_interval=60` and `kernel.numa_balancing=0` remove periodic wake-ups and hint faults.
 
-## 14. References
+## 15. References
 
 - <https://docs.kernel.org/admin-guide/sysctl/net.html>, <https://docs.kernel.org/networking/ip-sysctl.html>, <https://docs.kernel.org/admin-guide/sysctl/vm.html>
 - `man 5 sysctl.d`, `man 8 systemd-sysctl`

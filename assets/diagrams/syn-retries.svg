@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 326" width="760" height="326" role="img" aria-labelledby="t d">
+<title id="t">A SYN to a dead peer: about two minutes by default, 3 s with tcp_syn_retries=1</title>
+<desc id="d">Two timelines of connect() to a peer that does not answer. By default the kernel sends the SYN again after 1, 2, 4, 8, 16, 32 and 64 seconds, and connect() gives up after about 127 seconds. With tcp_syn_retries=1 there is one retry, and connect() fails after 3 seconds, so the application can try another peer.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .mid { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .wire { stroke: #57606a; stroke-width: 2; }
+  .syn { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .end { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 2; }
+  .tag { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1f4e8c; text-anchor: middle; }
+  .warn { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; }
+  .ok { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; }
+  .waitbar { fill: #ffc9c9; opacity: 0.55; }
+  .ev { transform-box: fill-box; transform-origin: center; animation: pop 8s linear infinite; }
+  @keyframes pop { 0%, 3% { transform: scale(1.5); } 7%, 100% { transform: scale(1); } }
+  .head { transform: translateX(570px); animation: sweep 8s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ev, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="326" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="140" rx="6"/>
+<text class="cap" x="24" y="34">Default: tcp_syn_retries=6</text>
+<text class="sub" x="24" y="52">The SYN is sent again after 1, 2, 4, 8, 16, 32 and 64 s. Each wait doubles.</text>
+<text class="lbl" x="24" y="98">connect()</text>
+<rect class="waitbar" x="150" y="84" width="556.8" height="20" rx="3"/>
+<line class="wire" x1="150" y1="94" x2="720" y2="94"/>
+<circle class="syn ev" cx="150.0" cy="94" r="6" style="animation-delay:-8.0s"/>
+<circle class="syn ev" cx="154.4" cy="94" r="6" style="animation-delay:-7.94s"/>
+<circle class="syn ev" cx="163.2" cy="94" r="6" style="animation-delay:-7.82s"/>
+<circle class="syn ev" cx="180.7" cy="94" r="6" style="animation-delay:-7.57s"/>
+<circle class="syn ev" cx="215.8" cy="94" r="6" style="animation-delay:-7.08s"/>
+<circle class="syn ev" cx="285.9" cy="94" r="6" style="animation-delay:-6.09s"/>
+<circle class="syn ev" cx="426.2" cy="94" r="6" style="animation-delay:-4.12s"/>
+<text class="tag" x="150.0" y="78">0 s</text>
+<text class="tag" x="180.7" y="78">7 s</text>
+<text class="tag" x="215.8" y="78">15 s</text>
+<text class="tag" x="285.9" y="78">31 s</text>
+<text class="tag" x="426.2" y="78">63 s</text>
+<rect class="end ev" x="700.8" y="82" width="12" height="24" rx="2" style="animation-delay:-0.18s"/>
+<text class="warn" x="420.0" y="128">connect() gives up after about 127 s: the thread hangs</text>
+<rect class="lane" x="10" y="160" width="740" height="140" rx="6"/>
+<text class="cap" x="24" y="184">Guide 06: tcp_syn_retries=1</text>
+<text class="sub" x="24" y="202">One retry. A peer that does not answer fails in 3 s.</text>
+<text class="lbl" x="24" y="248">connect()</text>
+<rect class="waitbar" x="150" y="234" width="13.2" height="20" rx="3"/>
+<line class="wire" x1="150" y1="244" x2="720" y2="244"/>
+<circle class="syn ev" cx="150.0" cy="244" r="6" style="animation-delay:-8.0s"/>
+<circle class="syn ev" cx="154.4" cy="244" r="6" style="animation-delay:-7.94s"/>
+<text class="tag" x="150.0" y="228">0 s</text>
+<rect class="end ev" x="157.2" y="232" width="12" height="24" rx="2" style="animation-delay:-7.82s"/>
+<text class="ok" x="175.2" y="278">fails after 3 s: the application can try another peer at once</text>
+<text class="axis" x="150" y="316">0 s</text><text class="axis" x="720" y="316" text-anchor="end">130 s</text>
+<line class="head" x1="150" y1="60" x2="150" y2="300"/>
+</svg>

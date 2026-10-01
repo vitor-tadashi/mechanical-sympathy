@@ -215,7 +215,7 @@ Structure, as in [`tick-nohz.svg`](assets/diagrams/tick-nohz.svg): a `viewBox` 7
 
 Text is 11px or larger. 10px is the floor, for a label inside a narrow bar, and `tools/lint-docs` rejects anything smaller. A pulse brightens its own color: `#ff3b3b` for a red event, `#3d7fd9` for a blue one.
 
-**One signature animation per guide.** Each guide shows, near its At a glance, the one animation that makes its point: the tick for Guide 01, the interrupt for Guide 04, the fenced agent for Guide 05. A reader who only watches the pictures should still learn what each guide removes.
+**One signature animation per guide.** Each guide shows, in its first sections, the one animation that makes its point: the boot arguments for Guide 01, the PAUSE frame or the interrupt for Guide 04, the fenced agent for Guide 05. A reader who only watches the pictures should still learn what each guide removes.
 
 Embed it with an `<img>` that has an `alt` text, followed by the same one-sentence summary as a Mermaid diagram:
 

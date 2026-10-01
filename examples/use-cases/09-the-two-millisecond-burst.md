@@ -121,7 +121,7 @@ The last row is the honest cost. The burst is not lost, but its tail waits: the 
 
 ## 6. Roll back
 
-- [ ] Rings: the checklist in [Guide 04 §12](../../guides/04-network-optimization.md#12-rollback), or `sudo ethtool -G ens1f0 rx 512 tx 512` for one interface (this resets the link)
+- [ ] Rings: the checklist in [Guide 04 §11](../../guides/04-network-optimization.md#11-rollback), or `sudo ethtool -G ens1f0 rx 512 tx 512` for one interface (this resets the link)
 - [ ] Sysctls: `sudo scripts/06-kernel-sysctl --rollback`
 - [ ] Whole host: `sudo systemctl disable lowlat-runtime.service` and reboot
 
