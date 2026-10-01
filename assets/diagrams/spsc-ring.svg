@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 310" width="760" height="310" role="img" aria-labelledby="t d">
+<title id="t">Head and tail on one cache line make every write wait; padding removes the wait</title>
+<desc id="d">Two timelines of a producer on CPU 3 and a consumer on CPU 5 that share a ring. When the producer's index and the consumer's index sit on the same 64-byte cache line, every write must first pull the line back from the other core, so each thread waits on almost every message. When each index has its own padded line, each thread usually writes a line it still owns. The other core only reads it, about once per batch, so waits become rare and the pair handles several times more messages in the same time.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .row { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.2; }
+  .w { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.2; }
+  .ev { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.2; transform-box: fill-box; transform-origin: center; animation: pulse 6s linear infinite; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @keyframes pulse {
+    0%, 4%   { transform: scaleY(1.4); }
+    8%, 100% { transform: scaleY(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ev, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="310" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="140" rx="6"/>
+<text class="cap" x="24" y="34">False sharing: head and tail on one 64-byte line</text>
+<text class="sub" x="24" y="52">Each write first pulls the line back from the other core (red). Four messages each.</text>
+<text class="lbl" x="24" y="81">producer, CPU 3</text>
+<text class="lbl" x="24" y="117">consumer, CPU 5</text>
+<rect class="row" x="150" y="68" width="570" height="20" rx="3"/>
+<rect class="row" x="150" y="104" width="570" height="20" rx="3"/>
+<rect class="wait" x="170" y="68" width="30" height="20" rx="2"/><rect class="ev" x="200" y="66" width="8" height="24" rx="1" style="animation-delay:-5.47s"/>
+<rect class="wait" x="290" y="68" width="30" height="20" rx="2"/><rect class="ev" x="320" y="66" width="8" height="24" rx="1" style="animation-delay:-4.21s"/>
+<rect class="wait" x="410" y="68" width="30" height="20" rx="2"/><rect class="ev" x="440" y="66" width="8" height="24" rx="1" style="animation-delay:-2.95s"/>
+<rect class="wait" x="530" y="68" width="30" height="20" rx="2"/><rect class="ev" x="560" y="66" width="8" height="24" rx="1" style="animation-delay:-1.68s"/>
+<rect class="wait" x="230" y="104" width="30" height="20" rx="2"/><rect class="ev" x="260" y="102" width="8" height="24" rx="1" style="animation-delay:-4.84s"/>
+<rect class="wait" x="350" y="104" width="30" height="20" rx="2"/><rect class="ev" x="380" y="102" width="8" height="24" rx="1" style="animation-delay:-3.58s"/>
+<rect class="wait" x="470" y="104" width="30" height="20" rx="2"/><rect class="ev" x="500" y="102" width="8" height="24" rx="1" style="animation-delay:-2.32s"/>
+<rect class="wait" x="590" y="104" width="30" height="20" rx="2"/><rect class="ev" x="620" y="102" width="8" height="24" rx="1" style="animation-delay:-1.05s"/>
+<text class="axis" x="150" y="141">red: waiting ~40–100 ns for the line; blue: the write itself</text>
+<rect class="lane" x="10" y="160" width="740" height="140" rx="6"/>
+<text class="cap" x="24" y="184">Padded: each index on its own line</text>
+<text class="sub" x="24" y="202">Each line has one writer. The reader pulls it about once per batch: waits become rare.</text>
+<text class="lbl" x="24" y="231">producer, CPU 3</text>
+<text class="lbl" x="24" y="267">consumer, CPU 5</text>
+<rect class="row" x="150" y="218" width="570" height="20" rx="3"/>
+<rect class="row" x="150" y="254" width="570" height="20" rx="3"/>
+<rect class="w" x="170" y="216" width="8" height="24" rx="1"/>
+<rect class="w" x="185" y="252" width="8" height="24" rx="1"/>
+<rect class="w" x="200" y="216" width="8" height="24" rx="1"/>
+<rect class="w" x="215" y="252" width="8" height="24" rx="1"/>
+<rect class="w" x="230" y="216" width="8" height="24" rx="1"/>
+<rect class="w" x="245" y="252" width="8" height="24" rx="1"/>
+<rect class="w" x="260" y="216" width="8" height="24" rx="1"/>
+<rect class="w" x="275" y="252" width="8" height="24" rx="1"/>
+<rect class="w" x="290" y="216" width="8" height="24" rx="1"/>
+<rect class="w" x="305" y="252" width="8" height="24" rx="1"/>
+<rect class="w" x="320" y="216" width="8" height="24" rx="1"/>
+<rect class="w" x="335" y="252" width="8" height="24" rx="1"/>
+<rect class="w" x="350" y="216" width="8" height="24" rx="1"/>
+<rect class="w" x="365" y="252" width="8" height="24" rx="1"/>
+<rect class="w" x="380" y="216" width="8" height="24" rx="1"/>
+<rect class="w" x="395" y="252" width="8" height="24" rx="1"/>
+<rect class="w" x="410" y="216" width="8" height="24" rx="1"/>
+<rect class="w" x="425" y="252" width="8" height="24" rx="1"/>
+<rect class="w" x="440" y="216" width="8" height="24" rx="1"/>
+<rect class="w" x="455" y="252" width="8" height="24" rx="1"/>
+<rect class="w" x="470" y="216" width="8" height="24" rx="1"/>
+<rect class="w" x="485" y="252" width="8" height="24" rx="1"/>
+<rect class="w" x="500" y="216" width="8" height="24" rx="1"/>
+<rect class="w" x="515" y="252" width="8" height="24" rx="1"/>
+<rect class="w" x="530" y="216" width="8" height="24" rx="1"/>
+<rect class="w" x="545" y="252" width="8" height="24" rx="1"/>
+<rect class="w" x="560" y="216" width="8" height="24" rx="1"/>
+<rect class="w" x="575" y="252" width="8" height="24" rx="1"/>
+<rect class="w" x="590" y="216" width="8" height="24" rx="1"/>
+<rect class="w" x="605" y="252" width="8" height="24" rx="1"/>
+<rect class="w" x="620" y="216" width="8" height="24" rx="1"/>
+<rect class="w" x="635" y="252" width="8" height="24" rx="1"/>
+<rect class="w" x="650" y="216" width="8" height="24" rx="1"/>
+<rect class="w" x="665" y="252" width="8" height="24" rx="1"/>
+<rect class="w" x="680" y="216" width="8" height="24" rx="1"/>
+<rect class="w" x="695" y="252" width="8" height="24" rx="1"/>
+<rect class="w" x="710" y="216" width="8" height="24" rx="1"/>
+<text class="axis" x="150" y="291">only the reader of a line pays a transfer, once per batch (illustrative widths)</text>
+<line class="head" x1="150" y1="62" x2="150" y2="280"/>
+</svg>

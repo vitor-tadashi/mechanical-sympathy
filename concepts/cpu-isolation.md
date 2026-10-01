@@ -92,7 +92,7 @@ Isolation gives a thread a CPU, and **how the thread uses memory** decides wheth
 
 - **Cache lines are 64 bytes**, and coherence works per line (MESI/MESIF). When two cores write to the same line, it bounces between their private caches, costing ~40–100 ns per transfer on the same socket and more across sockets.
 - **False sharing**: two independent variables, written by two threads, that happen to share a line. Typical examples are per-thread counters in an array, or the head and tail indices of a queue. Pad or align hot, independently written fields to 64 bytes (128 on CPUs with adjacent-line prefetch). In Java, `@jdk.internal.vm.annotation.Contended` or manual padding.
-- **Single-writer principle**: design data so each line has one writer. Single-producer/single-consumer (SPSC) ring buffers exist for this reason.
+- **Single-writer principle**: design data so each line has one writer. Single-producer/single-consumer (SPSC) ring buffers exist for this reason. [Concept: thread handoff](thread-handoff.md) builds one, line by line.
 - **NUMA**: memory is attached to a socket. A thread on node 1 reading node 0 memory pays the interconnect latency on every miss. Pin threads and their memory to the same node, the node where the NIC is attached.
 - **Prefetchers love sequential access**. Arrays of primitives beat pointer-chasing object graphs. Keep hot data compact.
 
