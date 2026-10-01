@@ -63,7 +63,7 @@ Do **not** apply when the application has hundreds of equally important threads 
 
 ## 3. Designing the CPU layout
 
-Write the layout down before touching the host. You will need it in `lowlat.conf`, in the application's affinity configuration, and when debugging.
+Write the layout down before touching the host. You will need it in `lowlat.conf`, in the application's affinity configuration, and when debugging. [Concept: hardware topology](../concepts/hardware-topology.md) explains each level (core, L3 domain, node, socket) and how to read it.
 
 ```bash
 lscpu -e=CPU,NODE,SOCKET,CORE          # topology
