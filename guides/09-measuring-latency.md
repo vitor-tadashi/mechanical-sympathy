@@ -88,6 +88,10 @@ Two ways to avoid it:
 
 The [Java probe](../examples/hugepages-java-example.md) is a closed-loop ping-pong on purpose. It measures one cache-line transfer at a time, so it shows host noise clearly. It is not a model of production traffic, so measure your application with open-loop load as well.
 
+### 3.4 The right clock
+
+Take both readings of a duration from `CLOCK_MONOTONIC` (`System.nanoTime()` in Java), never from the wall clock, which the time daemon can step. A latency between two hosts is only as accurate as the sync between their clocks. [Concept: clocks and time](../concepts/clocks-and-time.md#7-latency-across-two-hosts) gives the numbers.
+
 ### 3.4 Record the environment
 
 Two measurements are only comparable if everything except the one change is the same. Keep with every result: the kernel version, `/proc/cmdline`, the BIOS profile, the application build and configuration, the load (rate, message size, duration), the CPUs used, and the `verify-tuning` report. `09-measure-latency --run` writes most of this into the bundle for you.

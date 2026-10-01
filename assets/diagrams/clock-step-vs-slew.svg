@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" width="760" height="300" role="img" aria-labelledby="t d">
+<title id="t">A clock step makes a duration negative; a monotonic clock does not</title>
+<desc id="d">Two plots of clock reading against true time for one 220 microsecond request. On CLOCK_REALTIME the time daemon steps the clock back 2 milliseconds in the middle of the request, so end minus start is minus 1.78 milliseconds. On CLOCK_MONOTONIC the clock never jumps, and a slew only changes its rate slightly, so end minus start stays 220 microseconds.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .bad { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; }
+  .ok { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; }
+  .clk { fill: none; stroke: #1f4e8c; stroke-width: 2.5; }
+  .jump { stroke: #9b1c1c; stroke-width: 2; stroke-dasharray: 4 3; }
+  .stamp { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; transform-box: fill-box; transform-origin: center; animation: pop 6s linear infinite; }
+  .stepdot { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 2; transform-box: fill-box; transform-origin: center; animation: pop 6s linear infinite; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(570px); animation: sweep 6s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @keyframes pop {
+    0%, 4%   { transform: scale(1.6); }
+    8%, 100% { transform: scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .stamp, .stepdot, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="300" rx="8"/>
+
+<!-- Lane 1: REALTIME with a step -->
+<rect class="lane" x="10" y="10" width="740" height="135" rx="6"/>
+<text class="cap" x="24" y="34">CLOCK_REALTIME, stepped by the time daemon</text>
+<text class="sub" x="24" y="52">The clock jumps back 2 ms in the middle of a 220 µs request.</text>
+<text class="lbl" x="24" y="94">clock</text>
+<text class="axis" x="24" y="110">reading</text>
+<path class="clk" d="M150 120 L430 80 M430 112 L720 70.6"/>
+<line class="jump" x1="430" y1="80" x2="430" y2="112"/>
+<circle class="stepdot" cx="430" cy="96" r="5" style="animation-delay:-3.05s"/>
+<text class="axis" x="438" y="128">step back 2 ms</text>
+<circle class="stamp" cx="300" cy="98.6" r="6" style="animation-delay:-4.42s"/>
+<text class="axis" x="270" y="84">start</text>
+<circle class="stamp" cx="520" cy="99.1" r="6" style="animation-delay:-2.11s"/>
+<text class="axis" x="530" y="112">end</text>
+<text class="bad" x="580" y="128">end − start = −1.78 ms</text>
+
+<!-- Lane 2: MONOTONIC -->
+<rect class="lane" x="10" y="155" width="740" height="135" rx="6"/>
+<text class="cap" x="24" y="179">CLOCK_MONOTONIC (System.nanoTime)</text>
+<text class="sub" x="24" y="197">It never jumps. A slew only changes its rate, by at most 0.05 %.</text>
+<text class="lbl" x="24" y="239">clock</text>
+<text class="axis" x="24" y="255">reading</text>
+<path class="clk" d="M150 265 L430 225 L720 187.3"/>
+<text class="axis" x="438" y="245">slew: a little slower</text>
+<circle class="stamp" cx="300" cy="243.6" r="6" style="animation-delay:-4.42s"/>
+<text class="axis" x="270" y="229">start</text>
+<circle class="stamp" cx="520" cy="213.3" r="6" style="animation-delay:-2.11s"/>
+<text class="axis" x="530" y="226">end</text>
+<text class="ok" x="580" y="273">end − start = 0.22 ms</text>
+<text class="axis" x="150" y="283">true time →</text>
+
+<line class="head" x1="150" y1="64" x2="150" y2="270"/>
+</svg>
