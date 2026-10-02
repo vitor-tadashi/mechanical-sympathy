@@ -309,8 +309,28 @@ check_hugepages() {
 	done
 }
 
+# runtime_unit_settled - lowlat-runtime.service is neither running nor waiting for its
+# start job. It runs After=network-online.target, so SSH can answer before it starts.
+runtime_unit_settled() {
+	local state job
+	state="$(systemctl show -p ActiveState --value lowlat-runtime.service)" || return 1
+	job="$(systemctl show -p Job --value lowlat-runtime.service)" || return 1
+	[[ "${state}" != activating && -z "${job}" ]]
+}
+
+# check_runtime_unit <pass> - the oneshot unit ran at boot and succeeded. A slow VM may
+# still be running it when this phase starts, so wait up to 120 s for it to settle.
 check_runtime_unit() {
-	local pass="$1" result status
+	local pass="$1" result status state deadline=$((SECONDS + 120))
+	until runtime_unit_settled; do
+		if ((SECONDS >= deadline)); then
+			state="$(systemctl show -p ActiveState --value lowlat-runtime.service || true)"
+			fail "${pass}: lowlat-runtime.service did not finish within 120 s of the check (state ${state})"
+			journalctl -b -u lowlat-runtime.service --no-pager 2>&1 | tail -n 20 | indent
+			return 0
+		fi
+		sleep 2
+	done
 	result="$(systemctl show -p Result --value lowlat-runtime.service)"
 	status="$(systemctl show -p ExecMainStatus --value lowlat-runtime.service)"
 	if [[ "${result}" == success && "${status}" == 0 ]] && systemctl is-active --quiet lowlat-runtime.service; then
