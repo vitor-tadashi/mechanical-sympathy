@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Latency Labs</title>
+<meta name="description" content="Three small simulations in your browser: quiet a CPU one setting at a time, follow a packet from the wire to recv(), and watch a queue grow while a closed-loop benchmark looks away.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+	<div class="wrap">
+		<a class="brand" href="index.html">Mechanical Sympathy</a>
+		<nav aria-label="Main">
+			<a href="index.html#guides">Guides</a>
+			<a href="index.html#concepts">Concepts</a>
+			<a href="index.html#use-cases">Use cases</a>
+			<a href="gallery.html">Gallery</a>
+			<a href="labs.html" aria-current="page">Labs</a>
+			<a href="explorer.html">Layout explorer</a>
+			<a href="buffers.html">Buffer simulator</a>
+			<a href="https://github.com/vitor-tadashi/mechanical-sympathy">GitHub</a>
+		</nav>
+	</div>
+</header>
+
+<main class="wrap">
+	<h1>Latency labs</h1>
+	<p class="lead">Three experiments you can run in a few seconds. Turn one setting on, and see which part of the tail goes away.</p>
+	<p class="small">Everything runs in your browser and sends nothing anywhere. The costs are the orders of magnitude of the guides, so the results are <strong>illustrative</strong>: they show the shape of each effect, not your host.</p>
+
+	<section id="lab-core" class="lab">
+		<h2>1. Quiet the core</h2>
+		<p class="lead">One thread spins on CPU 5 and handles 50,000 messages in one second. Everything else that wants the CPU gets in its way. Remove the sources one by one.</p>
+		<div class="explorer">
+			<div class="panel">
+				<h3>Settings</h3>
+				<label class="check"><input type="checkbox" name="isol"> <span><code>isolcpus</code> + systemd <code>CPUAffinity</code> (Guides 01, 02)</span></label>
+				<label class="check"><input type="checkbox" name="nohz"> <span><code>nohz_full</code> (Guide 01)</span></label>
+				<label class="check"><input type="checkbox" name="rcu"> <span><code>rcu_nocbs</code> (Guide 01)</span></label>
+				<label class="check"><input type="checkbox" name="irq"> <span>NIC interrupts on a housekeeping CPU (Guide 04)</span></label>
+				<label class="check"><input type="checkbox" name="ht"> <span>No busy SMT sibling (Guide 00)</span></label>
+				<label class="check"><input type="checkbox" name="smi"> <span>SMI sources off in the BIOS (Guide 00)</span></label>
+				<p class="small lab-hint" aria-live="polite"></p>
+			</div>
+			<div>
+				<p class="small">One second of CPU 5. Each mark is an interruption: wide blue are other tasks, thin red the tick, orange RCU, purple NIC interrupts, black SMIs.</p>
+				<div class="figure lab-timeline"></div>
+				<div class="figure lab-ladder"></div>
+				<p class="verdict-text lab-verdict" role="status" aria-live="polite"></p>
+			</div>
+		</div>
+	</section>
+
+	<section id="lab-packet" class="lab">
+		<h2>2. Life of a packet</h2>
+		<p class="lead">The first packet after a quiet moment, from the wire to <code>recv()</code>. Every setting adds or removes a step.</p>
+		<div class="explorer">
+			<div class="panel">
+				<h3>Settings</h3>
+				<div class="field"><label for="p-path">Path</label>
+					<select id="p-path" name="path"><option value="kernel">Kernel stack</option><option value="bypass">Kernel bypass (Guide 08)</option></select></div>
+				<div class="field"><label for="p-co">Interrupt coalescing</label>
+					<select id="p-co" name="coalescing" class="kernel-only"><option value="adaptive">Adaptive (the default)</option><option value="fixed">rx-usecs 50</option><option value="zero">rx-usecs 0 (Guide 04)</option></select></div>
+				<div class="field"><label for="p-irq">The interrupt lands on</label>
+					<select id="p-irq" name="irq" class="kernel-only"><option value="isolated">The application's isolated CPU</option><option value="housekeeping">A housekeeping CPU (Guide 04)</option></select></div>
+				<div class="field"><label for="p-reader">The reader</label>
+					<select id="p-reader" name="reader" class="kernel-only"><option value="block">Blocks in recv()</option><option value="spin">Spins on a non-blocking socket (Guide 02)</option></select></div>
+				<label class="check"><input type="checkbox" name="deep" class="kernel-only" checked> <span>Deep C-states allowed (no <code>idle=poll</code>)</span></label>
+			</div>
+			<div>
+				<div class="lab-track" aria-hidden="true"><div class="lab-path"></div><div class="lab-token"></div></div>
+				<p class="lab-sum">First packet: <strong class="lab-total"></strong></p>
+				<table class="lab-table"><tbody class="lab-steps"></tbody></table>
+				<p class="verdict-text lab-notes" role="status" aria-live="polite"></p>
+			</div>
+		</div>
+	</section>
+
+	<section id="lab-queue" class="lab">
+		<h2>3. Queueing, and the benchmark that lied</h2>
+		<p class="lead">One server, requests at random, 10 µs of work each on average. Raise the load, make the work uneven, add a stall, and compare what users wait with what a closed-loop benchmark records.</p>
+		<div class="explorer">
+			<div class="panel">
+				<h3>Settings</h3>
+				<div class="field"><label for="q-rho">Utilization: <span class="lab-rho"></span></label>
+					<input id="q-rho" name="rho" type="range" min="10" max="95" step="5" value="70"></div>
+				<div class="field"><label for="q-svc">Service time</label>
+					<select id="q-svc" name="service"><option value="steady">Steady: always 10 µs</option><option value="random" selected>Random, 10 µs on average</option><option value="heavy">Heavy tail: 5 µs, or 105 µs one time in 20</option></select></div>
+				<label class="check"><input type="checkbox" name="stall"> <span>A 20 ms stall once a second (a GC, a reclaim, an SMI storm)</span></label>
+			</div>
+			<div>
+				<p class="small">Requests waiting during the first 200 ms:</p>
+				<div class="figure lab-queuechart"></div>
+				<div class="figure lab-ladder"></div>
+				<p class="verdict-text lab-verdict" role="status" aria-live="polite"></p>
+			</div>
+		</div>
+	</section>
+
+	<p class="small">Want the theory? <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/cpu-isolation.md">CPU isolation</a>, <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/network-tuning.md">the network path</a>, <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/queueing.md">queueing</a> and <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/tail-latency.md">tail latency</a> explain each lab.</p>
+</main>
+
+<footer>
+	<div class="wrap">
+		<p>The labs are <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/site/labs-core.js"><code>labs-core.js</code></a>, <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/site/labs-packet.js"><code>labs-packet.js</code></a> and <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/site/labs-queue.js"><code>labs-queue.js</code></a>: a few hundred lines with no dependencies. All figures are illustrative.</p>
+	</div>
+</footer>
+
+<script src="labs-common.js"></script>
+<script src="labs-core.js"></script>
+<script src="labs-packet.js"></script>
+<script src="labs-queue.js"></script>
+</body>
+</html>
