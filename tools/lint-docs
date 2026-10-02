@@ -189,14 +189,15 @@ while IFS= read -r svg; do
 		if (/\@keyframes/) {
 			# The first time value of an animation shorthand, or animation-duration, is the
 			# loop length, whatever the order of the other values.
+			# A declaration may hold a comma-separated list: check every entry.
 			while (/animation(?:-duration)?:\s*([^;}"]*)/g) {
-				my $decl = $1;
-				next if $decl =~ /^\s*none\b/;
-				my ($sec) = $decl =~ /(?<![\w.-])(\d+(?:\.\d+)?)s\b/;
-				my ($ms) = $decl =~ /(?<![\w.-])(\d+(?:\.\d+)?)ms\b/;
-				my $loop = defined $sec ? $sec : (defined $ms ? $ms / 1000 : undef);
-				next unless defined $loop;
-				print "loop of ${loop} s is outside 4 to 10 s\n" if $loop < 4 || $loop > 10;
+				for my $entry (split /,/, $1) {
+					next if $entry =~ /^\s*none\b/;
+					my ($num, $unit) = $entry =~ /(?<![\w.-])(\d+(?:\.\d+)?)(ms|s)\b/;
+					next unless defined $num;
+					my $loop = $unit eq "ms" ? $num / 1000 : $num;
+					print "loop of ${loop} s is outside 4 to 10 s\n" if $loop < 4 || $loop > 10;
+				}
 			}
 			# Every selector that animates outside the reduced-motion block must be stopped in it.
 			my $css = /<style[^>]*>(.*?)<\/style>/s ? $1 : "";
