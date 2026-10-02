@@ -114,6 +114,9 @@ A good isolated CPU under `rtla osnoise` shows single-digit µs max noise over h
 
 Typical orders of magnitude, not measurements. The [cheat sheet](../CHEATSHEET.md#orders-of-magnitude) has the full table.
 
+> [!NOTE]
+> **Validate on your hardware.** These values depend on the CPU, the NIC, the driver and the kernel. Measure the ones you rely on.
+
 | Event | Typical cost |
 |---|---|
 | A handler with warm caches | 1–10 µs |

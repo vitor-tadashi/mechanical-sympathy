@@ -12,7 +12,7 @@
 ## At a glance
 
 - **What:** give each traffic class its own NIC, then set every critical NIC so that a packet never waits (coalescing 0, no PAUSE, no batching offloads), is never dropped (large rings), and is handled on a known housekeeping CPU near the card.
-- **Why:** adaptive coalescing alone adds 30–50 µs to the first packet of a burst, PAUSE frames stall a port for milliseconds, and one dropped TCP segment costs a 200 ms retransmit.
+- **Why:** adaptive coalescing alone adds 30–50 µs to the first packet of a burst, PAUSE frames stall a port for milliseconds, and a dropped TCP segment that only the timeout can repair costs 200 ms or more.
 - **Cost:** one interrupt per packet on the IRQ CPU, lower bulk throughput unless you use the bulk profile, and a short link reset when queues or rings change.
 
 **Time:** ~1 h (mostly discovery and the role map), no reboot · **Do this if:** kernel-stack NICs carry latency-critical traffic · **Skip if:** you're working on the management NIC you are logged in through (role `mgmt` is never tuned).
@@ -313,7 +313,7 @@ Turn it off only for a known NIC or driver bug, or for a packet capture that nee
 
 ### 5.7 Ring sizes at maximum: `ethtool -G rx <max> tx <max>`
 
-The RX ring is where the NIC writes packets (by DMA) before software picks them up. If a burst arrives faster than the kernel drains it, packets are **dropped in hardware**, and a dropped TCP segment costs a retransmit timeout of ≥ 200 ms.
+The RX ring is where the NIC writes packets (by DMA) before software picks them up. If a burst arrives faster than the kernel drains it, packets are **dropped in hardware**, and a dropped TCP segment costs at least a round trip to repair, or a retransmit timeout of ≥ 200 ms when no later packet reveals the loss.
 
 A larger ring adds no latency while it is empty: it only absorbs bursts. Watch `ethtool -S <iface> | grep -iE 'drop|miss|fifo|no_buf'`, and size it with [Concept: network buffers](../concepts/network-buffers.md#3-burst-math).
 

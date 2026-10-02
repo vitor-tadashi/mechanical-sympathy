@@ -104,6 +104,9 @@ Some directives are **not** cgroup-based: `CPUAffinity=`, `Nice=`, `IOScheduling
 
 Typical values, not measurements.
 
+> [!NOTE]
+> **Validate on your hardware.** These values depend on the CPU, the NIC, the driver and the kernel. Measure the ones you rely on.
+
 | Quantity | Value |
 |---|---|
 | Default CPU quota period | 100 ms |

@@ -5,12 +5,12 @@
 ## At a glance
 
 - A received packet waits in up to ten places between the wire and `recv()`. On a tuned host, only the interrupt, softirq and wake-up are left.
-- The median barely changes with tuning. The tail does: adaptive coalescing adds 30–50 µs, PAUSE frames add milliseconds, and a dropped segment adds hundreds of milliseconds.
+- The median barely changes with tuning. The tail does: adaptive coalescing adds 30–50 µs, PAUSE frames add milliseconds, and a dropped segment adds a round trip, or 200 ms or more when only the timeout can repair it.
 - Each stage has one knob. Know the stage and you know which knob fixes which part of the histogram.
 
 ## 1. Why it matters
 
-On a well-tuned host, the time between a packet arriving at the NIC and the application seeing it is about 5–10 µs with the kernel stack, and about 1–2 µs with kernel bypass. On an untuned host the *median* is often similar. The difference shows up in the tail: 30–50 µs from adaptive interrupt coalescing, milliseconds from PAUSE frames, and hundreds of ms from a dropped segment that TCP has to retransmit. Understanding each stage tells you which knob fixes which part of the histogram.
+On a well-tuned host, the time between a packet arriving at the NIC and the application seeing it is about 5–10 µs with the kernel stack, and about 1–2 µs with kernel bypass. On an untuned host the *median* is often similar. The difference shows up in the tail: 30–50 µs from adaptive interrupt coalescing, milliseconds from PAUSE frames, and up to hundreds of ms from a dropped segment that TCP can only repair after its timeout. Understanding each stage tells you which knob fixes which part of the histogram.
 
 ## 2. The receive path, step by step
 
@@ -140,6 +140,9 @@ A user-space driver maps the NIC's rings (descriptor queues and doorbells) into 
 
 Typical values, not measurements. The [cheat sheet](../CHEATSHEET.md#orders-of-magnitude) has the rest.
 
+> [!NOTE]
+> **Validate on your hardware.** These values depend on the CPU, the NIC, the driver and the kernel. Measure the ones you rely on.
+
 | Quantity | Value |
 |---|---|
 | NIC to `recv()`: tuned kernel stack / kernel bypass | ~5–10 µs / ~1–2 µs |
@@ -149,7 +152,7 @@ Typical values, not measurements. The [cheat sheet](../CHEATSHEET.md#orders-of-m
 | Wake-up of a blocked reader | 2–50 µs |
 | NAPI budget per round | 300 packets or 2 ms |
 | One PAUSE frame at 10 Gb/s / 100 Gb/s | up to 3.3 ms / 0.3 ms |
-| TCP retransmit after a drop | ≥ 200 ms |
+| TCP repair of a drop: fast retransmit / retransmit timeout | about one round trip / ≥ 200 ms |
 | Nagle and delayed ACK together | the classic 40 ms stall |
 
 ## 12. How it shows up

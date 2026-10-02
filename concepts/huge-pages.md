@@ -142,6 +142,9 @@ Off-heap memory (`ByteBuffer.allocateDirect`, `Unsafe`, memory-mapped files) is 
 
 Typical values, not measurements.
 
+> [!NOTE]
+> **Validate on your hardware.** These values depend on the CPU, the NIC, the driver and the kernel. Measure the ones you rely on.
+
 | Quantity | Value |
 |---|---|
 | TLB reach of 2,048 entries: 4 KiB / 2 MiB / 1 GiB pages | 8 MiB / 4 GiB / 2 TiB |

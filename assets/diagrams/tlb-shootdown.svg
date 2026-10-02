@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 430" width="760" height="430" role="img" aria-labelledby="t d">
 <title id="t">Unmapping memory sends TLB flush interrupts to every CPU of the process</title>
-<desc id="d">Two panels of four CPUs that run threads of one JVM: a GC thread on housekeeping CPU 2, and net.rx, event.loop and worker.0 on isolated CPUs 3, 5 and 7. When the GC returns memory with munmap, CPU 2 sends an inter-processor interrupt to each of the other CPUs, each one stops to flush its TLB, and CPU 2 waits until all have answered. With the heap pre-touched and never uncommitted, the mappings never change and no CPU is interrupted.</desc>
+<desc id="d">Two panels of four CPUs that run threads of one JVM: a GC thread on housekeeping CPU 2, and net.rx, event.loop and worker.0 on isolated CPUs 3, 5 and 7. When the GC returns memory with munmap, CPU 2 sends an inter-processor interrupt to each of the other CPUs, each one stops to flush its TLB, and CPU 2 waits until all have answered. With the heap pre-touched and never uncommitted, the GC never changes the heap mapping and sends no flushes; thread creation, class loading and new mappings can still cause shootdowns.</desc>
 <style>
   .bg { fill: #ffffff; }
   .lane { fill: #f6f8fa; stroke: #d0d7de; }
@@ -65,7 +65,7 @@
 <text class="tag" x="260" y="115">TLB flush</text>
 <rect class="lane" x="10" y="210" width="740" height="210" rx="6"/>
 <text class="cap" x="24" y="234">Heap pre-touched and never uncommitted</text>
-<text class="sub" x="24" y="252">The process keeps its memory mapped, so nothing has to be flushed anywhere.</text>
+<text class="sub" x="24" y="252">The heap stays mapped, so the GC never sends a flush. Other map changes still can.</text>
 <text class="lbl" x="24" y="283">CPU 2</text><text class="axis" x="70" y="283">GC thread</text>
 <rect class="hk" x="150" y="268" width="570" height="22" rx="3"/>
 <text class="lbl" x="24" y="315">CPU 3</text><text class="axis" x="70" y="315">net.rx</text>
@@ -74,6 +74,6 @@
 <rect class="run" x="150" y="332" width="570" height="22" rx="3"/>
 <text class="lbl" x="24" y="379">CPU 7</text><text class="axis" x="70" y="379">worker.0</text>
 <rect class="run" x="150" y="364" width="570" height="22" rx="3"/>
-<text class="ok" x="150" y="408">no map changes, so no shootdowns: the TLB row of /proc/interrupts stays still</text>
+<text class="ok" x="150" y="408">no heap uncommit, so no shootdowns from the GC</text>
 <line class="head" x1="150" y1="64" x2="150" y2="402"/>
 </svg>

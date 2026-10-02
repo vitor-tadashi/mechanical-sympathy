@@ -332,6 +332,9 @@ flowchart LR
 
 Typical values, not measurements.
 
+> [!NOTE]
+> **Validate on your hardware.** These values depend on the CPU, the NIC, the driver and the kernel. Measure the ones you rely on.
+
 | Quantity | Value |
 |---|---|
 | Traffic stop when channels or rings change | ~0.1–3 s, on most drivers |

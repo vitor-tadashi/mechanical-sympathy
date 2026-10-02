@@ -142,6 +142,6 @@ The numbers every page in this repository uses. They are typical values from the
 | Adaptive interrupt coalescing, first packet of a burst | +30–50 µs | [Guide 04 §5.2](guides/04-network-optimization.md#52-adaptive-coalescing-off-ethtool--c-adaptive-rx-off-adaptive-tx-off) |
 | Deep C-state exit / SMI | tens to hundreds of µs, rarely ms | [Power and frequency](concepts/power-and-frequency.md) |
 | RT throttling of a `SCHED_FIFO` spinner | 50 ms every second | [Guide 02](guides/02-cpu-core-isolation.md) |
-| TCP retransmit after a drop | ≥ 200 ms | [Network path](concepts/network-tuning.md) |
+| TCP repair of a drop: fast retransmit / timeout (tail loss) | about one round trip / ≥ 200 ms | [Network path](concepts/network-tuning.md) |
 | NTP on a quiet LAN / PTP with hardware timestamps | 10–100 µs / below 1 µs | [Clocks and time](concepts/clocks-and-time.md) |
 | Samples to trust p99.99 | ~1,000,000 (10,000,000 is comfortable) | [Guide 09 §3.2](guides/09-measuring-latency.md#32-enough-samples) |

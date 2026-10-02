@@ -302,6 +302,9 @@ scripts/size-buffers --ring 512 --burst-mpps 4 --burst-us 1500 --drain-mpps 1.5
 
 Typical values, not measurements. The burst numbers of §3 are checked against `size-buffers`.
 
+> [!NOTE]
+> **Validate on your hardware.** These values depend on the CPU, the NIC, the driver and the kernel. Measure the ones you rely on.
+
 | Quantity | Value |
 |---|---|
 | 10 GbE line rate, 64-byte / 1500-byte frames | 14.88 Mpps / 0.81 Mpps |

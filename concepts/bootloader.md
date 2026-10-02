@@ -134,6 +134,9 @@ They are read in `setup_arch()`, and the kernel **patches its own code** at boot
 
 Typical orders of magnitude, not measurements.
 
+> [!NOTE]
+> **Validate on your hardware.** These values depend on the CPU, the NIC, the driver and the kernel. Measure the ones you rely on.
+
 | Parameter group | Removes | Order of magnitude |
 |---|---|---|
 | `nohz_full` | 1000 tick interrupts/s | 1–5 µs each |
