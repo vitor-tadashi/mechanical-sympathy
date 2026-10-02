@@ -16,6 +16,13 @@
 		"power-and-frequency": "firmware", queueing: "measure", "security-mitigations": "cpu",
 		"swap-and-oom": "memory", "tail-latency": "measure", "thread-handoff": "app",
 	};
+	const byUseCase = {
+		"01": "cpu", "02": "cpu", "03": "cpu", "04": "network", "05": "memory", "06": "memory",
+		"07": "firmware", "08": "measure", "09": "network", "10": "network", "11": "firmware",
+		"12": "cpu", "13": "firmware", "14": "cpu", "15": "network", "16": "app", "17": "memory",
+		"18": "cpu", "19": "measure",
+	};
+	// Guides and concepts name the subject best, then use cases; the README's hero is about the tail.
 	function topicOf(pages) {
 		for (const p of pages) {
 			const m = p.match(/^guides\/(\d\d)-/);
@@ -23,7 +30,11 @@
 			const c = p.match(/^concepts\/([a-z-]+)\.md$/);
 			if (c && byConcept[c[1]]) return byConcept[c[1]];
 		}
-		return "app";
+		for (const p of pages) {
+			const u = p.match(/^examples\/use-cases\/(\d\d)-/);
+			if (u && byUseCase[u[1]]) return byUseCase[u[1]];
+		}
+		return "measure";
 	}
 
 	const grid = document.getElementById("gallery");

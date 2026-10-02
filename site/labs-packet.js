@@ -80,7 +80,7 @@
 		if (value("irq") === "isolated" && value("path") === "kernel") notes.push("The interrupt and the softirq run on the application's own CPU: every packet stops the spinning thread first.");
 		if (value("coalescing") !== "zero" && value("path") === "kernel") notes.push("The first packet after a quiet moment pays the whole coalescing timer.");
 		if (value("reader") === "block" && value("path") === "kernel") notes.push("A blocked reader must be woken through the kernel.");
-		if (checked("deep")) notes.push("Deep C-states add an exit on every CPU that was asleep.");
+		if (checked("deep") && value("path") === "kernel") notes.push("Deep C-states add an exit on every CPU that was asleep.");
 		if (!notes.length) notes.push(value("path") === "bypass" ? "No interrupt, no softirq, no system call: the application reads the NIC's ring itself." : "This is the tuned kernel path of Guide 04: what is left is the stack's own work.");
 		root.querySelector(".lab-notes").textContent = notes.join(" ");
 		root.querySelectorAll(".kernel-only").forEach(function (n) { n.disabled = value("path") === "bypass"; });
