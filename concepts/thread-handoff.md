@@ -52,7 +52,11 @@ Coherence works per 64-byte line. If the producer's head and the consumer's tail
 
 A handoff is correct only if the consumer, when it sees the new head, also sees the message written before it. Both the compiler and the CPU may reorder memory operations unless told not to.
 
-**x86 (total store order)** keeps loads in order and stores in order. It allows one reordering: a store followed by a load from a different address may complete the other way round, because the store waits in the core's store buffer. So on x86:
+**x86 (total store order)** keeps loads in order and stores in order. It allows one reordering: a store followed by a load from a different address may complete the other way round, because the store waits in the core's store buffer.
+
+> **Picture it.** Each core has an outbox: its writes sit there for a moment before they reach the shared shelf. The core reads its own outbox, but other cores only see the shelf. Release and acquire are the rule "post the letter before the notice that says it is there".
+
+So on x86:
 
 | Java access mode (`VarHandle`) | Guarantees | x86 cost |
 |---|---|---|
@@ -60,6 +64,10 @@ A handoff is correct only if the consumer, when it sees the new head, also sees 
 | opaque (`getOpaque`/`setOpaque`) | The access really happens, no ordering with other variables | none |
 | acquire / release (`getAcquire`/`setRelease`) | Everything written before the release is visible after the matching acquire | none beyond stopping compiler reordering |
 | volatile (`getVolatile`/`setVolatile`, `volatile` fields) | Sequential consistency: also orders a store before a later load | a full fence (`lock`-prefixed instruction) on every store: ~20–40 cycles |
+
+<img src="../assets/diagrams/spin-hoist.svg" alt="Animation: a producer increments head from 0 to 3; with a plain read the consumer keeps seeing 0 because the read was hoisted out of the spin loop, with getAcquire it sees each new value" width="720">
+
+*The bug is not slowness but blindness: with a plain field, the compiler may read `head` once and spin on the copy forever. An acquire read goes to memory on every pass.*
 
 Release and acquire are exactly what a handoff needs, so [`PaddedSequence`](../examples/java-latency-probe/src/main/java/com/example/lowlat/PaddedSequence.java) uses `setRelease` and `getAcquire`. A plain field is not enough even on x86: the JIT can hoist a plain read out of a spin loop, and the consumer then spins forever on a value it read once. On ARM servers, acquire and release become real instructions (`ldar`, `stlr`) and still cost far less than a full fence.
 
@@ -72,10 +80,6 @@ When the ring is empty, the consumer must wait. How it waits sets its wake-up la
 | **spin** with `Thread.onSpinWait()` (`PAUSE`) | ~50–100 ns in one L3 domain: one line transfer, plus the loop noticing it | a whole core | isolated CPUs |
 | **backoff**: spin, then `Thread.yield()`, then `parkNanos` with growing sleeps | ns to ~100 µs, depending on how long it was idle | low | shared CPUs, VMs, development |
 | **block** on a lock or a blocking queue | 2–50 µs: futex, wake-up [IPI](../GLOSSARY.md#ipi), scheduler, maybe a C-state exit | none while idle | threads off the critical path |
-
-<img src="../assets/diagrams/spin-vs-block.svg" alt="Animation: a message to a blocked thread passes through an IPI, a C-state exit and the scheduler; a spinning thread sees the same message almost at once" width="720">
-
-*A blocked consumer is woken through the kernel. A spinning one sees the write after one cache-line transfer.*
 
 A blocking handoff also brings kernel work onto the consumer's CPU: the wake-up is a reschedule IPI (the `RES` row of `/proc/interrupts`), and the futex system call pays the [mitigation](security-mitigations.md) costs. That is why the critical threads in these guides spin on their own cores.
 

@@ -72,6 +72,12 @@ The M/M/1 numbers are a reference model: random arrivals **and** random service 
 W ≈ S × ρ / (1 − ρ) × (ca² + cs²) / 2
 ```
 
+<img src="../assets/diagrams/kingman-queues.svg" alt="Two charts of waiting customers over time for the same random arrivals at 80 percent utilization: a steady server keeps the queue short, an erratic server with the same average builds long queues and about twice the mean wait" width="720">
+
+*Same arrivals, same average service time, same 80 % utilization. Only the variability of the service time differs, and the erratic server makes customers wait about twice as long. The simulation is illustrative.*
+
+> **Picture it.** Two cashiers who both average one minute per customer. One takes exactly a minute every time. The other is quick for most customers, and once in a while spends five minutes on a price check. The second line is always longer.
+
 `ca` and `cs` are the coefficients of variation (standard deviation divided by the mean) of the gaps between arrivals and of the service times. Random (exponential) gives 1. A perfectly steady value gives 0.
 
 - **Service-time variability (`cs`)** is what the tuning in these guides removes. Every tick, page fault, C-state exit or cache miss after a migration makes one service time longer, and every message behind it waits. With a fixed service time, waiting halves at any utilization (the green curve above).

@@ -33,6 +33,8 @@ So a JVM with its heap in huge pages is **not** safe from swap by that alone. It
 
 ## 3. What `vm.swappiness` really means
 
+> **Picture it.** `swappiness` is how the kernel prices two chores when memory runs short: throwing away library copies of files (page cache) or moving private notes (anonymous memory) to the basement (swap). A low value makes the basement expensive, not closed.
+
 `vm.swappiness` (0–200, default 60) is **not** a threshold. It is the relative cost the kernel assigns to reclaiming anonymous pages versus file pages. A low value says "prefer dropping page cache over swapping".
 
 - `swappiness=0` does **not** turn swap off. It makes the kernel avoid swapping while there is page cache to drop. When the page cache is gone, it swaps anyway.

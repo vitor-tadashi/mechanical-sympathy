@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" width="760" height="330" role="img" aria-labelledby="t d">
+<title id="t">After another task runs, the next events pay for cold caches</title>
+<desc id="d">Two timelines of the time each event takes on one CPU. On a shared CPU, another task runs briefly; afterward the thread's data is gone from its L1 and L2 caches, and the next several events take ten to twenty times longer until the caches are warm again. On an isolated CPU nothing else runs, the caches stay warm, and every event takes about 2 microseconds. The heights are illustrative.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .mid { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .ev { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.2; }
+  .slow { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.2; }
+  .base { stroke: #57606a; stroke-width: 1.5; }
+  .tag { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; text-anchor: middle; }
+  .warn { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; }
+  .ok { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; }
+  .pk { transform-box: fill-box; transform-origin: center bottom; animation: pop 8s linear infinite; }
+  @keyframes pop { 0%, 3% { transform: scaleY(1.12); } 7%, 100% { transform: scaleY(1); } }
+  .head { transform: translateX(570px); animation: sweep 8s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pk, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="330" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="150" rx="6"/>
+<text class="cap" x="24" y="34">Shared CPU: another task runs for a moment</text>
+<text class="sub" x="24" y="52">Afterward the thread's data is gone from L1 and L2, and the next events run from L3 and memory.</text>
+<line class="base" x1="150" y1="140" x2="720" y2="140"/>
+<rect class="ev pk" x="158" y="132.0" width="14" height="8.0" rx="2" style="animation-delay:-7.79s"/>
+<rect class="ev pk" x="182" y="132.0" width="14" height="8.0" rx="2" style="animation-delay:-7.45s"/>
+<rect class="ev pk" x="206" y="132.0" width="14" height="8.0" rx="2" style="animation-delay:-7.12s"/>
+<rect class="ev pk" x="230" y="132.0" width="14" height="8.0" rx="2" style="animation-delay:-6.78s"/>
+<rect class="ev pk" x="254" y="132.0" width="14" height="8.0" rx="2" style="animation-delay:-6.44s"/>
+<rect class="box" x="278" y="114" width="90" height="26" rx="3"/><text class="mid" x="323.0" y="131">another task</text>
+<rect class="slow pk" x="376" y="70.0" width="14" height="70.0" rx="2" style="animation-delay:-4.73s"/>
+<rect class="slow pk" x="400" y="88.0" width="14" height="52.0" rx="2" style="animation-delay:-4.39s"/>
+<rect class="slow pk" x="424" y="104.0" width="14" height="36.0" rx="2" style="animation-delay:-4.06s"/>
+<rect class="slow pk" x="448" y="118.0" width="14" height="22.0" rx="2" style="animation-delay:-3.72s"/>
+<rect class="slow pk" x="472" y="126.0" width="14" height="14.0" rx="2" style="animation-delay:-3.38s"/>
+<rect class="ev pk" x="496" y="130.0" width="14" height="10.0" rx="2" style="animation-delay:-3.05s"/>
+<rect class="ev pk" x="520" y="132.0" width="14" height="8.0" rx="2" style="animation-delay:-2.71s"/>
+<rect class="ev pk" x="544" y="132.0" width="14" height="8.0" rx="2" style="animation-delay:-2.37s"/>
+<rect class="ev pk" x="568" y="132.0" width="14" height="8.0" rx="2" style="animation-delay:-2.04s"/>
+<rect class="ev pk" x="592" y="132.0" width="14" height="8.0" rx="2" style="animation-delay:-1.7s"/>
+<rect class="ev pk" x="616" y="132.0" width="14" height="8.0" rx="2" style="animation-delay:-1.36s"/>
+<text class="warn" x="510" y="86">cold caches: the next events</text><text class="warn" x="510" y="102">take 10 to 20 times longer</text>
+<text class="lbl" x="24" y="122">time per</text><text class="lbl" x="24" y="138">event</text>
+<rect class="lane" x="10" y="170" width="740" height="150" rx="6"/>
+<text class="cap" x="24" y="194">Isolated CPU: nothing else ever runs here</text>
+<text class="sub" x="24" y="212">The caches stay warm, and every event takes the same short time.</text>
+<line class="base" x1="150" y1="300" x2="720" y2="300"/>
+<rect class="ev pk" x="158" y="292.0" width="14" height="8.0" rx="2" style="animation-delay:-7.79s"/>
+<rect class="ev pk" x="182" y="292.0" width="14" height="8.0" rx="2" style="animation-delay:-7.45s"/>
+<rect class="ev pk" x="206" y="292.0" width="14" height="8.0" rx="2" style="animation-delay:-7.12s"/>
+<rect class="ev pk" x="230" y="292.0" width="14" height="8.0" rx="2" style="animation-delay:-6.78s"/>
+<rect class="ev pk" x="254" y="292.0" width="14" height="8.0" rx="2" style="animation-delay:-6.44s"/>
+<rect class="ev pk" x="278" y="292.0" width="14" height="8.0" rx="2" style="animation-delay:-6.11s"/>
+<rect class="ev pk" x="302" y="292.0" width="14" height="8.0" rx="2" style="animation-delay:-5.77s"/>
+<rect class="ev pk" x="326" y="292.0" width="14" height="8.0" rx="2" style="animation-delay:-5.43s"/>
+<rect class="ev pk" x="350" y="292.0" width="14" height="8.0" rx="2" style="animation-delay:-5.09s"/>
+<rect class="ev pk" x="374" y="292.0" width="14" height="8.0" rx="2" style="animation-delay:-4.76s"/>
+<rect class="ev pk" x="398" y="292.0" width="14" height="8.0" rx="2" style="animation-delay:-4.42s"/>
+<rect class="ev pk" x="422" y="292.0" width="14" height="8.0" rx="2" style="animation-delay:-4.08s"/>
+<rect class="ev pk" x="446" y="292.0" width="14" height="8.0" rx="2" style="animation-delay:-3.75s"/>
+<rect class="ev pk" x="470" y="292.0" width="14" height="8.0" rx="2" style="animation-delay:-3.41s"/>
+<rect class="ev pk" x="494" y="292.0" width="14" height="8.0" rx="2" style="animation-delay:-3.07s"/>
+<rect class="ev pk" x="518" y="292.0" width="14" height="8.0" rx="2" style="animation-delay:-2.74s"/>
+<rect class="ev pk" x="542" y="292.0" width="14" height="8.0" rx="2" style="animation-delay:-2.4s"/>
+<rect class="ev pk" x="566" y="292.0" width="14" height="8.0" rx="2" style="animation-delay:-2.06s"/>
+<text class="ok" x="400" y="252">every event about 2 µs</text>
+<text class="lbl" x="24" y="282">time per</text><text class="lbl" x="24" y="298">event</text>
+<text class="note" x="736" y="314">one bar per event; heights illustrative</text>
+<line class="head" x1="150" y1="60" x2="150" y2="312"/>
+</svg>

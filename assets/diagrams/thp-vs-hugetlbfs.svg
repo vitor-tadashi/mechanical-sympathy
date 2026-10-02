@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" width="760" height="300" role="img" aria-labelledby="t d">
+<title id="t">A THP fault may compact memory first; a hugetlbfs fault takes a reserved page</title>
+<desc id="d">Two lanes show the first touch of a 2 MiB region. With transparent huge pages, the fault needs a free 2 MiB block at that moment; when none is free, the faulting thread compacts memory itself, moving other pages, and waits microseconds to milliseconds. With hugetlbfs, the fault takes a page from the pool reserved at boot, with no search and no compaction, and pre-touch at start-up moves even that out of the serving path.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .mid { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .wire { stroke: #57606a; stroke-width: 2; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .late { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; text-anchor: end; }
+  .ok { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; text-anchor: end; }
+  .t1 { transform: translateX(600px); animation: t1 8s linear infinite; }
+  .t2 { transform: translateX(600px); animation: t2 8s linear infinite; }
+  @keyframes t1 { 0% { transform: translateX(0); } 8% { transform: translateX(150px); } 14% { transform: translateX(300px); } 62% { transform: translateX(300px); } 70% { transform: translateX(450px); } 78% { transform: translateX(600px); } 100% { transform: translateX(600px); } }
+  @keyframes t2 { 0% { transform: translateX(0); } 8% { transform: translateX(150px); } 14% { transform: translateX(450px); } 20% { transform: translateX(600px); } 100% { transform: translateX(600px); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .t1, .t2 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="300" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="128" rx="6"/>
+<text class="cap" x="24" y="34">THP: the page fault needs a free 2 MiB block now</text>
+<text class="sub" x="24" y="52">None is free, so the faulting thread compacts memory itself: it moves other pages and waits.</text>
+<line class="wire" x1="70" y1="92" x2="680" y2="92"/>
+<rect class="app" x="24" y="70" width="120" height="44" rx="5"/><text class="mid" x="84" y="97">first touch</text>
+<rect class="box" x="174" y="70" width="120" height="44" rx="5"/><text class="mid" x="234" y="88">no free</text><text class="mid" x="234" y="104">2 MiB block</text>
+<rect class="wait" x="324" y="70" width="120" height="44" rx="5"/><text class="mid" x="384" y="88">compaction:</text><text class="mid" x="384" y="104">moves pages, ms</text>
+<rect class="box" x="474" y="70" width="120" height="44" rx="5"/><text class="mid" x="534" y="88">zero</text><text class="mid" x="534" y="104">2 MiB</text>
+<rect class="app" x="624" y="70" width="120" height="44" rx="5"/><text class="mid" x="684" y="88">page</text><text class="mid" x="684" y="104">mapped</text>
+<circle class="tok t1" cx="70" cy="92" r="9"/>
+<text class="late" x="736" y="34">thread waits: µs to ms</text>
+<rect class="lane" x="10" y="148" width="740" height="128" rx="6"/>
+<text class="cap" x="24" y="172">hugetlbfs: the page comes from a pool reserved at boot</text>
+<text class="sub" x="24" y="190">The fault takes a page that was set aside for it. At start-up, pre-touch does even this ahead of time.</text>
+<line class="wire" x1="70" y1="230" x2="680" y2="230"/>
+<rect class="app" x="24" y="208" width="120" height="44" rx="5"/><text class="mid" x="84" y="235">first touch</text>
+<rect class="box" x="174" y="208" width="120" height="44" rx="5"/><text class="mid" x="234" y="226">take a page</text><text class="mid" x="234" y="242">from the pool</text>
+<rect class="mut" x="324" y="208" width="120" height="44" rx="5"/><text class="mid" x="384" y="235">no compaction</text>
+<rect class="box" x="474" y="208" width="120" height="44" rx="5"/><text class="mid" x="534" y="226">zero</text><text class="mid" x="534" y="242">2 MiB</text>
+<rect class="app" x="624" y="208" width="120" height="44" rx="5"/><text class="mid" x="684" y="226">page</text><text class="mid" x="684" y="242">mapped</text>
+<circle class="tok t2" cx="70" cy="230" r="9"/>
+<text class="ok" x="736" y="172">no search, no compaction</text>
+<text class="note" x="736" y="290">schematic: the token shows where the fault waits, not to scale</text>
+
+</svg>

@@ -132,9 +132,7 @@ TX:        8160        TX:        2048
 
 A ring is a circular array of **descriptors**, each pointing at one packet buffer. The NIC writes received packets into the buffers named by the RX descriptors (DMA) and advances; the driver refills them. When the NIC reaches a descriptor the driver has not refilled yet, the packet is **dropped in hardware**: the `rx_missed`/`rx_no_buffer`/`fifo` counters rise in `ethtool -S`.
 
-<img src="../assets/diagrams/ring-anatomy.svg" alt="A ring of sixteen slots drawn as a circle, with filled, ready and refilling slots, a write pointer for the NIC and a read pointer for the driver, and the rule that a drop happens when the head meets a slot that is not ready" width="720">
-
-*The NIC fills slots at the head and the driver empties them at the tail. A drop is the head meeting a slot that is not ready.*
+[Concept: network buffers §2](network-buffers.md#2-anatomy-of-a-ring) draws the ring and its pointers.
 
 - `rx N` / `tx N`: descriptors per queue. Larger rings absorb longer bursts, and cost N × buffer size of memory per queue. A larger ring **does not add latency** while it is not backed up, because packets are processed as soon as they arrive. It only lets the backlog grow instead of dropping.
 - `rx-mini` and `rx-jumbo`: separate rings for small or jumbo frames on a few older drivers.
@@ -207,7 +205,7 @@ RX:            off      ← honor PAUSE frames from the peer (stop our transmitt
 TX:            off      ← send PAUSE frames when our buffers fill
 ```
 
-IEEE 802.3x PAUSE lets a congested receiver stop the sender for up to 65,535 × 512 bit times: about 3.3 ms at 10 GbE. That stops the whole port, every flow on it. Low-latency NICs run with `autoneg off rx off tx off`, and the switch port must match. Priority Flow Control (PFC, per traffic class, used by RoCE) is configured with DCB tools (`dcb` from iproute2, or `lldptool`), not with `-A`. Leave it alone on RDMA fabrics unless you own the whole design. Changing pause autonegotiation can renegotiate the link.
+IEEE 802.3x PAUSE lets a congested receiver stop the sender for up to 65,535 × 512 bit times: about 3.3 ms at 10 GbE. That stops the whole port, every flow on it. Low-latency NICs run with `autoneg off rx off tx off`, and the switch port must match ([Guide 04 §5.4](../guides/04-network-optimization.md#54-pause-frames-off-ethtool--a-autoneg-off-rx-off-tx-off) animates the difference). Priority Flow Control (PFC, per traffic class, used by RoCE) is configured with Data Center Bridging (DCB) tools (`dcb` from iproute2, or `lldptool`, which speaks the link-layer discovery protocol, LLDP), not with `-A`. Leave it alone on RDMA fabrics unless you own the whole design. Changing pause autonegotiation can renegotiate the link.
 
 ## 9. `-x` / `-X`: RSS indirection table and hash key
 
@@ -319,16 +317,48 @@ Nothing set with `ethtool` survives a reboot or driver reload. The options:
 | RSS table (`-X`), hash fields and ntuple rules (`-N`), per-queue coalescing, private flags, FEC, EEE | none | `lowlat-runtime.service`, or a NetworkManager dispatcher script on `up` |
 | IRQ affinity (not `ethtool`) | none | `lowlat-runtime.service`, always **after** any `-L` |
 
-The keys and their spelling are listed in `man nm-settings-nmcli` (section `ethtool`). Whatever the mechanism, the order is fixed: **channels → rings → coalescing/features → RSS/ntuple → IRQ affinity**. Every earlier step can reset or recreate the queues that the later steps configure.
+The keys and their spelling are listed in `man nm-settings-nmcli` (section `ethtool`). Whatever the mechanism, the order is fixed:
 
-## 16. Key takeaways
+```mermaid
+flowchart LR
+  ch["-L channels"] --> rg["-G rings"] --> cf["-C coalescing,<br/>-K features"] --> rss["-X RSS,<br/>-N ntuple"] --> irq[["IRQ affinity<br/>/proc/irq"]]
+  ch -. "re-creates queues and vectors" .-> irq
+  rg -. "may reset the queues" .-> cf
+```
+
+*Every earlier step can reset or re-create the queues that the later steps configure, so the order is channels, rings, coalescing and features, RSS and ntuple, and IRQ affinity last.*
+
+## 16. Numbers to remember
+
+Typical values, not measurements.
+
+> [!NOTE]
+> **Validate on your hardware.** These values depend on the CPU, the NIC, the driver and the kernel. Measure the ones you rely on.
+
+| Quantity | Value |
+|---|---|
+| Traffic stop when channels or rings change | ~0.1–3 s, on most drivers |
+| RX ring: default / maximum on common server NICs | 512–2048 / 4096–8160 descriptors |
+| Adaptive coalescing, first packet of a burst | +30–50 µs |
+| One PAUSE frame at 10 GbE / 100 GbE | up to 3.3 ms / 0.3 ms |
+| Reed-Solomon FEC per hop | on the order of 100 ns |
+| Wake-up of a link in EEE sleep | microseconds |
+
+## 17. Myths
+
+- **"A value `ethtool` accepted is in effect."** Drivers round ring sizes and timers. Read the value back.
+- **"Settings survive a reboot."** None does. Something must apply them at every boot (§15).
+- **"A bigger ring adds latency."** Only the packets waiting behind a backlog wait longer. An empty ring adds nothing.
+- **"`ethtool -S` names are standard."** Each driver names its counters; search for the idea (`miss`, `no_buf`, `drop`), not one name.
+
+## 18. Key takeaways
 
 - Lowercase shows, uppercase sets. `[fixed]` means the driver will not let you change the feature.
 - `Pre-set maximums` are per device and per firmware. Never copy values between NIC models.
 - `-L`, `-G` and physical-layer changes reset the link. Never run them on the interface you are logged in through.
 - Nothing persists. Re-apply at boot in the fixed order, and place IRQs last.
 
-## 17. References
+## 19. References
 
 - `man 8 ethtool`; the ethtool netlink API: <https://docs.kernel.org/networking/ethtool-netlink.html>
 - Scaling (RSS, RPS, RFS, XPS, ntuple): <https://docs.kernel.org/networking/scaling.html>

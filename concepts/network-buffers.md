@@ -41,6 +41,8 @@ Typical defaults, and the values the guides set:
 
 *The NIC fills slots at the head, the driver empties them at the tail, and a drop is the head meeting a slot that is not ready.*
 
+> **Picture it.** A ring is a sushi conveyor with a fixed number of plates. The kitchen (the NIC) puts food on empty plates; the guest (the driver) takes it off and puts the plate back. When the kitchen reaches a plate that is still full, that dish goes in the bin.
+
 A **ring buffer** is a fixed array of [descriptors](../GLOSSARY.md#descriptor) used as a circle. Each descriptor points at one packet buffer in host memory. The NIC reads the next ready descriptor, [DMA](../GLOSSARY.md#dma)-writes the packet into that buffer, and moves on. The driver later reads the filled descriptors in the same order and posts new empty buffers behind it.
 
 Two facts follow from this:
@@ -71,6 +73,8 @@ One formula answers most sizing questions. [Concept: queueing](queueing.md) give
 ```text
 time to overflow = capacity / (arrival rate - drain rate)
 ```
+
+> **Picture it.** A bathtub with the tap open wider than the drain. The size of the tub decides how long you have before it overflows; a wider drain decides whether it ever does.
 
 **Packet rate** is fixed by the link. A 64-byte frame takes 84 bytes on the wire, so 10 GbE carries at most **14.88 Mpps** (25 GbE: 37.2, 100 GbE: 148.8). With 1500-byte frames, 10 GbE carries 0.81 Mpps.
 
@@ -294,14 +298,41 @@ scripts/size-buffers --ring 512 --burst-mpps 4 --burst-us 1500 --drain-mpps 1.5
 # ring              3750 packets, 7500 KiB per queue at 2048 B   <- the ring that holds this burst
 ```
 
-## Key takeaways
+## 10. Numbers to remember
+
+Typical values, not measurements. The burst numbers of §3 are checked against `size-buffers`.
+
+> [!NOTE]
+> **Validate on your hardware.** These values depend on the CPU, the NIC, the driver and the kernel. Measure the ones you rely on.
+
+| Quantity | Value |
+|---|---|
+| 10 GbE line rate, 64-byte / 1500-byte frames | 14.88 Mpps / 0.81 Mpps |
+| Time to fill a 512 / 4096 ring at 10 GbE line rate | 34 µs / 275 µs |
+| Kernel softirq drain per core, small packets | roughly 1–2 Mpps |
+| Truesize of a small datagram | about 768 to 2,304 bytes |
+| Default socket buffer (`rmem_default` on RHEL) | 208 KiB: 92 to 277 small datagrams |
+| Guide 06 `rmem_default` / `rmem_max` | 8 MiB / 128 MiB |
+
+## 11. Myths
+
+- **"A bigger ring adds latency."** An empty ring adds nothing. Only the packets of a backlog wait longer, and without the ring they would have been dropped.
+- **"`SO_RCVBUF` = 4 MiB means 4 MiB of payload."** The kernel doubles the request for its bookkeeping and charges each datagram its truesize, so small datagrams fill it far sooner.
+- **"No drops in `ethtool -S` means no drops."** The socket and the application have their own counters (§6).
+- **"Bypass has no buffers."** It has a mempool or a packet-buffer budget instead, with its own counters (§7).
+
+## 12. Illustrative scenario
+
+An illustrative case, not a measurement. A market-data receiver lost a few thousand packets at every opening auction, a 1.5 ms burst at 4 Mpps, and nothing at any other time. `ethtool -S` showed `rx_missed_errors` rising only at those moments: the 512-descriptor default ring was full after 0.2 ms. Raising the ring to its maximum moved the loss to `UdpRcvbufErrors`, because the 208 KiB socket buffer held fewer than 300 datagrams. With `rmem_default` at 8 MiB as well, the burst passed with no loss, and its last packet was read about 4.5 ms after it arrived. [Use case 09](../examples/use-cases/09-the-two-millisecond-burst.md) walks through the same steps.
+
+## 13. Key takeaways
 
 - **Size the queue to the burst, not to the average.** Capacity divided by (arrival minus drain) is the time you have, and the ring is the only queue that can hold a microburst.
 - **A default socket buffer is small in packets, not in bytes.** The kernel charges each datagram its truesize, so 208 KiB holds a few hundred small datagrams. Set `SO_RCVBUF` and `rmem_max` together.
 - **Every stage has its own counter.** Read the counter of the earliest stage that drops, and fix that stage first.
 - **Bypass moves the queues, it does not remove the problem.** The mempool or the packet-buffer budget is the new limit, and `rx_nombuf`, `imissed` and `memory_pressure` are the new counters.
 
-## References
+## 14. References
 
 - [Concept: network tuning](network-tuning.md), the receive path stage by stage.
 - [Concept: ethtool §5 and §11](ethtool.md#5--g---g-ring-sizes), ring sizes and statistics.

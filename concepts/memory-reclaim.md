@@ -51,6 +51,8 @@ The kernel keeps file pages and anonymous pages on separate **LRU** lists, each 
 
 ## 4. Watermarks: who reclaims
 
+> **Picture it.** Watermarks are the lines on a fuel gauge. Below `low`, a helper (`kswapd`) starts refilling in the background. Below `min`, whoever asks for fuel has to pump it themselves, and waits.
+
 Each memory zone (on x86-64, mainly `Normal` on each NUMA node) has three watermarks, `min` < `low` < `high`, in pages:
 
 | Free pages in the zone | What happens |

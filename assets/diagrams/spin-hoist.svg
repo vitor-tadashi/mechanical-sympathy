@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 350" width="760" height="350" role="img" aria-labelledby="t d">
+<title id="t">A plain read can be hoisted out of a spin loop; an acquire read cannot</title>
+<desc id="d">Two timelines of a shared head counter that a producer increments from 0 to 3, and the value a spinning consumer sees. With a plain field, the JIT compiler may read head once before the loop and spin on that copy, so the consumer keeps seeing 0 and never sees a message. With getAcquire, every pass of the loop reads memory, so the consumer sees each new value one cache-line transfer later, together with the message written before it.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .mid { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .cell { fill: #ffffff; stroke: #c4ccd4; }
+  .num { font: 700 14px ui-monospace, Menlo, Consolas, monospace; text-anchor: middle; fill: #1a1a1a; }
+  .stale { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .fresh { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .mem { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .warn { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; }
+  .ok { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; }
+  .code { font: 12px ui-monospace, Menlo, Consolas, monospace; fill: #1a1a1a; }
+  .pk { transform-box: fill-box; transform-origin: center; animation: pop 8s linear infinite; }
+  @keyframes pop { 0%, 4% { transform: scale(1.18); } 9%, 100% { transform: scale(1); } }
+  .head { transform: translateX(570px); animation: sweep 8s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pk, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="350" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="160" rx="6"/>
+<text class="cap" x="24" y="34">Plain read: the JIT may read head once, before the loop</text>
+<text class="sub" x="24" y="52">while (head == seen) onSpinWait();  — the loop then spins on a copy in a register.</text>
+<text class="lbl" x="24" y="82">head in memory</text>
+<rect class="mem pk" x="162" y="62" width="82" height="30" rx="4" style="animation-delay:-7.26s"/><text class="num" x="203.0" y="82">0</text>
+<rect class="mem pk" x="254" y="62" width="82" height="30" rx="4" style="animation-delay:-5.96s"/><text class="num" x="295.0" y="82">1</text>
+<rect class="mem pk" x="346" y="62" width="82" height="30" rx="4" style="animation-delay:-4.67s"/><text class="num" x="387.0" y="82">1</text>
+<rect class="mem pk" x="438" y="62" width="82" height="30" rx="4" style="animation-delay:-3.38s"/><text class="num" x="479.0" y="82">2</text>
+<rect class="mem pk" x="530" y="62" width="82" height="30" rx="4" style="animation-delay:-2.09s"/><text class="num" x="571.0" y="82">3</text>
+<rect class="mem pk" x="622" y="62" width="82" height="30" rx="4" style="animation-delay:-0.8s"/><text class="num" x="663.0" y="82">3</text>
+<text class="lbl" x="24" y="122">consumer sees</text>
+<rect class="fresh pk" x="162" y="102" width="82" height="30" rx="4" style="animation-delay:-7.26s"/><text class="num" x="203.0" y="122">0</text>
+<rect class="stale pk" x="254" y="102" width="82" height="30" rx="4" style="animation-delay:-5.96s"/><text class="num" x="295.0" y="122">0</text>
+<rect class="stale pk" x="346" y="102" width="82" height="30" rx="4" style="animation-delay:-4.67s"/><text class="num" x="387.0" y="122">0</text>
+<rect class="stale pk" x="438" y="102" width="82" height="30" rx="4" style="animation-delay:-3.38s"/><text class="num" x="479.0" y="122">0</text>
+<rect class="stale pk" x="530" y="102" width="82" height="30" rx="4" style="animation-delay:-2.09s"/><text class="num" x="571.0" y="122">0</text>
+<rect class="stale pk" x="622" y="102" width="82" height="30" rx="4" style="animation-delay:-0.8s"/><text class="num" x="663.0" y="122">0</text>
+<text class="warn" x="162" y="158">the producer has written 3 messages; the consumer never sees one</text>
+<rect class="lane" x="10" y="180" width="740" height="160" rx="6"/>
+<text class="cap" x="24" y="204">getAcquire: every pass of the loop reads memory</text>
+<text class="sub" x="24" y="222">while (head.getAcquire() == seen) onSpinWait();  — and everything written before the release is visible.</text>
+<text class="lbl" x="24" y="252">head in memory</text>
+<rect class="mem pk" x="162" y="232" width="82" height="30" rx="4" style="animation-delay:-7.26s"/><text class="num" x="203.0" y="252">0</text>
+<rect class="mem pk" x="254" y="232" width="82" height="30" rx="4" style="animation-delay:-5.96s"/><text class="num" x="295.0" y="252">1</text>
+<rect class="mem pk" x="346" y="232" width="82" height="30" rx="4" style="animation-delay:-4.67s"/><text class="num" x="387.0" y="252">1</text>
+<rect class="mem pk" x="438" y="232" width="82" height="30" rx="4" style="animation-delay:-3.38s"/><text class="num" x="479.0" y="252">2</text>
+<rect class="mem pk" x="530" y="232" width="82" height="30" rx="4" style="animation-delay:-2.09s"/><text class="num" x="571.0" y="252">3</text>
+<rect class="mem pk" x="622" y="232" width="82" height="30" rx="4" style="animation-delay:-0.8s"/><text class="num" x="663.0" y="252">3</text>
+<text class="lbl" x="24" y="292">consumer sees</text>
+<rect class="fresh pk" x="162" y="272" width="82" height="30" rx="4" style="animation-delay:-7.26s"/><text class="num" x="203.0" y="292">0</text>
+<rect class="fresh pk" x="254" y="272" width="82" height="30" rx="4" style="animation-delay:-5.96s"/><text class="num" x="295.0" y="292">1</text>
+<rect class="fresh pk" x="346" y="272" width="82" height="30" rx="4" style="animation-delay:-4.67s"/><text class="num" x="387.0" y="292">1</text>
+<rect class="fresh pk" x="438" y="272" width="82" height="30" rx="4" style="animation-delay:-3.38s"/><text class="num" x="479.0" y="292">2</text>
+<rect class="fresh pk" x="530" y="272" width="82" height="30" rx="4" style="animation-delay:-2.09s"/><text class="num" x="571.0" y="292">3</text>
+<rect class="fresh pk" x="622" y="272" width="82" height="30" rx="4" style="animation-delay:-0.8s"/><text class="num" x="663.0" y="292">3</text>
+<text class="ok" x="162" y="328">each new value arrives one cache-line transfer later, about 50–100 ns</text>
+<line class="head" x1="150" y1="64" x2="150" y2="330"/>
+</svg>
