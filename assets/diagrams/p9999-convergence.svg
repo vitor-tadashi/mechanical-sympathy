@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 370" width="760" height="370" role="img" aria-labelledby="t d">
 <title id="t">A p99.99 estimate jumps around until about a million samples</title>
-<desc id="d">Three runs of the same benchmark read their p99.99 estimate as samples accumulate, on log scales. With ten thousand samples the percentile is a single sample and the runs disagree by a factor of three. From about a million samples, a hundred samples beyond the percentile, the runs agree within about ten percent, and at ten million within about three percent. The numbers are illustrative.</desc>
+<desc id="d">Three runs of the same benchmark read their p99.99 estimate as samples accumulate, on log scales. With ten thousand samples the percentile is a single sample and the runs disagree by a factor of three. From about a million samples, a hundred samples beyond the percentile, the runs begin to agree. The curves come from one simulated distribution and are illustrative: with a heavier or multimodal tail, more samples are needed.</desc>
 <style>
   .bg { fill: #ffffff; }
   .lane { fill: #f6f8fa; stroke: #d0d7de; }
@@ -40,7 +40,7 @@
 <rect class="bg" x="0" y="0" width="760" height="370" rx="8"/>
 <rect class="lane" x="10" y="10" width="740" height="350" rx="6"/>
 <text class="cap" x="24" y="34">Three runs of the same benchmark, p99.99 read after every few samples</text>
-<text class="sub" x="24" y="52">Before about a million samples the estimate jumps by a factor of 3 between runs. After, the runs agree.</text>
+<text class="sub" x="24" y="52">With few samples beyond p99.99 the estimate jumps between runs. With many, the runs start to agree.</text>
 <rect class="plot" x="150" y="100" width="570" height="220"/>
 <rect class="band" x="577.5" y="100" width="142.5" height="220"/>
 <line class="grid" x1="150.0" y1="100" x2="150.0" y2="320"/><text class="ax" x="150.0" y="336">1,000</text>
@@ -58,11 +58,11 @@
 <circle class="pin" cx="292.5" cy="90" r="5" style="animation-delay:-6.0s"/>
 <text class="mk" x="292.5" y="80">1 sample beyond</text>
 <circle class="pin" cx="577.5" cy="90" r="5" style="animation-delay:-2.0s"/>
-<text class="mk" x="577.5" y="80">100 beyond: ±10 %</text>
+<text class="mk" x="577.5" y="80">100 beyond</text>
 <circle class="pin" cx="720.0" cy="90" r="5" style="animation-delay:0.0s"/>
-<text class="mk" x="700.0" y="80">±3 %</text>
+<text class="mk" x="700.0" y="80">1,000 beyond</text>
 <text class="lbl" x="24" y="180">p99.99</text><text class="axis" x="24" y="196">estimate</text>
-<text class="ax" x="435.0" y="356">samples so far (log scale) · dashed green: the true p99.99 · shaded: enough to trust</text>
-<text class="note" x="736" y="352">illustrative</text>
+<text class="ax" x="435.0" y="356">samples so far (log scale) · dashed green: the true p99.99 · shaded: runs begin to agree</text>
+<text class="note" x="736" y="352">illustrative: one simulated distribution; heavier tails need more</text>
 <line class="head" x1="150" y1="94" x2="150" y2="326"/>
 </svg>

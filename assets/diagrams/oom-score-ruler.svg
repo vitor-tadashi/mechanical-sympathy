@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 360" width="760" height="360" role="img" aria-labelledby="t d">
 <title id="t">oom_score_adj decides who the OOM killer takes first</title>
-<desc id="d">A ruler of oom_score_adj from -1000 to +1000. The OOM killer takes the process with the highest score first: agents, shells and most services sit at 0, the latency service at -900, and -1000 is never killed. With -900, a leaking agent is killed first, and a leak in the service itself still ends with the service killed and the host reachable. With -1000, a leak in the service kills everything else and then panics the kernel.</desc>
+<desc id="d">A ruler of oom_score_adj from -1000 to +1000. The OOM killer takes the process with the highest score first: agents, shells and most services sit at 0, the latency service at -900, and -1000 is never killed. The score is the memory share of each process plus the adjustment, so -900 is strong protection, not a fixed place in line: a leaking agent is killed first, and if the service itself leaks until it holds most of the memory, it is the one killed and the host stays reachable. With -1000, a leak in the service kills everything else and then panics the kernel.</desc>
 <style>
   .bg { fill: #ffffff; }
   .lane { fill: #f6f8fa; stroke: #d0d7de; }
@@ -51,9 +51,9 @@
 <path class="arrow" d="M378.0,184 L634.5,184"/><text class="warn" x="506.2" y="180" text-anchor="middle">killed first →</text>
 <rect class="lane" x="10" y="210" width="740" height="140" rx="6"/>
 <text class="cap" x="24" y="234">What -900 buys, and why not -1000</text>
-<text class="sub" x="24" y="252">The latency service stays last, but the host survives its own leak.</text>
+<text class="sub" x="24" y="252">-900 is strong protection, not a fixed place in line: the score also counts memory.</text>
 <text class="ok" x="24" y="276">-900, an agent leaks:</text><text class="seq" x="190" y="276">its MemoryMax ends it inside its slice, or the OOM killer picks it first. The service runs on.</text>
-<text class="ok" x="24" y="300">-900, the service leaks:</text><text class="seq" x="190" y="300">the OOM killer takes it last, after the agents. You lose it loudly; sshd still answers.</text>
+<text class="ok" x="24" y="300">-900, the service leaks:</text><text class="seq" x="190" y="300">once it holds most of the memory, its score passes the others and it is killed. sshd still answers.</text>
 <text class="warn" x="24" y="324">-1000, the service leaks:</text><text class="seq" x="190" y="324">everything else is killed, sshd and the journal too, and then the kernel panics.</text>
 
 </svg>

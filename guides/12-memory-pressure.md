@@ -134,12 +134,12 @@ MemorySwapMax=0          # cgroup v2 only
 
 | Value | Effect |
 |---|---|
-| `OOMScoreAdjust=-900` | The kernel kills almost any other process first |
+| `OOMScoreAdjust=-900` | Strong protection: the score is the process's share of memory plus this adjustment, so the kernel picks almost any other process first, unless this one holds most of the memory |
 | Not `-1000` | `-1000` makes the service unkillable. If the service itself leaks, the kernel kills everything else (agents, `sshd`, the journal) and then panics. `-900` keeps it last while the host stays reachable. |
 
 <img src="../assets/diagrams/oom-score-ruler.svg" alt="A ruler of oom_score_adj from -1000 to +1000: the latency service at -900, agents and most services at 0, -1000 never killed, +1000 always first; below, what happens when an agent leaks, when the service leaks at -900, and when it leaks at -1000" width="720">
 
-*The OOM killer takes the highest score first. At -900 the latency service goes last, and the host survives even its own leak. At -1000 it takes the host down with it.*
+*The OOM killer takes the highest score: memory share plus adjustment. At -900 the latency service is chosen only when it holds most of the memory, which is when it is the one leaking, and the host survives. At -1000 it can never be chosen, and it takes the host down with it.*
 
 The agents need no positive score when they are capped: their own `MemoryMax=` in [Guide 05](05-cgroup-isolation.md#4-design-three-slices) ends a leak inside their slice before the host runs out. [Guide 05](05-cgroup-isolation.md#4-design-three-slices) already shows `lowlat-app.service` with `OOMScoreAdjust=-900` and `LimitMEMLOCK=infinity`. This guide writes both, plus `MemorySwapMax=0` on cgroup v2, as a drop-in for every unit you list.
 

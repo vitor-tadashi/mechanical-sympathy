@@ -65,7 +65,7 @@ A latency distribution is long-tailed. The mean mixes the common fast case with 
 
 ### 3.2 Enough samples
 
-A percentile is only as good as the number of samples beyond it. With 10,000 samples, p99.99 is one single sample. To trust it you want about **100 samples beyond it** (a million in total, ±10 %), and about 1,000 beyond it is comfortable (±3 %, [tail latency §3](../concepts/tail-latency.md#3-what-a-percentile-is)). Run long enough to cover the periodic events you are hunting. The residual tick is once per second, and some housekeeping timers run every few seconds, so a 10-second run can miss them entirely.
+A percentile is only as good as the number of samples beyond it. With 10,000 samples, p99.99 is one single sample. To trust it you want about **100 samples beyond it** (a million in total), and about 1,000 beyond it is comfortable ([tail latency §3](../concepts/tail-latency.md#3-what-a-percentile-is)). That fixes the rank of the percentile to about ±10 % and ±3 %; how far the value itself moves depends on the shape of the tail, so compare repeated runs. Run long enough to cover the periodic events you are hunting. The residual tick is once per second, and some housekeeping timers run every few seconds, so a 10-second run can miss them entirely.
 
 | Target | Usable (~100 beyond it) | Comfortable (~1,000 beyond it) |
 |---|---|---|
@@ -75,7 +75,10 @@ A percentile is only as good as the number of samples beyond it. With 10,000 sam
 
 <img src="../assets/diagrams/p9999-convergence.svg" alt="Animation: three runs of the same benchmark read their p99.99 as samples accumulate; below about a million samples the estimates disagree by a factor of three, after it they agree within about ten percent" width="720">
 
-*Before about a million samples, p99.99 rests on a handful of samples and every run tells a different story. After it, the runs agree. The numbers are illustrative.*
+*Before about a million samples, p99.99 rests on a handful of samples and every run tells a different story. After it, the runs begin to agree. The curves come from one simulated distribution; a heavier or multimodal tail needs more samples.*
+
+> [!NOTE]
+> **Validate on your hardware.** These sample counts are a starting point. Repeat the run: when p99.99 changes little between runs, you have enough samples for your distribution.
 
 > **Picture it.** A p99.99 from 10,000 samples is a poll with one answer: whatever that one person says is the result. A hundred answers make a poll you can quote.
 
