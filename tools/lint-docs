@@ -187,11 +187,40 @@ while IFS= read -r svg; do
 		}
 		print "class .muted or .focus: use .mut and .foc\n" if /\.(?:muted|focus)\b[^-]/;
 		if (/\@keyframes/) {
-			while (/animation:\s*[\w-]+\s+(\d+(?:\.\d+)?)s/g) {
-				print "loop of $1 s is outside 4 to 10 s\n" if $1 < 4 || $1 > 10;
+			# The first time value of an animation shorthand, or animation-duration, is the
+			# loop length, whatever the order of the other values.
+			# A declaration may hold a comma-separated list: check every entry.
+			while (/animation(?:-duration)?:\s*([^;}"]*)/g) {
+				for my $entry (split /,/, $1) {
+					next if $entry =~ /^\s*none\b/;
+					my ($num, $unit) = $entry =~ /(?<![\w.-])(\d+(?:\.\d+)?)(ms|s)\b/;
+					next unless defined $num;
+					my $loop = $unit eq "ms" ? $num / 1000 : $num;
+					print "loop of ${loop} s is outside 4 to 10 s\n" if $loop < 4 || $loop > 10;
+				}
 			}
-			print "the reduced-motion block does not stop the animations\n"
-				unless /prefers-reduced-motion:\s*reduce\)\s*\{[^@]*animation:\s*none/s;
+			# Every selector that animates outside the reduced-motion block must be stopped in it.
+			my $css = /<style[^>]*>(.*?)<\/style>/s ? $1 : "";
+			$css =~ s{/\*.*?\*/}{}gs;
+			my $rm = "";
+			if ($css =~ /\@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}/s) {
+				$rm = $1;
+				$css =~ s/\@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}//s;
+			}
+			$css =~ s/\@keyframes[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}//gs;
+			my %stopped;
+			while ($rm =~ /([^{}]+)\{([^{}]*)\}/g) {
+				my ($sel, $body) = ($1, $2);
+				next unless $body =~ /animation:\s*none/;
+				$stopped{$_} = 1 for map { s/^\s+|\s+$//gr } split /,/, $sel;
+			}
+			while ($css =~ /([^{}]+)\{([^{}]*)\}/g) {
+				my ($sel, $body) = ($1, $2);
+				next unless $body =~ /animation(?:-name)?:\s*(?!none)\S/;
+				for my $s (map { s/^\s+|\s+$//gr } split /,/, $sel) {
+					print "the reduced-motion block does not stop $s\n" unless $stopped{$s};
+				}
+			}
 		}
 	' "${svg}")"
 	while IFS= read -r problem; do

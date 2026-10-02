@@ -38,7 +38,7 @@ flowchart TD
 
 | Step | Guide | What you do | Reboot |
 |---|---|---|---|
-| 0 | [09](guides/09-measuring-latency.md) | Baseline: latency percentiles of your workload, plus a host bundle (`sudo scripts/09-measure-latency --apply && sudo scripts/09-measure-latency --run`). Compare against it after step 10. | |
+| 0 | [09](guides/09-measuring-latency.md) | Baseline: latency percentiles of your workload, plus a host bundle (`sudo scripts/09-measure-latency --apply && sudo scripts/09-measure-latency --run`). Compare against it after step 14, once the application runs on the tuned host. | |
 | 1 | — | Design the CPU layout: NIC NUMA node, isolated CPUs, housekeeping CPUs ([Guide 02 §3](guides/02-cpu-core-isolation.md#3-designing-the-cpu-layout), or let `scripts/plan-layout` propose it) and write `/etc/lowlat/lowlat.conf` | |
 | 2 | [00](guides/00-bios-firmware.md) | BIOS: maximum-performance profile, C1E and deep C-states off, OS-controlled P-states, Hyper-Threading off, NUMA per socket, SMI sources off | ✔ (BIOS) |
 | 3 | [01](guides/01-grub-bootloader-tuning.md) | Kernel command line: isolation + latency set. Decide on mitigations with security. | ✔ |

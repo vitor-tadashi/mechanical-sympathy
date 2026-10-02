@@ -190,11 +190,13 @@ for irq in $(ls /sys/class/net/ens1f0/device/msi_irqs); do
 
 ### 6.1 Critical NICs: keep the qdisc out of the way
 
-Critical links carry small messages at modest rates. The qdisc should never hold a packet. `fq_codel` (the default) is fine as long as it is never backlogged. `noqueue` is not possible on physical NICs, so the smallest-overhead choice is a multi-queue `mq` root with a plain FIFO child per TX queue. The children take `net.core.default_qdisc`, which is `fq_codel` on RHEL, so set it to `pfifo_fast` first if you want plain FIFOs:
+Critical links carry small messages at modest rates. The qdisc should never hold a packet. `fq_codel` (the default) is fine as long as it is never backlogged. `noqueue` is not possible on physical NICs, so the smallest-overhead choice is a multi-queue `mq` root with a plain FIFO child per TX queue. The children take `net.core.default_qdisc`, which is `fq_codel` on RHEL ([Guide 06 §5](../guides/06-kernel-sysctl-tuning.md#5-queues)). That key is host-wide, so switch it only while you create the children, then put it back:
 
 ```bash
-sysctl -w net.core.default_qdisc=pfifo_fast  # children created from now on are plain FIFOs
-tc qdisc replace dev ens1f0 root mq           # one child per TX queue, of the default_qdisc type
+old=$(sysctl -n net.core.default_qdisc)        # fq_codel after Guide 06
+sysctl -w net.core.default_qdisc=pfifo_fast    # children created now are plain FIFOs
+tc qdisc replace dev ens1f0 root mq           # one child per TX queue
+sysctl -w net.core.default_qdisc="$old"        # every other interface keeps fq_codel
 tc -s qdisc show dev ens1f0                   # "backlog 0b 0p" and "dropped 0" at all times
 ```
 
