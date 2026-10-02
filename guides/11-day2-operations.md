@@ -50,6 +50,19 @@ Guides 00 to 10 and 12 set things once. The host then keeps changing under them:
 
 Every row has a command that answers "did it revert?". This guide runs the ones a script can run, and lists the rest.
 
+```mermaid
+timeline
+  title One kernel update, with and without the timer
+  Day 0 : dnf update installs a kernel : its boot entry lacks isolcpus
+  Day 3 : planned reboot : the new kernel boots untuned
+  Day 3 + 10 min : with the timer, lowlat-verify FAILs : you fix the entry the same day
+  Weeks later : without it, p99.9 has crept up : nobody knows since when
+```
+
+*The drift is silent: nothing fails, the tail just slowly gets worse. The timer turns it into a FAIL ten minutes after the reboot that caused it.*
+
+> **Picture it.** A tuned host is a tuned piano. Nothing breaks it in one day, but every move and every season pulls a string. The timer is the tuner who comes by every morning.
+
 ## 2. The verification timer
 
 `sudo scripts/11-day2-operations --apply` (or `apply-all`) installs two units:
@@ -114,7 +127,7 @@ journalctl -u lowlat-verify -n 80 --no-pager   # the full report of the last run
 cat /var/lib/lowlat/reports/verify-latest.txt  # the same, as a file
 ```
 
-> [!WARNING]
+> [!NOTE]
 > The report includes a one-second `turbostat` sample of the SMI count ([Guide 00 §7](00-bios-firmware.md#7-verification)). `turbostat` reads counters from every CPU, so it visits the isolated CPUs briefly. It is a read, not a workload, but if even that is unacceptable during business hours, set `DAY2_VERIFY_SCHEDULE` to a maintenance window.
 
 The unit's own state is the alert. The "last run did not fail" line of `--verify` cannot see the run that is in progress, so read it from `systemctl`, or from a manual `scripts/11-day2-operations --verify` between runs.
@@ -155,12 +168,17 @@ The repository does not ship a metrics exporter. Feed your own monitoring with t
 | Softirq squeeze | the dropped and squeezed columns of `/proc/net/softnet_stat` | not rising | [Guide 04 §9](04-network-optimization.md#9-verification) |
 | Huge page pool | `HugePages_Free` per node in `/sys/devices/system/node/node*/hugepages/` | matches the application's footprint | [Guide 03 §8](03-huge-pages-configuration.md#8-verification) |
 | Clock offset | `chronyc tracking`, or the `master offset` in `journalctl -u ptp4l` | small, and stable | [Guide 10 §9](10-time-sync.md#9-verification) |
+| Swap-ins and memory pressure | `pswpin` in `/proc/vmstat`; `full avg300` in `/proc/pressure/memory` | not rising; close to 0 | [Guide 12 §6](12-memory-pressure.md#6-verification) |
 
 Alert on a **change** more than on a level: a tick rate that doubled, a device interrupt that appeared, an SMI count that started to rise. The slow drift is what this guide is about.
 
 ## 5. Adding a thread without re-planning
 
 A new critical thread does not need a reboot as long as the layout has a spare isolated CPU ([Guide 02 §3](02-cpu-core-isolation.md#3-designing-the-cpu-layout), rule 5):
+
+<img src="../assets/diagrams/worker-placement.svg" alt="Animation: an unpinned spinning thread hops between OS CPUs while a spare isolated CPU stays unused, and the same thread pinned alone to the spare" width="720">
+
+*A new thread with no line in the affinity file inherits the OS CPUs and spins there. One line puts it on the spare isolated CPU, alone.*
 
 1. Pick a spare **physical core** on the critical NIC's node: one whose CPUs no thread uses (`lscpu -b -e=CPU,NODE,SOCKET,CORE` shows which CPUs share a `CORE`). With Hyper-Threading on, use one CPU of that core and leave its sibling idle, because `ISOLATED_CPUS` lists both. `scripts/plan-layout --check` tells you if the layout still follows the rules.
 2. Add the role to `affinity.properties` ([Guide 02 §6.1](02-cpu-core-isolation.md#61-describe-the-mapping-in-configuration-not-in-code)) and restart the application.

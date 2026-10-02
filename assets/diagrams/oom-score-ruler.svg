@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 360" width="760" height="360" role="img" aria-labelledby="t d">
+<title id="t">oom_score_adj decides who the OOM killer takes first</title>
+<desc id="d">A ruler of oom_score_adj from -1000 to +1000. The OOM killer takes the process with the highest score first: agents, shells and most services sit at 0, the latency service at -900, and -1000 is never killed. The score is the memory share of each process plus the adjustment, so -900 is strong protection, not a fixed place in line: a leaking agent is killed first, and if the service itself leaks until it holds most of the memory, it is the one killed and the host stays reachable. With -1000, a leak in the service kills everything else and then panics the kernel.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .mid { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .rule { stroke: #57606a; stroke-width: 2; }
+  .tickm { stroke: #57606a; stroke-width: 1.5; }
+  .ax { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+  .pin { stroke-width: 2; }
+  .arrow { stroke: #9b1c1c; stroke-width: 2.5; marker-end: url(#ar); fill: none; }
+  .warn { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; }
+  .ok { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; }
+  .seq { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="360" rx="8"/>
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#9b1c1c"/></marker></defs>
+<rect class="lane" x="10" y="10" width="740" height="190" rx="6"/>
+<text class="cap" x="24" y="34">oom_score_adj: who the OOM killer picks first</text>
+<text class="sub" x="24" y="52">It kills the process with the highest score: its share of memory, plus this adjustment.</text>
+<line class="rule" x1="150" y1="150" x2="720" y2="150"/>
+<line class="tickm" x1="150.0" y1="145" x2="150.0" y2="155"/><text class="ax" x="150.0" y="170">-1000</text>
+<line class="tickm" x1="292.5" y1="145" x2="292.5" y2="155"/><text class="ax" x="292.5" y="170">-500</text>
+<line class="tickm" x1="435.0" y1="145" x2="435.0" y2="155"/><text class="ax" x="435.0" y="170">0</text>
+<line class="tickm" x1="577.5" y1="145" x2="577.5" y2="155"/><text class="ax" x="577.5" y="170">+500</text>
+<line class="tickm" x1="720.0" y1="145" x2="720.0" y2="155"/><text class="ax" x="720.0" y="170">+1000</text>
+<text class="lbl" x="24" y="154">score adjustment</text>
+<line class="pin" x1="150.0" y1="94" x2="150.0" y2="150" stroke="#57606a"/>
+<rect class="wait" x="79.3" y="70" width="141.4" height="24" rx="5"/><text class="mid" x="150.0" y="86">-1000: never killed</text>
+<line class="pin" x1="178.5" y1="124" x2="178.5" y2="150" stroke="#57606a"/>
+<rect class="app" x="91.3" y="100" width="174.4" height="24" rx="5"/><text class="mid" x="178.5" y="116">lowlat-app.service: -900</text>
+<line class="pin" x1="435.0" y1="94" x2="435.0" y2="150" stroke="#57606a"/>
+<rect class="box" x="321.4" y="70" width="227.2" height="24" rx="5"/><text class="mid" x="435.0" y="86">agents, shells, most services: 0</text>
+<line class="pin" x1="720.0" y1="124" x2="720.0" y2="150" stroke="#57606a"/>
+<rect class="mut" x="594.6" y="100" width="141.4" height="24" rx="5"/><text class="mid" x="665.3" y="116">+1000: always first</text>
+<path class="arrow" d="M378.0,184 L634.5,184"/><text class="warn" x="506.2" y="180" text-anchor="middle">killed first →</text>
+<rect class="lane" x="10" y="210" width="740" height="140" rx="6"/>
+<text class="cap" x="24" y="234">What -900 buys, and why not -1000</text>
+<text class="sub" x="24" y="252">-900 is strong protection, not a fixed place in line: the score also counts memory.</text>
+<text class="ok" x="24" y="276">-900, an agent leaks:</text><text class="seq" x="190" y="276">its MemoryMax ends it inside its slice, or the OOM killer picks it first. The service runs on.</text>
+<text class="ok" x="24" y="300">-900, the service leaks:</text><text class="seq" x="190" y="300">once it holds most of the memory, its score passes the others and it is killed. sshd still answers.</text>
+<text class="warn" x="24" y="324">-1000, the service leaks:</text><text class="seq" x="190" y="324">everything else is killed, sshd and the journal too, and then the kernel panics.</text>
+
+</svg>

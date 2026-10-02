@@ -65,13 +65,22 @@ A latency distribution is long-tailed. The mean mixes the common fast case with 
 
 ### 3.2 Enough samples
 
-A percentile is only as good as the number of samples beyond it. With 10,000 samples, p99.99 is one single sample. To trust it you want about **100 samples beyond it** (a million in total, ±10 %), and about 1,000 beyond it is comfortable (±3 %, [tail latency §3](../concepts/tail-latency.md#3-what-a-percentile-is)). Run long enough to cover the periodic events you are hunting. The residual tick is once per second, and some housekeeping timers run every few seconds, so a 10-second run can miss them entirely.
+A percentile is only as good as the number of samples beyond it. With 10,000 samples, p99.99 is one single sample. To trust it you want about **100 samples beyond it** (a million in total), and about 1,000 beyond it is comfortable ([tail latency §3](../concepts/tail-latency.md#3-what-a-percentile-is)). That fixes the rank of the percentile to about ±10 % and ±3 %; how far the value itself moves depends on the shape of the tail, so compare repeated runs. Run long enough to cover the periodic events you are hunting. The residual tick is once per second, and some housekeeping timers run every few seconds, so a 10-second run can miss them entirely.
 
 | Target | Usable (~100 beyond it) | Comfortable (~1,000 beyond it) |
 |---|---|---|
 | p99 | 10,000 | 100,000 |
 | p99.9 | 100,000 | 1,000,000 |
 | p99.99 | 1,000,000 | 10,000,000 |
+
+<img src="../assets/diagrams/p9999-convergence.svg" alt="Animation: three runs of the same benchmark read their p99.99 as samples accumulate; below about a million samples the estimates disagree by a factor of three, after it they agree within about ten percent" width="720">
+
+*Before about a million samples, p99.99 rests on a handful of samples and every run tells a different story. After it, the runs begin to agree. The curves come from one simulated distribution; a heavier or multimodal tail needs more samples.*
+
+> [!NOTE]
+> **Validate on your hardware.** These sample counts are a starting point. Repeat the run: when p99.99 changes little between runs, you have enough samples for your distribution.
+
+> **Picture it.** A p99.99 from 10,000 samples is a poll with one answer: whatever that one person says is the result. A hundred answers make a poll you can quote.
 
 ### 3.3 Coordinated omission
 
@@ -86,7 +95,7 @@ Two ways to avoid it:
 - **Open-loop load.** Send at a fixed rate, whatever the response time, and measure each message from its **intended** send time, not its actual one.
 - **Correct the histogram.** HdrHistogram's `recordValueWithExpectedInterval(value, interval)` back-fills the samples a stall would have delayed.
 
-The [Java probe](../examples/hugepages-java-example.md) is a closed-loop ping-pong on purpose. It measures one cache-line transfer at a time, so it shows host noise clearly. It is not a model of production traffic, so measure your application with open-loop load as well.
+The [Java probe](../examples/hugepages-java-example.md) is a closed-loop ping-pong on purpose. Each round trip is a couple of cache-line transfers, so it shows host noise clearly. It is not a model of production traffic, so measure your application with open-loop load as well.
 
 ### 3.4 The right clock
 
@@ -193,7 +202,7 @@ Look at the **shape** first, then the numbers. [Concept: tail latency](../concep
 flowchart LR
   s(["What does the tail look like?"]) --> p1{"Spikes at a<br/>fixed period?"}
   p1 -- "every 1 s" --> c1["Residual tick or RT throttling<br/>(Guide 01 §7, Guide 02 §4.4)"]
-  p1 -- "every 1 to 4 ms" --> c2["Full tick: nohz_full not active<br/>or more than one task on the CPU"]
+  p1 -- "every 1 ms" --> c2["Full tick: nohz_full not active<br/>or more than one task on the CPU"]
   p1 -- "every few seconds" --> c3["vmstat, a watchdog or an agent:<br/>find it with rtla osnoise"]
   s --> p2{"Two humps<br/>(bimodal)?"}
   p2 -- yes --> c4["Two paths: cross-NUMA memory,<br/>an SMT sibling, or two code paths"]
@@ -204,6 +213,10 @@ flowchart LR
 ```
 
 *Periodic spikes point at timers, two humps at two different paths, a slow start at faults and warm-up, and a rare unexplained max at firmware or memory reclaim.*
+
+<img src="../assets/diagrams/histogram-shapes.svg" alt="Four latency histograms on a log axis: healthy with one narrow peak; bimodal with a second hump from two paths; a comb of spikes at fixed latencies from a timer, coalescing or polling; a long smooth tail from queueing or rare stalls" width="720">
+
+*The shape names the cause before any number does. [Concept: tail latency §7](../concepts/tail-latency.md#7-reading-the-shape) goes through each one.*
 
 | Pattern | Likely cause | Where to fix it |
 |---|---|---|
@@ -230,12 +243,25 @@ cat /var/lib/lowlat/measurements/<stamp>/osnoise.txt     # MAX SINGLE NOISE per 
 
 ## 9. Troubleshooting
 
+```mermaid
+flowchart TD
+  s(["The measurement itself fails"]) --> q1{"Tool missing?"}
+  q1 -- "rtla or rt-tests" --> f1["Enable the repository,<br/>or use the tracer in tracefs"]
+  q1 -- no --> q2{"No SMI column?"}
+  q2 -- yes --> f2["VM: expected.<br/>Bare metal: modprobe msr"]
+  q2 -- no --> q3{"Runs disagree?"}
+  q3 -- yes --> f3["Hold the load, the duration<br/>and the environment (§3.5)"]
+  q3 -- no --> f4["See the table below"]
+```
+
+*Start from what failed: a missing tool, a missing counter, or results that change between runs.*
+
 | Symptom | Cause | Fix |
 |---|---|---|
 | `dnf install rtla` fails | RHEL 8 before 8.8, or the repository is not enabled | Use the osnoise tracer directly (`/sys/kernel/tracing`), or upgrade |
 | `dnf install rt-tests` fails | `rt-tests` lives in the Real Time or EPEL repository | Enable one, or skip `cyclictest`: `rtla timerlat` covers the same question |
 | `rtla: tracefs not mounted` | tracefs not mounted | `mount -t tracefs nodev /sys/kernel/tracing` |
-| `turbostat` shows no `SMI` column | VM, or a CPU without the SMI counter MSR | Expected in VMs. On bare metal, load `msr` (`modprobe msr`). |
+| `turbostat` shows no `SMI` column | VM, or a CPU without the SMI counter (a model-specific register, MSR) | Expected in VMs. On bare metal, load `msr` (`modprobe msr`). |
 | The application's latency got worse during `--run` | `osnoise` ran on the application's CPUs | Measure before the application starts, or set `MEASURE_CPUS` |
 | Results differ a lot between runs | The load, duration or environment changed | §3.5: record and hold everything but the one change |
 
