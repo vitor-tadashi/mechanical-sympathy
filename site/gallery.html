@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagram Gallery</title>
+<meta name="description" content="Every animated and static diagram of the guides, concepts and use cases in one place, by topic, with the point each one makes and the pages that use it.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+	<div class="wrap">
+		<a class="brand" href="index.html">Mechanical Sympathy</a>
+		<nav aria-label="Main">
+			<a href="index.html#guides">Guides</a>
+			<a href="index.html#concepts">Concepts</a>
+			<a href="index.html#use-cases">Use cases</a>
+			<a href="gallery.html" aria-current="page">Gallery</a>
+			<a href="labs.html">Labs</a>
+			<a href="explorer.html">Layout explorer</a>
+			<a href="buffers.html">Buffer simulator</a>
+			<a href="https://github.com/vitor-tadashi/mechanical-sympathy">GitHub</a>
+		</nav>
+	</div>
+</header>
+
+<main class="wrap">
+	<h1>Diagram gallery</h1>
+	<p class="lead">Every picture of the guides in one place. Each one makes one point that you can get in a few seconds. Open one to see it full size, pause it, and jump to the pages that explain it.</p>
+	<p class="small">Moving diagrams follow your system setting: with reduced motion they show the complete picture, still. The numbers are illustrative, not measurements.</p>
+
+	<div class="filters" role="group" aria-label="Topic">
+		<button type="button" class="btn secondary" data-topic="all" aria-pressed="true">All</button>
+		<button type="button" class="btn secondary" data-topic="cpu" aria-pressed="false">CPU and scheduler</button>
+		<button type="button" class="btn secondary" data-topic="memory" aria-pressed="false">Memory</button>
+		<button type="button" class="btn secondary" data-topic="network" aria-pressed="false">Network</button>
+		<button type="button" class="btn secondary" data-topic="firmware" aria-pressed="false">Firmware and power</button>
+		<button type="button" class="btn secondary" data-topic="measure" aria-pressed="false">Time and measurement</button>
+		<button type="button" class="btn secondary" data-topic="app" aria-pressed="false">Application</button>
+	</div>
+	<p class="small" id="count" aria-live="polite"></p>
+	<div class="grid gallery" id="gallery"></div>
+	<noscript><p>The gallery needs JavaScript. The diagrams are also in <a href="https://github.com/vitor-tadashi/mechanical-sympathy/tree/main/assets/diagrams">the repository</a>.</p></noscript>
+</main>
+
+<footer>
+	<div class="wrap">
+		<p>Every diagram is a hand-written SVG in <a href="https://github.com/vitor-tadashi/mechanical-sympathy/tree/main/assets/diagrams"><code>assets/diagrams</code></a>, drawn to the rules of <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/STYLE.md">STYLE.md</a>. All figures are illustrative.</p>
+	</div>
+</footer>
+
+<script src="zoom.js"></script>
+<script src="gallery.js"></script>
+</body>
+</html>

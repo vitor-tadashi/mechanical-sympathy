@@ -13,7 +13,10 @@
 		<a class="brand" href="index.html">Mechanical Sympathy</a>
 		<nav aria-label="Main">
 			<a href="#guides">Guides</a>
+			<a href="#concepts">Concepts</a>
 			<a href="#use-cases">Use cases</a>
+			<a href="gallery.html">Gallery</a>
+			<a href="labs.html">Labs</a>
 			<a href="explorer.html">Layout explorer</a>
 			<a href="buffers.html">Buffer simulator</a>
 			<a href="https://github.com/vitor-tadashi/mechanical-sympathy">GitHub</a>
@@ -27,7 +30,8 @@
 		<h1>Make a Linux server quiet enough for microseconds.</h1>
 		<p class="lead">A field guide, with working scripts, for turning a RHEL 8, 9 or 10 host into a deterministic, low-jitter machine. Every guide explains what the kernel does, why each value was chosen, how to verify it, and how to undo it.</p>
 		<div class="buttons">
-			<a class="btn" href="explorer.html">Try the CPU layout explorer</a>
+			<a class="btn" href="labs.html">Play with the labs</a>
+			<a class="btn secondary" href="explorer.html">Try the CPU layout explorer</a>
 			<a class="btn secondary" href="#use-cases">See the use cases</a>
 			<a class="btn secondary" href="https://github.com/vitor-tadashi/mechanical-sympathy">Read the guides on GitHub</a>
 		</div>
@@ -71,6 +75,35 @@
 			<div class="card"><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/guides/11-day2-operations.md">11 Day-2 operations</a><p>A verification timer, kernel entries that must keep isolcpus, what to alert on, adding a thread.</p><div class="meta">No reboot</div></div>
 			<div class="card"><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/guides/12-memory-pressure.md">12 Memory pressure</a><p>Swap off or kept away from the latency services, the OOM order, memlock limits, pressure checks.</p><div class="meta">No reboot</div></div>
 		</div>
+	</div>
+</section>
+
+<section id="concepts">
+	<div class="wrap">
+		<h2>Nineteen concepts: how the machine works</h2>
+		<p class="lead">The guides say what to set. The concepts say why: what the hardware and the kernel do, the numbers to remember, the myths, and a read-only lab to see it on your own host. Read them from the hardware up.</p>
+		<div class="grid">
+			<div class="card"><span class="meta">Hardware · about 9 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/hardware-topology.md">Hardware topology</a><p>Which CPUs share a core, an L3, a node? How far is the NIC from my thread? How do I read the topology before writing a layout?</p></div>
+			<div class="card"><span class="meta">Hardware · about 10 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/power-and-frequency.md">Power, frequency and firmware</a><p>Why is the first message after a pause slow? Who chooses the clock? Is turbo worth it? Why does an SMI leave no trace?</p></div>
+			<div class="card"><span class="meta">Hardware · about 9 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/clocks-and-time.md">Clocks and time</a><p>Which clock do I read for a duration? Why can a latency be negative? What does the clocksource cost? How good is a one-way latency across hosts?</p></div>
+			<div class="card"><span class="meta">Kernel and CPU · about 7 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/bootloader.md">Boot path</a><p>How do arguments reach the kernel? What is the housekeeping mask? Why can't these be changed at runtime?</p></div>
+			<div class="card"><span class="meta">Kernel and CPU · about 7 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/cpu-isolation.md">CPU isolation</a><p>What interrupts a CPU? What does a context switch really cost? Spin or block?</p></div>
+			<div class="card"><span class="meta">Kernel and CPU · about 10 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/interrupts-and-deferred-work.md">Interrupts and deferred work</a><p>What runs after an interrupt, and where? When does ksoftirqd take over? Which IPIs reach an isolated CPU, and why? Where do RCU callbacks and kworkers run?</p></div>
+			<div class="card"><span class="meta">Kernel and CPU · about 8 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/security-mitigations.md">Security mitigations</a><p>What do Spectre and Meltdown fixes cost, and where? Who pays: a spinning thread or a blocking one? How do I measure it before opting out?</p></div>
+			<div class="card"><span class="meta">Kernel and CPU · about 5 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/cgroups.md">cgroups</a><p>Affinity vs cpuset? What do quota, memory.max, io.weight do? How does systemd map onto cgroups?</p></div>
+			<div class="card"><span class="meta">Memory · about 7 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/huge-pages.md">Huge pages and NUMA</a><p>What is TLB reach? Why pre-touch? Why is THP unpredictable? Why reserve per node?</p></div>
+			<div class="card"><span class="meta">Memory · about 10 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/memory-reclaim.md">Memory reclaim and faults</a><p>Where does the memory go? Who reclaims it, kswapd or my thread? What does a minor or major fault cost? Why do stalls appear only after days of uptime?</p></div>
+			<div class="card"><span class="meta">Memory · about 9 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/swap-and-oom.md">Swap and the OOM killer</a><p>What can be swapped, and what does a swap-in cost? What does swappiness really do? How does the OOM killer choose? Why prefer a loud failure?</p></div>
+			<div class="card"><span class="meta">Network · about 8 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/network-tuning.md">Network path</a><p>Where does a packet wait between the wire and <code>recv()</code>? What do coalescing, NAPI, RSS, and bypass change?</p></div>
+			<div class="card"><span class="meta">Network · about 10 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/network-buffers.md">Network buffers</a><p>How big is each queue on the way to <code>recv()</code>? How long does a ring hold a burst? Where did the packet die, and which counter shows it? What do DPDK and Onload change?</p></div>
+			<div class="card"><span class="meta">Network · about 16 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/ethtool.md">ethtool reference</a><p>What is a channel, and what does <code>combined</code> mean? Which options reset the link? How do I steer one flow to one queue? How do I persist each setting?</p></div>
+			<div class="card"><span class="meta">Application · about 10 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/thread-handoff.md">Thread handoff</a><p>What does passing a message between two cores cost? What is false sharing, and how do I pad? Acquire, release or volatile? Spin, back off or block?</p></div>
+			<div class="card"><span class="meta">Application · about 9 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/logging-and-io.md">Logging and I/O</a><p>Where can a log line block? What do dirty throttling, fsync and the kernel console cost? How do I log without doing I/O on the hot path?</p></div>
+			<div class="card"><span class="meta">Application · about 10 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/jvm-pauses.md">JVM pauses</a><p>Why does a pinned Java thread still stop? What is time to safepoint? What does ZGC still pause for? Which JVM stalls are not pauses, and how do I log them?</p></div>
+			<div class="card"><span class="meta">Measurement · about 9 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/tail-latency.md">Tail latency</a><p>Why does p99 matter to every user? How many samples does a percentile need? Why can percentiles not be averaged? What does the histogram shape say?</p></div>
+			<div class="card"><span class="meta">Measurement · about 9 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/queueing.md">Queueing</a><p>Why does p99 explode as load rises? What does Little's law tell me? Why does jitter cost as much as capacity? How long does one stall echo?</p></div>
+		</div>
+		<div class="buttons"><a class="btn secondary" href="gallery.html">See every diagram in the gallery</a></div>
 	</div>
 </section>
 
@@ -141,5 +174,6 @@ scripts/verify-tuning                        # PASS/WARN/FAIL for every guide</p
 		<p>Copyright (c) 2026 Vitor Tadashi. Prose is <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/LICENSE-docs">CC BY 4.0</a>, code is <a href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/LICENSE">MIT</a>. All figures on this site are typical orders of magnitude or fictional illustrations, not benchmark results.</p>
 	</div>
 </footer>
+<script src="zoom.js"></script>
 </body>
 </html>

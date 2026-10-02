@@ -17,6 +17,26 @@ rm -rf _site
 mkdir -p _site/assets
 cp -R site/. _site/
 cp -R assets/diagrams _site/assets/
+
+# diagrams.json, read by the gallery: title, description and the pages that use each diagram.
+docs="$(git ls-files -- '*.md' | grep -v '^STYLE.md$' || true)"
+perl -e '
+	my @docs = split /\n/, shift;
+	my %text = map { local $/; open my $f, "<", $_ or die "$_: $!"; ($_ => scalar <$f>) } @docs;
+	sub esc { my $s = shift; $s =~ s/\\/\\\\/g; $s =~ s/"/\\"/g; $s =~ s/\s+/ /g; return $s }
+	my @out;
+	for my $svg (sort @ARGV) {
+		open my $f, "<", $svg or die "$svg: $!"; local $/; my $s = <$f>;
+		my ($title) = $s =~ /<title[^>]*>(.*?)<\/title>/s;
+		my ($desc) = $s =~ /<desc[^>]*>(.*?)<\/desc>/s;
+		(my $name = $svg) =~ s{.*/}{};
+		my @pages = grep { index($text{$_}, $name) >= 0 } @docs;
+		my $animated = $s =~ /\@keyframes/ ? "true" : "false";
+		push @out, sprintf("{\"file\":\"%s\",\"title\":\"%s\",\"desc\":\"%s\",\"animated\":%s,\"pages\":[%s]}",
+			$name, esc($title // ""), esc($desc // ""), $animated, join(",", map { "\"$_\"" } @pages));
+	}
+	print "[\n", join(",\n", @out), "\n]\n";
+' "${docs}" assets/diagrams/*.svg >_site/diagrams.json
 files="$(find _site -type f)"
 count="$(grep -c . <<<"${files}")"
 printf 'build-site: wrote _site (%d files)\n' "${count}"
