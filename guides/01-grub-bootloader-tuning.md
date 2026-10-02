@@ -7,15 +7,15 @@
 | **Risk level** | **4 / 5**. A wrong value can make the host fail to boot, lose network names, or run without CPU vulnerability protections. |
 | **Reboot required** | Yes. Nothing in this guide takes effect until the next boot. |
 | **Applies to** | Bare metal: full set. Virtual machines: the latency subset only. |
-| **Time** | 30 min to prepare, 1 reboot, 15 min to verify. |
+| **Depends on** | [Guide 00](00-bios-firmware.md) on bare metal: the firmware decides which idle states and frequencies exist. |
 
 ## At a glance
 
-- **What:** kernel boot arguments that decide which CPUs the scheduler uses, whether they tick, where RCU work runs, how deep idle CPUs sleep, and which page sizes exist.
+- **What:** kernel boot arguments that decide which CPUs the scheduler uses, whether they tick, where the kernel's deferred cleanup ([RCU](../GLOSSARY.md#rcu)) runs, how deep idle CPUs sleep, and which page sizes exist.
 - **Why:** several of them (`isolcpus`, `nohz_full`, `rcu_nocbs`) can only be set at boot, and they remove the rare 20–200 µs interruptions that dominate p99.9.
 - **Cost:** a reboot, 100 % CPU and higher power from `idle=poll`, and, only if you opt in, weaker CPU vulnerability protection.
 
-**Time:** ~45 min + 1 reboot · **Do this if:** you run a latency-critical application on RHEL 8, 9 or 10 (full set on bare metal, subset in a VM) · **Skip if:** it's a container, or nobody has profiled the application yet.
+**Time:** 30 min to prepare, 1 reboot, 15 min to verify · **Do this if:** you run a latency-critical application on RHEL 8, 9 or 10 (full set on bare metal, subset in a VM) · **Skip if:** it's a container, or nobody has profiled the application yet.
 
 ```mermaid
 flowchart LR
@@ -41,7 +41,11 @@ Most of what makes a Linux host "noisy" for a latency-critical thread is decided
 
 These decisions are made while the kernel boots, from parameters that the bootloader passes on the kernel command line. Some of them (`isolcpus`, `nohz_full`, `rcu_nocbs`) **cannot be changed at runtime at all**. That is why this is the first guide: every other guide assumes these settings are already in place.
 
-The goal is **not** a lower *average* latency. The goal is to remove the causes of the rare, large outliers: a 20–200 µs timer interrupt, a C-state exit, an RCU callback batch, or a soft-lockup watchdog that lands on the core running your hot path. These are the events that dominate p99.9 and p99.99.
+The goal is **not** a lower *average* latency. The goal is to remove the causes of the rare, large outliers: a timer interrupt, a C-state exit, an RCU callback batch, or a soft-lockup watchdog that lands on the core running your hot path. These are the events that dominate p99.9 and p99.99.
+
+<img src="../assets/diagrams/kernel-args-stack.svg" alt="Animation: three timelines of one CPU running a busy thread; with no arguments other tasks, ticks and RCU callbacks interrupt it, isolcpus removes the tasks, and nohz_full stops the tick except one residual tick and moves the RCU callbacks away" width="720">
+
+*`isolcpus` removes the other tasks. `nohz_full` stops the tick and, on every RHEL kernel, also moves the RCU callbacks away; `rcu_nocbs` on the same CPUs says so explicitly. Only together do they leave the thread alone on its CPU.*
 
 ## 2. When to apply and when not to
 
@@ -161,7 +165,7 @@ sequenceDiagram
 | Rocky Linux 9 | the `options` line of each boot entry; the image has no `/etc/default/grub` | on `/proc/cmdline` | gone |
 | AlmaLinux 10, CentOS Stream 10 | the `options` line of each boot entry, and `GRUB_CMDLINE_LINUX` | on `/proc/cmdline` | gone |
 
-Why RHEL 8 behaves that way on the cloud image: `/boot/grub2/grubenv` is a symbolic link to `../efi/EFI/rocky/grubenv`, a file on the EFI partition. A GRUB that boots through the BIOS reads `/boot/grub2` and cannot follow that link, so it never sees `kernelopts`. It falls back to the copy of `kernelopts` that `grub2-mkconfig` wrote into `grub.cfg`: the kernel boots with exactly that string. At apply time that copy is fresh, because the script runs `grub2-mkconfig` after `grubby`. At rollback it is stale, because the rollback does not run it (a Phase 1 fix, `rhel8-rollback-args-return` in `scripts/fixtures/vm/known-issues`).
+Why RHEL 8 behaves that way on the cloud image: `/boot/grub2/grubenv` is a symbolic link to `../efi/EFI/rocky/grubenv`, a file on the EFI partition. A GRUB that boots through the BIOS reads `/boot/grub2` and cannot follow that link, so it never sees `kernelopts`. It falls back to the copy of `kernelopts` that `grub2-mkconfig` wrote into `grub.cfg`: the kernel boots with exactly that string. At apply time that copy is fresh, because the script runs `grub2-mkconfig` after `grubby`. At rollback it is stale, because the rollback does not run it (a known issue, `rhel8-rollback-args-return` in `scripts/fixtures/vm/known-issues`).
 
 A server installed from the RHEL 8 ISO usually has a real `grubenv` file, and then `grubby` alone is enough. Check which case you have:
 
@@ -174,7 +178,7 @@ cat /proc/cmdline                                    # what the kernel really go
 
 If the fallback line in `grub.cfg` and `/proc/cmdline` disagree with `grub2-editenv list`, GRUB is not reading `grubenv`. Regenerate `grub.cfg` after every change of kernel arguments, the rollback included: `sudo grub2-mkconfig -o /boot/grub2/grub.cfg`.
 
-> **Not tested yet.** The check shows the stale fallback. It does not yet run `grub2-mkconfig` after the rollback to show that this clears it.
+The check shows the stale fallback. It does not yet run `grub2-mkconfig` after the rollback to show that this clears it.
 
 </details>
 
@@ -199,21 +203,26 @@ If the fallback line in `grub.cfg` and `/proc/cmdline` disagree with `grub2-edit
 | `nohz_full` | `3,5,…,31` | *Adaptive ticks*: when exactly one runnable task is on the CPU, the periodic tick (1000 Hz on RHEL x86_64) stops. The remaining time-keeping duty moves to housekeeping CPUs. |
 | `rcu_nocbs` | `3,5,…,31` | RCU callbacks for these CPUs are not run in softirq context on the CPU itself. They run in `rcuo*` kernel threads, which the scheduler keeps on housekeeping CPUs. |
 | `rcu_nocb_poll` | *(flag)* | The `rcuo*` threads poll for new callbacks, so the isolated CPU does not have to send a wake-up to them. |
-| `nohz` | `off` | Disables *idle* dynticks (`CONFIG_NO_HZ_IDLE`). See the note below. |
+| `nohz` | `off` | Disables *idle* dynticks (`CONFIG_NO_HZ_IDLE`). See below the picture. |
 | `skew_tick` | `1` | Offsets each CPU's tick timer so that the ticks do not all fire at the same instant. This reduces contention on the jiffies/timekeeping locks on large machines. |
 
 <img src="../assets/diagrams/tick-nohz.svg" alt="Animation: a busy CPU is interrupted by a timer tick many times per second; with nohz_full the same CPU runs uninterrupted except for one residual tick" width="720">
 
 *`nohz_full` in one picture: with exactly one runnable task, the periodic tick stops and only about one residual tick per second is left.*
 
+> **Picture it.** The tick is a bell that rings in every office 1000 times a second, to check whether someone else should use the desk. `nohz_full` switches the bell off in an office where only one person works.
+
 > [!WARNING]
-> **`rcu_nocbs` must list the isolated CPUs.** It names the CPUs whose callbacks are **moved away**. A common mistake, found in real tuning scripts, is to set `rcu_nocbs` to the *housekeeping* CPUs ("the CPUs that do RCU work"). That does the opposite of what you want: the isolated CPUs keep running their callbacks in softirq, and the housekeeping CPUs get an extra layer of kthreads. On recent kernels `nohz_full` implies `rcu_nocbs` for the same CPUs, but setting it explicitly documents intent and covers older kernels.
+> **`rcu_nocbs` lists the isolated CPUs**, the ones whose callbacks move away. Setting it to the housekeeping CPUs, a mistake found in real tuning scripts, leaves the callbacks on the isolated CPUs.
+
+> **Picture it.** RCU is a library that throws away an old edition only after the last reader has put it down. The throwing away is a callback. `rcu_nocbs` hands that chore to a helper (`rcuo`) who works in another room.
+
+`nohz_full` already implies `rcu_nocbs` for the same CPUs on RHEL 8, 9 and 10. Setting it explicitly documents the intent, and keeps the offload if `nohz_full` is ever removed. `rcu_nocb_poll` is a flag: `rcu_nocb_poll=10` is accepted, but the `10` is ignored.
+
+`nohz=off` only disables tickless *idle*. With `idle=poll` the CPUs are never idle, so the parameter rarely matters. It is kept for parity with common low-latency configurations.
 
 > [!NOTE]
-> **`rcu_nocb_poll` is a flag.** Writing `rcu_nocb_poll=10` is accepted, but the `10` is ignored. There is no poll-interval parameter.
-
-> [!NOTE]
-> **`nohz=off` together with `nohz_full`: verify on your kernel.** `nohz=off` only disables tickless *idle*. With `idle=poll` your CPUs are never idle anyway, so most of the time the parameter has no effect. It is kept for parity with common low-latency configurations. After the reboot, verify that the isolated CPUs really stopped ticking (§7). If the `LOC` counter keeps increasing at `HZ` on an isolated CPU that runs a single pinned busy thread, remove `nohz=off` and test again.
+> **Validate on your hardware.** If the `LOC` counter keeps increasing at `HZ` on an isolated CPU that runs one pinned busy thread (§7), remove `nohz=off` and test again.
 
 **What isolation does *not* do.** `isolcpus` does not move per-CPU kernel threads (`ksoftirqd/N`, `kworker/N:*`, `migration/N`, `cpuhp/N`), and it does not route interrupts. Those are handled by [Guide 02](02-cpu-core-isolation.md) (workqueues, irqbalance), [Guide 04](04-network-optimization.md) (NIC IRQ affinity) and [Guide 05](05-cgroup-isolation.md) (user-space daemons).
 
@@ -234,7 +243,7 @@ If the fallback line in `grub.cfg` and `/proc/cmdline` disagree with `grub2-edit
 |---|---|---|
 | `nosoftlockup` | The soft-lockup detector: a per-CPU hrtimer plus a `watchdog/N` thread that checks every CPU is still scheduling. | A 100 % busy-spinning pinned thread never "schedules". Besides the timer noise, the detector would report false lockups. |
 | `nmi_watchdog=0` | The hard-lockup detector: a periodic perf-counter NMI on every CPU. NMIs cannot be masked, so they interrupt even the most critical code. | You lose automatic detection of hard lockups. The host still panics on real hardware faults. |
-| `mce=ignore_ce` | Corrected machine-check error handling: the CMCI interrupt and the periodic MCE polling timer. | You lose OS-level visibility of *corrected* memory/cache errors. **Mitigation:** monitor them out-of-band through the BMC/IPMI System Event Log. Uncorrected errors are still handled. |
+| `mce=ignore_ce` | Corrected machine-check error handling: the corrected-error interrupt (CMCI) and the periodic machine-check (MCE) polling timer. | You lose OS-level visibility of *corrected* memory/cache errors. **Mitigation:** monitor them out-of-band through the BMC/IPMI System Event Log. Uncorrected errors are still handled. |
 
 ### 5.5 Huge page size
 
@@ -256,12 +265,16 @@ With `KERNEL_BYPASS_STACK=dpdk` and the `vfio-pci` driver, the script does the o
 
 | Parameter | What it does | Latency gain | Security cost |
 |---|---|---|---|
-| `intel_iommu=off`, `iommu=off` | Turns DMA address translation off. Devices then DMA straight to physical addresses instead of going through the IOMMU and its IOTLB. | Removes IOTLB misses on the DMA path. | Devices can DMA anywhere in memory. **Required ON** for SR-IOV/VFIO/DPDK-with-IOMMU and for Thunderbolt/untrusted devices. |
-| `pti=off` | Turns Kernel Page-Table Isolation (the Meltdown mitigation) off. Kernel and user space share one page table again, so entering and leaving the kernel no longer switches CR3. | Removes a CR3 switch and TLB flush on **every syscall and interrupt**. This is the largest single gain in this table. | User space can read kernel memory on vulnerable Intel CPUs. |
+| `intel_iommu=off`, `iommu=off` | Turns DMA address translation off. Devices then DMA straight to physical addresses instead of going through the IOMMU and its translation cache (IOTLB). | Removes IOTLB misses on the DMA path. | Devices can DMA anywhere in memory. **Required ON** for SR-IOV/VFIO/DPDK-with-IOMMU and for Thunderbolt/untrusted devices. |
+| `pti=off` | Turns Kernel Page-Table Isolation (the Meltdown mitigation) off. Kernel and user space share one page table again, so entering and leaving the kernel no longer switches the page-table register (CR3). | Removes a page-table switch and TLB flush on **every syscall and interrupt**. This is the largest single gain in this table. | User space can read kernel memory on vulnerable Intel CPUs. |
 | `nospectre_v1` | Stops the kernel from inserting Spectre v1 barriers (`lfence`, array index masking) after bounds checks. | Small. | Bounds-check bypass attacks. |
 | `nospectre_v2` | Stops the kernel from using retpolines / IBRS, and from issuing IBPB on context switch, to protect indirect branches. | Noticeable on context-switch-heavy paths. | Branch-target injection across processes and into the kernel. |
 | `mds=off` | Stops the kernel from clearing CPU buffers (`VERW`) on every return to user space (Microarchitectural Data Sampling mitigation). | Noticeable on syscall-heavy paths. | ZombieLoad/RIDL-class leaks. |
 | `tsx_async_abort=off` | Stops the TSX Async Abort mitigation (the same `VERW` buffer clearing, plus TSX handling). | Pairs with `mds=off`. | TAA-class leaks. |
+
+<img src="../assets/diagrams/syscall-mitigations.svg" alt="Animation: one small system call with mitigations on spends most of its time on a page-table switch in, a CPU buffer clear and a page-table switch out; with pti=off and mds=off the same call is the entry, the work and the return" width="720">
+
+*With the mitigations on, a small system call spends most of its time on the protection around it. That is the gain, and it is also exactly what the protection is for.*
 
 `mitigations=off` is the umbrella switch for all of the above and any future ones. The explicit list is used here so that a kernel update never silently disables a *new* mitigation you have not reviewed.
 
@@ -394,16 +407,10 @@ flowchart TD
 - [ ] Reboot: `sudo systemctl reboot`
 - [ ] Confirm: `cat /proc/cmdline` no longer shows the arguments, and `cat /sys/devices/system/cpu/isolated` is empty
 
-The first bare-metal apply saves each installed kernel's graphical-console
-presence in `/var/lib/lowlat/console-original`. Repeated apply preserves that
-record, and repeated rollback does not duplicate the console argument. A VM
-apply leaves consoles alone. Keep the record for subsequent rollbacks; if a
-recorded kernel was removed, inspect the installed entries before retrying.
+**Graphical consoles.** The first bare-metal apply records which kernels had `console=tty0` in `/var/lib/lowlat/console-original`, and the rollback puts it back on exactly those. Applying or rolling back twice changes nothing more, and a VM apply leaves consoles alone. Keep the record. If a recorded kernel has been removed since, check the installed entries before you retry.
 
 > [!NOTE]
-> **Validate on your hardware.** Console restoration is checked against fake
-> boot entries and real grubby in containers. Verify the running command line
-> after reboot before relying on it for production recovery.
+> **Validate on your hardware.** Console restoration is checked against fake boot entries and real `grubby` in containers. Check the running command line after the reboot before you rely on it for recovery.
 
 ## 10. Bare metal vs VM summary
 

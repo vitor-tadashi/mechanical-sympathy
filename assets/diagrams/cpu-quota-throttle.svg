@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 360" width="760" height="360" role="img" aria-labelledby="t d">
+<title id="t">CPUQuota caps an agent burst and leaves part of every period free</title>
+<desc id="d">Two lanes show CPUs 4 and 6, the CPUs of housekeeping.slice, during a runaway agent burst. Without a quota the agent keeps both CPUs at 100 percent, and other work on them, such as the exporter, system services and kernel threads, only runs in short turns the scheduler takes from it. With CPUQuota=150%, the slice may use 150 ms of CPU time per 100 ms period. When it has used them, the kernel throttles the slice until the next period, a quarter of every period is free for other work, and the nr_throttled counter grows by one per period.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .mid { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .ag { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.2; }
+  .ex { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.2; }
+  .th { fill: url(#hatch); stroke: #777777; stroke-width: 1; }
+  .per { stroke: #57606a; stroke-width: 1; stroke-dasharray: 2 3; }
+  .tag { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; text-anchor: middle; }
+  .warn { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; }
+  .ok { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; }
+  .cnt { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; transform-box: fill-box; transform-origin: center; animation: pop 8s linear infinite; }
+  @keyframes pop { 0%, 4% { transform: scale(1.35); fill: #9b1c1c; } 8%, 100% { transform: scale(1); fill: #1a1a1a; } }
+  .head { transform: translateX(570px); animation: sweep 8s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cnt, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="360" rx="8"/>
+<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#eeeeee"/><line x1="0" y1="0" x2="0" y2="6" stroke="#9a9a9a" stroke-width="2"/></pattern></defs>
+<rect class="lane" x="10" y="10" width="740" height="160" rx="6"/>
+<text class="cap" x="24" y="34">No quota: a runaway agent keeps CPUs 4 and 6 at 100 %</text>
+<text class="sub" x="24" y="52">The fence keeps it off the isolated CPUs. On CPUs 4 and 6, everything else must wait for the scheduler to take a turn from it.</text>
+<text class="lbl" x="24" y="79">CPU 4</text><text class="lbl" x="24" y="111">CPU 6</text>
+<rect class="ag" x="150" y="62" width="570" height="24" rx="3"/>
+<rect class="ex" x="212.7" y="67" width="10" height="14" rx="2"/>
+<rect class="ex" x="326.7" y="67" width="10" height="14" rx="2"/>
+<rect class="ex" x="440.7" y="67" width="10" height="14" rx="2"/>
+<rect class="ex" x="554.7" y="67" width="10" height="14" rx="2"/>
+<rect class="ex" x="668.7" y="67" width="10" height="14" rx="2"/>
+<rect class="ag" x="150" y="94" width="570" height="24" rx="3"/>
+<rect class="ex" x="242.7" y="99" width="10" height="14" rx="2"/>
+<rect class="ex" x="356.7" y="99" width="10" height="14" rx="2"/>
+<rect class="ex" x="470.7" y="99" width="10" height="14" rx="2"/>
+<rect class="ex" x="584.7" y="99" width="10" height="14" rx="2"/>
+<rect class="ex" x="698.7" y="99" width="10" height="14" rx="2"/>
+<text class="mid" x="270" y="79">agent</text>
+<text class="warn" x="150" y="142">yellow: other work (exporter, system services, kernel threads) squeezed into short turns</text>
+<rect class="lane" x="10" y="180" width="740" height="170" rx="6"/>
+<text class="cap" x="24" y="204">CPUQuota=150%: 150 ms of CPU time per 100 ms period, then the slice waits</text>
+<text class="sub" x="24" y="222">When the agent has used its share, the kernel throttles the slice until the next period.</text>
+<text class="lbl" x="24" y="249">CPU 4</text><text class="lbl" x="24" y="281">CPU 6</text>
+<rect class="ag" x="150.0" y="232" width="85.5" height="24" rx="3"/>
+<rect class="th" x="236.5" y="232" width="25.5" height="24" rx="3"/>
+<rect class="ex" x="240.5" y="237" width="17.5" height="14" rx="2"/>
+<rect class="ag" x="150.0" y="264" width="85.5" height="24" rx="3"/>
+<rect class="th" x="236.5" y="264" width="25.5" height="24" rx="3"/>
+<rect class="ex" x="240.5" y="269" width="17.5" height="14" rx="2"/>
+<text class="cnt" x="248.0" y="310" style="animation-delay:-6.8s">+1</text>
+<rect class="ag" x="264.0" y="232" width="85.5" height="24" rx="3"/>
+<rect class="th" x="350.5" y="232" width="25.5" height="24" rx="3"/>
+<rect class="ex" x="354.5" y="237" width="17.5" height="14" rx="2"/>
+<rect class="ag" x="264.0" y="264" width="85.5" height="24" rx="3"/>
+<rect class="th" x="350.5" y="264" width="25.5" height="24" rx="3"/>
+<rect class="ex" x="354.5" y="269" width="17.5" height="14" rx="2"/>
+<line class="per" x1="264.0" y1="224" x2="264.0" y2="292"/>
+<text class="cnt" x="362.0" y="310" style="animation-delay:-5.2s">+1</text>
+<rect class="ag" x="378.0" y="232" width="85.5" height="24" rx="3"/>
+<rect class="th" x="464.5" y="232" width="25.5" height="24" rx="3"/>
+<rect class="ex" x="468.5" y="237" width="17.5" height="14" rx="2"/>
+<rect class="ag" x="378.0" y="264" width="85.5" height="24" rx="3"/>
+<rect class="th" x="464.5" y="264" width="25.5" height="24" rx="3"/>
+<rect class="ex" x="468.5" y="269" width="17.5" height="14" rx="2"/>
+<line class="per" x1="378.0" y1="224" x2="378.0" y2="292"/>
+<text class="cnt" x="476.0" y="310" style="animation-delay:-3.6s">+1</text>
+<rect class="ag" x="492.0" y="232" width="85.5" height="24" rx="3"/>
+<rect class="th" x="578.5" y="232" width="25.5" height="24" rx="3"/>
+<rect class="ex" x="582.5" y="237" width="17.5" height="14" rx="2"/>
+<rect class="ag" x="492.0" y="264" width="85.5" height="24" rx="3"/>
+<rect class="th" x="578.5" y="264" width="25.5" height="24" rx="3"/>
+<rect class="ex" x="582.5" y="269" width="17.5" height="14" rx="2"/>
+<line class="per" x1="492.0" y1="224" x2="492.0" y2="292"/>
+<text class="cnt" x="590.0" y="310" style="animation-delay:-2.0s">+1</text>
+<rect class="ag" x="606.0" y="232" width="85.5" height="24" rx="3"/>
+<rect class="th" x="692.5" y="232" width="25.5" height="24" rx="3"/>
+<rect class="ex" x="696.5" y="237" width="17.5" height="14" rx="2"/>
+<rect class="ag" x="606.0" y="264" width="85.5" height="24" rx="3"/>
+<rect class="th" x="692.5" y="264" width="25.5" height="24" rx="3"/>
+<rect class="ex" x="696.5" y="269" width="17.5" height="14" rx="2"/>
+<line class="per" x1="606.0" y1="224" x2="606.0" y2="292"/>
+<text class="cnt" x="704.0" y="310" style="animation-delay:-0.4s">+1</text>
+<text class="tag" x="192.8" y="249">agent</text>
+<text class="axis" x="24" y="310">nr_throttled</text>
+<text class="ok" x="150" y="334">hatched: the slice is throttled. A quarter of every period is free for other work.</text>
+<line class="head" x1="150" y1="64" x2="150" y2="342"/>
+</svg>

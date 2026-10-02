@@ -143,7 +143,7 @@ Illustrative:
 
 ## 6. Roll back
 
-- [ ] Queues: the checklist in [Guide 04 §12](../../guides/04-network-optimization.md#12-rollback), or `sudo ethtool -L ens1f0 combined 1` (this resets the link)
+- [ ] Queues: the checklist in [Guide 04 §11](../../guides/04-network-optimization.md#11-rollback), or `sudo ethtool -L ens1f0 combined 1` (this resets the link)
 - [ ] Bypass: `sudo scripts/08-kernel-bypass --rollback`, then follow [Guide 08 §12](../../guides/08-kernel-bypass.md#12-rollback), and start the application without the `onload` prefix
 - [ ] Whole host: `sudo systemctl disable lowlat-runtime.service` and reboot
 

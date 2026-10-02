@@ -41,7 +41,7 @@ Guides 00 to 10 and 12 set things once. The host then keeps changing under them:
 |---|---|---|---|
 | **Kernel update** | The new kernel entry boots without `isolcpus`, `nohz_full` or `rcu_nocbs` | `grubby --info=ALL`, or `/sys/devices/system/cpu/isolated` empty after the reboot | §3 and [Guide 01](01-grub-bootloader-tuning.md#7-verification) |
 | **BIOS or BMC firmware update** | BIOS settings back to vendor defaults: C-states, turbo, Hyper-Threading, SMI sources | `scripts/00-bios-firmware --verify`, and the SMI count | [Guide 00 §8](00-bios-firmware.md#8-troubleshooting) |
-| **NIC driver or firmware update, driver reload** | Queues, coalescing, offloads and IRQ affinity go back to defaults | `scripts/04-network --verify` | [Guide 04 §11](04-network-optimization.md#11-troubleshooting), and `sudo scripts/apply-all --runtime` |
+| **NIC driver or firmware update, driver reload** | Queues, coalescing, offloads and IRQ affinity go back to defaults | `scripts/04-network --verify` | [Guide 04 §10](04-network-optimization.md#10-troubleshooting), and `sudo scripts/apply-all --runtime` |
 | **Agent update** (endpoint security, monitoring) | The agent resets its own affinity and leaves the fence | Where every thread of each agent runs | [Guide 05 §7](05-cgroup-isolation.md#7-troubleshooting) |
 | **Package updates of tuned or sysctl files** | The order in which profiles and `sysctl.d` files apply | `scripts/06-kernel-sysctl --verify` | [Guide 07 §5](07-os-hygiene.md#5-tuned-profile) |
 | **Application release** | New threads, or changed pinning | `show_affinity` of the running process | §5 |

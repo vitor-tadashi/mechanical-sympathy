@@ -39,7 +39,7 @@ flowchart LR
   classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
 ```
 
-*A received packet crosses six stages. The coalescing timer, highlighted, is where most of the avoidable waiting happens, and the IRQ CPU X is never the application's isolated CPU Y.*
+*A received packet crosses six stages. The coalescing timer, highlighted, is where most of the avoidable waiting happens, and the IRQ CPU X is never the application's isolated CPU Y. [NAPI](../GLOSSARY.md#napi) is the kernel loop that collects received packets from the ring in batches.*
 
 Each stage has a setting that trades latency against throughput or CPU cost:
 
@@ -50,8 +50,8 @@ Each stage has a setting that trades latency against throughput or CPU cost:
 | Transmit segmentation (TSO/GSO) | Build large frames and split them in the NIC or late in the stack | small, variable | `ethtool -K` |
 | IRQ / softirq placement | irqbalance picks a CPU, possibly remote or isolated | cross-node cache misses; noise on the isolated CPU | `/proc/irq/N/smp_affinity_list` |
 | Flow control | A congested peer can PAUSE our transmitter | up to ms | `ethtool -A` |
-| Queue count / RSS | Driver default (often one per CPU) | queues on CPUs you did not choose; flows sharing a queue block each other | `ethtool -L`, `-X`, `-N` |
-| Ring size | Driver default (typically 512 to 2048) | drops, then retransmits (TCP: ≥ 200 ms RTO) | `ethtool -G` |
+| Queue count / RSS (a hash that spreads flows over the queues) | Driver default (often one per CPU) | queues on CPUs you did not choose; flows sharing a queue block each other | `ethtool -L`, `-X`, `-N` |
+| Ring size | Driver default (typically 512 to 2048) | drops, then retransmits (TCP: a retransmit timeout, RTO, of ≥ 200 ms) | `ethtool -G` |
 
 The goal of this guide is that a critical packet **never waits** (coalescing 0, no batching, no PAUSE), is **never dropped** (large rings), and is **processed on a known CPU near the NIC** that is **not** one of the isolated CPUs.
 
@@ -62,7 +62,7 @@ The goal of this guide is that a critical packet **never waits** (coalescing 0, 
 | Physical NICs carrying latency-critical requests, event streams, or a latency-critical backend | **Yes** |
 | Bulk links (replication, logs, reports) on the same host | Yes, with the *bulk* profile (§5.9) |
 | The management interface you are logged in through | **No.** Role `mgmt` is never touched, except for moving its IRQs off isolated CPUs. |
-| VMs with virtio/ENA/vmxnet3 | Partially: see §10 |
+| VMs with virtio/ENA/vmxnet3 | Partially: see §12 |
 | Kernel-bypass NICs | Yes, for what the kernel keeps: one queue with socket acceleration, nothing with DPDK (§7, [Guide 08](08-kernel-bypass.md)). |
 
 ## 3. Network segmentation: give each traffic class its own NIC
@@ -253,7 +253,7 @@ In `lowlat.conf`, `KERNEL_BYPASS_DRIVER` and `KERNEL_BYPASS_COMMAND` mark socket
 
 ### 5.2 Adaptive coalescing off: `ethtool -C adaptive-rx off adaptive-tx off`
 
-Adaptive (DIM) coalescing re-tunes `rx-usecs` continuously from the observed packet rate. It is excellent for throughput and CPU usage, and it is the reason a quiet link suddenly adds 30–50 µs when a burst starts. It also **overwrites** fixed values, so it must be off before §5.3 means anything.
+Adaptive coalescing (the driver's dynamic interrupt moderation, DIM) re-tunes `rx-usecs` continuously from the observed packet rate. It is excellent for throughput and CPU usage, and it is the reason a quiet link suddenly adds 30–50 µs when a burst starts. It also **overwrites** fixed values, so it must be off before §5.3 means anything.
 
 ### 5.3 Coalescing 0: `ethtool -C rx-usecs 0 tx-usecs 0`
 
@@ -262,6 +262,12 @@ Adaptive (DIM) coalescing re-tunes `rx-usecs` continuously from the observed pac
 <img src="../assets/diagrams/rx-coalescing.svg" alt="Animation: with adaptive coalescing, the first packet waits in the NIC until the timer fires; with rx-usecs 0 the same packet reaches the application immediately" width="720">
 
 *With coalescing, the first packet of a burst sits in the NIC until the timer expires. With `rx-usecs 0`, it raises the interrupt at once.*
+
+> **Picture it.** Coalescing is a mail carrier who waits until the bag is full, or until the clock says go, before ringing your bell. Fewer rings, but the first letter of the day always waits for the clock.
+
+<img src="../assets/diagrams/coalescing-rate.svg" alt="Animation: lone packets each wait for the whole coalescing timer while a burst shares one wait, and with rx-usecs 0 every packet is delivered at once" width="720">
+
+*At a low rate every packet is the first of its burst, so each one pays the whole timer. That is why a quiet feed suffers more than a busy one.*
 
 | rx-usecs | Latency added at low rate | Interrupt rate at 1 Mpps |
 |---|---|---|
@@ -276,13 +282,22 @@ The cost is CPU: every packet raises an interrupt on the housekeeping CPU. That 
 
 ### 5.4 Pause frames off: `ethtool -A autoneg off rx off tx off`
 
-This is **flow control** (IEEE 802.3x PAUSE), not an offload. With RX pause on, a peer or switch whose buffers are filling can tell our NIC to **stop transmitting** for up to 65,535 quanta: about 3.3 ms at 10 GbE and 0.3 ms at 100 GbE. For low-latency traffic a drop, handled by the protocol, is preferable to a silent multi-millisecond stall of *all* traffic on the port. Make sure the switch port is configured the same way. Priority flow control (PFC, for RoCE) is a separate topic and should not be disabled blindly on RDMA fabrics.
+This is **flow control** (IEEE 802.3x PAUSE), not an offload. With RX pause on, a peer or switch whose buffers are filling can tell our NIC to **stop transmitting** for up to 65,535 quanta: about 3.3 ms at 10 GbE and 0.3 ms at 100 GbE.
+
+<img src="../assets/diagrams/pause-frame.svg" alt="Animation: with flow control on, a PAUSE frame from a congested switch stops the critical and the bulk flow of the host for milliseconds; with flow control off, the switch drops one bulk packet and the critical flow keeps moving" width="720">
+
+*A PAUSE frame stops every flow of the port, the critical one too. Without flow control, the congested switch queues or drops packets instead. Which flow loses one depends on the switch's queues and the order of arrival: here it is a bulk packet, but it can be a critical one.*
+
+For low-latency traffic, a drop that the protocol handles is usually better than a silent stall of *all* traffic on the port. Configure the switch port the same way. To keep the critical flow out of the congestion altogether, give it its own NIC or switch queue (§3).
+
+> [!NOTE]
+> **Validate on your network.** Measure drops and the tail on both settings with your switch: queueing, drop policy and buffer sizes differ between switches. Priority flow control (PFC, used by RoCE) is a separate topic: do not disable it blindly on RDMA fabrics.
 
 ### 5.5 Segmentation and aggregation offloads off: `ethtool -K tso off gso off lro off`
 
 | Feature | Direction | What it does | Why off |
 |---|---|---|---|
-| TSO | TX | NIC splits a large TCP buffer into MSS-sized segments | Encourages the stack to build large buffers; small writes may wait |
+| TSO | TX | NIC splits a large TCP buffer into segments of the maximum segment size (MSS) | Encourages the stack to build large buffers; small writes may wait |
 | GSO | TX | Same, done in software late in the stack | Same |
 | LRO | RX | NIC merges segments into one large packet (not in routing/bridging setups) | Adds merge delay, and hides per-packet timing |
 
@@ -290,13 +305,17 @@ This is **flow control** (IEEE 802.3x PAUSE), not an offload. With RX pause on, 
 
 ### 5.6 Checksum offload: keep it on, unless you have measured otherwise
 
-`ethtool -K rx off tx off` disables **checksum offload** and moves checksum computation to the CPU. Some tuning scripts do this together with the offloads above. It is **not** a general latency win: the NIC computes checksums at line rate for free, while the CPU spends cycles on every byte. The only cases where turning it off makes sense are specific NIC/driver bugs, or packet-capture setups that need the raw checksum. It is therefore **opt-in** here (`NIC_DISABLE_CSUM_OFFLOAD=yes`).
+`ethtool -K rx off tx off` disables **checksum offload** and moves checksum computation to the CPU. Some tuning scripts do this together with the offloads above. It is **not** a general latency win: the NIC computes checksums at line rate for free, while the CPU spends cycles on every byte.
+
+Turn it off only for a known NIC or driver bug, or for a packet capture that needs the raw checksum. It is therefore **opt-in** here (`NIC_DISABLE_CSUM_OFFLOAD=yes`).
 
 <a id="ring-sizes"></a>
 
 ### 5.7 Ring sizes at maximum: `ethtool -G rx <max> tx <max>`
 
-The RX ring is where the NIC DMAs packets before software picks them up. If a burst (a traffic spike, a reconnect storm, a GC-less but busy consumer) arrives faster than NAPI drains it, packets are **dropped in hardware**, and a dropped TCP segment costs a retransmit timeout of ≥ 200 ms. A larger ring does not add latency while it is empty. It only absorbs bursts. Watch `ethtool -S <iface> | grep -iE 'drop|miss|fifo|no_buf'`.
+The RX ring is where the NIC writes packets (by DMA) before software picks them up. If a burst arrives faster than the kernel drains it, packets are **dropped in hardware**, and a dropped TCP segment costs a retransmit timeout of ≥ 200 ms.
+
+A larger ring adds no latency while it is empty: it only absorbs bursts. Watch `ethtool -S <iface> | grep -iE 'drop|miss|fifo|no_buf'`, and size it with [Concept: network buffers](../concepts/network-buffers.md#3-burst-math).
 
 <img src="../assets/diagrams/ring-anatomy.svg" alt="A ring of sixteen slots drawn as a circle, with filled, ready and refilling slots, a write pointer for the NIC and a read pointer for the driver, and the rule that a drop happens when the head meets a slot that is not ready" width="720">
 
@@ -355,13 +374,12 @@ echo 1 > /proc/irq/<irq>/smp_affinity_list         # CPU list format, no hex mas
 cat /proc/irq/<irq>/effective_affinity_list        # what the interrupt controller actually uses
 ```
 
-- The MSI-X directory lists **exactly** the vectors of that PCI function. The fallback, matching names in `/proc/interrupts`, uses whole-word matching, so that `em1` does not also match `em10`, a bug that affects scripts using `grep em1`.
+- The MSI-X directory (one interrupt vector per queue) lists **exactly** the vectors of that PCI function. The fallback, matching names in `/proc/interrupts`, uses whole-word matching, so that `em1` does not also match `em10`, a bug that affects scripts using `grep em1`.
 - `smp_affinity_list` takes a CPU list (`1`, `0-3`, `1,3`), so there is no hex-mask arithmetic that silently breaks above 64 CPUs.
 - With a multi-CPU list, most interrupt controllers (x86 APIC in physical mode) deliver to **one** CPU of the set. Check `effective_affinity_list`.
 - Some drivers on newer kernels use **kernel-managed** IRQs, whose affinity is fixed and `write` fails with `EIO`. The script logs these and continues. For those drivers, reduce the queue count (§5.1) so the managed spreading only covers housekeeping CPUs, or use `isolcpus=managed_irq,...` ([Guide 01](01-grub-bootloader-tuning.md)).
 
-> [!IMPORTANT]
-> **irqbalance must be off** ([Guide 02 §4.3](02-cpu-core-isolation.md#43-irqbalance-persistent)), or it will rewrite these files within 10 seconds.
+**irqbalance must be off** ([Guide 02 §4.3](02-cpu-core-isolation.md#43-irqbalance-persistent)), or it rewrites these files within 10 seconds.
 
 ### 6.3 RPS, RFS and XPS
 
@@ -427,19 +445,7 @@ sockperf ping-pong -i <ip> -p 11111 --tcp -t 30 --full-rtt   # on host A (taskse
 
 Record p50/p99/p99.9 before and after. The biggest visible change is usually in p99 and above, where adaptive coalescing and PAUSE frames lived.
 
-## 10. Bare metal vs VM
-
-| | Bare metal | VM |
-|---|---|---|
-| Coalescing 0, adaptive off | ✅ | ⚠️ virtio: `ethtool -C` is supported on recent kernels; ENA/vmxnet3: partial. Try it and check `ethtool -c`. |
-| Offloads off | ✅ | ✅ |
-| Pause frames | ✅ | ❌ not applicable (the host owns the physical port) |
-| Rings / channels | ✅ | ⚠️ limited by the virtual device |
-| IRQ affinity | ✅ | ✅ for virtio/SR-IOV queues. irqbalance stays **on** in VMs (Guide 02 keeps it), so either ban CPUs in its config or accept that it moves IRQs. |
-| Kernel bypass | ✅ | Only with SR-IOV VF passthrough of a supported NIC |
-| Best VM option | — | Ask for **SR-IOV / passthrough** of the critical NIC, plus vCPU pinning on the host |
-
-## 11. Troubleshooting
+## 10. Troubleshooting
 
 ```mermaid
 flowchart TD
@@ -467,54 +473,54 @@ flowchart TD
 | Latency better but throughput collapsed on bulk NIC | Coalescing 0 + offloads off at a high rate | §5.9 bulk profile |
 | SSH session dropped while applying | `ethtool -L`/`-G` on the management NIC | Mark it `mgmt` in `NICS` |
 
-When verifying a configured IRQ CPU list, the script requires at least one
-IRQ and a readable affinity value for every discovered vector. An empty
-IRQ list is a FAIL. Virtio PCI NICs expose their vectors on the PCI parent
-of the virtio device, rather than directly under the interface's `device`
-directory. The script checks that parent and checks effective affinity when
-the kernel provides it. If verification fails, compare the requested
-`smp_affinity_list` with `effective_affinity_list` under `/proc/irq/<irq>`;
-kernel-managed vectors may reject manual placement.
+**How `--verify` checks IRQ placement.** For each NIC with an IRQ CPU list, it needs at least one interrupt and a readable affinity for every vector it finds; an empty list is a FAIL. Virtio NICs keep their vectors on the PCI parent of the virtio device, and the script looks there. When a check fails, compare `smp_affinity_list` (what was asked) with `effective_affinity_list` (what the kernel did) under `/proc/irq/<irq>`: kernel-managed vectors may refuse manual placement.
 
-## 12. Rollback
+## 11. Rollback
 
-Stop boot reapplication before restoring the NICs:
-
-```bash
-sudo systemctl disable --now lowlat-runtime.service
-sudo scripts/04-network --rollback
+```mermaid
+flowchart LR
+  stop["Stop lowlat-runtime.service<br/>(no re-apply at boot)"] --> ch["Channels first<br/>(may re-create IRQ vectors)"] --> rest["Rings, coalescing, PAUSE,<br/>offloads, txqueuelen"] --> irq["IRQ CPU lists,<br/>vector by vector"]
 ```
 
-The script restores the first-apply baseline retained under
-`/var/lib/lowlat/factory-settings`: combined channels, rings, coalescing,
-adaptive coalescing, PAUSE, managed offloads, transmit queue length, and IRQ
-CPU lists. Repeated apply, runtime reapplication, and rollback retain this
-baseline. A rollback without a saved apply does nothing. Management NICs
-without an explicit IRQ CPU list remain untouched.
+*Channels go back first, because changing them can create new interrupt vectors. The IRQ placement is restored last, on the vectors that exist then.*
 
-Channels are restored first because changing them may recreate IRQ vectors.
-The script rediscovers vectors and restores CPU lists in numeric vector order;
-IRQ numbers can change. A different vector count, missing interface, missing
-saved state, or rejected restoration command fails visibly. Inspect the error
-and the saved baseline before retrying; do not replace it with assumed driver
-defaults. Unsupported settings that the driver cannot report are left unchanged
-on apply. Channel and ring changes can interrupt traffic: use a maintenance
-window. This automatic restoration has harness coverage. Drivers differ, so
-check the result on your host.
+- [ ] Stop the boot-time re-apply, then restore the NICs:
 
-Verify with `ethtool -l`, `-g`, `-c`, `-a`, `-k`,
-`ip link show dev <iface>`, and the discovered IRQs' `smp_affinity_list` and
-`effective_affinity_list`; compare them with the saved baseline and the output
-from §4. `--verify` checks the tuned configuration, so it is expected to fail
-after rollback. Reboot once boot reapplication is disabled to check the
-untuned boot behavior; driver boot defaults may differ from the saved runtime
-baseline. Reapply with `sudo scripts/04-network --apply` if desired.
+  ```bash
+  sudo systemctl disable --now lowlat-runtime.service
+  sudo scripts/04-network --rollback
+  ```
 
-For a whole host, use `sudo scripts/apply-all --rollback`. It restores Guide
-08 before Guide 04 so a driver reload does not replace the restored settings. Restore irqbalance through Guide 02. RSS
-indirection and manually added ntuple rules from the optional examples are
-outside the script's managed settings; undo them using the original output
-from §4 (`ethtool -X` and `ethtool -N`).
+- [ ] Compare with your saved `ethtool` output from §4: `ethtool -l`, `-g`, `-c`, `-a`, `-k`, and `ip link show dev <iface>` for each NIC.
+- [ ] Check every IRQ of the NIC: `smp_affinity_list` and `effective_affinity_list` under `/proc/irq/<irq>`.
+- [ ] Undo by hand what the script does not manage: RSS weights (`ethtool -X`) and ntuple rules (`ethtool -N`) from the optional examples, and irqbalance through [Guide 02](02-cpu-core-isolation.md#10-rollback).
+- [ ] Optional: reboot to see the untuned boot behavior. Driver defaults at boot may differ from the saved runtime state.
+
+What the rollback restores, and when it refuses:
+
+- **It restores the first-apply baseline** saved under `/var/lib/lowlat/factory-settings`: channels, rings, coalescing, adaptive coalescing, PAUSE, the managed offloads, `txqueuelen` and the IRQ CPU lists. Applying again, or the boot-time re-apply, never replaces it. Without a saved apply, the rollback does nothing.
+- **It leaves `mgmt` NICs alone** unless you gave them an IRQ CPU list.
+- **It stops loudly** on a different vector count, a missing interface, missing saved state or a refused command. Read the error and the saved baseline before you retry; do not replace them with assumed driver defaults.
+- **Settings the driver cannot report** were left unchanged at apply time, so there is nothing to restore.
+- **Channel and ring changes can interrupt traffic.** Use a maintenance window.
+- **For a whole host**, use `sudo scripts/apply-all --rollback`. It restores Guide 08 before this guide, so a driver reload does not undo the restored settings.
+
+`--verify` checks the tuned state, so it reports FAIL lines after a rollback. To tune again, run `sudo scripts/04-network --apply`.
+
+> [!NOTE]
+> **Validate on your hardware.** The automated checks cover this rollback, but drivers differ. Check the result on your host.
+
+## 12. Bare metal vs VM
+
+| | Bare metal | VM |
+|---|---|---|
+| Coalescing 0, adaptive off | ✅ | Partly. virtio: `ethtool -C` works on recent kernels; ENA and vmxnet3: some keys. Try it and check `ethtool -c`. |
+| Offloads off | ✅ | ✅ |
+| Pause frames | ✅ | ❌ not applicable (the host owns the physical port) |
+| Rings / channels | ✅ | Limited by the virtual device |
+| IRQ affinity | ✅ | ✅ for virtio/SR-IOV queues. irqbalance stays **on** in VMs (Guide 02 keeps it), so either ban CPUs in its config or accept that it moves IRQs. |
+| Kernel bypass | ✅ | Only with SR-IOV VF passthrough of a supported NIC |
+| Best VM option | — | Ask for **SR-IOV / passthrough** of the critical NIC, plus vCPU pinning on the host |
 
 ## 13. Key takeaways
 

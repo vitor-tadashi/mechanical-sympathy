@@ -114,7 +114,7 @@ Illustrative:
 - [ ] The two feeds have the same latency at light load ([Guide 04 §9](../../guides/04-network-optimization.md#9-verification) has the sockperf round trip)
 - [ ] `watch -d -n1 "grep -E 'CPU|ens1f1' /proc/interrupts"` shows the `ens1f1` rows increasing only in the CPU 1 column
 - [ ] `systemctl is-enabled lowlat-runtime.service` prints `enabled`, and after a reboot `ethtool -c ens1f1` still shows the same values
-- [ ] Roll back: `sudo systemctl disable --now lowlat-runtime.service`, then `sudo scripts/04-network --rollback` restores every NIC to its saved baseline ([Guide 04 §12](../../guides/04-network-optimization.md#12-rollback)). To keep `ens1f0` tuned, remove the `ens1f1` line from `NICS`, run `--apply` again and re-enable `lowlat-runtime.service`
+- [ ] Roll back: `sudo systemctl disable --now lowlat-runtime.service`, then `sudo scripts/04-network --rollback` restores every NIC to its saved baseline ([Guide 04 §11](../../guides/04-network-optimization.md#11-rollback)). To keep `ens1f0` tuned, remove the `ens1f1` line from `NICS`, run `--apply` again and re-enable `lowlat-runtime.service`
 
 ## 6. Key takeaways
 

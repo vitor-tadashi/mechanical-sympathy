@@ -31,7 +31,7 @@ flowchart LR
 
 ## 1. Why huge pages
 
-Every memory access goes through a virtual → physical translation, and the CPU caches translations in the **TLB**. A modern core has about 64 L1 DTLB entries and 1,500–2,000 L2 STLB entries. With 4 KiB pages, 2,048 entries cover **8 MiB**. A 16 GiB heap, a 1 GiB in-memory index, or a 256 MiB ring buffer is far beyond that, so the hot path takes TLB misses. Each miss is a **page walk** of up to four dependent memory reads (five with 5-level paging), which costs tens of ns if the page tables are cached and 100+ ns if they are not.
+Every memory access goes through a virtual → physical translation, and the CPU caches translations in the **TLB**. A modern core has about 64 entries in its first-level data TLB (DTLB) and 1,500–2,000 in its second-level TLB (STLB). With 4 KiB pages, 2,048 entries cover **8 MiB**. A 16 GiB heap, a 1 GiB in-memory index, or a 256 MiB ring buffer is far beyond that, so the hot path takes TLB misses. Each miss is a **page walk** of up to four dependent memory reads (five with 5-level paging), which costs tens of ns if the page tables are cached and 100+ ns if they are not.
 
 | Page size | Reach of 2,048 TLB entries | Page-table levels walked |
 |---|---|---|
@@ -42,6 +42,8 @@ Every memory access goes through a virtual → physical translation, and the CPU
 <img src="../assets/diagrams/tlb-reach.svg" alt="Animation: random reads over a 256 MiB working set; with 4 KiB pages only a tiny slice is inside TLB reach and most reads miss, with 2 MiB pages the whole set is inside reach and every read hits" width="720">
 
 *With 4 KiB pages, a 256 MiB working set is mostly outside TLB reach and most reads take a page walk. With 2 MiB pages, all of it fits.*
+
+> **Picture it.** The TLB is a small box of index cards, one card per page, each saying where that page really lives. The box holds the same number of cards whatever the page size, so bigger pages mean each card covers 512 times more memory.
 
 Huge pages also:
 
@@ -68,8 +70,8 @@ Linux has two mechanisms:
 
 This documentation turns THP **off** at boot (`transparent_hugepage=never`, [Guide 01](01-grub-bootloader-tuning.md#51-latency-subset-bare-metal-and-vms)) and uses **explicit** pages only.
 
-> [!WARNING]
-> **Correction of a common mistake.** `-XX:+UseTransparentHugePages` only makes the JVM `madvise()` its heap for THP. With `transparent_hugepage=never` the kernel ignores that advice, so the flag does nothing. With THP enabled you get the compaction stalls described above. The JVM flag for explicit pages is `-XX:+UseLargePages` (§5).
+> [!NOTE]
+> **A common mistake.** `-XX:+UseTransparentHugePages` asks for THP, which is off here, so it does nothing. The flag for explicit pages is `-XX:+UseLargePages` (§5).
 
 ## 3. Sizing the pool
 
@@ -127,6 +129,14 @@ flowchart LR
 
 *The reservation runs in `sysinit.target`, before other services have fragmented memory, so the contiguous 2 MiB blocks are still there to take.*
 
+<img src="../assets/diagrams/hugepage-fragmentation.svg" alt="Animation: at early boot the reservation finds 48 empty 2 MiB blocks on node 1 and takes twelve; one hour later scattered 4 KiB pages sit in most blocks, and the same request finds only five empty ones" width="720">
+
+*A huge page needs 2 MiB of free, contiguous memory. At early boot most memory is still free in large blocks. An hour later, small pages from the page cache and other processes sit in most blocks, and the same request falls short. The numbers are illustrative.*
+
+> **Picture it.** Reserving huge pages is booking whole tables in a restaurant. Before opening, most tables are free. At lunchtime one guest sits at almost every table, and there is nowhere left to seat a party of twelve.
+
+Early boot makes a full reservation likely, not certain: a large pool on a node with little spare memory can still fall short on the first boot. That is why the generated script reads the count back and warns. Check `journalctl -u hugetlb-reserve-pages` after every reboot (§8).
+
 We want *most* of the pages on the critical node, so the per-node sysfs interface is the one to use. Running it **as early as possible in boot**, before any service has fragmented memory, makes it nearly as reliable as the command line. This is also the approach Red Hat documents for per-node reservation.
 
 ### 4.2 The reservation unit
@@ -155,7 +165,8 @@ reserve_pages 12288 node1
 
 </details>
 
-`/etc/systemd/system/hugetlb-reserve-pages.service`:
+<details>
+<summary><b>Generated unit:</b> <code>/etc/systemd/system/hugetlb-reserve-pages.service</code></summary>
 
 ```ini
 [Unit]
@@ -176,6 +187,8 @@ ExecStart=/usr/lib/systemd/hugetlb-reserve-pages
 [Install]
 WantedBy=sysinit.target
 ```
+
+</details>
 
 Writing to `nr_hugepages` is a *request*. The kernel reserves as many pages as it can find and reports the real number back. The script reads the value back and logs any shortfall. Check it in `journalctl -u hugetlb-reserve-pages`.
 
@@ -215,7 +228,7 @@ On a **bare-metal host whose application threads are pinned** ([Guide 02](02-cpu
 
 | Flag | What it does | Why it belongs here |
 |---|---|---|
-| `-XX:+UseLargePages` | The heap (and code cache) is mapped from the explicit huge page pool (`MAP_HUGETLB` / hugetlbfs). ZGC uses a `memfd` with `MFD_HUGETLB`, so no hugetlbfs mount is needed. | TLB reach for a 16 GiB heap goes from 8 MiB to 4 GiB. |
+| `-XX:+UseLargePages` | The heap (and code cache) is mapped from the explicit huge page pool (`MAP_HUGETLB` / hugetlbfs). ZGC backs the heap with an anonymous in-memory file (`memfd`) created with `MFD_HUGETLB`, so no hugetlbfs mount is needed. | TLB reach for a 16 GiB heap goes from 8 MiB to 4 GiB. |
 | `-XX:+UseNUMA` | Heap memory is placed so that each thread allocates on its own node. | Combined with pinning, a critical thread on node 1 gets node-1 memory. |
 | `-XX:+AlwaysPreTouch` | The JVM writes to every page of the committed heap during start-up. | Moves all page faults (and zeroing) out of the serving path. If the pool is too small, this fails **at start-up**, not hours later under load when the heap grows. |
 | `-Xms` = `-Xmx` | The whole heap is committed at start. | Nothing to commit later. With ZGC, uncommit never goes below `-Xms`, so `-ZUncommit` is a second safeguard. |
@@ -225,6 +238,9 @@ Start-up takes longer because of the pre-touch (several seconds for 16 GiB). Tha
 ### 5.2 Add the large-page flags only when the host is ready for them
 
 Do not put the large-page flags in a static options file that also runs on VMs, laptops, and CI. Make the **launcher** add them only when the host has isolated, pinned CPUs and a reserved pool:
+
+<details>
+<summary><b>Launcher excerpt</b> that picks the options by host class</summary>
 
 ```bash
 # launcher excerpt - see examples/hugepages-java-example.md for the full script
@@ -246,6 +262,8 @@ fi
 
 exec java ${PARAMS} -cp "lib/*" com.example.Main
 ```
+
+</details>
 
 Why the flags are tied to affinity:
 

@@ -1,0 +1,235 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 350" width="760" height="350" role="img" aria-labelledby="t d">
+<title id="t">Reserve huge pages at early boot, before memory fragments</title>
+<desc id="d">Two attempts to reserve twelve 2 MiB huge pages on NUMA node 1, with illustrative numbers. At early boot, most memory is still free in large blocks and the service gets all twelve. One hour later, small 4 KiB pages used by the page cache, the kernel and other processes sit in most 2 MiB blocks, so the same request as a runtime sysctl finds only five empty blocks, and the JVM falls back to small pages.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .mid { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .free { fill: #ffffff; stroke: #c4ccd4; stroke-width: 1; }
+  .pg { fill: #57606a; }
+  .cnt { font: 700 13px system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .good { fill: #1d6b33; }
+  .bad { fill: #9b1c1c; }
+  .pk { transform-box: fill-box; transform-origin: center; animation: pop 8s linear infinite; }
+  @keyframes pop { 0%, 3% { transform: scale(1.25); } 7%, 100% { transform: scale(1); } }
+  .head { transform: translateX(570px); animation: sweep 8s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pk, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="350" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="150" rx="6"/>
+<text class="cap" x="24" y="34">At early boot: hugetlb-reserve-pages.service</text>
+<text class="sub" x="24" y="52">Most memory is still free in large blocks, so the request is usually met in full.</text>
+<text class="lbl" x="24" y="88">node 1</text><text class="axis" x="24" y="104">48 blocks of 2 MiB</text>
+<rect class="app pk" x="151.0" y="70" width="21" height="22" rx="3" style="animation-delay:-7.84s"/>
+<rect class="app pk" x="174.8" y="70" width="21" height="22" rx="3" style="animation-delay:-7.51s"/>
+<rect class="app pk" x="198.5" y="70" width="21" height="22" rx="3" style="animation-delay:-7.17s"/>
+<rect class="app pk" x="222.2" y="70" width="21" height="22" rx="3" style="animation-delay:-6.84s"/>
+<rect class="app pk" x="246.0" y="70" width="21" height="22" rx="3" style="animation-delay:-6.51s"/>
+<rect class="app pk" x="269.8" y="70" width="21" height="22" rx="3" style="animation-delay:-6.17s"/>
+<rect class="free" x="293.5" y="70" width="21" height="22" rx="3"/>
+<rect class="free" x="317.2" y="70" width="21" height="22" rx="3"/>
+<rect class="free" x="341.0" y="70" width="21" height="22" rx="3"/>
+<rect class="free" x="364.8" y="70" width="21" height="22" rx="3"/>
+<rect class="free" x="388.5" y="70" width="21" height="22" rx="3"/>
+<rect class="free" x="412.2" y="70" width="21" height="22" rx="3"/>
+<rect class="free" x="436.0" y="70" width="21" height="22" rx="3"/>
+<rect class="free" x="459.8" y="70" width="21" height="22" rx="3"/>
+<rect class="free" x="483.5" y="70" width="21" height="22" rx="3"/>
+<rect class="free" x="507.2" y="70" width="21" height="22" rx="3"/>
+<rect class="free" x="531.0" y="70" width="21" height="22" rx="3"/>
+<rect class="free" x="554.8" y="70" width="21" height="22" rx="3"/>
+<rect class="free" x="578.5" y="70" width="21" height="22" rx="3"/>
+<rect class="free" x="602.2" y="70" width="21" height="22" rx="3"/>
+<rect class="free" x="626.0" y="70" width="21" height="22" rx="3"/>
+<rect class="free" x="649.8" y="70" width="21" height="22" rx="3"/>
+<rect class="free" x="673.5" y="70" width="21" height="22" rx="3"/>
+<rect class="free" x="697.2" y="70" width="21" height="22" rx="3"/>
+<rect class="app pk" x="151.0" y="97" width="21" height="22" rx="3" style="animation-delay:-7.84s"/>
+<rect class="app pk" x="174.8" y="97" width="21" height="22" rx="3" style="animation-delay:-7.51s"/>
+<rect class="app pk" x="198.5" y="97" width="21" height="22" rx="3" style="animation-delay:-7.17s"/>
+<rect class="app pk" x="222.2" y="97" width="21" height="22" rx="3" style="animation-delay:-6.84s"/>
+<rect class="app pk" x="246.0" y="97" width="21" height="22" rx="3" style="animation-delay:-6.51s"/>
+<rect class="app pk" x="269.8" y="97" width="21" height="22" rx="3" style="animation-delay:-6.17s"/>
+<rect class="free" x="293.5" y="97" width="21" height="22" rx="3"/>
+<rect class="free" x="317.2" y="97" width="21" height="22" rx="3"/>
+<rect class="free" x="341.0" y="97" width="21" height="22" rx="3"/>
+<rect class="free" x="364.8" y="97" width="21" height="22" rx="3"/>
+<rect class="free" x="388.5" y="97" width="21" height="22" rx="3"/>
+<rect class="free" x="412.2" y="97" width="21" height="22" rx="3"/>
+<rect class="free" x="436.0" y="97" width="21" height="22" rx="3"/>
+<rect class="free" x="459.8" y="97" width="21" height="22" rx="3"/>
+<rect class="free" x="483.5" y="97" width="21" height="22" rx="3"/>
+<rect class="free" x="507.2" y="97" width="21" height="22" rx="3"/>
+<rect class="free" x="531.0" y="97" width="21" height="22" rx="3"/>
+<rect class="free" x="554.8" y="97" width="21" height="22" rx="3"/>
+<rect class="free" x="578.5" y="97" width="21" height="22" rx="3"/>
+<rect class="free" x="602.2" y="97" width="21" height="22" rx="3"/>
+<rect class="free" x="626.0" y="97" width="21" height="22" rx="3"/>
+<rect class="free" x="649.8" y="97" width="21" height="22" rx="3"/>
+<rect class="free" x="673.5" y="97" width="21" height="22" rx="3"/>
+<rect class="free" x="697.2" y="97" width="21" height="22" rx="3"/>
+<text class="cnt good" x="720" y="148" text-anchor="end">reserved 12 of 12 (illustrative)</text>
+<rect class="lane" x="10" y="170" width="740" height="170" rx="6"/>
+<text class="cap" x="24" y="194">One hour later: the same request as a runtime sysctl</text>
+<text class="sub" x="24" y="212">Scattered 4 KiB pages (page cache, kernel, other processes) sit in most blocks. Only empty blocks can become huge pages.</text>
+<text class="lbl" x="24" y="248">node 1</text><text class="axis" x="24" y="264">48 blocks of 2 MiB</text>
+<rect class="free" x="151.0" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="155.0" y="237" width="4" height="4"/>
+<rect class="pg" x="162.0" y="239" width="4" height="4"/>
+<rect class="pg" x="163.0" y="241" width="4" height="4"/>
+<rect class="free" x="174.8" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="189.8" y="239" width="4" height="4"/>
+<rect class="free" x="198.5" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="203.5" y="243" width="4" height="4"/>
+<rect class="free" x="222.2" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="231.2" y="238" width="4" height="4"/>
+<rect class="pg" x="234.2" y="245" width="4" height="4"/>
+<rect class="pg" x="226.2" y="235" width="4" height="4"/>
+<rect class="free" x="246.0" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="254.0" y="243" width="4" height="4"/>
+<rect class="pg" x="248.0" y="242" width="4" height="4"/>
+<rect class="pg" x="260.0" y="233" width="4" height="4"/>
+<rect class="free" x="269.8" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="271.8" y="236" width="4" height="4"/>
+<rect class="pg" x="283.8" y="232" width="4" height="4"/>
+<rect class="pg" x="284.8" y="245" width="4" height="4"/>
+<rect class="free" x="293.5" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="306.5" y="246" width="4" height="4"/>
+<rect class="pg" x="301.5" y="243" width="4" height="4"/>
+<rect class="pg" x="307.5" y="246" width="4" height="4"/>
+<rect class="free" x="317.2" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="331.2" y="241" width="4" height="4"/>
+<rect class="pg" x="326.2" y="246" width="4" height="4"/>
+<rect class="pg" x="321.2" y="246" width="4" height="4"/>
+<rect class="free" x="341.0" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="345.0" y="239" width="4" height="4"/>
+<rect class="free" x="364.8" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="372.8" y="244" width="4" height="4"/>
+<rect class="pg" x="376.8" y="245" width="4" height="4"/>
+<rect class="pg" x="370.8" y="238" width="4" height="4"/>
+<rect class="free" x="388.5" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="399.5" y="237" width="4" height="4"/>
+<rect class="pg" x="398.5" y="241" width="4" height="4"/>
+<rect class="free" x="412.2" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="419.2" y="242" width="4" height="4"/>
+<rect class="app pk" x="436.0" y="230" width="21" height="22" rx="3" style="animation-delay:-3.84s"/>
+<rect class="free" x="459.8" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="470.8" y="242" width="4" height="4"/>
+<rect class="pg" x="472.8" y="234" width="4" height="4"/>
+<rect class="free" x="483.5" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="493.5" y="246" width="4" height="4"/>
+<rect class="pg" x="494.5" y="241" width="4" height="4"/>
+<rect class="free" x="507.2" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="512.2" y="242" width="4" height="4"/>
+<rect class="pg" x="522.2" y="241" width="4" height="4"/>
+<rect class="pg" x="513.2" y="236" width="4" height="4"/>
+<rect class="free" x="531.0" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="546.0" y="242" width="4" height="4"/>
+<rect class="pg" x="540.0" y="233" width="4" height="4"/>
+<rect class="free" x="554.8" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="562.8" y="246" width="4" height="4"/>
+<rect class="free" x="578.5" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="586.5" y="244" width="4" height="4"/>
+<rect class="pg" x="586.5" y="245" width="4" height="4"/>
+<rect class="free" x="602.2" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="613.2" y="244" width="4" height="4"/>
+<rect class="pg" x="604.2" y="238" width="4" height="4"/>
+<rect class="pg" x="615.2" y="241" width="4" height="4"/>
+<rect class="free" x="626.0" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="636.0" y="235" width="4" height="4"/>
+<rect class="pg" x="628.0" y="236" width="4" height="4"/>
+<rect class="free" x="649.8" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="660.8" y="240" width="4" height="4"/>
+<rect class="free" x="673.5" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="681.5" y="236" width="4" height="4"/>
+<rect class="free" x="697.2" y="230" width="21" height="22" rx="3"/>
+<rect class="pg" x="710.2" y="232" width="4" height="4"/>
+<rect class="app pk" x="151.0" y="257" width="21" height="22" rx="3" style="animation-delay:-7.84s"/>
+<rect class="free" x="174.8" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="178.8" y="273" width="4" height="4"/>
+<rect class="pg" x="189.8" y="265" width="4" height="4"/>
+<rect class="free" x="198.5" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="206.5" y="269" width="4" height="4"/>
+<rect class="pg" x="213.5" y="268" width="4" height="4"/>
+<rect class="pg" x="210.5" y="267" width="4" height="4"/>
+<rect class="free" x="222.2" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="228.2" y="265" width="4" height="4"/>
+<rect class="pg" x="234.2" y="270" width="4" height="4"/>
+<rect class="pg" x="235.2" y="262" width="4" height="4"/>
+<rect class="app pk" x="246.0" y="257" width="21" height="22" rx="3" style="animation-delay:-6.51s"/>
+<rect class="free" x="269.8" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="279.8" y="263" width="4" height="4"/>
+<rect class="pg" x="279.8" y="264" width="4" height="4"/>
+<rect class="free" x="293.5" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="304.5" y="264" width="4" height="4"/>
+<rect class="pg" x="295.5" y="265" width="4" height="4"/>
+<rect class="free" x="317.2" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="321.2" y="259" width="4" height="4"/>
+<rect class="pg" x="329.2" y="269" width="4" height="4"/>
+<rect class="pg" x="324.2" y="266" width="4" height="4"/>
+<rect class="free" x="341.0" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="352.0" y="270" width="4" height="4"/>
+<rect class="pg" x="347.0" y="270" width="4" height="4"/>
+<rect class="free" x="364.8" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="366.8" y="269" width="4" height="4"/>
+<rect class="pg" x="366.8" y="264" width="4" height="4"/>
+<rect class="pg" x="370.8" y="269" width="4" height="4"/>
+<rect class="free" x="388.5" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="399.5" y="264" width="4" height="4"/>
+<rect class="pg" x="392.5" y="264" width="4" height="4"/>
+<rect class="pg" x="392.5" y="264" width="4" height="4"/>
+<rect class="free" x="412.2" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="418.2" y="263" width="4" height="4"/>
+<rect class="pg" x="426.2" y="265" width="4" height="4"/>
+<rect class="pg" x="415.2" y="271" width="4" height="4"/>
+<rect class="app pk" x="436.0" y="257" width="21" height="22" rx="3" style="animation-delay:-3.84s"/>
+<rect class="app pk" x="459.8" y="257" width="21" height="22" rx="3" style="animation-delay:-3.51s"/>
+<rect class="free" x="483.5" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="489.5" y="267" width="4" height="4"/>
+<rect class="free" x="507.2" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="512.2" y="264" width="4" height="4"/>
+<rect class="pg" x="511.2" y="269" width="4" height="4"/>
+<rect class="free" x="531.0" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="534.0" y="260" width="4" height="4"/>
+<rect class="pg" x="542.0" y="264" width="4" height="4"/>
+<rect class="pg" x="538.0" y="269" width="4" height="4"/>
+<rect class="free" x="554.8" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="568.8" y="272" width="4" height="4"/>
+<rect class="free" x="578.5" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="581.5" y="264" width="4" height="4"/>
+<rect class="free" x="602.2" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="613.2" y="266" width="4" height="4"/>
+<rect class="free" x="626.0" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="628.0" y="267" width="4" height="4"/>
+<rect class="free" x="649.8" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="655.8" y="266" width="4" height="4"/>
+<rect class="free" x="673.5" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="677.5" y="272" width="4" height="4"/>
+<rect class="pg" x="679.5" y="264" width="4" height="4"/>
+<rect class="pg" x="687.5" y="272" width="4" height="4"/>
+<rect class="free" x="697.2" y="257" width="21" height="22" rx="3"/>
+<rect class="pg" x="704.2" y="268" width="4" height="4"/>
+<rect class="pg" x="701.2" y="265" width="4" height="4"/>
+<rect class="pg" x="703.2" y="267" width="4" height="4"/>
+<text class="cnt bad" x="720" y="308" text-anchor="end">reserved 5 of 12: the JVM falls back to small pages</text>
+<text class="axis" x="150" y="330">■ = a 4 KiB page in use  ·  green = a reserved 2 MiB huge page  ·  white = a free block</text>
+<line class="head" x1="150" y1="62" x2="150" y2="330"/>
+</svg>

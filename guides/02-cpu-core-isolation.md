@@ -42,7 +42,7 @@ A latency-critical thread that spins on a CPU is delayed by every event that tak
 | Device interrupts + softirq (NIC, disk) | 1–5 µs per IRQ, up to ~50 µs with the softirq work | IRQ affinity ([Guide 04](04-network-optimization.md)), irqbalance off (this guide) |
 | Migration to another CPU | cold L1/L2, µs to 10s of µs | one thread per CPU, pinned (this guide) |
 | RT throttling | **50 ms every second** for SCHED_FIFO spinners | `sched_rt_runtime_us=-1` (this guide) |
-| TLB shootdown IPIs from threads of the same process | 1–5 µs | fewer `munmap`/`mprotect` calls, huge pages ([Guide 03](03-huge-pages-configuration.md)) |
+| TLB shootdown [IPIs](../GLOSSARY.md#ipi) (interrupts sent by another CPU) from threads of the same process | 1–5 µs | fewer `munmap`/`mprotect` calls, huge pages ([Guide 03](03-huge-pages-configuration.md)) |
 
 <img src="../assets/diagrams/who-wants-my-cpu.svg" alt="Seven sources of interference on a CPU, each paired with the setting that removes it, leading to an isolated CPU that runs one pinned thread uninterrupted" width="720">
 
@@ -73,7 +73,7 @@ cat /sys/class/net/<nic>/device/numa_node
 
 **Rules**
 
-1. **NUMA locality first.** Critical threads, their memory ([Guide 03](03-huge-pages-configuration.md)) and the critical NIC must sit on the same node. A packet DMA'd into node 1 memory and processed by a thread on node 0 crosses the socket interconnect on every cache miss (~+60–100 ns each).
+1. **NUMA locality first.** Critical threads, their memory ([Guide 03](03-huge-pages-configuration.md)) and the critical NIC must sit on the same node. A packet that the NIC writes (by DMA) into node 1 memory and that a thread on node 0 processes crosses the socket interconnect on every cache miss (~+60–100 ns each).
 2. **Keep one housekeeping CPU on the critical node.** The critical NIC's IRQs, softirq processing, and the node's kernel threads need somewhere local to run. In the reference layout this is CPU 1.
 3. **CPU 0 is never isolated.** Some timers, early-boot IRQs, and platform interrupts are stuck to it.
 4. **Hyper-Threading.** If HT is on, a sibling shares L1/L2, the TLBs, and the execution ports. Either disable HT in the BIOS (preferred), or isolate both siblings and use only one. `lscpu -e` shows siblings as two CPUs with the same `CORE`.
@@ -83,43 +83,11 @@ cat /sys/class/net/<nic>/device/numa_node
 
 *Rule 1 in one picture: the thread, the NIC and the memory belong on the same node, or every cache miss pays the trip across sockets.*
 
-<img src="../assets/diagrams/memory-ladder.svg" alt="A logarithmic ruler from 1 nanosecond to 100 milliseconds with the typical range of a cache hit, DRAM, a page fault, a context switch, the kernel network path, an SMI, reclaim and RT throttling" width="720">
-
-*Where the remote-DRAM penalty sits among the other latencies on the host: small next to a page fault, but paid on every cache miss.*
-
 **Reference layout** (2 × 16 cores, HT off, even CPUs = node 0, odd = node 1, critical NICs on node 1):
-
-```mermaid
-%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
-flowchart TD
-  subgraph n1["NUMA node 1 (odd CPUs): critical NICs and threads"]
-    direction LR
-    c1["CPU 1 · housekeeping: critical NIC IRQs"]
-    c3["CPU 3 · ISOLATED · net.rx loop"]
-    c5["CPU 5 · ISOLATED · net.tx loop"]
-    c7["CPU 7 · ISOLATED · event.loop"]
-    c9["CPU 9, 11 · ISOLATED · worker.0, worker.1"]
-    c13["CPU 13 to 31 · ISOLATED · timer, spares"]
-  end
-  subgraph n0["NUMA node 0 (even CPUs): operating system"]
-    direction LR
-    c0["CPU 0 · workqueues, mgmt and timing NIC IRQs"]
-    c2["CPU 2 · workqueues"]
-    c4["CPU 4, 6 · agents slice (EDR, monitoring)"]
-    c8["CPU 8 to 28 · OS and non-critical app threads"]
-    c30["CPU 30 · bulk NIC IRQs"]
-  end
-  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  class c0,c2,c4,c8,c30,c1 hk
-  class c3,c5,c7,c9,c13 iso
-```
-
-*Node 0 runs the operating system, agents and non-critical interrupts. Node 1 keeps one housekeeping CPU for the critical NIC's interrupts, and every other CPU there is isolated and runs exactly one pinned thread role.*
 
 <img src="../assets/diagrams/cpu-map-reference-host.svg" alt="Two NUMA panels of 16 CPUs each: node 1 has one housekeeping CPU for the critical NICs and isolated CPUs with pinned thread roles, node 0 runs the operating system, agents and bulk interrupts" width="720">
 
-*The same layout as a floor plan: the critical NICs, their interrupts, the pinned threads and their memory all sit on node 1, and node 0 carries everything else.*
+*The layout as a floor plan. Node 1 holds the critical NICs, their interrupts on CPU 1, and one pinned thread role on every other CPU. Node 0 runs the operating system, the agents and the non-critical interrupts.*
 
 <details>
 <summary><b>The same layout as text</b> (for copying into a runbook)</summary>
@@ -174,7 +142,14 @@ DefaultLimitNICE=40
 - **`CPUAffinity`**: PID 1 calls `sched_setaffinity()` on itself early in boot. Every process it forks (services, getty, sshd, and therefore every login shell and everything you start from it) inherits that mask. This is what keeps `rsyslogd`, `chronyd`, `sshd`, `crond`, and your own `bash` off the isolated CPUs.
 - **`DefaultLimitRTPRIO` / `DefaultLimitNICE`**: `RLIMIT_RTPRIO` and `RLIMIT_NICE` for every service. They let an unprivileged service raise its own threads to `SCHED_FIFO` or a negative nice value without running as root. `NICE=40` is the rlimit encoding of nice `-20`. Login sessions get the same limits from `limits.d` ([Guide 07](07-os-hygiene.md)).
 
-This is **affinity, not a cpuset**. A process started with the OS mask may still call `sched_setaffinity()` and move a thread onto an isolated CPU. That is exactly how the application pins its critical threads (§6), and it is why this mechanism is preferred over cgroup `AllowedCPUs=` on `system.slice` (see the warning in [Guide 05](05-cgroup-isolation.md#44-the-cpuset-trap)).
+This is **affinity, not a cpuset**. A process started with the OS mask may still call `sched_setaffinity()` and move a thread onto an isolated CPU.
+
+<img src="../assets/diagrams/affinity-vs-cpuset.svg" alt="Two panels: systemd CPUAffinity gives PID 1 the OS CPUs and every service inherits the mask, yet net.rx can pin itself to isolated CPU 9; a cpuset on housekeeping.slice fences an agent onto CPUs 4 and 6, and its request for CPU 7 is rejected" width="720">
+
+*Affinity is a default that a thread may change, which is how the critical threads reach their isolated CPUs. A cpuset is a wall the kernel enforces, which is why Guide 05 uses it for agents.*
+
+> **Picture it.** Affinity is the seat a guest is shown at a dinner: anyone may move. A cpuset is a locked room: the door decides, not the guest.
+ That is exactly how the application pins its critical threads (§6), and it is why this mechanism is preferred over cgroup `AllowedCPUs=` on `system.slice` (see the warning in [Guide 05](05-cgroup-isolation.md#44-the-cpuset-trap)).
 
 A **reboot** is needed. `systemctl daemon-reexec` makes PID 1 re-read the file, but units that are already running keep their old mask.
 
@@ -238,8 +213,7 @@ What matters is not that they exist, but that they **stay asleep**. Measure it w
 
 Isolated CPUs have **no load balancing**. A thread whose affinity mask spans several isolated CPUs is put on the first one and never moved. So the rule is:
 
-> [!IMPORTANT]
-> **One critical thread → one isolated CPU. Every other thread → the OS CPUs.**
+**The rule: one critical thread → one isolated CPU. Every other thread → the OS CPUs.**
 
 <img src="../assets/diagrams/thread-migration.svg" alt="Animation: an unpinned thread hops across four CPUs and starts with a cold cache after every hop, while a pinned thread on one isolated CPU starts cold once and then keeps its caches warm" width="720">
 
@@ -381,7 +355,13 @@ Keep both as configuration profiles and select one by host class, as the launche
 
 ### 6.5 Real-time scheduling class: usually unnecessary
 
-On an isolated CPU with exactly one runnable thread, `SCHED_OTHER` and `SCHED_FIFO` behave the same, because there is nothing to preempt. FIFO helps only if something else occasionally becomes runnable on that CPU. In that case FIFO makes the other task wait, and if that task is `ksoftirqd`, your network stalls. If you do use it: `chrt -f -p 1 <tid>`, a low priority (1–10), never 99, and the RT throttling change from §4.4.
+On an isolated CPU with exactly one runnable thread, `SCHED_OTHER` and `SCHED_FIFO` behave the same, because there is nothing to preempt. FIFO helps only if something else occasionally becomes runnable on that CPU. In that case FIFO makes the other task wait, and if that task is `ksoftirqd`, your network stalls.
+
+<img src="../assets/diagrams/fifo-starvation.svg" alt="Animation: a SCHED_FIFO spinner leaves ksoftirqd and a kworker waiting on its CPU, while a SCHED_OTHER spinner lets the kworker run" width="720">
+
+*A FIFO spinner never yields, so the kernel's own work on that CPU waits behind it. With `SCHED_OTHER`, that work gets its turn and finishes in microseconds.*
+
+If you do use FIFO: `chrt -f -p 1 <tid>`, a low priority (1–10), never 99, and the RT throttling change from §4.4. [Use case 14](../examples/use-cases/14-the-spinner-that-stalled-the-kernel.md) tells the story.
 
 ## 7. Using the script
 
@@ -475,36 +455,22 @@ flowchart TD
 - [ ] Check `systemctl is-enabled irqbalance` and `systemctl is-active irqbalance`: each matches its original state, including a previously disabled service
 - [ ] Reboot: `sudo systemctl reboot`. Check `grep Cpus_allowed_list /proc/1/status` against the original manager affinity; running services keep inherited affinity until restarted or rebooted
 
-The script restores files, workqueue masks and RT throttling immediately.
-It records file absence, service state and runtime values under
-`/var/lib/lowlat/factory-settings/`; repeated apply and boot reapplication
-preserve those records. Timestamped file backups remain under
-`/var/lib/lowlat/backup/<timestamp>/`. Keep these directories for subsequent
-rollbacks. Without a saved baseline, rollback does nothing; it cannot
-reconstruct state from an installation made before state recording existed.
+What the rollback keeps and needs:
 
-On RHEL 10, the script creates a local `[Manager]` configuration when
-`/etc/systemd/system.conf` is absent. Rollback removes that override and
-leaves the vendor file under `/usr/lib/systemd` intact. If restoration
-reports missing or corrupt state, recover the original data from your
-backups and retry; do not substitute guessed defaults.
-
-A standalone `--runtime` changes only workqueue masks, and its rollback
-restores only those masks. `lowlat-runtime.service` can reapply tuning at
-boot: use `apply-all --rollback`, or disable that unit before
-rebooting during a whole-host rollback.
+- **It restores at once** the files, the workqueue masks and RT throttling. The systemd mask needs the reboot above.
+- **It needs its records.** The originals sit under `/var/lib/lowlat/factory-settings/` and the timestamped backups under `/var/lib/lowlat/backup/`. Keep both. Without a saved baseline the rollback does nothing, because it cannot rebuild a state it never saw. If a record is missing or damaged, restore it from your backups and try again; do not guess the defaults.
+- **On RHEL 10** the script creates a local `[Manager]` file when `/etc/systemd/system.conf` does not exist. The rollback removes it and leaves the vendor file under `/usr/lib/systemd` alone.
+- **`--runtime` is narrower.** On its own it changes only the workqueue masks, and its rollback restores only those. For a whole host, use `apply-all --rollback`, or disable `lowlat-runtime.service` before the reboot so it does not apply the masks again.
 
 > [!NOTE]
-> **Validate on your hardware.** Restoration is checked on fake hosts and
-> systemd containers. Verify the saved values and post-reboot affinity on
-> your host before using it for production recovery.
+> **Validate on your hardware.** Restoration is checked on fake hosts and in systemd containers. Check the saved values and the affinity after the reboot on your host before you rely on it for recovery.
 
 ## 11. Bare metal vs VM
 
 | | Bare metal | VM |
 |---|---|---|
 | systemd `CPUAffinity`, workqueue mask, irqbalance off, RT throttling | ✅ | ❌ (skipped by the script) |
-| Application pins one thread per vCPU | ✅ | ⚠️ Only if the hypervisor pins vCPUs to dedicated pCPUs. Otherwise pinning inside the guest does not help. |
+| Application pins one thread per vCPU | ✅ | Partly: only if the hypervisor pins vCPUs to dedicated physical CPUs. Otherwise pinning inside the guest does not help. |
 | Busy-spin idle strategy | ✅ | ❌ Use back-off |
 
 ## 12. Key takeaways
