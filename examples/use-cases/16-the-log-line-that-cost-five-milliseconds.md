@@ -34,12 +34,13 @@ flowchart TD
   s(["Rare ms stalls on CPU 1"]) --> q1{"Kernel message<br/>at that time?"}
   q1 -- no --> f1["Not the console: rtla osnoise<br/>on CPU 1 (Guide 09)"]
   q1 -- yes --> q2{"Console level<br/>above 1?"}
+  q2 -- no --> f1b["The message is filtered, so it is<br/>not the console: back to rtla osnoise"]
   q2 -- yes --> f2["kernel.printk = 1 4 1 7<br/>(Guide 06 §2)"]
-  q2 -- no --> q3{"Graphical console<br/>in /proc/consoles?"}
-  q3 -- yes --> f3["Remove console=tty0<br/>(Guide 01 §5.7)"]
+  f2 --> q3{"Graphical console<br/>in /proc/consoles?"}
+  q3 -- yes --> f3["Also remove console=tty0<br/>(Guide 01 §5.7)"]
 ```
 
-*Match the stall to a kernel message, then check the console level, then the consoles that get each line.*
+*Match the stall to a kernel message, then check the console level: only a message above it reaches the consoles. Then list the consoles that get each line.*
 
 ```bash
 # 1. The kernel log around a stall, with wall-clock times

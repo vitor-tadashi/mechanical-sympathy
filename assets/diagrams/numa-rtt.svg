@@ -22,8 +22,8 @@
   .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
   .ok { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; text-anchor: end; }
   .warn { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; text-anchor: end; }
-  .ta { animation: pa 8s linear infinite; }
-  .tb { animation: pb 8s linear infinite; }
+  .ta { transform: translateX(150px); animation: pa 8s linear infinite; }
+  .tb { transform: translateX(400px); animation: pb 8s linear infinite; }
   @keyframes pa { 0%, 25%, 50%, 75%, 100% { transform: translateX(0); } 12.5%, 37.5%, 62.5%, 87.5% { transform: translateX(150px); } }
   @keyframes pb { 0%, 50%, 100% { transform: translateX(0); } 25%, 75% { transform: translateX(400px); } }
   @media (prefers-color-scheme: dark) {

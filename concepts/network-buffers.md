@@ -323,7 +323,7 @@ Typical values, not measurements. The burst numbers of §3 are checked against `
 
 ## 12. Illustrative scenario
 
-An illustrative case, not a measurement. A market-data receiver lost a few thousand packets at every opening auction, a 1.5 ms burst at 4 Mpps, and nothing at any other time. `ethtool -S` showed `rx_missed_errors` rising only at those moments: the 512-descriptor default ring was full after 0.2 ms. Raising the ring to its maximum moved the loss to `UdpRcvbufErrors`, because the 208 KiB socket buffer held fewer than 300 datagrams. With `rmem_default` at 8 MiB as well, the burst passed with no loss, and its last packet was read about 4.5 ms after it arrived. [Use case 09](../examples/use-cases/09-the-two-millisecond-burst.md) walks through the same steps.
+An illustrative case, not a measurement. A market-data receiver lost a few thousand packets at every opening auction, a 1.5 ms burst at 4 Mpps, and nothing at any other time. `rx_missed_errors` rose only at those moments, because the 512-descriptor default ring was full after 0.2 ms, and `UdpRcvbufErrors` rose too. Raising the ring to its maximum stopped the first counter, and the second grew instead: the 208 KiB socket buffer held fewer than 300 datagrams. With `rmem_default` at 8 MiB as well, the burst passed with no loss, and its last packet was read about 4.5 ms after it arrived. [Use case 09](../examples/use-cases/09-the-two-millisecond-burst.md) walks through the same steps.
 
 ## 13. Key takeaways
 

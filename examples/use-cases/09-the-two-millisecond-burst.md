@@ -38,10 +38,10 @@ ethtool -S $IF | grep -E 'rx_missed_errors|rx_no_buffer_count' > /tmp/after
 paste -d' ' /tmp/before /tmp/after | awk '{ print $1, "+" ($4 - $2) }'   # after minus before, so old counts do not matter
 # rx_missed_errors: +3238            <- the ring dropped 3,238 packets in this one batch
 nstat | grep -E 'UdpRcvbufErrors'
-# (no output)                        <- the socket did not overflow, because the ring was upstream of it
+# UdpRcvbufErrors     828            <- the socket buffer overflowed too, behind the ring
 ```
 
-The number is the diagnosis. The ring holds 512 packets, the burst brings 6,000 and 2,250 are drained meanwhile, so `6000 − 2250 − 512 = 3238` are lost. When the counter matches the formula, you have found the queue.
+The numbers are the diagnosis. The ring holds 512 packets, the burst brings 6,000 and 2,250 are drained meanwhile, so `6000 − 2250 − 512 = 3238` are lost there. The 208 KiB socket buffer, only 92 datagrams, loses 828 more of the packets the ring let through. When each counter matches the arithmetic, you have found both queues: fix the first one, then the next (`scripts/size-buffers` prints both).
 
 ## 3. Change
 
@@ -94,9 +94,9 @@ A receiver that never calls `setsockopt` now gets 8 MiB, which covers 4.4 MiB. A
 
 ## 4. Result
 
-<img src="../../assets/diagrams/drop-moves-downstream.svg" alt="Animation: the same 1.5 ms burst of 6,000 packets three times; with a 512-slot ring the ring overflows and rx_missed_errors counts 3,238; with the ring at its maximum the 208 KiB socket buffer overflows and UdpRcvbufErrors counts 1,908; with an 8 MiB socket buffer as well nothing is lost" width="720">
+<img src="../../assets/diagrams/drop-moves-downstream.svg" alt="Animation: the same 1.5 ms burst of 6,000 packets three times; with a 512-slot ring both the ring and the socket buffer overflow, 3,238 drops in rx_missed_errors and 828 in UdpRcvbufErrors; with the ring at its maximum the 208 KiB socket buffer overflows and UdpRcvbufErrors counts 1,908; with an 8 MiB socket buffer as well nothing is lost" width="720">
 
-*Each fix moves the drop one stage downstream, until every stage can hold its share of the burst. That is why the counters are read at every stage, not only at the NIC.*
+*Each fix removes the drops of one stage, and the stage after it then has to hold more, until every stage can hold its share of the burst. That is why the counters are read at every stage, not only at the NIC.*
 
 
 Illustrative:
@@ -105,7 +105,7 @@ Illustrative:
 |---|---|---|
 | RX ring | 512 descriptors | 8160 descriptors |
 | Time before the ring is full | 0.2 ms | more than the whole burst |
-| Packets dropped per batch | about 3,240 in the ring | 0 |
+| Packets dropped per batch | about 3,240 in the ring and 830 in the socket buffer | 0 |
 | Socket buffer | 208 KiB, 92 to 277 datagrams | 8 MiB, 3,640 to 10,920 datagrams |
 | Latency of a packet while the ring is empty | unchanged | unchanged |
 | Latency of the last packet of the burst | not delivered | about 4.5 ms: it waits behind the others |
