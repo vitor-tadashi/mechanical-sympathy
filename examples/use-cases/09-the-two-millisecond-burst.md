@@ -38,10 +38,10 @@ ethtool -S $IF | grep -E 'rx_missed_errors|rx_no_buffer_count' > /tmp/after
 paste -d' ' /tmp/before /tmp/after | awk '{ print $1, "+" ($4 - $2) }'   # after minus before, so old counts do not matter
 # rx_missed_errors: +3238            <- the ring dropped 3,238 packets in this one batch
 nstat | grep -E 'UdpRcvbufErrors'
-# (no output)                        <- the socket did not overflow, because the ring was upstream of it
+# UdpRcvbufErrors     828            <- the socket buffer overflowed too, behind the ring
 ```
 
-The number is the diagnosis. The ring holds 512 packets, the burst brings 6,000 and 2,250 are drained meanwhile, so `6000 − 2250 − 512 = 3238` are lost. When the counter matches the formula, you have found the queue.
+The numbers are the diagnosis. The ring holds 512 packets, the burst brings 6,000 and 2,250 are drained meanwhile, so `6000 − 2250 − 512 = 3238` are lost there. The 208 KiB socket buffer, only 92 datagrams, loses 828 more of the packets the ring let through. When each counter matches the arithmetic, you have found both queues: fix the first one, then the next (`scripts/size-buffers` prints both).
 
 ## 3. Change
 
@@ -92,7 +92,29 @@ sysctl net.core.rmem_max net.core.rmem_default
 
 A receiver that never calls `setsockopt` now gets 8 MiB, which covers 4.4 MiB. A receiver that sets its own size should ask for at least the 2250 KiB that `size-buffers` prints, because the kernel doubles the request to 4.4 MiB. Asking for 4 MiB (8 MiB after doubling) leaves room for a longer burst. The kernel clamps anything above `rmem_max` without an error.
 
-## 4. Verify
+## 4. Result
+
+<img src="../../assets/diagrams/drop-moves-downstream.svg" alt="Animation: the same 1.5 ms burst of 6,000 packets three times; with a 512-slot ring both the ring and the socket buffer overflow, 3,238 drops in rx_missed_errors and 828 in UdpRcvbufErrors; with the ring at its maximum the 208 KiB socket buffer overflows and UdpRcvbufErrors counts 1,908; with an 8 MiB socket buffer as well nothing is lost" width="720">
+
+*Each fix removes the drops of one stage, and the stage after it then has to hold more, until every stage can hold its share of the burst. That is why the counters are read at every stage, not only at the NIC.*
+
+
+Illustrative:
+
+| | Before | After |
+|---|---|---|
+| RX ring | 512 descriptors | 8160 descriptors |
+| Time before the ring is full | 0.2 ms | more than the whole burst |
+| Packets dropped per batch | about 3,240 in the ring and 830 in the socket buffer | 0 |
+| Socket buffer | 208 KiB, 92 to 277 datagrams | 8 MiB, 3,640 to 10,920 datagrams |
+| Latency of a packet while the ring is empty | unchanged | unchanged |
+| Latency of the last packet of the burst | not delivered | about 4.5 ms: it waits behind the others |
+
+The last row is the honest cost. The burst is not lost, but its tail waits: the last packet arrives at 1.5 ms and the application, at 1.0 Mpps, reads it at about 6 ms. To shorten that wait, drain faster ([use case 4](04-one-nic-one-queue-one-cpu.md)), because a bigger ring only buys time.
+
+## 5. Verify and roll back
+
+### Verify
 
 ```bash
 ethtool -S ens1f0 | grep -E 'rx_missed_errors|rx_no_buffer_count'
@@ -104,28 +126,13 @@ ss -umn 'sport = :5000'
 
 Then run the replay ten times. A queue that is only just big enough passes once and fails on a bigger batch, so leave headroom: size for twice the largest burst you have seen.
 
-## 5. Result
-
-Illustrative:
-
-| | Before | After |
-|---|---|---|
-| RX ring | 512 descriptors | 8160 descriptors |
-| Time before the ring is full | 0.2 ms | more than the whole burst |
-| Packets dropped per batch | about 3,240 in the ring | 0 |
-| Socket buffer | 208 KiB, 92 to 277 datagrams | 8 MiB, 3,640 to 10,920 datagrams |
-| Latency of a packet while the ring is empty | unchanged | unchanged |
-| Latency of the last packet of the burst | not delivered | about 4.5 ms: it waits behind the others |
-
-The last row is the honest cost. The burst is not lost, but its tail waits: the last packet arrives at 1.5 ms and the application, at 1.0 Mpps, reads it at about 6 ms. To shorten that wait, drain faster ([use case 4](04-one-nic-one-queue-one-cpu.md)), because a bigger ring only buys time.
-
-## 6. Roll back
+### Roll back
 
 - [ ] Rings: the checklist in [Guide 04 §11](../../guides/04-network-optimization.md#11-rollback), or `sudo ethtool -G ens1f0 rx 512 tx 512` for one interface (this resets the link)
 - [ ] Sysctls: `sudo scripts/06-kernel-sysctl --rollback`
 - [ ] Whole host: `sudo systemctl disable lowlat-runtime.service` and reboot
 
-## 7. Key takeaways
+## 6. Key takeaways
 
 - **Size the ring to the burst, not to the average.** The average was about 2,000 packets per second. The burst was 4 Mpps for 1.5 ms.
 - **The drops move downstream.** After the ring is fixed, the socket buffer is the next queue to overflow, so read both counters.

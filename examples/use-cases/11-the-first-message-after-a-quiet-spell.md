@@ -28,13 +28,17 @@ The pattern shows up when you split the samples by the gap before each message: 
 Three questions: which states can the CPU enter, how deep are they, and what should have kept it out of them?
 
 ```mermaid
-flowchart LR
-  a["Which idle driver<br/>and states?"] --> b["Exit latency and<br/>entries per state"] --> c["idle=poll, caps,<br/>PM QoS in place?"]
-  class a,b,c focus
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+flowchart TD
+  s(["First message after a pause is slow"]) --> q1{"Idle driver<br/>is none?"}
+  q1 -- yes --> f1["Not C-states: look at coalescing<br/>(use case 15) or cold caches"]
+  q1 -- no --> q2{"Deep states<br/>entered?"}
+  q2 -- yes --> q3{"Bare metal?"}
+  q3 -- yes --> f2["idle=poll and the C-state caps<br/>(Guide 01 §5.1)"]
+  q3 -- no --> f3["tuned PM QoS<br/>(Guide 07 §5)"]
+  q2 -- no --> f4["Check the BIOS C-state settings<br/>(Guide 00 §4.1)"]
 ```
 
-*First list the states, then measure how deep they are and how often the CPU enters them, then find the missing control.*
+*Start from the slow first message: is an idle driver active, does the CPU enter deep states, and which control is missing on this host class.*
 
 ```bash
 # 1. The idle driver and the states CPU 7 may enter (Guide 01 §7, Guide 00 §7)

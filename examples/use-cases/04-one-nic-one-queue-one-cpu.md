@@ -39,6 +39,18 @@ sudo rtla osnoise top -c 3 -d 30s
 
 ## 3. Change
 
+```mermaid
+flowchart LR
+  pkt(["critical flow<br/>udp 10.10.1.10:5000"]) --> rule["ntuple rule"] --> q0["queue 0"] --> irq["its MSI-X vector"] --> c1["CPU 1: hard IRQ<br/>and softirq"] --> sock["socket"] --> rx[["net.rx spinning<br/>on CPU 3"]]
+  other(["every other flow"]) --> rss["RSS, weight 0 1"] --> q1["queue 1"] --> c1b["its IRQ CPU"]
+  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
+  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
+  class rx iso
+  class c1,c1b hk
+```
+
+*Where the critical packet goes after the change: its own queue, an interrupt on the housekeeping CPU 1, and only the finished data reaches the isolated CPU 3. Every other flow is hashed to the other queue. The addresses are made up.*
+
 The NIC roles and their interrupt CPUs come from `lowlat.conf`. The reference host puts both critical NICs on CPU 1, the housekeeping CPU of NUMA node 1, where the NICs live:
 
 ```bash
@@ -79,25 +91,10 @@ ethtool -n ens1f0                                                           # li
 > [!IMPORTANT]
 > These commands are **not managed by `04-network`**. It sets the queue count from the `irq_cpus` field of the `NICS` entry (one queue for `1`), and it never restores RSS weights or ntuple rules. After a reboot or a driver reload the NIC is back to `combined 1` and the flow steering is gone. To keep it, run the same commands, and the IRQ placement for both queues, from a oneshot unit of your own ordered `After=lowlat-runtime.service` ([Guide 04 §8](../../guides/04-network-optimization.md#8-persistence)). Not tested by this repository.
 
-<img src="../../assets/diagrams/packet-path.svg" alt="Animation: on the kernel path a packet passes through a DMA, an interrupt, softirq processing, a socket buffer, a wake-up and recv, and the interrupt and wake-up steps are highlighted; with kernel bypass a pinned thread polls the ring and about 6 microseconds are not spent" width="720">
-
-*The steps of the kernel path. This use case moves the interrupt and the softirq off the critical CPU, and [Guide 08](../../guides/08-kernel-bypass.md) removes them altogether.*
-
 > [!WARNING]
 > Changing channels resets the NIC on most drivers, with the link down for 1 to 3 seconds, and the new queues come up with default IRQ affinity. Do it in a maintenance window, and keep irqbalance off, or it rewrites the affinity within 10 seconds ([Guide 02 §4.3](../../guides/02-cpu-core-isolation.md#43-irqbalance-persistent)).
 
-## 4. Verify
-
-```bash
-scripts/04-network --verify                         # per-NIC PASS/FAIL, and "no NIC IRQ on an isolated CPU"
-watch -d -n1 "grep -E 'CPU|ens1f0' /proc/interrupts"
-# expect: the critical NIC's counters increase only in the CPU 1 column
-
-ethtool -S ens1f0 | grep -iE 'drop|miss|discard|no_buf|fifo' | grep -v ': 0$'
-# expect: no output. A larger ring absorbs bursts, and drops mean the softirq CPU is too busy
-```
-
-## 5. Result
+## 4. Result
 
 Illustrative:
 
@@ -108,12 +105,25 @@ Illustrative:
 | Queues | 63 (driver default), each with an interrupt to place | as many as there are IRQ CPUs |
 | Data path to `net.rx` | packet processed on the same CPU | a few cache-line transfers from CPU 1 to CPU 3 |
 
-## 6. Roll back
+## 5. Verify and roll back
+
+### Verify
+
+```bash
+scripts/04-network --verify                         # per-NIC PASS/FAIL, and "no NIC IRQ on an isolated CPU"
+watch -d -n1 "grep -E 'CPU|ens1f0' /proc/interrupts"
+# expect: the critical NIC's counters increase only in the CPU 1 column
+
+ethtool -S ens1f0 | grep -iE 'drop|miss|discard|no_buf|fifo' | grep -v ': 0$'
+# expect: no output. A larger ring absorbs bursts, and drops mean the softirq CPU is too busy
+```
+
+### Roll back
 
 - [ ] Whole host: `sudo systemctl disable lowlat-runtime.service`, `sudo systemctl enable --now irqbalance`, reboot
 - [ ] One interface: the checklist in [Guide 04 §11](../../guides/04-network-optimization.md#11-rollback), including `ethtool -N ens1f0 delete <rule id>` for every ntuple rule
 
-## 7. Key takeaways
+## 6. Key takeaways
 
 - **The interrupt CPU is the softirq CPU.** Never put a kernel-stack NIC's interrupts on an isolated CPU that runs a spinning thread.
 - **Add IRQ CPUs first, then queues.** One queue per interrupt CPU keeps the host simple.
