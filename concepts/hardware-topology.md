@@ -20,6 +20,8 @@ The picture is not printed on the server. Linux numbers CPUs in the order the fi
 
 *Seen from one pinned thread, the machine is a set of rings: its own core, its L3 domain, its socket, and the other socket. Each ring costs several times more than the one inside it.*
 
+> **Picture it.** A building. Your desk is the core, your floor's shared shelf is the L3, the building is the socket, and the other socket is the building across the street. Handing a note across the desk is cheap; across the street, you need a courier for every note.
+
 | Level | What it is | Shared by | Linux name |
 |---|---|---|---|
 | **Hardware thread** | One instruction stream. Linux calls it a CPU. | — | `cpuN` |

@@ -33,6 +33,8 @@ Two separate things happen:
 
 ## 3. The TSC and the clocksource
 
+> **Picture it.** The TSC is a metronome inside each CPU. Reading it is as cheap as glancing at it. The flags below say whether every CPU's metronome ticks at the same rate, and keeps ticking when the CPU sleeps.
+
 The TSC counts at a constant rate on modern CPUs. Three CPU flags in `/proc/cpuinfo` say how much you can trust it:
 
 | Flag | Means |

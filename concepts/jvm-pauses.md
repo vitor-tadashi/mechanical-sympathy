@@ -66,6 +66,10 @@ What can still stop or slow a latency thread:
 | GC threads | They need CPU time. Unpinned, they run on the OS CPUs ([Java example](../examples/hugepages-java-example.md)) | — |
 | Heap uncommit | Giving memory back changes the memory map: TLB shootdowns to every CPU running the JVM ([interrupts and deferred work §4](interrupts-and-deferred-work.md#4-ipis-interrupts-from-other-cpus)) | `-XX:-ZUncommit` removes it |
 
+<img src="../assets/diagrams/alloc-stall.svg" alt="Two panels of four Java threads: at a safepoint every thread stops and the safepoint log records it; in an allocation stall only the allocating thread waits while the others run, and the safepoint log shows nothing" width="720">
+
+*A safepoint stops everyone and leaves a line in the safepoint log. An allocation stall stops one thread and leaves nothing there: look in the GC log and JFR.*
+
 The best GC pause is the one for garbage that was never made. A hot path that allocates nothing per message (pre-allocated messages, rings of reused slots, primitives instead of boxed values) leaves ZGC little to do and never meets an allocation stall.
 
 ## 5. The JIT: warm-up and deoptimization

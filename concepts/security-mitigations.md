@@ -19,6 +19,8 @@ The mitigations are the one tuning topic where a latency gain is paid with a sec
 
 Modern CPUs guess ahead: they run instructions before they know the instructions are needed, and throw the results away if the guess was wrong. The results are thrown away, but traces stay in caches and buffers, and a careful program can read those traces. The flaws differ in which guess and which buffer, but the defense is always the same kind: **clear or separate the shared state** whenever execution moves from one trust domain to another. That clearing is the cost.
 
+> **Picture it.** A clerk who starts filling in a form before checking your ID, and shreds it when the check fails. The form is gone, but the pen marks on the desk below show what was written. Mitigations make the clerk wipe the desk at every visit, and that wiping is the cost.
+
 ## 3. The families, and what the kernel does
 
 | Family (names you meet) | What leaks | Kernel defense | Where the cost lands |
@@ -57,7 +59,7 @@ flowchart LR
 This gives the order of decisions:
 
 1. **Cross less.** Batch messages per system call (`recvmmsg`, `sendmmsg`), or move the critical path to kernel bypass ([Guide 08](../guides/08-kernel-bypass.md)). Both remove crossings, and with them the mitigation cost, with no security change. Busy polling (`SO_BUSY_POLL`) is not the same: it removes the interrupt, the wake-up and the context switch, but the `recv` or `poll` system call itself stays, and its entry and exit still pay.
-2. **Measure what is left** (§8). If the critical path makes no system calls, turning mitigations off gains nothing there.
+2. **Measure what is left** (§9). If the critical path makes no system calls, turning mitigations off gains nothing there.
 3. **Opt out per mitigation**, only for what the measurement shows, with the sign-off of [Guide 01 §5.6](../guides/01-grub-bootloader-tuning.md#56-iommu-and-cpu-vulnerability-mitigations-security-sensitive).
 
 Interrupts are crossings too. With the IRQs and softirqs of kernel-stack NICs kept off the isolated CPUs, that part of the cost lands on the housekeeping CPUs, which is where it belongs.
@@ -101,7 +103,14 @@ Typical orders of magnitude on affected CPUs, not measurements. Newer CPUs fix s
 | A twin host with a newer CPU is faster on the same code | The newer CPU is `Not affected` by Meltdown or MDS | `vulnerabilities/*` on both |
 | Turning mitigations off changed nothing | The critical path makes no crossings | Good news: keep them on |
 
-## 8. See it on your host
+## 8. Myths
+
+- **"`mitigations=off` gives you 30 %."** That number comes from syscall-heavy benchmarks on affected CPUs. A latency thread that spins in user space can gain nothing at all. Measure your path.
+- **"`mitigations=off` is the same as listing the switches."** It also turns off every mitigation a future kernel adds, including ones nobody has reviewed.
+- **"The isolated CPUs need it more than the others."** The isolated CPUs make the fewest crossings when the tuning is right. Most of the cost lands on housekeeping CPUs, where interrupts and system services run.
+- **"Turning SMT off is only for latency."** Some flaws are only fully closed with SMT off, so a latency host that already runs without SMT gets that protection for free.
+
+## 9. See it on your host
 
 Measure the cost of a crossing on your own CPU and kernel. `dd` with a 1-byte block makes one `read` and one `write` system call per byte, so a million bytes is two million system calls:
 
@@ -113,13 +122,6 @@ time dd if=/dev/zero of=/dev/null bs=1 count=1000000 status=none
 Run it pinned to one CPU (`taskset -c 3`) a few times and keep the lowest number. That number includes the useful work of `read` and `write` and the `dd` loop, so it is not the mitigation cost. To isolate that cost, run the same command on a **scratch VM or test host** booted with `mitigations=off`, never on a production host, and divide the **difference** of the two times by the 2,000,000 calls. On a CPU that reports `Not affected` for Meltdown and MDS, the difference will be small.
 
 `perf stat -e 'syscalls:sys_enter_*' -p <pid> -- sleep 10` (root) counts how many system calls your application makes per second. Multiplied by that per-call difference, it gives a rough estimate of what the mitigations cost the process. Other system calls cost more or less than `read` and `write` on `/dev/zero`, so treat it as an order of magnitude.
-
-## 9. Myths
-
-- **"`mitigations=off` gives you 30 %."** That number comes from syscall-heavy benchmarks on affected CPUs. A latency thread that spins in user space can gain nothing at all. Measure your path.
-- **"`mitigations=off` is the same as listing the switches."** It also turns off every mitigation a future kernel adds, including ones nobody has reviewed.
-- **"The isolated CPUs need it more than the others."** The isolated CPUs make the fewest crossings when the tuning is right. Most of the cost lands on housekeeping CPUs, where interrupts and system services run.
-- **"Turning SMT off is only for latency."** Some flaws are only fully closed with SMT off, so a latency host that already runs without SMT gets that protection for free.
 
 ## 10. Illustrative scenario
 

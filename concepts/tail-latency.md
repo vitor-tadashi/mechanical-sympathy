@@ -23,6 +23,10 @@ A percentile describes one event. Users and downstream systems see many. If a si
 | 100 | 63 % | 9.5 % |
 | 1,000 | ~100 % | 63 % |
 
+<img src="../assets/diagrams/fanout-tail.svg" alt="A chart of the share of requests that meet at least one slow call against the number of calls per request: with each call slow 1 percent of the time, 10 calls give 10 percent and 100 calls 63 percent; with 0.1 percent, 100 calls give about 10 percent" width="720">
+
+*The backend's p99 becomes the user's median somewhere around 70 calls per request. That is why a fan-out service watches p99.9 and p99.99 of each call.*
+
 The table is the independent case. Calls of one user action often share a host, a queue or a stall, so they are correlated: if one stall delays all of them or none, 100 calls see the tail with the same 1 % as one call. Real systems fall between the two, so read the table as an upper bound that is often close.
 
 The same holds over time. At 100,000 messages per second, p99.99 is crossed **10 times every second**, 864,000 times a day. A "rare" event at that rate is a steady stream.

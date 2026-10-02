@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 430" width="760" height="430" role="img" aria-labelledby="t d">
+<title id="t">Unmapping memory sends TLB flush interrupts to every CPU of the process</title>
+<desc id="d">Two panels of four CPUs that run threads of one JVM: a GC thread on housekeeping CPU 2, and net.rx, event.loop and worker.0 on isolated CPUs 3, 5 and 7. When the GC returns memory with munmap, CPU 2 sends an inter-processor interrupt to each of the other CPUs, each one stops to flush its TLB, and CPU 2 waits until all have answered. With the heap pre-touched and never uncommitted, the mappings never change and no CPU is interrupted.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .mid { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .run { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.2; }
+  .hk { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.2; }
+  .ipi { stroke: #9b1c1c; stroke-width: 1.8; fill: none; marker-end: url(#ar); }
+  .flush { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .tag { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; }
+  .ok { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; }
+  .pk { transform-box: fill-box; transform-origin: center; animation: pop 8s linear infinite; }
+  @keyframes pop { 0%, 4% { transform: scale(1.3); } 9%, 100% { transform: scale(1); } }
+  .head { transform: translateX(570px); animation: sweep 8s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pk, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="430" rx="8"/>
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#9b1c1c"/></marker></defs>
+<rect class="lane" x="10" y="10" width="740" height="210" rx="6"/>
+<text class="cap" x="24" y="34">The GC gives memory back: munmap on CPU 2</text>
+<text class="sub" x="24" y="52">Every CPU that runs a thread of the same process must flush its TLB, and CPU 2 waits for all of them.</text>
+<text class="lbl" x="24" y="83">CPU 2</text><text class="axis" x="70" y="83">GC thread</text>
+<rect class="hk" x="150" y="68" width="570" height="22" rx="3"/>
+<text class="lbl" x="24" y="115">CPU 3</text><text class="axis" x="70" y="115">net.rx</text>
+<rect class="run" x="150" y="100" width="570" height="22" rx="3"/>
+<text class="lbl" x="24" y="147">CPU 5</text><text class="axis" x="70" y="147">event.loop</text>
+<rect class="run" x="150" y="132" width="570" height="22" rx="3"/>
+<text class="lbl" x="24" y="179">CPU 7</text><text class="axis" x="70" y="179">worker.0</text>
+<rect class="run" x="150" y="164" width="570" height="22" rx="3"/>
+<rect class="wait pk" x="230" y="68" width="40" height="22" rx="3" style="animation-delay:-6.88s"/>
+<path class="ipi" d="M236,90 L244,98"/>
+<rect class="flush pk" x="244" y="100" width="12" height="22" rx="2" style="animation-delay:-6.68s"/>
+<path class="ipi" d="M236,90 L244,130"/>
+<rect class="flush pk" x="244" y="132" width="12" height="22" rx="2" style="animation-delay:-6.68s"/>
+<path class="ipi" d="M236,90 L244,162"/>
+<rect class="flush pk" x="244" y="164" width="12" height="22" rx="2" style="animation-delay:-6.68s"/>
+<rect class="wait pk" x="520" y="68" width="40" height="22" rx="3" style="animation-delay:-2.81s"/>
+<path class="ipi" d="M526,90 L534,98"/>
+<rect class="flush pk" x="534" y="100" width="12" height="22" rx="2" style="animation-delay:-2.61s"/>
+<path class="ipi" d="M526,90 L534,130"/>
+<rect class="flush pk" x="534" y="132" width="12" height="22" rx="2" style="animation-delay:-2.61s"/>
+<path class="ipi" d="M526,90 L534,162"/>
+<rect class="flush pk" x="534" y="164" width="12" height="22" rx="2" style="animation-delay:-2.61s"/>
+<text class="tag" x="276" y="83">munmap: sends IPIs, waits for every CPU</text>
+<text class="tag" x="260" y="115">TLB flush</text>
+<rect class="lane" x="10" y="210" width="740" height="210" rx="6"/>
+<text class="cap" x="24" y="234">Heap pre-touched and never uncommitted</text>
+<text class="sub" x="24" y="252">The process keeps its memory mapped, so nothing has to be flushed anywhere.</text>
+<text class="lbl" x="24" y="283">CPU 2</text><text class="axis" x="70" y="283">GC thread</text>
+<rect class="hk" x="150" y="268" width="570" height="22" rx="3"/>
+<text class="lbl" x="24" y="315">CPU 3</text><text class="axis" x="70" y="315">net.rx</text>
+<rect class="run" x="150" y="300" width="570" height="22" rx="3"/>
+<text class="lbl" x="24" y="347">CPU 5</text><text class="axis" x="70" y="347">event.loop</text>
+<rect class="run" x="150" y="332" width="570" height="22" rx="3"/>
+<text class="lbl" x="24" y="379">CPU 7</text><text class="axis" x="70" y="379">worker.0</text>
+<rect class="run" x="150" y="364" width="570" height="22" rx="3"/>
+<text class="ok" x="150" y="408">no map changes, so no shootdowns: the TLB row of /proc/interrupts stays still</text>
+<line class="head" x1="150" y1="64" x2="150" y2="402"/>
+</svg>

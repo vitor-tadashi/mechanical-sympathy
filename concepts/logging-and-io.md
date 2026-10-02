@@ -73,6 +73,8 @@ A write that reaches an NVMe disk completes with an interrupt. NVMe drivers crea
 
 *The I/O waits do not disappear. They move to a thread whose delay costs nothing.*
 
+> **Picture it.** A waiter who walks every order to the kitchen and waits for the chef to read it serves one table at a time. A waiter who drops the order slip on a spike and goes back to the room serves them all; the kitchen reads the spike at its own pace.
+
 | Rule | Why |
 |---|---|
 | **Enqueue, do not write.** The critical thread puts a fixed-size record in a single-producer, single-consumer ring ([SPSC](../GLOSSARY.md#spsc)). | An enqueue is a few stores and one cache line handoff: tens of ns. |

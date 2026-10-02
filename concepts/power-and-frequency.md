@@ -52,6 +52,8 @@ A spinning thread on an isolated CPU never lets its CPU go idle, so it never pay
 
 ## 3. Frequency: P-states and who chooses them
 
+> **Picture it.** A P-state is a gear. The CPU, or the OS, shifts up when it is busy and down when it is not, and every shift takes a moment. For a burst that starts in low gear, that moment is the latency.
+
 A **P-state** is a pair of clock frequency and voltage. A lower clock uses much less power (power grows roughly with frequency × voltage²). Who chooses the P-state matters as much as which one is chosen:
 
 | Driver | Who decides | What the guides do |

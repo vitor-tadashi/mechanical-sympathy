@@ -62,6 +62,12 @@ An **inter-processor interrupt** ([IPI](../GLOSSARY.md#ipi)) is one CPU interrup
 
 The `TLB` row is the one that surprises people. A housekeeping thread of the same JVM that releases memory sends a TLB flush to **every CPU that runs a thread of that process**, including the isolated ones, and waits for each to answer. [Guide 02 §1](../guides/02-cpu-core-isolation.md#1-the-problem-everything-else-that-wants-your-cpu) puts its cost at 1–5 µs per event.
 
+<img src="../assets/diagrams/tlb-shootdown.svg" alt="Animation: a GC thread on CPU 2 calls munmap, sends an inter-processor interrupt to isolated CPUs 3, 5 and 7, each stops to flush its TLB, and CPU 2 waits for all of them; with the heap pre-touched and never uncommitted, nothing is flushed" width="720">
+
+*One `munmap` on a housekeeping CPU reaches every CPU that runs a thread of the same process, isolated or not. Keeping the memory map still keeps the `TLB` row still.*
+
+> **Picture it.** Every CPU keeps a pocket map of the process's memory. When one thread tears out a page, it has to phone every other holder of the map to cross it out, and it waits on the line until each one confirms.
+
 ## 5. RCU: freeing memory later, safely
 
 **Read-Copy-Update** ([RCU](../GLOSSARY.md#rcu)) lets kernel readers run without locks. A writer publishes a new version, and the old one is freed only after a **grace period**: once every CPU has passed through a quiescent state, no reader can still hold it. The freeing runs as an **RCU callback**.

@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 430" width="760" height="430" role="img" aria-labelledby="t d">
+<title id="t">A safepoint stops every thread; an allocation stall stops one, and the safepoint log misses it</title>
+<desc id="d">Two panels of four Java threads. At a safepoint, every thread stops at the same time, and the safepoint log records it. In an allocation stall, ZGC has not freed memory fast enough, so only the thread that allocates waits, possibly for milliseconds, while the others keep running, and the safepoint log shows nothing: the stall appears in the GC log and in JFR instead.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .mid { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .run { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.2; }
+  .stop { fill: url(#hatch); stroke: #9b1c1c; stroke-width: 1.5; }
+  .log { font: 12px ui-monospace, Menlo, Consolas, monospace; fill: #1a1a1a; }
+  .tag { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; text-anchor: middle; }
+  .pk { transform-box: fill-box; transform-origin: center; animation: pop 8s linear infinite; }
+  @keyframes pop { 0%, 4% { transform: scale(1.12); } 9%, 100% { transform: scale(1); } }
+  .head { transform: translateX(570px); animation: sweep 8s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pk, .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="430" rx="8"/>
+<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#ffc9c9"/><line x1="0" y1="0" x2="0" y2="6" stroke="#9b1c1c" stroke-width="1.5"/></pattern></defs>
+<rect class="lane" x="10" y="10" width="740" height="200" rx="6"/>
+<text class="cap" x="24" y="34">Safepoint: every Java thread stops</text>
+<text class="sub" x="24" y="52">The JVM needs all threads stopped at once, for a GC phase or a deoptimization.</text>
+<text class="lbl" x="24" y="83">net.rx</text><rect class="run" x="150" y="68" width="570" height="20" rx="3"/>
+<text class="lbl" x="24" y="111">event.loop</text><rect class="run" x="150" y="96" width="570" height="20" rx="3"/>
+<text class="lbl" x="24" y="139">worker.0</text><rect class="run" x="150" y="124" width="570" height="20" rx="3"/>
+<text class="lbl" x="24" y="167">worker.1</text><rect class="run" x="150" y="152" width="570" height="20" rx="3"/>
+<rect class="stop pk" x="400" y="68" width="60" height="20" rx="2" style="animation-delay:-4.49s"/>
+<rect class="stop pk" x="400" y="96" width="60" height="20" rx="2" style="animation-delay:-4.49s"/>
+<rect class="stop pk" x="400" y="124" width="60" height="20" rx="2" style="animation-delay:-4.49s"/>
+<rect class="stop pk" x="400" y="152" width="60" height="20" rx="2" style="animation-delay:-4.49s"/>
+<text class="axis" x="24" y="198">-Xlog:safepoint</text><text class="log" x="150" y="198">Safepoint "ZMarkStart", Total: 0.6 ms   ← it is in the log</text>
+<rect class="lane" x="10" y="220" width="740" height="200" rx="6"/>
+<text class="cap" x="24" y="244">Allocation stall: one thread waits for memory</text>
+<text class="sub" x="24" y="262">ZGC has not freed enough yet. Only the thread that allocates waits; the others keep running.</text>
+<text class="lbl" x="24" y="293">net.rx</text><rect class="run" x="150" y="278" width="570" height="20" rx="3"/>
+<text class="lbl" x="24" y="321">event.loop</text><rect class="run" x="150" y="306" width="570" height="20" rx="3"/>
+<text class="lbl" x="24" y="349">worker.0</text><rect class="run" x="150" y="334" width="570" height="20" rx="3"/>
+<text class="lbl" x="24" y="377">worker.1</text><rect class="run" x="150" y="362" width="570" height="20" rx="3"/>
+<rect class="stop pk" x="330" y="306" width="140" height="20" rx="2" style="animation-delay:-5.47s"/>
+<text class="axis" x="24" y="408">-Xlog:safepoint</text><text class="log" x="150" y="408">(nothing)   ← the stall is not a safepoint; look in -Xlog:gc and JFR</text>
+<line class="head" x1="150" y1="64" x2="150" y2="420"/>
+</svg>
