@@ -21,6 +21,10 @@
 
 A burst is a queue problem: capacity divided by (arrival minus drain) says how long it lasts. An overload is different. At 6 Mpps against a 1.5 Mpps drain, an 8160-slot ring fills in 8160 / 4.5 = 1.8 ms, and after that 75% of the packets are lost, for as long as the traffic lasts.
 
+<img src="../../assets/diagrams/burst-vs-overload.svg" alt="Two charts of RX ring fill over 5 ms: a 1.5 ms burst at 4 Mpps fills the ring to 3,750 and drains it with nothing lost; a sustained 6 Mpps fills the 8160-slot ring in 1.8 ms and keeps it full, dropping 75 percent; below, 167 ns between arrivals against 667 ns of work per packet on one core" width="720">
+
+*A burst rises and drains, so a bigger buffer solves it. An overload never drains, so only more CPU per packet solves it: more cores, or less work per packet with kernel bypass.*
+
 ## 2. Diagnose
 
 The signature of an overload is that every counter grows **continuously**, and not once per burst:
@@ -112,7 +116,22 @@ At 6 Mpps the budget is `1 / 6 Mpps = 167 ns` per packet for your own code on th
 > [!NOTE]
 > **Not tested by this repository:** the DPDK path ([Guide 08 §6](../../guides/08-kernel-bypass.md#6-dpdk-on-intel-nics)). It follows the same idea with a poll-mode driver and a mempool, and its sizing rule is in [Concept: network buffers §7.1](../../concepts/network-buffers.md#71-dpdk).
 
-## 4. Verify
+## 4. Result
+
+Illustrative:
+
+| | Kernel, one queue | Kernel, five queues | Onload |
+|---|---|---|---|
+| Drain rate | about 1.5 Mpps | about 7.5 Mpps | set by your thread: 167 ns per packet at 6 Mpps |
+| Loss at 6 Mpps | about 75%, steady | none | none, if `oflow_drop` and `memory_pressure` stay 0 |
+| CPUs at 100% | 1 (softirq) | 5 (softirq) | 1 per stack (your polling thread) |
+| Interrupts | one per burst, per queue | one per burst, per queue | none while the thread spins |
+| `tcpdump`, netfilter | yes | yes | not for accelerated traffic |
+| Where to read drops | `ethtool -S`, `nstat`, `ss -m` | the same | `onload_stackdump` |
+
+## 5. Verify and roll back
+
+### Verify
 
 ```bash
 # kernel path, after step 1
@@ -128,26 +147,13 @@ onload_stackdump lots | grep -E 'oflow_drop|memory_pressure|pkt_bufs'
 
 Run the replay at 1.2 times the real rate. A queue or a stack that is at its limit at the real rate fails the first time the feed grows.
 
-## 5. Result
-
-Illustrative:
-
-| | Kernel, one queue | Kernel, five queues | Onload |
-|---|---|---|---|
-| Drain rate | about 1.5 Mpps | about 7.5 Mpps | set by your thread: 167 ns per packet at 6 Mpps |
-| Loss at 6 Mpps | about 75%, steady | none | none, if `oflow_drop` and `memory_pressure` stay 0 |
-| CPUs at 100% | 1 (softirq) | 5 (softirq) | 1 per stack (your polling thread) |
-| Interrupts | one per burst, per queue | one per burst, per queue | none while the thread spins |
-| `tcpdump`, netfilter | yes | yes | not for accelerated traffic |
-| Where to read drops | `ethtool -S`, `nstat`, `ss -m` | the same | `onload_stackdump` |
-
-## 6. Roll back
+### Roll back
 
 - [ ] Queues: the checklist in [Guide 04 §11](../../guides/04-network-optimization.md#11-rollback), or `sudo ethtool -L ens1f0 combined 1` (this resets the link)
 - [ ] Bypass: `sudo scripts/08-kernel-bypass --rollback`, then follow [Guide 08 §11](../../guides/08-kernel-bypass.md#11-rollback), and start the application without the `onload` prefix
 - [ ] Whole host: `sudo systemctl disable lowlat-runtime.service` and reboot
 
-## 7. Key takeaways
+## 6. Key takeaways
 
 - **Buffers absorb bursts, and they cannot absorb an overload.** If every counter grows all the time, count the nanoseconds per packet, and stop resizing queues.
 - **Try queues before bypass.** Five queues keep every tool you know, and bypass costs `tcpdump`, netfilter and a spinning core.

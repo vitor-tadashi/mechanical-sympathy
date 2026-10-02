@@ -28,13 +28,15 @@ Right after a reboot, memory is mostly free and those allocations are cheap. Lin
 Three questions: is free memory at the watermarks, did threads reclaim inline, and did anything wait for memory?
 
 ```mermaid
-flowchart LR
-  a["Zone free pages<br/>near min?"] --> b["allocstall rising<br/>at the stall?"] --> c["PSI memory<br/>some above 0?"]
-  class a,b,c focus
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+flowchart TD
+  s(["ms stalls when the journal rotates"]) --> q1{"allocstall rises<br/>at the stall?"}
+  q1 -- no --> f1["Not reclaim: look at fsync and<br/>the logger (use case 16)"]
+  q1 -- yes --> q2{"Zone free near<br/>its min?"}
+  q2 -- yes --> f2["Raise min_free_kbytes,<br/>fence the writer (§3)"]
+  q2 -- no --> f3["Check PSI and the slice limits<br/>(Guide 12 §4.6)"]
 ```
 
-*First compare each zone's free pages with its watermarks, then count inline reclaim, then confirm that tasks waited.*
+*Count inline reclaim at the stall, compare free pages with the watermarks, and confirm with PSI.*
 
 ```bash
 # 1. Where the memory is (Guide 03 §8 reads the same file for huge pages)

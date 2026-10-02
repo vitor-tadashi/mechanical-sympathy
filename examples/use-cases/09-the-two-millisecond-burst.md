@@ -92,19 +92,12 @@ sysctl net.core.rmem_max net.core.rmem_default
 
 A receiver that never calls `setsockopt` now gets 8 MiB, which covers 4.4 MiB. A receiver that sets its own size should ask for at least the 2250 KiB that `size-buffers` prints, because the kernel doubles the request to 4.4 MiB. Asking for 4 MiB (8 MiB after doubling) leaves room for a longer burst. The kernel clamps anything above `rmem_max` without an error.
 
-## 4. Verify
+## 4. Result
 
-```bash
-ethtool -S ens1f0 | grep -E 'rx_missed_errors|rx_no_buffer_count'
-nstat | grep -E 'UdpRcvbufErrors'
-ss -umn 'sport = :5000'
-# replay one upstream batch, then read them again
-# expect: rx_missed_errors unchanged, no UdpRcvbufErrors line, and d0 in skmem
-```
+<img src="../../assets/diagrams/drop-moves-downstream.svg" alt="Animation: the same 1.5 ms burst of 6,000 packets three times; with a 512-slot ring the ring overflows and rx_missed_errors counts 3,238; with the ring at its maximum the 208 KiB socket buffer overflows and UdpRcvbufErrors counts 1,908; with an 8 MiB socket buffer as well nothing is lost" width="720">
 
-Then run the replay ten times. A queue that is only just big enough passes once and fails on a bigger batch, so leave headroom: size for twice the largest burst you have seen.
+*Each fix moves the drop one stage downstream, until every stage can hold its share of the burst. That is why the counters are read at every stage, not only at the NIC.*
 
-## 5. Result
 
 Illustrative:
 
@@ -119,13 +112,27 @@ Illustrative:
 
 The last row is the honest cost. The burst is not lost, but its tail waits: the last packet arrives at 1.5 ms and the application, at 1.0 Mpps, reads it at about 6 ms. To shorten that wait, drain faster ([use case 4](04-one-nic-one-queue-one-cpu.md)), because a bigger ring only buys time.
 
-## 6. Roll back
+## 5. Verify and roll back
+
+### Verify
+
+```bash
+ethtool -S ens1f0 | grep -E 'rx_missed_errors|rx_no_buffer_count'
+nstat | grep -E 'UdpRcvbufErrors'
+ss -umn 'sport = :5000'
+# replay one upstream batch, then read them again
+# expect: rx_missed_errors unchanged, no UdpRcvbufErrors line, and d0 in skmem
+```
+
+Then run the replay ten times. A queue that is only just big enough passes once and fails on a bigger batch, so leave headroom: size for twice the largest burst you have seen.
+
+### Roll back
 
 - [ ] Rings: the checklist in [Guide 04 §11](../../guides/04-network-optimization.md#11-rollback), or `sudo ethtool -G ens1f0 rx 512 tx 512` for one interface (this resets the link)
 - [ ] Sysctls: `sudo scripts/06-kernel-sysctl --rollback`
 - [ ] Whole host: `sudo systemctl disable lowlat-runtime.service` and reboot
 
-## 7. Key takeaways
+## 6. Key takeaways
 
 - **Size the ring to the burst, not to the average.** The average was about 2,000 packets per second. The burst was 4 Mpps for 1.5 ms.
 - **The drops move downstream.** After the ring is fixed, the socket buffer is the next queue to overflow, so read both counters.

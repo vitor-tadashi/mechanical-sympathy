@@ -40,13 +40,17 @@ Guide 02 sets `kernel.sched_rt_runtime_us=-1`, and the 50 ms cluster is gone.
 Three questions: which threads run in a real-time class, is the kernel throttling them, and what is waiting on their CPU?
 
 ```mermaid
-flowchart LR
-  a["Which threads<br/>are FIFO?"] --> b["Throttled?<br/>sched_rt_runtime_us"] --> c["What is runnable<br/>on that CPU?"]
-  class a,b,c focus
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+flowchart TD
+  s(["Network or disk stalls on one CPU"]) --> q1{"A FIFO thread<br/>on it?"}
+  q1 -- no --> f1["Not this story: see<br/>use case 4"]
+  q1 -- yes --> q2{"sched_rt_runtime_us<br/>is -1?"}
+  q2 -- no --> f2["50 ms throttling gaps<br/>every second (act 1)"]
+  q2 -- yes --> f3["ksoftirqd or a kworker waits<br/>behind the spinner (act 2)"]
+  f2 --> fix["Back to SCHED_OTHER (§3)"]
+  f3 --> fix
 ```
 
-*First find the real-time threads, then the throttle setting, then the kernel threads that wait behind them.*
+*Find the real-time thread, check the throttle, and both branches end at the same fix: the normal scheduling class.*
 
 ```bash
 # 1. Threads in a real-time class, with CPU and priority (Guide 02 §8, check 7)

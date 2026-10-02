@@ -71,17 +71,7 @@ sudo scripts/00-bios-firmware --apply       # PCIe ASPM policy: runtime, re-appl
 > [!WARNING]
 > With `idle=poll` every CPU runs at 100% all the time. Set the fan profile to maximum cooling, or the CPUs reach thermal limits and lower their frequency, which is exactly the variation you are removing ([Guide 00 §4.8](../../guides/00-bios-firmware.md#48-cooling)).
 
-## 4. Verify
-
-```bash
-sudo scripts/00-bios-firmware --verify       # SMT off, NUMA per socket, EPB, ASPM, turbostat SMI over 1 s
-sudo turbostat --quiet --interval 10 --num_iterations 1 --show SMI
-# expect: 0, or a small constant count, and the rare spike gone from the histogram
-```
-
-Save the finished BIOS configuration as a profile through the vendor's BMC tools, and apply it to every host of the same model. A firmware update can reset it, so run `--verify` after each one.
-
-## 5. Result
+## 4. Result
 
 Illustrative:
 
@@ -91,13 +81,25 @@ Illustrative:
 | Rare maximum | hundreds of µs, no cause in the OS | gone, or explained |
 | What you can now say | "the OS is clean" | "the OS and the firmware are clean" |
 
-## 6. Roll back
+## 5. Verify and roll back
+
+### Verify
+
+```bash
+sudo scripts/00-bios-firmware --verify       # SMT off, NUMA per socket, EPB, ASPM, turbostat SMI over 1 s
+sudo turbostat --quiet --interval 10 --num_iterations 1 --show SMI
+# expect: 0, or a small constant count, and the rare spike gone from the histogram
+```
+
+Save the finished BIOS configuration as a profile through the vendor's BMC tools, and apply it to every host of the same model. A firmware update can reset it, so run `--verify` after each one.
+
+### Roll back
 
 - [ ] Restore the BIOS settings from the exported configuration (Guide 00 §3), or load the vendor defaults and re-apply your site baseline
 - [ ] `sudo scripts/00-bios-firmware --rollback`, then set `BIOS_PCIE_ASPM_POLICY=""` in `lowlat.conf`
 - [ ] Reboot, and check `numactl --hardware` against `lowlat.conf` if the NUMA layout changed
 
-## 7. Key takeaways
+## 6. Key takeaways
 
 - **The firmware sets the noise floor.** No kernel setting removes an SMI.
 - **Count before you change.** `turbostat` before and after each BIOS change is the only proof.

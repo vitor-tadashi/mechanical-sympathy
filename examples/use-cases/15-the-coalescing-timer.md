@@ -28,13 +28,17 @@ Measured from the wire, messages from `ens1f1` take about 50 µs longer to reach
 Three questions: what does the NIC wait for, why was it never tuned, and where do its interrupts go?
 
 ```mermaid
-flowchart LR
-  a["ethtool -c:<br/>adaptive, rx-usecs?"] --> b["Is the NIC in<br/>lowlat.conf?"] --> c["Where do its<br/>IRQs land?"]
-  class a,b,c focus
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+flowchart TD
+  s(["One feed slow at light load"]) --> q1{"adaptive-rx on<br/>or rx-usecs > 0?"}
+  q1 -- no --> f1["Not coalescing: look at<br/>C-states (use case 11)"]
+  q1 -- yes --> q2{"NIC listed<br/>in NICS?"}
+  q2 -- no --> f2["Add it with the critical role (§3)"]
+  q2 -- yes --> f3["04-network did not run on it:<br/>check lowlat-runtime.service"]
+  f2 --> q3{"IRQs on an<br/>isolated CPU?"}
+  q3 -- yes --> f4["irq_cpus: the node's IRQ CPU"]
 ```
 
-*First read the coalescing settings, then find out why the script skipped the NIC, then check its interrupts.*
+*Read the coalescing settings, then find out why the script skipped the NIC, then check where its interrupts land.*
 
 ```bash
 # 1. The coalescing settings of both NICs (Concept: ethtool §6)

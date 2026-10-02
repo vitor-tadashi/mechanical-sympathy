@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 410" width="760" height="410" role="img" aria-labelledby="t d">
+<title id="t">A burst needs a bigger buffer; a sustained overload needs more CPU</title>
+<desc id="d">Two charts of RX ring fill over 5 ms with a ring of 8160 slots drained at 1.5 million packets per second. A burst at 4 Mpps for 1.5 ms fills the ring to 3,750 and drains it, losing nothing. A sustained 6 Mpps fills the ring in 1.8 ms and keeps it full, so 75 percent of the packets are dropped. Below, the budget: 167 ns between arrivals at 6 Mpps, against 667 ns of kernel work per packet on one core.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .mid { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .plot { fill: #ffffff; stroke: #d0d7de; }
+  .capl { stroke: #9b1c1c; stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .fa { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 2; }
+  .fb { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 2; }
+  .drop { fill: url(#hatch); }
+  .ax { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: middle; }
+  .axr { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .ok { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; text-anchor: end; }
+  .warn { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; text-anchor: end; }
+  .bar1 { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .bar2 { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .head { transform: translateX(570px); animation: sweep 8s linear infinite; }
+  @keyframes sweep { from { transform: translateX(0); } to { transform: translateX(570px); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .head { animation: none; }
+    .head { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="410" rx="8"/>
+<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#ffc9c9"/><line x1="0" y1="0" x2="0" y2="6" stroke="#9b1c1c" stroke-width="1.5"/></pattern></defs>
+<rect class="lane" x="10" y="10" width="740" height="160" rx="6"/>
+<text class="cap" x="24" y="34">A burst: 4 Mpps for 1.5 ms, drained at 1.5 Mpps</text>
+<text class="sub" x="24" y="52">The ring fills while the burst lasts, then empties. Buffers solve this.</text>
+<rect class="plot" x="150" y="70" width="570" height="80"/>
+<line class="capl" x1="150" y1="70.0" x2="720" y2="70.0"/><text class="axr" x="144" y="74.0">8160</text><text class="axr" x="144" y="150">0</text>
+<path class="fa" d="M150.0,150 L321.0,113.2 L606.0,150.0 L720.0,150.0 L720.0,150 Z"/>
+<text class="ax" x="150.0" y="164">0 ms</text><text class="ax" x="264.0" y="164">1 ms</text><text class="ax" x="378.0" y="164">2 ms</text><text class="ax" x="492.0" y="164">3 ms</text><text class="ax" x="606.0" y="164">4 ms</text><text class="ax" x="720.0" y="164">5 ms</text>
+<text class="lbl" x="24" y="104">ring fill</text><text class="axis" x="24" y="120">packets</text>
+<text class="ok" x="736" y="34">nothing lost</text>
+<rect class="lane" x="10" y="180" width="740" height="220" rx="6"/>
+<text class="cap" x="24" y="204">Overload: 6 Mpps that never stops, drained at 1.5 Mpps</text>
+<text class="sub" x="24" y="222">The ring is full after 1.8 ms and stays full. No buffer is big enough.</text>
+<rect class="plot" x="150" y="240" width="570" height="80"/>
+<line class="capl" x1="150" y1="240.0" x2="720" y2="240.0"/><text class="axr" x="144" y="244.0">8160</text><text class="axr" x="144" y="320">0</text>
+<rect class="drop" x="356.7" y="226" width="363.3" height="12"/><text class="warn" x="720.0" y="222">dropped: 75 % of the packets</text>
+<path class="fb" d="M150.0,320 L356.7,240.0 L720.0,240.0 L720.0,320 Z"/>
+<text class="ax" x="150.0" y="334">0 ms</text><text class="ax" x="264.0" y="334">1 ms</text><text class="ax" x="378.0" y="334">2 ms</text><text class="ax" x="492.0" y="334">3 ms</text><text class="ax" x="606.0" y="334">4 ms</text><text class="ax" x="720.0" y="334">5 ms</text>
+<text class="lbl" x="24" y="274">ring fill</text><text class="axis" x="24" y="290">packets</text>
+<text class="warn" x="736" y="204"></text>
+<text class="lbl" x="24" y="358">per packet</text>
+<rect class="bar1" x="150" y="346" width="136.0" height="18" rx="3"/><text class="axis" x="292.0" y="359">167 ns between arrivals at 6 Mpps</text>
+<rect class="bar2" x="150" y="370" width="543.1" height="18" rx="3"/><text class="mid" x="421.6" y="383">667 ns of work per packet on one core: add cores, or bypass</text>
+<line class="head" x1="150" y1="62" x2="150" y2="338"/>
+</svg>

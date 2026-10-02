@@ -34,13 +34,15 @@ What the users see during the stall is a backlog. The first request waits for th
 Three questions: does the client wait before it sends, how many samples does it lose, and what do the numbers become when it stops waiting?
 
 ```mermaid
-flowchart LR
-  a["Does the client<br/>wait for answers?"] --> b["Samples vs<br/>duration × rate"] --> c["Re-run open loop,<br/>or correct"]
-  class a,b,c focus
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+flowchart TD
+  s(["Benchmark p99.99 looks great,<br/>production disagrees"]) --> q1{"Client waits<br/>for answers?"}
+  q1 -- no --> f1["Open loop already: compare the<br/>environments (Guide 09 §3.5)"]
+  q1 -- yes --> q2{"Samples below<br/>duration × rate?"}
+  q2 -- yes --> f2["Coordinated omission: re-run open loop,<br/>or correct the histogram (§3)"]
+  q2 -- no --> f3["Look for a stall the<br/>client timed (Guide 09 §7)"]
 ```
 
-*First find out whether the client waits, then count what it missed, then measure again without the gap.*
+*Check whether the client waits, count the samples it should have taken, and measure again without the gap.*
 
 1. **Read the load generator.** If it sends the next request only after the answer of the previous one, it is closed-loop. A ping-pong benchmark, such as the [Java probe](../hugepages-java-example.md), is closed-loop on purpose: it measures the host's noise, not user traffic ([Guide 09 §3.3](../../guides/09-measuring-latency.md#33-coordinated-omission)).
 2. **Count the samples.** An open-loop run of 10 minutes at 100,000 per second records 60 million samples, the same number every time. A closed-loop run records whatever the answers allowed, and loses the ones a stall would have delayed.

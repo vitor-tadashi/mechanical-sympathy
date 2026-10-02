@@ -57,9 +57,9 @@ Then change the second line, and restart the probe. Java's `Properties` has no i
 pong.cpu.affinity=10
 ```
 
-<img src="../../assets/diagrams/memory-ladder.svg" alt="A logarithmic ruler from 1 nanosecond to 100 milliseconds with the typical range of a cache hit, DRAM, a page fault, a context switch, the kernel network path, an SMI, reclaim and RT throttling" width="720">
+<img src="../../assets/diagrams/numa-rtt.svg" alt="Animation: the probe's message bounces between ping on CPU 9 and pong on CPU 11 four times while the same pair with pong on CPU 10 of the other socket completes two round trips across the socket link" width="720">
 
-*Where the remote-memory penalty sits: small next to a page fault, but paid on every cache miss.*
+*The same probe, one line changed: across the sockets, every round trip pays the socket link twice. The numbers are illustrative.*
 
 ## 3. Change
 
@@ -79,7 +79,19 @@ Then check that the pool on node 1 is big enough for what is now bound to it (`H
 > [!IMPORTANT]
 > Changing node interleaving or SNC/NPS in the BIOS changes the node numbers and the CPU-to-node map. Update `ISOLATED_CPUS`, `OS_CPUS`, `HUGEPAGES_PER_NODE` and `NICS` in `lowlat.conf` afterward ([Guide 00 §4.5](../../guides/00-bios-firmware.md#45-memory-and-numa)).
 
-## 4. Verify
+## 4. Result
+
+Illustrative:
+
+| | Before | After |
+|---|---|---|
+| Thread and memory | node 0 thread, node 1 memory and NIC | all on node 1 |
+| Every cache miss | local DRAM plus about 60 to 100 ns | local DRAM |
+| Histogram | shifted right; two humps if the placement changed between restarts | one peak, further left |
+
+## 5. Verify and roll back
+
+### Verify
 
 ```bash
 show_affinity "$(pgrep -f my-app)"       # every critical thread on a node-1 CPU
@@ -89,22 +101,12 @@ scripts/verify-tuning                    # host configuration; it does not look 
 
 The histogram shows one hump again. If a second hump survives, look for an SMT sibling sharing the core (`lscpu -e`, and [Guide 00 §4.4](../../guides/00-bios-firmware.md#44-hyper-threading)).
 
-## 5. Result
-
-Illustrative:
-
-| | Before | After |
-|---|---|---|
-| Thread and memory | node 0 thread, node 1 memory and NIC | all on node 1 |
-| Every cache miss | local DRAM plus about 60 to 100 ns | local DRAM |
-| Histogram | two humps | one |
-
-## 6. Roll back
+### Roll back
 
 - [ ] Restore the previous line in `affinity.properties` and restart the application
 - [ ] Remove `numactl --membind=1` from the launcher if the pool on node 1 cannot hold the whole heap
 
-## 7. Key takeaways
+## 6. Key takeaways
 
 - **Three things share a node: the thread, its memory and the NIC.** Check all three, because getting two right hides the third.
 - **A second hump is a second path.** Cross-node memory and an SMT sibling are the two usual ones.

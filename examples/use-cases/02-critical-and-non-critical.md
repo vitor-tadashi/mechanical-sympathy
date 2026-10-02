@@ -21,7 +21,7 @@ The application has six latency-critical roles (network receive, network transmi
 
 *A thread that may move will move, and each hop lands on a CPU whose caches hold someone else's data.*
 
-## 2. Design the map
+## 2. Diagnose: draw the map
 
 Write the layout down before touching the host. Three commands give you the facts:
 
@@ -57,7 +57,7 @@ flowchart TD
 
 *The result on the reference host: node 1 holds the NICs, their interrupts and the six pinned roles, and node 0 carries everything else.*
 
-## 3. Pin the roles
+## 3. Change: pin the roles
 
 Map roles to CPUs in a file the application reads at start-up, so a layout change never touches code ([Guide 02 §6.1](../../guides/02-cpu-core-isolation.md#61-describe-the-mapping-in-configuration-not-in-code)):
 
@@ -82,7 +82,20 @@ taskset -cp 9 <tid>                    # then, each critical thread onto its own
 
 The operating system stays on its side of the fence through systemd's `CPUAffinity`, which `sudo scripts/02-cpu-isolation --apply` writes from `OS_CPUS`.
 
-## 4. Verify
+## 4. Result
+
+Illustrative:
+
+| | Before | After |
+|---|---|---|
+| Critical threads | float across all CPUs | one per isolated CPU on the NIC's node |
+| Migrations of a critical thread | every scheduler decision | about 0 |
+| Non-critical threads | everywhere, including the critical cores | on the OS CPUs only |
+| What is left to remove | everything | interrupts ([use case 4](04-one-nic-one-queue-one-cpu.md)) and agents ([use case 3](03-the-noisy-neighbor.md)) |
+
+## 5. Verify and roll back
+
+### Verify
 
 ```bash
 . scripts/02-cpu-isolation
@@ -95,23 +108,12 @@ perf stat -e context-switches,cpu-migrations -t <tid> -- sleep 10
 
 Name your threads (`Thread.setName`, `pthread_setname_np`). Without names, `show_affinity` and `top -H` show only numbers.
 
-## 5. Result
-
-Illustrative:
-
-| | Before | After |
-|---|---|---|
-| Critical threads | float across all CPUs | one per isolated CPU on the NIC's node |
-| Migrations of a critical thread | every scheduler decision | about 0 |
-| Non-critical threads | everywhere, including the critical cores | on the OS CPUs only |
-| What is left to remove | everything | interrupts ([use case 4](04-one-nic-one-queue-one-cpu.md)) and agents ([use case 3](03-the-noisy-neighbor.md)) |
-
-## 6. Roll back
+### Roll back
 
 - [ ] Set `affinity.enable=false` and restart the application. The same build then runs unpinned
 - [ ] Follow [Guide 02 §10](../../guides/02-cpu-core-isolation.md#10-rollback) for the systemd defaults
 
-## 7. Key takeaways
+## 6. Key takeaways
 
 - **Decide by role, not by thread.** A role has one CPU, and the layout lives in a file.
 - **One critical thread per isolated CPU.** A mask that spans several isolated CPUs puts every thread on the first one.

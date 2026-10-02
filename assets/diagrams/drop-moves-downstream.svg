@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 464" width="760" height="464" role="img" aria-labelledby="t d">
+<title id="t">Fixing one buffer moves the drop to the next one</title>
+<desc id="d">Three lanes show the same 1.5 ms burst of 6,000 packets crossing the RX ring, the socket buffer and the application. With the default 512-slot ring, the ring overflows and rx_missed_errors counts 3,238 drops. With the ring at its maximum, the ring holds the burst but the 208 KiB socket buffer overflows, and UdpRcvbufErrors counts 1,908. With an 8 MiB socket buffer as well, nothing is lost and the application reads all 6,000 packets. The numbers are illustrative.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .mid { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .well { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .fillok { fill: #c8f0d0; }
+  .fillbad { fill: #ffc9c9; }
+  .arrow { stroke: #57606a; stroke-width: 2; marker-end: url(#ar); }
+  .x { font: 700 18px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; text-anchor: middle; }
+  .cnt { font: 600 11px ui-monospace, Menlo, Consolas, monospace; text-anchor: middle; }
+  .bad { fill: #9b1c1c; } .good { fill: #1d6b33; }
+  .grow { transform-box: fill-box; transform-origin: left; animation: grow 8s linear infinite; }
+  .pk { transform-box: fill-box; transform-origin: center; animation: pop 8s linear infinite; }
+  @keyframes grow { 0% { transform: scaleX(0); } 45% { transform: scaleX(1); } 100% { transform: scaleX(1); } }
+  @keyframes pop { 0%, 30% { transform: scale(1); } 34%, 40% { transform: scale(1.5); } 46%, 100% { transform: scale(1); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .grow, .pk { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="464" rx="8"/>
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker></defs>
+<rect class="lane" x="10" y="10" width="740" height="138" rx="6"/>
+<text class="cap" x="24" y="34">Default: the ring overflows first</text>
+<text class="sub" x="24" y="52">512 descriptors fill in 0.2 ms. The NIC drops the rest of the excess.</text>
+<rect class="box" x="24" y="84" width="100" height="30" rx="4"/><text class="mid" x="74" y="104">6,000 packets</text><text class="axis" x="24" y="76">burst, 1.5 ms</text>
+<line class="arrow" x1="128" y1="99" x2="176" y2="99"/>
+<text class="lbl" x="180" y="76">RX ring</text>
+<rect class="well" x="180" y="84" width="150" height="30" rx="4"/>
+<rect class="fillbad grow" x="182" y="86" width="146.0" height="26" rx="3"/>
+<text class="mid" x="255.0" y="104">512 slots</text>
+<text class="x pk" x="342" y="106">✕</text>
+<text class="cnt bad" x="255.0" y="132">rx_missed_errors +3,238</text>
+<line class="arrow" x1="358" y1="99" x2="396" y2="99"/>
+<text class="lbl" x="400" y="76">socket buffer</text>
+<rect class="well" x="400" y="84" width="150" height="30" rx="4"/>
+<rect class="fillok grow" x="402" y="86" width="58.4" height="26" rx="3"/>
+<text class="mid" x="475.0" y="104">208 KiB</text>
+<text class="cnt good" x="475.0" y="132">no drops</text>
+<line class="arrow" x1="578" y1="99" x2="606" y2="99"/>
+<rect class="app" x="610" y="84" width="126" height="30" rx="4"/><text class="mid" x="673" y="104">2,762 read</text><text class="cnt bad" x="673" y="132">3,238 lost</text><text class="lbl" x="610" y="76">application</text>
+<rect class="lane" x="10" y="158" width="740" height="138" rx="6"/>
+<text class="cap" x="24" y="182">Ring at its maximum: the drop moves to the socket</text>
+<text class="sub" x="24" y="200">The ring holds the burst. Now the 208 KiB socket buffer, about 300 datagrams, overflows.</text>
+<rect class="box" x="24" y="232" width="100" height="30" rx="4"/><text class="mid" x="74" y="252">6,000 packets</text><text class="axis" x="24" y="224">burst, 1.5 ms</text>
+<line class="arrow" x1="128" y1="247" x2="176" y2="247"/>
+<text class="lbl" x="180" y="224">RX ring</text>
+<rect class="well" x="180" y="232" width="150" height="30" rx="4"/>
+<rect class="fillok grow" x="182" y="234" width="67.2" height="26" rx="3"/>
+<text class="mid" x="255.0" y="252">8160 slots</text>
+<text class="cnt good" x="255.0" y="280">no drops</text>
+<line class="arrow" x1="358" y1="247" x2="396" y2="247"/>
+<text class="lbl" x="400" y="224">socket buffer</text>
+<rect class="well" x="400" y="232" width="150" height="30" rx="4"/>
+<rect class="fillbad grow" x="402" y="234" width="146.0" height="26" rx="3"/>
+<text class="mid" x="475.0" y="252">208 KiB</text>
+<text class="x pk" x="562" y="254">✕</text>
+<text class="cnt bad" x="475.0" y="280">UdpRcvbufErrors +1,908</text>
+<line class="arrow" x1="578" y1="247" x2="606" y2="247"/>
+<rect class="app" x="610" y="232" width="126" height="30" rx="4"/><text class="mid" x="673" y="252">4,092 read</text><text class="cnt bad" x="673" y="280">1,908 lost</text><text class="lbl" x="610" y="224">application</text>
+<rect class="lane" x="10" y="306" width="740" height="138" rx="6"/>
+<text class="cap" x="24" y="330">Ring and socket buffer sized: nothing lost</text>
+<text class="sub" x="24" y="348">rmem_default at 8 MiB holds the excess; the reader catches up after the burst.</text>
+<rect class="box" x="24" y="380" width="100" height="30" rx="4"/><text class="mid" x="74" y="400">6,000 packets</text><text class="axis" x="24" y="372">burst, 1.5 ms</text>
+<line class="arrow" x1="128" y1="395" x2="176" y2="395"/>
+<text class="lbl" x="180" y="372">RX ring</text>
+<rect class="well" x="180" y="380" width="150" height="30" rx="4"/>
+<rect class="fillok grow" x="182" y="382" width="67.2" height="26" rx="3"/>
+<text class="mid" x="255.0" y="400">8160 slots</text>
+<text class="cnt good" x="255.0" y="428">no drops</text>
+<line class="arrow" x1="358" y1="395" x2="396" y2="395"/>
+<text class="lbl" x="400" y="372">socket buffer</text>
+<rect class="well" x="400" y="380" width="150" height="30" rx="4"/>
+<rect class="fillok grow" x="402" y="382" width="80.3" height="26" rx="3"/>
+<text class="mid" x="475.0" y="400">8 MiB</text>
+<text class="cnt good" x="475.0" y="428">d0: no drops</text>
+<line class="arrow" x1="578" y1="395" x2="606" y2="395"/>
+<rect class="app" x="610" y="380" width="126" height="30" rx="4"/><text class="mid" x="673" y="400">6,000 read</text><text class="cnt good" x="673" y="428">all of them</text><text class="lbl" x="610" y="372">application</text>
+<text class="note" x="736" y="456">illustrative numbers from use case 9; each fix moves the drop one stage downstream</text>
+
+</svg>

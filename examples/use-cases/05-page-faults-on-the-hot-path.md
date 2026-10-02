@@ -25,6 +25,19 @@ Transparent huge pages do not fix this. THP allocates on a best-effort basis at 
 
 ## 2. Diagnose
 
+```mermaid
+flowchart TD
+  s(["Slow only in the first minutes"]) --> q1{"HugePages_Free<br/>dropped at start?"}
+  q1 -- no --> f1["The JVM fell back to 4 KiB pages:<br/>flags, pool size (Guide 03 §9)"]
+  q1 -- yes --> q2{"Huge pages on<br/>node 1?"}
+  q2 -- no --> f2["Bind the JVM to node 1<br/>(Guide 03 §5.3)"]
+  q2 -- yes --> q3{"AlwaysPreTouch<br/>on?"}
+  q3 -- no --> f3["Pre-touch the heap (§3)"]
+  q3 -- yes --> f4["JIT and cold caches:<br/>warm up before traffic"]
+```
+
+*Did the heap get huge pages, on the right node, touched before the traffic came? Each "no" has its own fix.*
+
 The shape comes first: a histogram that is slow only at the start points at page faults, JIT and cold caches ([Guide 09 §7](../../guides/09-measuring-latency.md#7-reading-the-results)). Then check whether the heap is on explicit huge pages at all:
 
 ```bash
@@ -74,7 +87,20 @@ Bind the process to the critical node, so the whole heap comes from the pool you
 > [!WARNING]
 > If the pool is too small, `AlwaysPreTouch` fails at start-up. That is the point: you find out in the first second, not hours later when the heap grows under load.
 
-## 4. Verify
+## 4. Result
+
+Illustrative:
+
+| | Before | After |
+|---|---|---|
+| First touch of a page | 0.5 to 2 µs (4 KiB), during serving | at start-up |
+| Direct reclaim or compaction on a fault | ms-scale, possible during serving | none: the pool was reserved at boot |
+| TLB reach of 2,048 entries | 8 MiB | 4 GiB |
+| Cost | none | start-up takes seconds longer, and the pool is unavailable to everything else |
+
+## 5. Verify and roll back
+
+### Verify
 
 ```bash
 scripts/03-huge-pages --verify
@@ -88,24 +114,13 @@ journalctl -b -u hugetlb-reserve-pages                   # requested vs reserved
 
 *The second gain of the same change: with 2 MiB pages the TLB covers the working set, and the hot path stops taking page walks.*
 
-## 5. Result
-
-Illustrative:
-
-| | Before | After |
-|---|---|---|
-| First touch of a page | 0.5 to 2 µs (4 KiB), during serving | at start-up |
-| Direct reclaim or compaction on a fault | ms-scale, possible during serving | none: the pool was reserved at boot |
-| TLB reach of 2,048 entries | 8 MiB | 4 GiB |
-| Cost | none | start-up takes seconds longer, and the pool is unavailable to everything else |
-
-## 6. Roll back
+### Roll back
 
 - [ ] Remove the large-page flags from the launcher, or set `affinity.enable=false`, or the JVM will look for a pool that no longer exists
 - [ ] `sudo scripts/03-huge-pages --rollback`, then `sudo systemctl reboot`
 - [ ] `grep HugePages_Total /proc/meminfo` shows `0`
 
-## 7. Key takeaways
+## 6. Key takeaways
 
 - **A fault is a stall you scheduled by accident.** Pre-touch moves it to a time you chose.
 - **Explicit, not transparent.** A pool reserved per node at early boot never compacts on the hot path, and a missing pool fails loudly.

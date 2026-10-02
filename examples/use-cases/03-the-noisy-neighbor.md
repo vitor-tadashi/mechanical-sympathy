@@ -39,6 +39,17 @@ mpstat -P ALL 1
 
 ## 3. Change
 
+```mermaid
+flowchart TD
+  s(["An agent to fence"]) --> q1{"A systemd<br/>unit?"}
+  q1 -- yes --> f1["List it in HOUSEKEEPING_SLICE_UNITS,<br/>restart it into the slice"]
+  q1 -- "no, or it respawns" --> f2["List it in HOUSEKEEPING_PIN_PROCESSES:<br/>pinned by name at every boot"]
+  f1 --> lim["Slice limits: CPUQuota,<br/>MemoryMax, IOWeight"]
+  f2 --> lim
+```
+
+*Units go into the slice, where the kernel fences them. Agents that start outside systemd are pinned by name. Both end under the same limits.*
+
 The slice and its members come from `lowlat.conf`, and the reference host fences agents on CPUs 4 and 6, which serve no interrupts and no workqueues:
 
 ```bash
@@ -64,16 +75,7 @@ Processes that are not systemd units (started by a vendor script, or respawning 
 > [!WARNING]
 > Do not put `AllowedCPUs=` on `system.slice` or `user.slice` unless the application runs in its own slice. A cpuset without the isolated CPUs makes the application's own `sched_setaffinity()` fail with `EINVAL`. See [Guide 05 §4.4, the cpuset trap](../../guides/05-cgroup-isolation.md#44-the-cpuset-trap).
 
-## 4. Verify
-
-```bash
-scripts/05-cgroup-isolation --verify
-systemd-cgls --no-pager /housekeeping.slice                    # the agents are inside
-cat /sys/fs/cgroup/housekeeping.slice/cpuset.cpus.effective    # expect: 4,6
-cat /sys/fs/cgroup/housekeeping.slice/cpu.stat                 # nr_throttled rises when the quota is reached
-```
-
-## 5. Result
+## 4. Result
 
 Illustrative:
 
@@ -84,13 +86,24 @@ Illustrative:
 | Agent memory | unbounded, can fill the page cache | capped at 4 GiB, and an OOM stays inside the slice |
 | Cost | none | agents get less headroom and may report degraded health: agree on the limits with their owners |
 
-## 6. Roll back
+## 5. Verify and roll back
+
+### Verify
+
+```bash
+scripts/05-cgroup-isolation --verify
+systemd-cgls --no-pager /housekeeping.slice                    # the agents are inside
+cat /sys/fs/cgroup/housekeeping.slice/cpuset.cpus.effective    # expect: 4,6
+cat /sys/fs/cgroup/housekeeping.slice/cpu.stat                 # nr_throttled rises when the quota is reached
+```
+
+### Roll back
 
 - [ ] `sudo scripts/05-cgroup-isolation --rollback`
 - [ ] `sudo systemctl restart node_exporter fluent-bit`
 - [ ] `systemctl show -p Slice node_exporter` shows `system.slice` again
 
-## 7. Key takeaways
+## 6. Key takeaways
 
 - **Affinity is a request and a cpuset is a fence.** Agents that reset their own affinity need the fence.
 - **A fence needs a budget.** The cpuset says where, and the quota says how much.

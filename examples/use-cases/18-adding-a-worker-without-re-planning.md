@@ -28,13 +28,15 @@ Unpinned threads stay on the OS CPUs, as they should. For a logging or admin thr
 Three questions: where does the new thread run, what does it cost the OS CPUs, and which isolated CPUs are free?
 
 ```mermaid
-flowchart LR
-  a["Where does<br/>worker.2 run?"] --> b["Which OS CPU<br/>is at 100 %?"] --> c["Which isolated<br/>CPU is spare?"]
-  class a,b,c focus
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
+flowchart TD
+  s(["worker.2 is slow, an OS CPU at 100 %"]) --> q1{"worker.2 in<br/>affinity.properties?"}
+  q1 -- yes --> f1["Its CPU is wrong or shared:<br/>show_affinity (§2)"]
+  q1 -- no --> q2{"A spare isolated<br/>CPU on the node?"}
+  q2 -- yes --> f2["One line: worker.2.cpu.affinity,<br/>restart (§3)"]
+  q2 -- no --> f3["Re-plan with plan-layout,<br/>reboot (Guide 11 §5)"]
 ```
 
-*First find the thread, then its cost, then a free place for it.*
+*Find where the thread runs, then whether a spare isolated CPU is left: one line of configuration, or a re-plan and a reboot.*
 
 ```bash
 # 1. Allowed and last CPU of every thread (Guide 02 §6.3, Guide 11 §1)

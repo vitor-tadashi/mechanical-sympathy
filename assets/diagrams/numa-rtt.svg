@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 348" width="760" height="348" role="img" aria-labelledby="t d">
+<title id="t">A ping-pong between two threads takes about twice as long across sockets</title>
+<desc id="d">Two lanes show the message of the probe bouncing between ping on CPU 9 and pong. With pong on CPU 11 of the same node and L3 domain, it completes four round trips in the time the cross-socket pair, with pong on CPU 10 of the other socket, completes two, because every cache line has to cross the socket link in both directions. The numbers are illustrative.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 2; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .mid { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .axis { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; text-anchor: end; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .sock { fill: #f6f8fa; stroke: #57606a; stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .wire { stroke: #57606a; stroke-width: 2; }
+  .link { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .ok { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; text-anchor: end; }
+  .warn { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; text-anchor: end; }
+  .ta { animation: pa 8s linear infinite; }
+  .tb { animation: pb 8s linear infinite; }
+  @keyframes pa { 0%, 25%, 50%, 75%, 100% { transform: translateX(0); } 12.5%, 37.5%, 62.5%, 87.5% { transform: translateX(150px); } }
+  @keyframes pb { 0%, 50%, 100% { transform: translateX(0); } 25%, 75% { transform: translateX(400px); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ta, .tb { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="348" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="150" rx="6"/>
+<text class="cap" x="24" y="34">Ping and pong on one node</text>
+<text class="sub" x="24" y="52">The probe: ping on CPU 9 and pong on CPU 11, both on node 1, in one L3 domain.</text>
+<line class="wire" x1="260" y1="107" x2="418" y2="107"/>
+<rect class="app" x="150" y="84" width="110" height="46" rx="5"/><text class="mid" x="205" y="104">ping</text><text class="mid" x="205" y="120">CPU 9</text>
+<rect class="app" x="418" y="84" width="110" height="46" rx="5"/><text class="mid" x="473" y="104">pong</text><text class="mid" x="473" y="120">CPU 11</text>
+<circle class="tok ta" cx="268" cy="107" r="8"/>
+<text class="ok" x="736" y="34">4 round trips in the time of 2</text>
+<rect class="lane" x="10" y="170" width="740" height="150" rx="6"/>
+<text class="cap" x="24" y="194">The same pair across the sockets</text>
+<text class="sub" x="24" y="212">pong moves to CPU 10, node 0. Every cache line crosses the socket link, both ways.</text>
+<rect class="sock" x="130" y="226" width="150" height="70" rx="8"/><text class="axis" x="138" y="238">socket 1</text>
+<rect class="sock" x="548" y="226" width="150" height="70" rx="8"/><text class="axis" x="556" y="238">socket 0</text>
+<rect class="link" x="379.0" y="256" width="90" height="22" rx="4"/><text class="mid" x="424.0" y="271">socket link</text>
+<line class="wire" x1="260" y1="267" x2="568" y2="267"/>
+<rect class="app" x="150" y="244" width="110" height="46" rx="5"/><text class="mid" x="205" y="264">ping</text><text class="mid" x="205" y="280">CPU 9</text>
+<rect class="wait" x="568" y="244" width="110" height="46" rx="5"/><text class="mid" x="623" y="264">pong</text><text class="mid" x="623" y="280">CPU 10</text>
+<circle class="tok tb" cx="268" cy="267" r="8"/>
+<text class="warn" x="736" y="194">2 round trips</text>
+<text class="note" x="736" y="338">illustrative: about 100–250 ns per round trip in one L3 domain, roughly twice that across sockets</text>
+
+</svg>
