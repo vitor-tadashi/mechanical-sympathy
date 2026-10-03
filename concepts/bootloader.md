@@ -104,6 +104,22 @@ At boot, the scheduler builds *scheduling domains*, a hierarchy (SMT siblings �
 
 It does not move per-CPU kernel threads, and it does not change interrupt routing.
 
+#### Keep or change `isolcpus`?
+
+Load balancing is how the scheduler uses every CPU: a busy CPU hands tasks to an idle one. `isolcpus` switches that off for the listed CPUs, so they stay quiet, and so they stay empty unless you place a thread there yourself. The CPUs are reserved at boot, and changing the list needs a reboot.
+
+| Your situation | Verdict | Why |
+|---|---|---|
+| A few threads, each pinned by you to its own CPU, and the rest of the host is busy | **change** (use `isolcpus`) | Nothing else may land on those CPUs, even by mistake |
+| Pinning is done by a service manager or cpuset (`AllowedCPUs`, cpuset partitions), and nothing else runs on the host | **measure first** | A runtime fence may be enough, and it changes without a reboot ([Guide 05](../guides/05-cgroup-isolation.md)) |
+| A thread pool that should spread over many CPUs | **keep** (do not isolate them) | A task whose mask spans several isolated CPUs stays on the first one |
+| You cannot reboot, or you do not own the boot arguments | **ask the owner** | Use the runtime fence until a maintenance window |
+
+> [!NOTE]
+> **Validate on your hardware.** This repository does not measure a runtime fence against `isolcpus`. Treat the "measure first" row as an open question until you have run both.
+
+To decide with data, put the same pinned workload under each setup and compare the tail latency, with the baseline protocol in [Guide 09](../guides/09-measuring-latency.md). Also list what else runs on the CPU (`ps -eLo psr,comm | awk '$1==5'`, for CPU 5): a runtime fence needs the list to be empty too.
+
 ### `nohz_full=<list>` (adaptive ticks)
 
 Normally every CPU takes a periodic timer interrupt (`CONFIG_HZ`, 1000 on RHEL) that accounts CPU time, runs the scheduler tick, expires timers, and advances RCU. With `nohz_full`, when a CPU has **exactly one runnable task**, the tick is stopped:
@@ -148,17 +164,66 @@ To decide with data, read the `LOC` row of `/proc/interrupts` on the CPU for ten
 
 RCU (Read-Copy-Update) lets readers run without locks; writers defer freeing old data until every CPU has passed a quiescent state, then run **callbacks**. By default those callbacks run in softirq context on the CPU that queued them, in batches that take from tens of µs to milliseconds ([interrupts §5](interrupts-and-deferred-work.md#5-rcu-freeing-memory-later-safely)). `rcu_nocbs` offloads callback execution for the listed CPUs to `rcuo<type>/<cpu>` kthreads, which the scheduler keeps on housekeeping CPUs. `rcu_nocb_poll` makes those kthreads poll periodically instead of being woken by the isolated CPU, which removes a wake-up IPI. It is a boolean flag and takes no value.
 
+#### Keep or change `rcu_nocbs` and `rcu_nocb_poll`?
+
+The default runs RCU callbacks on the CPU that queued them. That is cheap and fair on a shared CPU, and it is a source of bursts of tens of µs to milliseconds on a CPU that runs one critical thread. `rcu_nocbs` moves the work to kernel threads on housekeeping CPUs. Those threads now compete with your housekeeping work, so a housekeeping set that is too small slows the cleanup instead.
+
+| Your situation | Verdict | Why |
+|---|---|---|
+| The CPU runs one critical thread and `nohz_full` is on | **keep** (list the same CPUs) | `nohz_full` offloads the callbacks anyway, and `rcu_nocbs` says so explicitly |
+| The CPU is shared, or you do not use `nohz_full` | **keep the default** | There is no burst to remove, and the housekeeping CPUs pay for the move |
+| You have very few housekeeping CPUs | **measure first** | The `rcuo*` threads need CPU time there |
+| Isolated CPUs go idle between bursts | **measure first** for `rcu_nocb_poll` | The poll removes a wake-up IPI from the isolated CPU, and costs a periodic wake-up on the housekeeping side |
+
+To decide with data, check that the `rcuo*` threads sit on housekeeping CPUs (`ps -eLo psr,comm | grep rcuo`), then compare the p99.9 of the critical thread with and without the setting, as in [Guide 09](../guides/09-measuring-latency.md).
+
 ### `idle=poll`, `processor.max_cstate`, `intel_idle.max_cstate`
 
 When a CPU has nothing to run, the idle loop picks a C-state, and the next interrupt pays the exit: ~1–2 µs from C1, ~100 µs from core C6, more from a package C-state. [Power and frequency §2](power-and-frequency.md#2-idle-c-states) explains the states. `idle=poll` replaces the idle loop with a spin, so the CPU never enters any C-state. The two `max_cstate` parameters cap the idle drivers in case polling is ever turned off.
+
+#### Keep or change `idle=poll`?
+
+Idle states save power and leave thermal room for the busy CPUs. `idle=poll` gives that up completely: every CPU runs at 100 % all the time, so power and heat rise, and on some parts the extra heat lowers the turbo headroom. With Hyper-Threading, a polling sibling competes with the busy thread. In a VM, the guest burns host CPU even when it is idle.
+
+There are three ways to bound the wake-up delay, from strongest to lightest: `idle=poll`, a cap such as `processor.max_cstate=1`, and a PM QoS request held by the application at run time ([Power and frequency §2](power-and-frequency.md#2-idle-c-states)).
+
+| Your situation | Verdict | Why |
+|---|---|---|
+| Messages arrive at random, gaps between them are long, and the first message must be fast | **change** (`idle=poll`, or a deep cap) | A wake-up from a deep C-state costs up to about 100 µs |
+| The thread already spins, so its CPU never goes idle | **keep** the default for that CPU | The idle loop is not used, and polling adds nothing |
+| Traffic is steady, and a shallow state (C1) is fast enough | **measure first** (cap plus PM QoS) | You keep most of the power saving and bound the exit to about 1-2 µs |
+| The host is a VM, or shares power or heat with other tenants | **ask the owner** | The cost lands on the hypervisor and on the neighbors |
+| Power or thermal budget is capped | **keep** | Polling leaves no headroom to turbo |
+
+> [!NOTE]
+> **Validate on your hardware.** Exit latencies and the turbo cost differ by CPU model and by BIOS setting. Measure both before you choose.
+
+To decide with data, compare the three setups with `cyclictest` and `turbostat` ([Power and frequency §9](power-and-frequency.md#9-reading-the-cpus-power-state)): the wake-up tail on one side, the package power and clock on the other.
 
 ### `transparent_hugepage=never`, `default_hugepagesz`, `hugepagesz`
 
 These configure the memory subsystem before any allocation happens. THP is disabled, the size of explicit huge pages is registered, and the default size is set for `MAP_HUGETLB` without a size flag and for hugetlbfs mounts without `pagesize=`. See [huge-pages.md](huge-pages.md).
 
+#### Keep or change THP?
+
+Transparent huge pages give an application bigger pages with no change to the application. The price is that the kernel may stop an allocation to compact memory or may copy pages in the background (`khugepaged`), and either can stall a thread for up to milliseconds. `never` removes the stalls and the benefit with them, and a latency-critical process then gets its huge pages from the explicit pool ([Guide 03](../guides/03-huge-pages-configuration.md)).
+
+| Your situation | Verdict | Why |
+|---|---|---|
+| A latency JVM or a process with a fixed, pre-touched heap | **change** (`never`, plus explicit huge pages) | The pool is reserved at boot, so no compaction can stall it |
+| A mixed host where other processes gain from THP, and the critical one does not use it | **measure first** (`madvise`) | Only processes that ask get THP, so the critical one is left alone |
+| The host is memory-tight | **ask the owner** | The explicit pool is reserved for good, and small hosts may not have room |
+| The critical process cannot ask for huge pages (no `MAP_HUGETLB`, no hugetlbfs) | **measure first** | `never` takes THP away and gives nothing back |
+
+To decide with data, read the counters before and after a run (`grep -E 'thp_fault_alloc|compact_stall' /proc/vmstat`) and the mode in `/sys/kernel/mm/transparent_hugepage/enabled`. A growing `compact_stall` while the critical thread allocates points to THP as the cause.
+
 ### Mitigation switches (`pti=off`, `nospectre_v2`, `mds=off`, ...)
 
 They are read in `setup_arch()`, and the kernel **patches its own code** at boot (the "alternatives" mechanism) to include or exclude barriers, retpolines (safe indirect jumps), `VERW` CPU-buffer clears, and page-table switches on every kernel entry/exit. Once patched, they cannot be changed at runtime. This is why the choice belongs on the command line, and why it affects every syscall and interrupt.
+
+#### Keep or change the mitigations?
+
+This one is a security decision first and a latency decision second, so it is not made on this page. The ordered way to decide (cross the kernel less, measure, then opt out with sign-off) is in [Security mitigations §4](security-mitigations.md#4-where-the-cost-lands-crossings). The short rule: if the hot path makes no syscalls and takes no interrupts, switching the mitigations off gains nothing, and **keep** is the answer.
 
 ## 5. Numbers to remember
 
