@@ -41,20 +41,14 @@
   .p4 { animation: p4 9s linear infinite; }
   @keyframes p4 { 0%, 33.65% { fill: #cfe3ff; stroke-width: 1.5; } 35.75% { fill: #9cc3ff; stroke-width: 3; } 38.75%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
   .p5 { animation: p5 9s linear infinite; }
-  @keyframes p5 { 0%, 44.09% { fill: #c8f0d0; stroke-width: 1.5; } 46.19% { fill: #8fe0a0; stroke-width: 3; } 49.19%, 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  @keyframes p5 { 0% { fill: #c8f0d0; stroke-width: 1.5; } 44.09% { fill: #c8f0d0; stroke-width: 1.5; } 46.19% { fill: #8fe0a0; stroke-width: 3; } 49.17% { fill: #c8f0d0; stroke-width: 1.5; } 49.47% { fill: #c8f0d0; stroke-width: 1.5; } 51.57% { fill: #8fe0a0; stroke-width: 3; } 54.57% { fill: #c8f0d0; stroke-width: 1.5; } 56.56% { fill: #c8f0d0; stroke-width: 1.5; } 58.66% { fill: #8fe0a0; stroke-width: 3; } 61.66% { fill: #c8f0d0; stroke-width: 1.5; } 100% { fill: #c8f0d0; stroke-width: 1.5; } }
   .p6 { animation: p6 9s linear infinite; }
-  @keyframes p6 { 0%, 49.27% { fill: #c8f0d0; stroke-width: 1.5; } 51.37% { fill: #8fe0a0; stroke-width: 3; } 54.37%, 100% { fill: #c8f0d0; stroke-width: 1.5; } }
-  .p7 { animation: p7 9s linear infinite; }
-  @keyframes p7 { 0%, 56.56% { fill: #c8f0d0; stroke-width: 1.5; } 58.66% { fill: #8fe0a0; stroke-width: 3; } 61.66%, 100% { fill: #c8f0d0; stroke-width: 1.5; } }
-  .p8 { animation: p8 9s linear infinite; }
-  @keyframes p8 { 0%, 70.16% { fill: #ffd166; stroke-width: 1.5; } 72.26% { fill: #ffb703; stroke-width: 3; } 75.26%, 100% { fill: #ffd166; stroke-width: 1.5; } }
-  .p9 { animation: p9 9s linear infinite; }
-  @keyframes p9 { 0%, 82.9% { fill: #ffd166; stroke-width: 1.5; } 85% { fill: #ffb703; stroke-width: 3; } 88%, 100% { fill: #ffd166; stroke-width: 1.5; } }
+  @keyframes p6 { 0% { fill: #ffd166; stroke-width: 1.5; } 70.16% { fill: #ffd166; stroke-width: 1.5; } 72.26% { fill: #ffb703; stroke-width: 3; } 75.26% { fill: #ffd166; stroke-width: 1.5; } 82.9% { fill: #ffd166; stroke-width: 1.5; } 85% { fill: #ffb703; stroke-width: 3; } 88% { fill: #ffd166; stroke-width: 1.5; } 100% { fill: #ffd166; stroke-width: 1.5; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .k1, .p2, .p3, .p4, .p5, .p6, .p7, .p8, .p9 { animation: none; }
+    .k1, .p2, .p3, .p4, .p5, .p6 { animation: none; }
   }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="360" rx="8"/>
@@ -70,7 +64,7 @@
 <rect class="box p2" x="39" y="100" width="322" height="56" rx="5"/><text class="sm" x="200" y="118.5" text-anchor="middle">Kernel and CPU</text><text class="sm" x="200" y="132.5" text-anchor="middle">boot path · CPU isolation · interrupts and</text><text class="sm" x="200" y="146.5" text-anchor="middle">deferred work · mitigations · cgroups · RHEL tools</text>
 <rect class="box p3" x="469" y="100" width="222" height="56" rx="5"/><text class="sm" x="580" y="118.5" text-anchor="middle">Memory</text><text class="sm" x="580" y="132.5" text-anchor="middle">huge pages and NUMA · reclaim and</text><text class="sm" x="580" y="146.5" text-anchor="middle">faults · swap and OOM</text>
 <rect class="box p4" x="65.5" y="207" width="269" height="42" rx="5"/><text class="sm" x="200" y="225.5" text-anchor="middle">Network</text><text class="sm" x="200" y="239.5" text-anchor="middle">network path · network buffers · ethtool</text>
-<rect class="app p5 p6 p7" x="435" y="207" width="290" height="42" rx="5"/><text class="sm" x="580" y="225.5" text-anchor="middle">Application</text><text class="sm" x="580" y="239.5" text-anchor="middle">thread handoff · logging and I/O · JVM pauses</text>
-<rect class="foc p8 p9" x="304.5" y="297" width="151" height="42" rx="5"/><text class="sm" x="380" y="315.5" text-anchor="middle">Measurement</text><text class="sm" x="380" y="329.5" text-anchor="middle">tail latency · queueing</text>
+<rect class="app p5" x="435" y="207" width="290" height="42" rx="5"/><text class="sm" x="580" y="225.5" text-anchor="middle">Application</text><text class="sm" x="580" y="239.5" text-anchor="middle">thread handoff · logging and I/O · JVM pauses</text>
+<rect class="foc p6" x="304.5" y="297" width="151" height="42" rx="5"/><text class="sm" x="380" y="315.5" text-anchor="middle">Measurement</text><text class="sm" x="380" y="329.5" text-anchor="middle">tail latency · queueing</text>
 <circle class="tok k1" cx="0" cy="0" r="6"/>
 </svg>
