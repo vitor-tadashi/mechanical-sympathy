@@ -264,17 +264,17 @@ for file in "${docs[@]}"; do
 	done <<<"${missing}"
 done
 
-# 5. A "Picture it" line is a quote of its own. A text line right under it, with no
-#    blank line between, is pulled into the quote (a lazy continuation in Markdown).
+# 5. A "Picture it" line is a quote of its own. Any line right under it, quoted or not,
+#    joins it (a lazy continuation in Markdown), so a blank line must follow.
 for file in "${docs[@]}"; do
 	swallowed="$(awk '
 		/^[ \t]*(```|~~~)/ { fence = !fence; picture = 0; next }
 		fence { next }
-		picture && $0 != "" && $0 !~ /^>/ { print FNR }
+		picture && $0 != "" { print FNR }
 		{ picture = ($0 ~ /^> \*\*Picture it\.\*\*/) }
 	' "${file}")"
 	while IFS= read -r line; do
-		[[ -n "${line}" ]] && fail "${file}:${line}: text right under a Picture it quote joins the quote; add a blank line"
+		[[ -n "${line}" ]] && fail "${file}:${line}: a line right under a Picture it quote joins the quote; add a blank line"
 	done <<<"${swallowed}"
 done
 

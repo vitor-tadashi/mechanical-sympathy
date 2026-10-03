@@ -239,8 +239,8 @@ grubby --update-kernel=ALL --args="isolcpus=managed_irq,domain,3,5,7,9"   # same
 
 - **What it does.** When a queue's interrupt mask holds both isolated and housekeeping CPUs, the kernel delivers the interrupt to a housekeeping CPU in that mask. It is best effort. A queue whose mask holds only isolated CPUs keeps them, but it only fires when a thread on those CPUs submits I/O, and the critical threads should not.
 - **Why `domain` is written out.** `domain` is the default flag of `isolcpus`. As soon as you give any flag, the default no longer applies, so leaving out `domain` would also drop the load-balancing isolation.
-- **When to use it.** Only when Guide 04 logs `EIO` for an interrupt you need to move, or when `/proc/interrupts` shows a disk or NIC queue counting on an isolated CPU. On the reference host, the critical NICs use ordinary IRQs and the plain form is enough.
-- **How to verify.** After the reboot, read the CPU each managed interrupt really uses: `grep -H . /proc/irq/*/effective_affinity_list`. No managed queue should list an isolated CPU.
+- **When to use it.** Only when `04-network` warns `IRQ N is kernel-managed, affinity not changed` for an interrupt you need to move, or when `/proc/interrupts` shows a disk or NIC queue counting on an isolated CPU. On the reference host, the critical NICs use ordinary IRQs and the plain form is enough.
+- **How to verify.** After the reboot, read the CPU each managed interrupt really uses: `grep -H . /proc/irq/*/effective_affinity_list`. A queue whose mask holds both kinds of CPU should now list only housekeeping CPUs. A queue whose mask holds only isolated CPUs may still list one, because the flag cannot move it. For those, check in `/proc/interrupts` that the count does not grow while the critical threads run.
 - **How to roll back.** Run the same two `grubby` lines with the plain list (`isolcpus=3,5,7,9`), then reboot.
 
 > [!IMPORTANT]
