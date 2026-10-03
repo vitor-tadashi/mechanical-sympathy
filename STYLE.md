@@ -103,7 +103,7 @@ Never fold a warning, a precondition or the command the reader must run.
 
 ### 2.4 Decision aid
 
-A page that says how to change a setting must also let the reader decide whether to. Most settings are a trade: the default kernel behavior does a job, and removing it only pays on some workloads. Give every tunable a decision aid, directly under the text that explains it, with the heading `#### Keep or change <thing>?`.
+A page that says how to change a setting must also let the reader decide whether to. Most settings are a trade: the default kernel behavior does a job, and removing it only pays on some workloads. Give every tunable one decision aid, on the concept page that explains the mechanism, directly under that text, with the heading `#### Keep or change <thing>?`. A guide does not repeat it: the guide links to the aid where it applies the setting, and that link satisfies the guide's side of this rule.
 
 The aid has five parts, in this order:
 
@@ -118,7 +118,7 @@ Rules:
 - The aid describes the trade. It does not prescribe. The guide still names the value it applies, and the aid tells the reader when to choose another.
 - "Keep" and "measure first" are valid, common verdicts. An aid that always says "change" is advice, not a decision.
 - A guide links to the aid at the place where it applies the setting. It does not repeat the table.
-- Models: [`concepts/security-mitigations.md`](concepts/security-mitigations.md) §4 for an ordered decision, and `concepts/bootloader.md` for "Keep or stop the tick?".
+- Model: [`concepts/security-mitigations.md`](concepts/security-mitigations.md) §4, an ordered decision.
 
 ## 3. Diagrams
 
@@ -253,5 +253,5 @@ Embed it with an `<img>` that has an `alt` text, followed by the same one-senten
 - [ ] Every new abbreviation, product or unusual word has an entry in [`GLOSSARY.md`](GLOSSARY.md), in the same change (`make lint` keeps the entries sorted).
 - [ ] Link text says where the link goes ("Guide 05 §4.4, the cpuset trap"), never "here".
 - [ ] Unmeasured advice is marked (§2.2).
-- [ ] Every tunable the page explains has a decision aid (§2.4), or the page says why not.
+- [ ] Every tunable a concept page explains has a decision aid (§2.4), and a guide that applies the setting links to it, or the page says why not.
 - [ ] `make lint` passes (links, anchors, Mermaid, SVG rules).
