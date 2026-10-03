@@ -235,6 +235,7 @@
 
 | Term | Means | Why you meet it here |
 |---|---|---|
+| <a id="managed-irq"></a>**managed IRQ** | An [IRQ](#irq) whose CPU the kernel chooses and owns, usually one per device queue, spread over all CPUs. User space cannot move it: a write to its `smp_affinity` file fails. | It can land on an isolated CPU, and only the `managed_irq` flag of `isolcpus` steers it away. [Guide 01 §5.2](guides/01-grub-bootloader-tuning.md#opt-in-kernel-managed-irqs) |
 | <a id="mbuf"></a>**mbuf** | **Message buffer.** The [DPDK](#dpdk) structure that holds one packet: a small header and a data area. | A DPDK program runs out of packets when it runs out of mbufs. [Guide 08 §6.1](guides/08-kernel-bypass.md#61-how-it-works) |
 | <a id="mds"></a>**MDS / TAA** | **Microarchitectural Data Sampling** and **TSX Asynchronous Abort.** Flaws that leak data left in internal CPU buffers. | The kernel clears those buffers (`VERW`) on every return to user space. [Concept: security mitigations §3](concepts/security-mitigations.md#3-the-families-and-what-the-kernel-does) |
 | <a id="mempool"></a>**mempool** | **Memory pool.** In [DPDK](#dpdk), a fixed set of [mbufs](#mbuf) created at start-up in huge pages. Receiving takes one out, and finishing with a packet puts it back. | It is sized once. If it is too small, receiving stops. [Guide 08 §6.1](guides/08-kernel-bypass.md#61-how-it-works) |

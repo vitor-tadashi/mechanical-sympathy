@@ -377,7 +377,7 @@ cat /proc/irq/<irq>/effective_affinity_list        # what the interrupt controll
 - The MSI-X directory (one interrupt vector per queue) lists **exactly** the vectors of that PCI function. The fallback, matching names in `/proc/interrupts`, uses whole-word matching, so that `em1` does not also match `em10`, a bug that affects scripts using `grep em1`.
 - `smp_affinity_list` takes a CPU list (`1`, `0-3`, `1,3`), so there is no hex-mask arithmetic that silently breaks above 64 CPUs.
 - With a multi-CPU list, most interrupt controllers (x86 APIC in physical mode) deliver to **one** CPU of the set. Check `effective_affinity_list`.
-- Some drivers on newer kernels use **kernel-managed** IRQs, whose affinity is fixed and `write` fails with `EIO`. The script logs these and continues. For those drivers, reduce the queue count (§5.1) so the managed spreading only covers housekeeping CPUs, or use `isolcpus=managed_irq,...` ([Guide 01](01-grub-bootloader-tuning.md)).
+- Some drivers on newer kernels use **kernel-managed** IRQs, whose affinity is fixed and `write` fails with `EIO`. The script logs these and continues. For those drivers, reduce the queue count (§5.1) so the managed spreading only covers housekeeping CPUs, or add the `managed_irq` flag to `isolcpus` ([Guide 01 §5.2](01-grub-bootloader-tuning.md#opt-in-kernel-managed-irqs)).
 
 **irqbalance must be off** ([Guide 02 §4.3](02-cpu-core-isolation.md#43-irqbalance-persistent)), or it rewrites these files within 10 seconds.
 
