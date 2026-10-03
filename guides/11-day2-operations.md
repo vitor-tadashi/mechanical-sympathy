@@ -18,16 +18,7 @@
 
 **Time:** 20 min · **Do this if:** always, after Guides 00 to 10 and 12 · **Skip if:** the host is throwaway.
 
-```mermaid
-flowchart LR
-  ev(["A change: kernel, firmware,<br/>driver, agent, application"]) --> dr["Drift: one setting<br/>silently reverts"]
-  dr --> tm["lowlat-verify.timer<br/>daily and 10 min after boot"]
-  tm --> vt["verify-tuning<br/>PASS / WARN / FAIL"]
-  vt --> jr["Journal and a failed unit<br/>systemctl --failed"]
-  jr --> al(["Your alerting<br/>and the fix from the guide"])
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-  class tm focus
-```
+<img src="../assets/diagrams/drift-caught.svg" alt="A change makes a setting drift, the verify timer reports a FAIL, and alerting picks up the failed unit" width="720">
 
 *A change makes one setting revert, the timer's report catches it within a day (or ten minutes after the next boot), a FAIL leaves the unit failed, and your alerting picks that up.*
 
@@ -50,14 +41,7 @@ Guides 00 to 10 and 12 set things once. The host then keeps changing under them:
 
 Every row has a command that answers "did it revert?". This guide runs the ones a script can run, and lists the rest.
 
-```mermaid
-timeline
-  title One kernel update, with and without the timer
-  Day 0 : dnf update installs a kernel : its boot entry lacks isolcpus
-  Day 3 : planned reboot : the new kernel boots untuned
-  Day 3 + 10 min : with the timer, lowlat-verify FAILs : you fix the entry the same day
-  Weeks later : without it, p99.9 has crept up : nobody knows since when
-```
+<img src="../assets/diagrams/kernel-update-timeline.svg" alt="A timeline of one kernel update, fixed the same day with the timer and unnoticed for weeks without it" width="720">
 
 *The drift is silent: nothing fails, the tail just slowly gets worse. The timer turns it into a FAIL ten minutes after the reboot that caused it.*
 
@@ -227,16 +211,7 @@ systemctl show -p Result --value lowlat-verify.service    # success (or exit-cod
 
 ## 9. Troubleshooting
 
-```mermaid
-flowchart TD
-  s(["lowlat-verify.service failed"]) --> sec{"Which section<br/>has the FAIL?"}
-  sec -- "01 or 02" --> f1["Boot arguments or affinity lost:<br/>kernel entries (§3), Guide 01"]
-  sec -- "04" --> f2["NIC defaults after a driver change:<br/>apply-all --runtime"]
-  sec -- "00 or 09" --> f3["Firmware reset or SMIs:<br/>Guide 00 §8"]
-  sec -- "12" --> f6["Swap back or memory pressure:<br/>Guide 12 §7"]
-  sec -- "11" --> f4["The timer itself:<br/>systemctl status, the table below"]
-  sec -- "other" --> f5["Open that guide's troubleshooting section"]
-```
+<img src="../assets/diagrams/verify-troubleshoot.svg" alt="The section of the first FAIL points to the guide that owns the setting" width="720">
 
 *Read the section header of the first FAIL in the journal. It names the guide that owns the setting, and the guide's own troubleshooting section has the fix.*
 

@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 299" width="760" height="299" role="img" aria-labelledby="t d">
+<title id="t">Troubleshooting Guide 07: each breakage maps to one section</title>
+<desc id="d">The common breakages after Guide 07 map one to one to a section: logs not rotated (cron and logrotate), a ulimit still at 1024 (limits), tuned-adm verify failing (tuned), and lost remote access (the opt-in firewall).</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(410px, 151px); animation: k1 7s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(100px, 49px); } 6% { transform: translate(100px, 49px); } 12% { transform: translate(100px, 49px); } 26.15% { transform: translate(100px, 163.5px); } 32.15% { transform: translate(100px, 163.5px); } 39.96% { transform: translate(161.5px, 178px); } 43.29% { transform: translate(161.5px, 151px); } 74% { transform: translate(410px, 151px); } 80% { transform: translate(410px, 151px); } 100% { transform: translate(410px, 151px); } }
+  .p2 { animation: p2 7s linear infinite; }
+  @keyframes p2 { 0%, 26.05% { fill: #ffffff; stroke-width: 1.5; } 28.15% { fill: #ffe9a8; stroke-width: 3; } 36.15%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p3 { animation: p3 7s linear infinite; }
+  @keyframes p3 { 0%, 73.9% { fill: #cfe3ff; stroke-width: 1.5; } 74%, 97% { fill: #9cc3ff; stroke-width: 3; } 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .p3 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="299" rx="8"/>
+<path class="walk" d="M100,49 L100,163.5" marker-end="url(#w)"/>
+<path class="wire" d="M137.5,178 L161.5,178 L161.5,97 L410,97" marker-end="url(#a)"/>
+<path class="walk" d="M137.5,178 L161.5,178 L161.5,151 L410,151" marker-end="url(#w)"/>
+<path class="wire" d="M137.5,178 L161.5,178 L161.5,205 L410,205" marker-end="url(#a)"/>
+<path class="wire" d="M137.5,178 L161.5,178 L161.5,259 L410,259" marker-end="url(#a)"/>
+<rect class="foc" x="7.5" y="20" width="185" height="29" rx="14.5"/><text class="lbl" x="100" y="39" text-anchor="middle">Something broke after 07</text>
+<polygon class="step p2" points="62.5,178 76.5,163.5 123.5,163.5 137.5,178 123.5,192.5 76.5,192.5"/><text class="lbl" x="100" y="182.5" text-anchor="middle">What?</text>
+<rect class="box" x="410" y="75" width="231" height="44" rx="5"/><text class="lbl" x="525.5" y="94" text-anchor="middle">RHEL 8: logrotate ran from cron.</text><text class="lbl" x="525.5" y="109" text-anchor="middle">Enable logrotate.timer</text>
+<rect class="box p3" x="410" y="129" width="178" height="44" rx="5"/><text class="lbl" x="499" y="148" text-anchor="middle">Services ignore limits.d:</text><text class="lbl" x="499" y="163" text-anchor="middle">LimitNOFILE= in the unit</text>
+<rect class="box" x="410" y="183" width="247" height="44" rx="5"/><text class="lbl" x="533.5" y="202" text-anchor="middle">Another profile or a manual change:</text><text class="lbl" x="533.5" y="217" text-anchor="middle">tuned-adm profile low-latency</text>
+<rect class="wait" x="410" y="237" width="251" height="44" rx="5"/><text class="lbl" x="535.5" y="256" text-anchor="middle">Firewall flush: out-of-band console,</text><text class="lbl" x="535.5" y="271" text-anchor="middle">systemctl start firewalld</text>
+<text class="el" x="169.5" y="92" text-anchor="start">logs not rotated</text>
+<text class="el" x="169.5" y="146" text-anchor="start">ulimit still 1024 in a service</text>
+<text class="el" x="169.5" y="200" text-anchor="start">tuned-adm verify fails</text>
+<text class="el" x="169.5" y="254" text-anchor="start">remote access lost</text>
+<circle class="tok k1" cx="0" cy="0" r="7"/>
+</svg>

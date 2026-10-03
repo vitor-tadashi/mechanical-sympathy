@@ -17,15 +17,7 @@
 
 **Time:** 15 min (chrony) to 1 h (PTP) · **Do this if:** always, on every host · **Skip if:** never. Even a VM needs a disciplined clock.
 
-```mermaid
-flowchart LR
-  gm(["Grandmaster<br/>(GPS)"]) --> sw["Switch<br/>boundary or<br/>transparent clock"] --> phc["Timing NIC<br/>hardware clock (PHC)"]
-  phc -- "ptp4l" --> phc
-  phc -- "phc2sys" --> sys["System clock<br/>CLOCK_REALTIME"]
-  ntp(["NTP servers"]) -. "chrony (alternative)" .-> sys
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-  class phc focus
-```
+<img src="../assets/diagrams/ptp-chain.svg" alt="Time flows from the grandmaster through the switch to the NIC clock and then the system clock, with chrony as the alternative" width="720">
 
 *With PTP, ptp4l disciplines the NIC's hardware clock from the grandmaster, and phc2sys steers the system clock from the NIC clock. With chrony, the system clock follows NTP servers directly.*
 
@@ -69,16 +61,7 @@ The time daemons also matter for **noise**. They wake up periodically, take inte
 | Complexity | low | low | medium: network design and monitoring |
 | Choose it when | the host only needs sane wall-clock time | you need µs, but the network has no PTP | you timestamp events across hosts, or regulation asks for sub-100 µs traceability |
 
-```mermaid
-flowchart TD
-  s(["Which time sync?"]) --> q1{"Need µs or better<br/>across hosts?"}
-  q1 -- no --> c["chrony (NTP)"]
-  q1 -- yes --> q2{"PTP grandmaster and<br/>PTP-aware switches?"}
-  q2 -- yes --> q3{"Timing NIC has<br/>hardware timestamps?"}
-  q3 -- yes --> p["PTP: ptp4l + phc2sys"]
-  q3 -- no --> fix["Get a NIC that does:<br/>ethtool -T (§4)"]
-  q2 -- no --> ch["chrony with<br/>hardware timestamping"]
-```
+<img src="../assets/diagrams/time-sync-choice.svg" alt="A decision tree that picks chrony, chrony with hardware timestamps, or PTP" width="720">
 
 *Plain chrony when wall-clock time is enough, chrony with hardware timestamping for microseconds without a PTP network, and PTP when you have the grandmaster, the switches and the NIC.*
 
@@ -140,16 +123,7 @@ Settings worth checking in `/etc/chrony.conf`:
 
 `/etc/ptp4l.conf` stays yours. The profile (domain number, delay mechanism E2E or P2P, transport L2 or UDP, message intervals) must match the grandmaster and the switches. Agree it with the network team. Keep `time_stamping hardware`, which is the default.
 
-```mermaid
-sequenceDiagram
-  participant M as Master (switch port)
-  participant S as ptp4l on eno1
-  M->>S: Sync (hardware timestamp t1 at master, t2 at NIC)
-  M->>S: Follow_Up (carries t1)
-  S->>M: Delay_Req (t3 at NIC)
-  M->>S: Delay_Resp (carries t4)
-  Note over S: offset = ((t2 - t1) - (t4 - t3)) / 2, then the PHC is adjusted
-```
+<img src="../assets/diagrams/ptp-exchange.svg" alt="Sync, Follow_Up, Delay_Req and Delay_Resp messages between the master and ptp4l give four timestamps" width="720">
 
 *Four timestamps give the path delay and the offset, assuming the path is symmetric. With PTP-aware switches, each hop corrects for its own residence time.*
 
@@ -192,18 +166,7 @@ cat /sys/devices/system/clocksource/clocksource0/current_clocksource       # tsc
 
 ## 10. Troubleshooting
 
-```mermaid
-flowchart TD
-  s(["Clock problem"]) --> m{"Mode?"}
-  m -- chrony --> c1{"Leap status<br/>Normal?"}
-  c1 -- no --> f1["No reachable source:<br/>chronyc sources -v, firewall, DNS"]
-  c1 -- yes --> f2["Offset large or jumpy:<br/>more sources, hwtimestamp,<br/>check the network path"]
-  m -- ptp --> p1{"ptp4l state<br/>s2 (locked)?"}
-  p1 -- no --> f3["No master seen: domain, transport,<br/>VLAN, switch PTP config"]
-  p1 -- yes --> p2{"phc2sys offset<br/>small?"}
-  p2 -- no --> f4["Another daemon steering the clock:<br/>chronyd running? One owner only"]
-  p2 -- yes --> f5["See the table below"]
-```
+<img src="../assets/diagrams/time-sync-troubleshoot.svg" alt="A troubleshooting tree with one branch for chrony and one for PTP" width="720">
 
 *chrony problems are usually unreachable sources or a noisy path. PTP problems are usually a profile mismatch with the switches, or two daemons fighting over the system clock.*
 

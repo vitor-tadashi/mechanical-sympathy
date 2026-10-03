@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 371" width="760" height="371" role="img" aria-labelledby="t d">
+<title id="t">Pick a kernel-bypass stack from the NIC and whether the application can change</title>
+<desc id="d">The NIC decides the family of stacks, and whether the application can change decides the stack. Solarflare or AMD: Onload, or ef_vi and DPDK. NVIDIA ConnectX: XLIO, or bifurcated DPDK. Intel: busy polling, ADQ or Onload over AF_XDP for an unmodified application, DPDK or AF_XDP otherwise. Virtio or cloud: the kernel stack with busy polling.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(470px, 236px); animation: k1 8s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(66px, 44.5px); } 6% { transform: translate(66px, 44.5px); } 12% { transform: translate(66px, 44.5px); } 14.89% { transform: translate(66px, 81.5px); } 20.89% { transform: translate(66px, 81.5px); } 34.7% { transform: translate(66px, 258.25px); } 53.14% { transform: translate(302px, 258.25px); } 59.14% { transform: translate(302px, 258.25px); } 67.26% { transform: translate(406px, 258.25px); } 69% { transform: translate(406px, 236px); } 74% { transform: translate(470px, 236px); } 80% { transform: translate(470px, 236px); } 100% { transform: translate(470px, 236px); } }
+  .p2 { animation: p2 8s linear infinite; }
+  @keyframes p2 { 0%, 14.79% { fill: #ffffff; stroke-width: 1.5; } 16.89% { fill: #ffe9a8; stroke-width: 3; } 24.89%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p3 { animation: p3 8s linear infinite; }
+  @keyframes p3 { 0%, 53.04% { fill: #ffffff; stroke-width: 1.5; } 55.14% { fill: #ffe9a8; stroke-width: 3; } 63.14%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p4 { animation: p4 8s linear infinite; }
+  @keyframes p4 { 0%, 73.9% { fill: #ffffff; stroke-width: 1.5; } 74%, 97% { fill: #ffe9a8; stroke-width: 3; } 100% { fill: #ffffff; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .p3, .p4 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="371" rx="8"/>
+<path class="wire" d="M66,44.5 L66,81.5" marker-end="url(#a)"/>
+<path class="wire" d="M66,110.5 L66,71 L302,71" marker-end="url(#a)"/>
+<path class="wire" d="M388,71 L406,71 L406,52.5 L470,52.5" marker-end="url(#a)"/>
+<path class="wire" d="M388,71 L406,71 L406,89.5 L470,89.5" marker-end="url(#a)"/>
+<path class="wire" d="M66,110.5 L66,159 L302,159" marker-end="url(#a)"/>
+<path class="wire" d="M388,159 L406,159 L406,140.5 L470,140.5" marker-end="url(#a)"/>
+<path class="wire" d="M388,159 L406,159 L406,177.5 L470,177.5" marker-end="url(#a)"/>
+<path class="wire" d="M66,110.5 L66,258.25 L302,258.25" marker-end="url(#a)"/>
+<path class="wire" d="M388,258.25 L406,258.25 L406,236 L470,236" marker-end="url(#a)"/>
+<path class="wire" d="M388,258.25 L406,258.25 L406,280.5 L470,280.5" marker-end="url(#a)"/>
+<path class="wire" d="M66,110.5 L66,331 L470,331" marker-end="url(#a)"/>
+<path class="walk" d="M66,44.5 L66,81.5" marker-end="url(#w)"/>
+<path class="walk" d="M66,110.5 L66,258.25 L302,258.25" marker-end="url(#w)"/>
+<path class="walk" d="M388,258.25 L406,258.25 L406,236 L470,236" marker-end="url(#w)"/>
+<rect class="foc" x="17.5" y="15.5" width="97" height="29" rx="14.5"/><text class="lbl" x="66" y="34.5" text-anchor="middle">Pick a stack</text>
+<polygon class="step p2" points="32.5,96 46.5,81.5 85.5,81.5 99.5,96 85.5,110.5 46.5,110.5"/><text class="lbl" x="66" y="100.5" text-anchor="middle">NIC?</text>
+<rect class="app" x="470" y="38" width="88" height="29" rx="5"/><text class="lbl" x="514" y="57" text-anchor="middle">Onload (§5)</text>
+<rect class="step" x="470" y="75" width="107" height="29" rx="5"/><text class="lbl" x="523.5" y="94" text-anchor="middle">ef_vi or DPDK</text>
+<polygon class="step" points="302,71 316,49 374,49 388,71 374,93 316,93"/><text class="lbl" x="345" y="68" text-anchor="middle">App can</text><text class="lbl" x="345" y="83" text-anchor="middle">change?</text>
+<rect class="step" x="470" y="126" width="79" height="29" rx="5"/><text class="lbl" x="509.5" y="145" text-anchor="middle">XLIO (§7)</text>
+<rect class="step" x="470" y="163" width="128" height="29" rx="5"/><text class="lbl" x="534" y="182" text-anchor="middle">DPDK, bifurcated</text>
+<polygon class="step" points="302,159 316,137 374,137 388,159 374,181 316,181"/><text class="lbl" x="345" y="156" text-anchor="middle">App can</text><text class="lbl" x="345" y="171" text-anchor="middle">change?</text>
+<rect class="step p4" x="470" y="214" width="275" height="44" rx="5"/><text class="lbl" x="607.5" y="233" text-anchor="middle">Kernel stack + busy polling, ADQ on E810,</text><text class="lbl" x="607.5" y="248" text-anchor="middle">or evaluate Onload over AF_XDP (§7)</text>
+<rect class="step" x="470" y="266" width="148" height="29" rx="5"/><text class="lbl" x="544" y="285" text-anchor="middle">DPDK (§6) or AF_XDP</text>
+<polygon class="step p3" points="302,258.25 316,236.25 374,236.25 388,258.25 374,280.25 316,280.25"/><text class="lbl" x="345" y="255.25" text-anchor="middle">App can</text><text class="lbl" x="345" y="270.25" text-anchor="middle">change?</text>
+<rect class="step" x="470" y="316.5" width="189" height="29" rx="5"/><text class="lbl" x="564.5" y="335.5" text-anchor="middle">Kernel stack + busy polling</text>
+<text class="el" x="76" y="65" text-anchor="start">Solarflare / AMD (sfc)</text>
+<text class="el" x="412" y="47.5" text-anchor="start">no</text>
+<text class="el" x="412" y="84.5" text-anchor="start">yes</text>
+<text class="el" x="76" y="153" text-anchor="start">NVIDIA ConnectX (mlx5)</text>
+<text class="el" x="412" y="135.5" text-anchor="start">no</text>
+<text class="el" x="412" y="172.5" text-anchor="start">yes</text>
+<text class="el" x="76" y="252.25" text-anchor="start">Intel (ice, i40e, ixgbe)</text>
+<text class="el" x="412" y="231" text-anchor="start">no</text>
+<text class="el" x="412" y="275.5" text-anchor="start">yes</text>
+<text class="el" x="76" y="325" text-anchor="start">virtio / cloud</text>
+<circle class="tok k1" cx="0" cy="0" r="7"/>
+</svg>
