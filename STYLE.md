@@ -160,17 +160,17 @@ classDef muted fill:#eeeeee,stroke:#777777,color:#333333
 
 ### 3.3 The "you are here" strip
 
-The ordered tuning guides (00 to 08) show where they sit in the sequence. Guides 09 to 12 are cross-cutting (measuring, clocks, keeping a host tuned, memory pressure), so they open with a diagram of their own instead. Copy this block, and point the `class … focus` line at the current guide:
+The ordered tuning guides (00 to 08) show where they sit in the sequence. The strip opens with Guide 09 as **step 0**, because the baseline measurement comes before Guide 00 and repeats after every guide. Guides 09 to 12 are cross-cutting (measuring, clocks, keeping a host tuned, memory pressure), so they open with a diagram of their own instead. Copy this block, and point the `class … focus` line at the current guide:
 
 ```mermaid
 flowchart LR
-  g00["00<br/>BIOS"] --> g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g09m(["Step 0<br/>09 Measure"]) --> g00["00<br/>BIOS"] --> g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
   g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
   class g01 focus
   classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
 ```
 
-*Guide 01 is the current step. The dotted arrow marks Guide 08 as optional.*
+*Guide 01 is the current step. The rounded box is the baseline from Guide 09, taken before Guide 00. The dotted arrow marks Guide 08 as optional.*
 
 ### 3.4 Troubleshooting flowcharts
 
