@@ -16,16 +16,7 @@ The other concepts remove what the operating system and the hardware do to a thr
 
 A **safepoint** is a point in the code where the JVM knows exactly where every object reference is. Some operations need all Java threads stopped at one: some GC phases, a heap dump, a thread dump, class redefinition, some deoptimizations. They run in four steps:
 
-```mermaid
-sequenceDiagram
-  participant VM as VM thread
-  participant T as Java threads (net.rx, event.loop, worker.N)
-  VM->>T: arm the safepoint poll of every thread
-  Note over T: each thread runs until its next poll<br/>(method return, loop back-edge)
-  T-->>VM: all threads stopped
-  VM->>VM: the operation itself: the "pause"
-  VM->>T: release
-```
+<img src="../assets/diagrams/safepoint-sequence.svg" alt="The VM thread arms the safepoint, waits for every thread to stop, runs the operation and releases them" width="720">
 
 *The stop lasts from the request until the release. The slowest thread to reach a poll decides the first part, the operation decides the second.*
 
