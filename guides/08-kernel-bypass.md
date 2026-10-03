@@ -18,13 +18,7 @@
 
 **Time:** half a day to a few days, depending on the stack · **Do this if:** the tuned kernel stack is measured and still too slow, and your NIC has a supported stack · **Skip if:** you have not measured Guides 01–07 yet, or the NIC is Intel and the application is an unmodified JVM (try busy polling first).
 
-```mermaid
-flowchart LR
-  g09m(["Step 0<br/>09 Measure"]) --> g00["00<br/>BIOS"] --> g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
-  g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
-  class g08 focus
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-```
+<img src="../assets/diagrams/strip-guide-08.svg" alt="The tuning order, from the Guide 09 baseline through Guides 00 to 08, with Guide 08 highlighted" width="720">
 
 *Guide 08 is optional and builds on Guides 02, 03 and 04.*
 

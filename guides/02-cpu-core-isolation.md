@@ -17,13 +17,7 @@
 
 **Time:** ~1 h including the layout design + 1 reboot (shared with Guide 01) · **Do this if:** bare metal, one critical application, a handful of threads you can pin · **Skip if:** thread-per-request servers or large dynamic pools, or a VM (only §6 applies).
 
-```mermaid
-flowchart LR
-  g09m(["Step 0<br/>09 Measure"]) --> g00["00<br/>BIOS"] --> g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
-  g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
-  class g02 focus
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-```
+<img src="../assets/diagrams/strip-guide-02.svg" alt="The tuning order, from the Guide 09 baseline through Guides 00 to 08, with Guide 02 highlighted" width="720">
 
 *Guide 02 builds on the boot arguments from Guide 01 and comes before huge pages.*
 

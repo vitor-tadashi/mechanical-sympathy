@@ -17,13 +17,7 @@
 
 **Time:** 30 min to prepare, 1 reboot, 15 min to verify · **Do this if:** you run a latency-critical application on RHEL 8, 9 or 10 (full set on bare metal, subset in a VM) · **Skip if:** it's a container, or nobody has profiled the application yet.
 
-```mermaid
-flowchart LR
-  g09m(["Step 0<br/>09 Measure"]) --> g00["00<br/>BIOS"] --> g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
-  g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
-  class g01 focus
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-```
+<img src="../assets/diagrams/strip-guide-01.svg" alt="The tuning order, from the Guide 09 baseline through Guides 00 to 08, with Guide 01 highlighted" width="720">
 
 *Guide 01 is the first step on the operating system, right after the firmware. Every later guide assumes these boot arguments are in place.*
 
