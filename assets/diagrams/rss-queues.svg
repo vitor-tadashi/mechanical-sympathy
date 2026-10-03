@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 250" width="760" height="250" role="img" aria-labelledby="t d">
+<title id="t">RSS spreads flows over queues, and every queue interrupt here points at CPU 1</title>
+<desc id="d">The NIC hashes each flow to a queue through the indirection table. Each queue has its own MSI-X interrupt, and here every interrupt points at CPU 1, so one CPU drains all the queues in turn before NAPI hands the data to the socket.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(685px, 125px); animation: k1 9s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(145.5px, 125px); } 6% { transform: translate(145.5px, 125px); } 7.31% { transform: translate(172.75px, 125px); } 10.42% { transform: translate(172.75px, 60px); } 11.73% { transform: translate(200px, 60px); } 15.56% { transform: translate(280px, 60px); } 17.48% { transform: translate(320px, 60px); } 21.31% { transform: translate(400px, 60px); } 21.88% { transform: translate(412px, 60px); } 25% { transform: translate(412px, 125px); } 25.57% { transform: translate(424px, 125px); } 30.37% { transform: translate(424px, 125px); } 30.57% { transform: translate(145.5px, 125px); } 33.19% { transform: translate(200px, 125px); } 37.02% { transform: translate(280px, 125px); } 38.94% { transform: translate(320px, 125px); } 42.77% { transform: translate(400px, 125px); } 43.92% { transform: translate(424px, 125px); } 48.72% { transform: translate(424px, 125px); } 48.92% { transform: translate(145.5px, 125px); } 50.23% { transform: translate(172.75px, 125px); } 53.34% { transform: translate(172.75px, 190px); } 54.65% { transform: translate(200px, 190px); } 58.48% { transform: translate(280px, 190px); } 60.4% { transform: translate(320px, 190px); } 64.23% { transform: translate(400px, 190px); } 64.8% { transform: translate(412px, 190px); } 67.92% { transform: translate(412px, 125px); } 68.49% { transform: translate(424px, 125px); } 75.2% { transform: translate(564px, 125px); } 76.35% { transform: translate(588px, 125px); } 80.09% { transform: translate(666px, 125px); } 81% { transform: translate(685px, 125px); } 85.8% { transform: translate(685px, 125px); } 100% { transform: translate(685px, 125px); } }
+  .p2 { animation: p2 9s linear infinite; }
+  @keyframes p2 { 0%, 25.47% { fill: #cfe3ff; stroke-width: 1.5; } 27.57% { fill: #9cc3ff; stroke-width: 3; } 31.57%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  .p3 { animation: p3 9s linear infinite; }
+  @keyframes p3 { 0%, 43.82% { fill: #cfe3ff; stroke-width: 1.5; } 45.92% { fill: #9cc3ff; stroke-width: 3; } 49.92%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  .p4 { animation: p4 9s linear infinite; }
+  @keyframes p4 { 0%, 80.9% { fill: #c8f0d0; stroke-width: 1.5; } 81%, 97% { fill: #8fe0a0; stroke-width: 3; } 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .p3, .p4 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="250" rx="8"/>
+<path class="wire" d="M145.5,125 L172.75,125 L172.75,60 L200,60" marker-end="url(#a)"/>
+<path class="wire" d="M280,60 L320,60" marker-end="url(#a)"/>
+<path class="wire" d="M400,60 L412,60 L412,125 L424,125" marker-end="url(#a)"/>
+<path class="wire" d="M145.5,125 L200,125" marker-end="url(#a)"/>
+<path class="wire" d="M280,125 L320,125" marker-end="url(#a)"/>
+<path class="wire" d="M400,125 L424,125" marker-end="url(#a)"/>
+<path class="wire" d="M145.5,125 L172.75,125 L172.75,190 L200,190" marker-end="url(#a)"/>
+<path class="wire" d="M280,190 L320,190" marker-end="url(#a)"/>
+<path class="wire" d="M400,190 L412,190 L412,125 L424,125" marker-end="url(#a)"/>
+<path class="wire" d="M564,125 L588,125" marker-end="url(#a)"/>
+<path class="wire" d="M666,125 L685,125" marker-end="url(#a)"/>
+<text class="note" x="240" y="226" text-anchor="middle">indirection table (ethtool -x)</text>
+<rect class="step" x="14.5" y="95.5" width="131" height="59" rx="5"/><text class="lbl" x="80" y="114.5" text-anchor="middle">NIC:</text><text class="lbl" x="80" y="129.5" text-anchor="middle">RSS hash of</text><text class="lbl" x="80" y="144.5" text-anchor="middle">src/dst IP + port</text>
+<rect class="step" x="200" y="45.5" width="80" height="29" rx="5"/><text class="lbl" x="240" y="64.5" text-anchor="middle">queue 0</text>
+<rect class="step" x="320" y="45.5" width="80" height="29" rx="5"/><text class="lbl" x="360" y="64.5" text-anchor="middle">IRQ 120</text>
+<rect class="step" x="200" y="110.5" width="80" height="29" rx="5"/><text class="lbl" x="240" y="129.5" text-anchor="middle">queue 1</text>
+<rect class="step" x="320" y="110.5" width="80" height="29" rx="5"/><text class="lbl" x="360" y="129.5" text-anchor="middle">IRQ 121</text>
+<rect class="step" x="200" y="175.5" width="80" height="29" rx="5"/><text class="lbl" x="240" y="194.5" text-anchor="middle">queue N</text>
+<rect class="step" x="320" y="175.5" width="80" height="29" rx="5"/><text class="lbl" x="360" y="194.5" text-anchor="middle">IRQ 12N</text>
+<rect class="box p2 p3" x="424" y="103" width="140" height="44" rx="5"/><text class="lbl" x="494" y="122" text-anchor="middle">CPU 1</text><text class="lbl" x="494" y="137" text-anchor="middle">(smp_affinity_list)</text>
+<rect class="box" x="588" y="103" width="78" height="44" rx="5"/><text class="lbl" x="627" y="122" text-anchor="middle">NAPI poll</text><text class="lbl" x="627" y="137" text-anchor="middle">softirq</text>
+<rect class="app p4" x="685" y="110.5" width="60" height="29" rx="5"/><text class="lbl" x="715" y="129.5" text-anchor="middle">socket</text>
+<circle class="tok k1" cx="0" cy="0" r="7"/>
+</svg>

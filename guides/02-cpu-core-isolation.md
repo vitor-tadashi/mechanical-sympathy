@@ -346,15 +346,7 @@ A pinned critical thread normally **busy-spins**: it polls its queue or socket i
 
 *A blocked thread has to be woken through the kernel. A spinning thread on its own CPU sees the write after a single cache-line transfer.*
 
-```mermaid
-flowchart LR
-  q{"Does this thread own<br/>a physical CPU?"} -- "yes: isolated CPU<br/>on bare metal" --> spin["busy-spin<br/>(Thread.onSpinWait)"]
-  q -- "no: VM or<br/>shared CPU" --> back["backoff<br/>spin, then yield, then park"]
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
-  class spin iso
-  class back hk
-```
+<img src="../assets/diagrams/spin-decision.svg" alt="A thread that owns an isolated CPU busy-spins; a thread on a shared or virtual CPU backs off" width="720">
 
 *Spin only when the CPU belongs to the thread. On a shared or virtual CPU, spinning steals time from other work and raises steal time, so back off.*
 
@@ -435,15 +427,7 @@ How to read `/proc/interrupts` on isolated CPUs:
 
 When an isolated CPU is noisy, the row of `/proc/interrupts` that keeps increasing tells you who is interrupting it:
 
-```mermaid
-flowchart TD
-  s(["Isolated CPU is noisy"]) --> r{"Which row<br/>increases?"}
-  r -- "LOC at HZ" --> f1["More than one runnable task, or nohz_full<br/>not active: check ps -eLo psr and Guide 01 §7"]
-  r -- "RES" --> f2["Another task keeps waking there:<br/>find it with ps -eLo psr,comm"]
-  r -- "CAL or TLB" --> f3["munmap or mprotect in the process:<br/>fewer mapping changes, huge pages (Guide 03)"]
-  r -- "a NIC row" --> f4["IRQ affinity or irqbalance:<br/>§4.3 and Guide 04 §6"]
-  r -- "none, still slow" --> f5["Kernel thread or RT throttling:<br/>rtla osnoise top, §4.4, §5"]
-```
+<img src="../assets/diagrams/noisy-cpu-rows.svg" alt="Each increasing row of /proc/interrupts points to a different cause of noise on an isolated CPU" width="720">
 
 *Match the increasing interrupt row to its cause: tick, rescheduling IPI, TLB shootdown, device interrupt, or, when none increases, a kernel thread or RT throttling.*
 
