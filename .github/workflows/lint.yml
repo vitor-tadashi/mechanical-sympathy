@@ -115,13 +115,6 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: "22"
-      - name: Install mermaid-cli (pinned; the 11.x line matches the Mermaid that GitHub renders)
-        env:
-          MERMAID_CLI_VERSION: 11.17.0
-        run: npm install --global "@mermaid-js/mermaid-cli@${MERMAID_CLI_VERSION}"
       - run: make lint-docs
 
   site:
