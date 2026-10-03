@@ -10,6 +10,7 @@
 #      30 KiB, and honors prefers-reduced-motion when it animates
 #   4. every SVG in assets/diagrams/ is used by a page (STYLE.md does not count), and
 #      every image in Markdown has a non-empty alt text
+#   5. a "Picture it" quote is followed by a blank line, so the next text stays out of it
 #
 # Usage: tools/lint-docs            (from anywhere inside the repository)
 # Env:   MMDC=<command>             mermaid-cli to use (default: mmdc)
@@ -261,6 +262,20 @@ for file in "${docs[@]}"; do
 	while IFS= read -r line; do
 		[[ -n "${line}" ]] && fail "${file}:${line}: image without alt text"
 	done <<<"${missing}"
+done
+
+# 5. A "Picture it" line is a quote of its own. A text line right under it, with no
+#    blank line between, is pulled into the quote (a lazy continuation in Markdown).
+for file in "${docs[@]}"; do
+	swallowed="$(awk '
+		/^[ \t]*(```|~~~)/ { fence = !fence; picture = 0; next }
+		fence { next }
+		picture && $0 != "" && $0 !~ /^>/ { print FNR }
+		{ picture = ($0 ~ /^> \*\*Picture it\.\*\*/) }
+	' "${file}")"
+	while IFS= read -r line; do
+		[[ -n "${line}" ]] && fail "${file}:${line}: text right under a Picture it quote joins the quote; add a blank line"
+	done <<<"${swallowed}"
 done
 
 if ((failures > 0)); then

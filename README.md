@@ -192,7 +192,7 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 ├── guides/          00..12 step-by-step guides
 ├── concepts/        19 deep dives
 ├── examples/        use-cases/ (19 stories), Java on a tuned host (+ runnable probe), multi-NIC segmentation
-├── assets/          diagrams/ (50 hand-written SVGs), social-preview.svg (source of the repository card)
+├── assets/          diagrams/ (hand-written SVGs), social-preview.svg (source of the repository card)
 ├── site/            the GitHub Pages site, the CPU layout explorer and the buffer simulator (no dependencies)
 ├── tools/           lint, the four checkers (fake hosts, regressions, containers, VMs), site build
 ├── .github/         CI workflows (lint, integration, vm, doc-health, pages), issue forms, Dependabot

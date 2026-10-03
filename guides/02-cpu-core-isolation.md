@@ -142,14 +142,13 @@ DefaultLimitNICE=40
 - **`CPUAffinity`**: PID 1 calls `sched_setaffinity()` on itself early in boot. Every process it forks (services, getty, sshd, and therefore every login shell and everything you start from it) inherits that mask. This is what keeps `rsyslogd`, `chronyd`, `sshd`, `crond`, and your own `bash` off the isolated CPUs.
 - **`DefaultLimitRTPRIO` / `DefaultLimitNICE`**: `RLIMIT_RTPRIO` and `RLIMIT_NICE` for every service. They let an unprivileged service raise its own threads to `SCHED_FIFO` or a negative nice value without running as root. `NICE=40` is the rlimit encoding of nice `-20`. Login sessions get the same limits from `limits.d` ([Guide 07](07-os-hygiene.md)).
 
-This is **affinity, not a cpuset**. A process started with the OS mask may still call `sched_setaffinity()` and move a thread onto an isolated CPU.
+This is **affinity, not a cpuset**. A process started with the OS mask may still call `sched_setaffinity()` and move a thread onto an isolated CPU. That is exactly how the application pins its critical threads (§6), and it is why this mechanism is preferred over cgroup `AllowedCPUs=` on `system.slice` (see the warning in [Guide 05](05-cgroup-isolation.md#44-the-cpuset-trap)).
 
 <img src="../assets/diagrams/affinity-vs-cpuset.svg" alt="Two panels: systemd CPUAffinity gives PID 1 the OS CPUs and every service inherits the mask, yet net.rx can pin itself to isolated CPU 9; a cpuset on housekeeping.slice fences an agent onto CPUs 4 and 6, and its request for CPU 7 is rejected" width="720">
 
 *Affinity is a default that a thread may change, which is how the critical threads reach their isolated CPUs. A cpuset is a wall the kernel enforces, which is why Guide 05 uses it for agents.*
 
 > **Picture it.** Affinity is the seat a guest is shown at a dinner: anyone may move. A cpuset is a locked room: the door decides, not the guest.
- That is exactly how the application pins its critical threads (§6), and it is why this mechanism is preferred over cgroup `AllowedCPUs=` on `system.slice` (see the warning in [Guide 05](05-cgroup-isolation.md#44-the-cpuset-trap)).
 
 A **reboot** is needed. `systemctl daemon-reexec` makes PID 1 re-read the file, but units that are already running keep their old mask.
 
