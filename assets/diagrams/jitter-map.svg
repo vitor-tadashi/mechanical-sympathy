@@ -16,8 +16,25 @@
   .role { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #333333; }
   .chip { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
   .side { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .tk1 { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; transform: translate(726px, 422px); animation: tk1 9s linear infinite; }
+  @keyframes tk1 { 0% { transform: translate(726px, 92px); } 4% { transform: translate(726px, 92px); } 7.39% { transform: translate(726px, 112px); } 12.39% { transform: translate(726px, 112px); } 22.92% { transform: translate(726px, 174px); } 27.92% { transform: translate(726px, 174px); } 38.44% { transform: translate(726px, 236px); } 43.44% { transform: translate(726px, 236px); } 53.96% { transform: translate(726px, 298px); } 58.96% { transform: translate(726px, 298px); } 69.48% { transform: translate(726px, 360px); } 74.48% { transform: translate(726px, 360px); } 85% { transform: translate(726px, 422px); } 90% { transform: translate(726px, 422px); } 100% { transform: translate(726px, 422px); } }
+  .pl2 { animation: pl2 9s linear infinite; }
+  @keyframes pl2 { 0%, 7.29% { fill: #ffd166; } 9.39% { fill: #ffb703; } 17.39%, 100% { fill: #ffd166; } }
+  .pl3 { animation: pl3 9s linear infinite; }
+  @keyframes pl3 { 0%, 22.82% { fill: #ffd166; } 24.92% { fill: #ffb703; } 32.92%, 100% { fill: #ffd166; } }
+  .pl4 { animation: pl4 9s linear infinite; }
+  @keyframes pl4 { 0%, 38.34% { fill: #ffd166; } 40.44% { fill: #ffb703; } 48.44%, 100% { fill: #ffd166; } }
+  .pl5 { animation: pl5 9s linear infinite; }
+  @keyframes pl5 { 0%, 53.86% { fill: #ffd166; } 55.96% { fill: #ffb703; } 63.96%, 100% { fill: #ffd166; } }
+  .pl6 { animation: pl6 9s linear infinite; }
+  @keyframes pl6 { 0%, 69.38% { fill: #ffd166; } 71.48% { fill: #ffb703; } 79.48%, 100% { fill: #ffd166; } }
+  .pl7 { animation: pl7 9s linear infinite; }
+  @keyframes pl7 { 0%, 84.9% { fill: #ffd166; } 87% { fill: #ffb703; } 95%, 100% { fill: #ffd166; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tk1, .pl2, .pl3, .pl4, .pl5, .pl6, .pl7 { animation: none; }
   }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="490" rx="8"/>
@@ -35,7 +52,7 @@
 <text class="role" x="30" y="125">the code you wrote</text>
 <text class="lbl" x="206" y="108">GC pauses, JIT, unpinned threads</text>
 <text class="role" x="206" y="125">cold caches after each migration: µs to 10s of µs</text>
-<rect class="foc" x="558" y="94" width="138" height="36" rx="5"/>
+<rect class="foc pl2" x="558" y="94" width="138" height="36" rx="5"/>
 <text class="chip" x="627" y="117">Guides 02, 03</text>
 
 <!-- Row 2: memory -->
@@ -45,7 +62,7 @@
 <text class="role" x="30" y="187">the working set</text>
 <text class="lbl" x="206" y="170">Page faults, TLB misses, remote NUMA</text>
 <text class="role" x="206" y="187">fault 0.5-2 µs · huge page zeroing 50-100 µs</text>
-<rect class="foc" x="558" y="156" width="138" height="36" rx="5"/>
+<rect class="foc pl3" x="558" y="156" width="138" height="36" rx="5"/>
 <text class="chip" x="627" y="179">Guides 02, 03</text>
 
 <!-- Row 3: network path -->
@@ -55,7 +72,7 @@
 <text class="role" x="30" y="249">wire to recv()</text>
 <text class="lbl" x="206" y="232">Coalescing, interrupts, softirq, PAUSE</text>
 <text class="role" x="206" y="249">first packet 30-50 µs · IRQ 1-50 µs · PAUSE up to ms</text>
-<rect class="foc" x="558" y="218" width="138" height="36" rx="5"/>
+<rect class="foc pl4" x="558" y="218" width="138" height="36" rx="5"/>
 <text class="chip" x="627" y="241">Guides 04, 08</text>
 
 <!-- Row 4: operating system -->
@@ -65,7 +82,7 @@
 <text class="role" x="30" y="311">scheduler, kernel, services</text>
 <text class="lbl" x="206" y="294">Tick, tasks, kworkers, RCU, agents</text>
 <text class="role" x="206" y="311">tick 1-5 µs · RT throttling 50 ms every second</text>
-<rect class="foc" x="558" y="280" width="138" height="36" rx="5"/>
+<rect class="foc pl5" x="558" y="280" width="138" height="36" rx="5"/>
 <text class="chip" x="627" y="303">Guides 01, 02, 05-07</text>
 
 <!-- Row 5: time -->
@@ -75,7 +92,7 @@
 <text class="role" x="30" y="373">clocks and timestamps</text>
 <text class="lbl" x="206" y="356">Clock offset and steps</text>
 <text class="role" x="206" y="373">latency numbers you cannot compare across hosts</text>
-<rect class="foc" x="558" y="342" width="138" height="36" rx="5"/>
+<rect class="foc pl6" x="558" y="342" width="138" height="36" rx="5"/>
 <text class="chip" x="627" y="365">Guide 10</text>
 
 <!-- Row 6: firmware and hardware -->
@@ -85,7 +102,7 @@
 <text class="role" x="30" y="435">BIOS, SMM, the CPU</text>
 <text class="lbl" x="206" y="418">SMIs, deep C-states, turbo, HT sibling</text>
 <text class="role" x="206" y="435">SMI or deep C-state exit: tens to hundreds of µs</text>
-<rect class="foc" x="558" y="404" width="138" height="36" rx="5"/>
+<rect class="foc pl7" x="558" y="404" width="138" height="36" rx="5"/>
 <text class="chip" x="627" y="427">Guide 00</text>
 
 <!-- Measure bar -->
@@ -93,4 +110,5 @@
 <text class="side" transform="translate(731 267) rotate(-90)">Guide 09 measures every layer</text>
 
 <text class="sub" x="20" y="472">Typical orders of magnitude from the guides, not measurements.</text>
+<circle class="tk1" cx="0" cy="0" r="7"/>
 </svg>

@@ -11,8 +11,80 @@
   .bar { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1; }
   .tail { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1; }
   .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .hd1 { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(322px); animation: hd1 8s linear infinite; }
+  @keyframes hd1 { 0%, 4% { transform: translateX(0); } 90%, 100% { transform: translateX(322px); } }
+  .hd2 { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(322px); animation: hd2 8s linear infinite; }
+  @keyframes hd2 { 0%, 4% { transform: translateX(0); } 90%, 100% { transform: translateX(322px); } }
+  .hd3 { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(322px); animation: hd3 8s linear infinite; }
+  @keyframes hd3 { 0%, 4% { transform: translateX(0); } 90%, 100% { transform: translateX(322px); } }
+  .hd4 { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(322px); animation: hd4 8s linear infinite; }
+  @keyframes hd4 { 0%, 4% { transform: translateX(0); } 90%, 100% { transform: translateX(322px); } }
+  .pl5 { animation: pl5 8s linear infinite; }
+  @keyframes pl5 { 0%, 50.88% { fill: #ffc9c9; } 52.98% { fill: #ff3b3b; } 58.98%, 100% { fill: #ffc9c9; } }
+  .pl6 { animation: pl6 8s linear infinite; }
+  @keyframes pl6 { 0%, 53.71% { fill: #ffc9c9; } 55.81% { fill: #ff3b3b; } 61.81%, 100% { fill: #ffc9c9; } }
+  .pl7 { animation: pl7 8s linear infinite; }
+  @keyframes pl7 { 0%, 56.54% { fill: #ffc9c9; } 58.64% { fill: #ff3b3b; } 64.64%, 100% { fill: #ffc9c9; } }
+  .pl8 { animation: pl8 8s linear infinite; }
+  @keyframes pl8 { 0%, 59.37% { fill: #ffc9c9; } 61.47% { fill: #ff3b3b; } 67.47%, 100% { fill: #ffc9c9; } }
+  .pl9 { animation: pl9 8s linear infinite; }
+  @keyframes pl9 { 0%, 62.2% { fill: #ffc9c9; } 64.3% { fill: #ff3b3b; } 70.3%, 100% { fill: #ffc9c9; } }
+  .pl10 { animation: pl10 8s linear infinite; }
+  @keyframes pl10 { 0%, 65.03% { fill: #ffc9c9; } 67.13% { fill: #ff3b3b; } 73.13%, 100% { fill: #ffc9c9; } }
+  .pl11 { animation: pl11 8s linear infinite; }
+  @keyframes pl11 { 0%, 67.87% { fill: #ffc9c9; } 69.97% { fill: #ff3b3b; } 75.97%, 100% { fill: #ffc9c9; } }
+  .pl12 { animation: pl12 8s linear infinite; }
+  @keyframes pl12 { 0%, 39.56% { fill: #ffc9c9; } 41.66% { fill: #ff3b3b; } 47.66%, 100% { fill: #ffc9c9; } }
+  .pl13 { animation: pl13 8s linear infinite; }
+  @keyframes pl13 { 0%, 56.54% { fill: #ffc9c9; } 58.64% { fill: #ff3b3b; } 64.64%, 100% { fill: #ffc9c9; } }
+  .pl14 { animation: pl14 8s linear infinite; }
+  @keyframes pl14 { 0%, 73.53% { fill: #ffc9c9; } 75.63% { fill: #ff3b3b; } 81.63%, 100% { fill: #ffc9c9; } }
+  .pl15 { animation: pl15 8s linear infinite; }
+  @keyframes pl15 { 0%, 33.89% { fill: #ffc9c9; } 35.99% { fill: #ff3b3b; } 41.99%, 100% { fill: #ffc9c9; } }
+  .pl16 { animation: pl16 8s linear infinite; }
+  @keyframes pl16 { 0%, 36.72% { fill: #ffc9c9; } 38.82% { fill: #ff3b3b; } 44.82%, 100% { fill: #ffc9c9; } }
+  .pl17 { animation: pl17 8s linear infinite; }
+  @keyframes pl17 { 0%, 39.56% { fill: #ffc9c9; } 41.66% { fill: #ff3b3b; } 47.66%, 100% { fill: #ffc9c9; } }
+  .pl18 { animation: pl18 8s linear infinite; }
+  @keyframes pl18 { 0%, 42.39% { fill: #ffc9c9; } 44.49% { fill: #ff3b3b; } 50.49%, 100% { fill: #ffc9c9; } }
+  .pl19 { animation: pl19 8s linear infinite; }
+  @keyframes pl19 { 0%, 45.22% { fill: #ffc9c9; } 47.32% { fill: #ff3b3b; } 53.32%, 100% { fill: #ffc9c9; } }
+  .pl20 { animation: pl20 8s linear infinite; }
+  @keyframes pl20 { 0%, 48.05% { fill: #ffc9c9; } 50.15% { fill: #ff3b3b; } 56.15%, 100% { fill: #ffc9c9; } }
+  .pl21 { animation: pl21 8s linear infinite; }
+  @keyframes pl21 { 0%, 50.88% { fill: #ffc9c9; } 52.98% { fill: #ff3b3b; } 58.98%, 100% { fill: #ffc9c9; } }
+  .pl22 { animation: pl22 8s linear infinite; }
+  @keyframes pl22 { 0%, 53.71% { fill: #ffc9c9; } 55.81% { fill: #ff3b3b; } 61.81%, 100% { fill: #ffc9c9; } }
+  .pl23 { animation: pl23 8s linear infinite; }
+  @keyframes pl23 { 0%, 56.54% { fill: #ffc9c9; } 58.64% { fill: #ff3b3b; } 64.64%, 100% { fill: #ffc9c9; } }
+  .pl24 { animation: pl24 8s linear infinite; }
+  @keyframes pl24 { 0%, 59.37% { fill: #ffc9c9; } 61.47% { fill: #ff3b3b; } 67.47%, 100% { fill: #ffc9c9; } }
+  .pl25 { animation: pl25 8s linear infinite; }
+  @keyframes pl25 { 0%, 62.2% { fill: #ffc9c9; } 64.3% { fill: #ff3b3b; } 70.3%, 100% { fill: #ffc9c9; } }
+  .pl26 { animation: pl26 8s linear infinite; }
+  @keyframes pl26 { 0%, 65.03% { fill: #ffc9c9; } 67.13% { fill: #ff3b3b; } 73.13%, 100% { fill: #ffc9c9; } }
+  .pl27 { animation: pl27 8s linear infinite; }
+  @keyframes pl27 { 0%, 67.87% { fill: #ffc9c9; } 69.97% { fill: #ff3b3b; } 75.97%, 100% { fill: #ffc9c9; } }
+  .pl28 { animation: pl28 8s linear infinite; }
+  @keyframes pl28 { 0%, 70.7% { fill: #ffc9c9; } 72.8% { fill: #ff3b3b; } 78.8%, 100% { fill: #ffc9c9; } }
+  .pl29 { animation: pl29 8s linear infinite; }
+  @keyframes pl29 { 0%, 73.53% { fill: #ffc9c9; } 75.63% { fill: #ff3b3b; } 81.63%, 100% { fill: #ffc9c9; } }
+  .pl30 { animation: pl30 8s linear infinite; }
+  @keyframes pl30 { 0%, 76.36% { fill: #ffc9c9; } 78.46% { fill: #ff3b3b; } 84.46%, 100% { fill: #ffc9c9; } }
+  .pl31 { animation: pl31 8s linear infinite; }
+  @keyframes pl31 { 0%, 79.19% { fill: #ffc9c9; } 81.29% { fill: #ff3b3b; } 87.29%, 100% { fill: #ffc9c9; } }
+  .pl32 { animation: pl32 8s linear infinite; }
+  @keyframes pl32 { 0%, 82.02% { fill: #ffc9c9; } 84.12% { fill: #ff3b3b; } 90.12%, 100% { fill: #ffc9c9; } }
+  .pl33 { animation: pl33 8s linear infinite; }
+  @keyframes pl33 { 0%, 84.85% { fill: #ffc9c9; } 86.95% { fill: #ff3b3b; } 92.95%, 100% { fill: #ffc9c9; } }
+  .pl34 { animation: pl34 8s linear infinite; }
+  @keyframes pl34 { 0%, 87.68% { fill: #ffc9c9; } 89.78% { fill: #ff3b3b; } 95.78%, 100% { fill: #ffc9c9; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hd1, .hd2, .hd3, .hd4, .pl5, .pl6, .pl7, .pl8, .pl9, .pl10, .pl11, .pl12, .pl13, .pl14, .pl15, .pl16, .pl17, .pl18, .pl19, .pl20, .pl21, .pl22, .pl23, .pl24, .pl25, .pl26, .pl27, .pl28, .pl29, .pl30, .pl31, .pl32, .pl33, .pl34 { animation: none; }
+    .hd1, .hd2, .hd3, .hd4 { display: none; }
   }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="410" rx="8"/>
@@ -40,13 +112,13 @@
 <rect class="bar" x="486.2" y="77.9" width="8.6" height="54.1"/>
 <rect class="bar" x="496.8" y="115.2" width="8.6" height="16.8"/>
 <rect class="bar" x="507.4" y="129.6" width="8.6" height="2.4"/>
-<rect class="tail" x="581.6" y="130.9" width="8.6" height="1.1"/>
-<rect class="tail" x="592.2" y="124.0" width="8.6" height="8.0"/>
-<rect class="tail" x="602.8" y="106.3" width="8.6" height="25.7"/>
-<rect class="tail" x="613.4" y="94.0" width="8.6" height="38.0"/>
-<rect class="tail" x="624.0" y="106.3" width="8.6" height="25.7"/>
-<rect class="tail" x="634.6" y="124.0" width="8.6" height="8.0"/>
-<rect class="tail" x="645.2" y="130.9" width="8.6" height="1.1"/>
+<rect class="tail pl5" x="581.6" y="130.9" width="8.6" height="1.1"/>
+<rect class="tail pl6" x="592.2" y="124.0" width="8.6" height="8.0"/>
+<rect class="tail pl7" x="602.8" y="106.3" width="8.6" height="25.7"/>
+<rect class="tail pl8" x="613.4" y="94.0" width="8.6" height="38.0"/>
+<rect class="tail pl9" x="624.0" y="106.3" width="8.6" height="25.7"/>
+<rect class="tail pl10" x="634.6" y="124.0" width="8.6" height="8.0"/>
+<rect class="tail pl11" x="645.2" y="130.9" width="8.6" height="1.1"/>
 <line class="base" x1="410" y1="132" x2="732" y2="132"/>
 <text class="axis" x="732" y="146">latency, log scale →</text>
 <text class="sub" x="404" y="174">Two paths: a remote NUMA node, an SMT sibling.</text>
@@ -59,9 +131,9 @@
 <rect class="bar" x="95.6" y="274.0" width="8.6" height="48.0"/>
 <rect class="bar" x="106.2" y="311.6" width="8.6" height="10.4"/>
 <rect class="bar" x="116.8" y="321.2" width="8.6" height="0.8"/>
-<rect class="tail" x="159.2" y="296.0" width="8.6" height="26.0"/>
-<rect class="tail" x="222.8" y="304.0" width="8.6" height="18.0"/>
-<rect class="tail" x="286.4" y="310.0" width="8.6" height="12.0"/>
+<rect class="tail pl12" x="159.2" y="296.0" width="8.6" height="26.0"/>
+<rect class="tail pl13" x="222.8" y="304.0" width="8.6" height="18.0"/>
+<rect class="tail pl14" x="286.4" y="310.0" width="8.6" height="12.0"/>
 <line class="base" x1="30" y1="322" x2="352" y2="322"/>
 <text class="axis" x="352" y="336">latency, log scale →</text>
 <text class="sub" x="24" y="364">A fixed wait: a timer, coalescing, polling.</text>
@@ -75,28 +147,32 @@
 <rect class="bar" x="486.2" y="299.4" width="8.6" height="22.6"/>
 <rect class="bar" x="496.8" y="305.8" width="8.6" height="16.2"/>
 <rect class="bar" x="507.4" y="309.4" width="8.6" height="12.6"/>
-<rect class="tail" x="518.0" y="311.8" width="8.6" height="10.2"/>
-<rect class="tail" x="528.6" y="313.5" width="8.6" height="8.5"/>
-<rect class="tail" x="539.2" y="314.7" width="8.6" height="7.3"/>
-<rect class="tail" x="549.8" y="315.6" width="8.6" height="6.4"/>
-<rect class="tail" x="560.4" y="316.3" width="8.6" height="5.7"/>
-<rect class="tail" x="571.0" y="316.9" width="8.6" height="5.1"/>
-<rect class="tail" x="581.6" y="317.4" width="8.6" height="4.6"/>
-<rect class="tail" x="592.2" y="317.8" width="8.6" height="4.2"/>
-<rect class="tail" x="602.8" y="318.2" width="8.6" height="3.8"/>
-<rect class="tail" x="613.4" y="318.4" width="8.6" height="3.6"/>
-<rect class="tail" x="624.0" y="318.7" width="8.6" height="3.3"/>
-<rect class="tail" x="634.6" y="318.9" width="8.6" height="3.1"/>
-<rect class="tail" x="645.2" y="319.1" width="8.6" height="2.9"/>
-<rect class="tail" x="655.8" y="319.3" width="8.6" height="2.7"/>
-<rect class="tail" x="666.4" y="319.4" width="8.6" height="2.6"/>
-<rect class="tail" x="677.0" y="319.6" width="8.6" height="2.4"/>
-<rect class="tail" x="687.6" y="319.7" width="8.6" height="2.3"/>
-<rect class="tail" x="698.2" y="319.8" width="8.6" height="2.2"/>
-<rect class="tail" x="708.8" y="319.9" width="8.6" height="2.1"/>
-<rect class="tail" x="719.4" y="320.0" width="8.6" height="2.0"/>
+<rect class="tail pl15" x="518.0" y="311.8" width="8.6" height="10.2"/>
+<rect class="tail pl16" x="528.6" y="313.5" width="8.6" height="8.5"/>
+<rect class="tail pl17" x="539.2" y="314.7" width="8.6" height="7.3"/>
+<rect class="tail pl18" x="549.8" y="315.6" width="8.6" height="6.4"/>
+<rect class="tail pl19" x="560.4" y="316.3" width="8.6" height="5.7"/>
+<rect class="tail pl20" x="571.0" y="316.9" width="8.6" height="5.1"/>
+<rect class="tail pl21" x="581.6" y="317.4" width="8.6" height="4.6"/>
+<rect class="tail pl22" x="592.2" y="317.8" width="8.6" height="4.2"/>
+<rect class="tail pl23" x="602.8" y="318.2" width="8.6" height="3.8"/>
+<rect class="tail pl24" x="613.4" y="318.4" width="8.6" height="3.6"/>
+<rect class="tail pl25" x="624.0" y="318.7" width="8.6" height="3.3"/>
+<rect class="tail pl26" x="634.6" y="318.9" width="8.6" height="3.1"/>
+<rect class="tail pl27" x="645.2" y="319.1" width="8.6" height="2.9"/>
+<rect class="tail pl28" x="655.8" y="319.3" width="8.6" height="2.7"/>
+<rect class="tail pl29" x="666.4" y="319.4" width="8.6" height="2.6"/>
+<rect class="tail pl30" x="677.0" y="319.6" width="8.6" height="2.4"/>
+<rect class="tail pl31" x="687.6" y="319.7" width="8.6" height="2.3"/>
+<rect class="tail pl32" x="698.2" y="319.8" width="8.6" height="2.2"/>
+<rect class="tail pl33" x="708.8" y="319.9" width="8.6" height="2.1"/>
+<rect class="tail pl34" x="719.4" y="320.0" width="8.6" height="2.0"/>
 <line class="base" x1="410" y1="322" x2="732" y2="322"/>
 <text class="axis" x="732" y="336">latency, log scale →</text>
 <text class="sub" x="404" y="364">Queueing, or rare stalls such as GC or reclaim.</text>
 <text class="note" x="14" y="400">Count of samples per latency bucket. Shapes are illustrative. Red marks the part of the shape that points at the cause.</text>
+<line class="hd1" x1="30" y1="40" x2="30" y2="134"/>
+<line class="hd2" x1="410" y1="40" x2="410" y2="134"/>
+<line class="hd3" x1="30" y1="230" x2="30" y2="324"/>
+<line class="hd4" x1="410" y1="230" x2="410" y2="324"/>
 </svg>

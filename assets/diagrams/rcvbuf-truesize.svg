@@ -24,8 +24,22 @@
   .tick { stroke: #8c959f; stroke-width: 1; }
   .arrow { stroke: #57606a; stroke-width: 1.5; fill: none; marker-end: url(#ah); }
   .arrowr { stroke: #9b1c1c; stroke-width: 1.5; fill: none; marker-end: url(#ahr); }
+  .hd1 { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(400px); animation: hd1 8s linear infinite; }
+  @keyframes hd1 { 0%, 5% { transform: translateX(0); } 90%, 100% { transform: translateX(400px); } }
+  .pl2 { animation: pl2 8s linear infinite; }
+  @keyframes pl2 { 0%, 5.54% { fill: #ffc9c9; } 7.64% { fill: #ff3b3b; } 15.64%, 100% { fill: #ffc9c9; } }
+  .pl3 { animation: pl3 8s linear infinite; }
+  @keyframes pl3 { 0%, 7.03% { fill: #ffc9c9; } 9.13% { fill: #ff3b3b; } 17.12%, 100% { fill: #ffc9c9; } }
+  .pl4 { animation: pl4 8s linear infinite; }
+  @keyframes pl4 { 0%, 32.74% { fill: #c8f0d0; } 34.84% { fill: #8fe0a0; } 42.84%, 100% { fill: #c8f0d0; } }
+  .pl5 { animation: pl5 8s linear infinite; }
+  @keyframes pl5 { 0%, 88.05% { fill: #c8f0d0; } 90.15% { fill: #8fe0a0; } 94.15%, 100% { fill: #c8f0d0; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hd1, .pl2, .pl3, .pl4, .pl5 { animation: none; }
+    .hd1 { display: none; }
   }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="426" rx="8"/>
@@ -58,13 +72,14 @@
 <rect class="lane" x="10" y="290" width="740" height="100" rx="6"/>
 <text class="smb" x="24" y="310">How long a stopped reader is covered at 1 Mpps (0.001 ms per packet)</text>
 <text class="sm" x="24" y="333">208 KiB</text>
-<rect class="wait" x="190" y="320" width="3.27273" height="20" rx="2"/>
-<rect class="wait" x="193.273" y="320" width="6.90909" height="20" rx="2" style="opacity:.55"/>
+<rect class="wait pl2" x="190" y="320" width="3.27273" height="20" rx="2"/>
+<rect class="wait pl3" x="193.273" y="320" width="6.90909" height="20" rx="2" style="opacity:.55"/>
 <text class="sm" x="208.182" y="334">0.09 to 0.28 ms</text>
 <text class="sm" x="24" y="363">8 MiB</text>
-<rect class="app" x="190" y="350" width="130.909" height="20" rx="2"/>
-<rect class="app" x="320.909" y="350" width="265.455" height="20" rx="2" style="opacity:.55"/>
+<rect class="app pl4" x="190" y="350" width="130.909" height="20" rx="2"/>
+<rect class="app pl5" x="320.909" y="350" width="265.455" height="20" rx="2" style="opacity:.55"/>
 <text class="sm" x="594.364" y="364">3.6 to 10.9 ms</text>
 <text class="tiny" x="24" y="384">Solid part: at 2,304 B truesize. Lighter part: up to 768 B truesize.</text>
 <text class="sub" x="380" y="412" text-anchor="middle">Illustrative truesize values. Measure yours: in ss -m, compare skmem r (bytes held) with rb (limit), and read d for drops.</text>
+<line class="hd1" x1="190" y1="314" x2="190" y2="376"/>
 </svg>
