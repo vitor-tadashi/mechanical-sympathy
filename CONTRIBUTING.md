@@ -21,7 +21,7 @@ Thank you for reading closely enough to want to fix something. This repository i
 ## Workflow
 
 ```bash
-make install-git-hooks        # optional: pre-commit runs make lint, commit-msg checks titles
+make install-git-hooks        # optional: pre-commit lints the areas you staged, commit-msg checks titles
 git switch -c docs/short-slug # Conventional Branch: <type>/<kebab-slug>
 make lint                     # links, anchors, Mermaid, SVG rules, ShellCheck, site, Checkstyle
 make check-scripts            # script changes: every script end to end on fake hosts (Linux only)

@@ -4,7 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+    # edited: the PR title and body are checked by commit-titles; nothing else reruns.
     types: [opened, synchronize, reopened, edited]
+  workflow_dispatch:
 
 permissions: {}
 
@@ -13,6 +15,42 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    # Which areas does the change touch? The rules live in tools/changed-areas.
+    if: github.event.action != 'edited'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      scripts: ${{ steps.areas.outputs.scripts }}
+      docs: ${{ steps.areas.outputs.docs }}
+      site: ${{ steps.areas.outputs.site }}
+      java: ${{ steps.areas.outputs.java }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: areas
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [[ "${EVENT}" == "workflow_dispatch" ]]; then
+            areas="$(tools/changed-areas --all)"
+          else
+            areas="$(tools/changed-areas "${BASE_SHA}")"
+          fi
+          printf 'Areas: %s\n' "$(tr '\n' ' ' <<<"${areas}")"
+          for area in scripts docs site java integration doc-health; do
+            if grep -qx "${area}" <<<"${areas}"; then
+              echo "${area}=true" >> "${GITHUB_OUTPUT}"
+            else
+              echo "${area}=false" >> "${GITHUB_OUTPUT}"
+            fi
+          done
+
   commit-titles:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
@@ -47,6 +85,8 @@ jobs:
           done
 
   scripts:
+    needs: changes
+    if: needs.changes.outputs.scripts == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -65,6 +105,8 @@ jobs:
       - run: make lint-scripts
 
   docs:
+    needs: changes
+    if: needs.changes.outputs.docs == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -83,6 +125,8 @@ jobs:
       - run: make lint-docs
 
   site:
+    needs: changes
+    if: needs.changes.outputs.site == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -97,6 +141,8 @@ jobs:
       - run: make lint-site
 
   java:
+    needs: changes
+    if: needs.changes.outputs.java == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -111,3 +157,16 @@ jobs:
           java-version: "25"
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
       - run: make lint-java
+
+  # The one check to require: skipped jobs pass, failed or cancelled ones do not.
+  lint-ok:
+    if: always()
+    needs: [changes, commit-titles, scripts, docs, site, java]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Results: ${RESULTS}"
+          [[ " ${RESULTS} " != *" failure "* && " ${RESULTS} " != *" cancelled "* ]]
