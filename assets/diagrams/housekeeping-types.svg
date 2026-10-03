@@ -47,7 +47,7 @@
   .k7 { transform: translate(490px, 201px); animation: k7 9s linear infinite; }
   @keyframes k7 { 0% { transform: translate(250px, 228px); } 37.71% { transform: translate(250px, 228px); } 41.75% { transform: translate(370px, 228px); } 42.66% { transform: translate(370px, 201px); } 46.7% { transform: translate(490px, 201px); } 100% { transform: translate(490px, 201px); } }
   .p8 { animation: p8 9s linear infinite; }
-  @keyframes p8 { 0%, 46.6% { fill: #cfe3ff; stroke-width: 1.5; } 48.7% { fill: #9cc3ff; stroke-width: 3; } 56.7%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  @keyframes p8 { 0% { fill: #cfe3ff; stroke-width: 1.5; } 46.6% { fill: #cfe3ff; stroke-width: 1.5; } 48.7% { fill: #9cc3ff; stroke-width: 3; } 56.7% { fill: #cfe3ff; stroke-width: 1.5; } 78.31% { fill: #cfe3ff; stroke-width: 1.5; } 80.41% { fill: #9cc3ff; stroke-width: 3; } 88.41% { fill: #cfe3ff; stroke-width: 1.5; } 100% { fill: #cfe3ff; stroke-width: 1.5; } }
   .k9 { transform: translate(490px, 256px); animation: k9 9s linear infinite; }
   @keyframes k9 { 0% { transform: translate(250px, 228px); } 48.29% { transform: translate(250px, 228px); } 52.31% { transform: translate(370px, 228px); } 53.25% { transform: translate(370px, 256px); } 57.27% { transform: translate(490px, 256px); } 100% { transform: translate(490px, 256px); } }
   .p10 { animation: p10 9s linear infinite; }
@@ -58,13 +58,11 @@
   @keyframes p12 { 0%, 67.74% { fill: #cfe3ff; stroke-width: 1.5; } 69.84% { fill: #9cc3ff; stroke-width: 3; } 77.84%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
   .k13 { transform: translate(490px, 209px); animation: k13 9s linear infinite; }
   @keyframes k13 { 0% { transform: translate(250px, 312px); } 69.43% { transform: translate(250px, 312px); } 73.88% { transform: translate(420px, 312px); } 76.58% { transform: translate(420px, 209px); } 78.41% { transform: translate(490px, 209px); } 100% { transform: translate(490px, 209px); } }
-  .p14 { animation: p14 9s linear infinite; }
-  @keyframes p14 { 0%, 78.31% { fill: #cfe3ff; stroke-width: 1.5; } 80.41% { fill: #9cc3ff; stroke-width: 3; } 88.41%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .k1, .p2, .k3, .p4, .k5, .p6, .k7, .p8, .k9, .p10, .k11, .p12, .k13, .p14 { animation: none; }
+    .k1, .p2, .k3, .p4, .k5, .p6, .k7, .p8, .k9, .p10, .k11, .p12, .k13 { animation: none; }
   }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="350" rx="8"/>
@@ -78,7 +76,7 @@
 <rect class="box p2" x="490" y="15" width="220" height="42" rx="5"/><text class="sm" x="600" y="33.5" text-anchor="middle">domain</text><text class="sm" x="600" y="47.5" text-anchor="middle">load balancing</text>
 <rect class="box p4" x="490" y="70" width="220" height="42" rx="5"/><text class="sm" x="600" y="88.5" text-anchor="middle">managed_irq</text><text class="sm" x="600" y="102.5" text-anchor="middle">managed IRQ vectors</text>
 <rect class="box p6" x="490" y="125" width="220" height="42" rx="5"/><text class="sm" x="600" y="143.5" text-anchor="middle">timer</text><text class="sm" x="600" y="157.5" text-anchor="middle">unbound timers, do_timer</text>
-<rect class="box p8 p14" x="490" y="180" width="220" height="42" rx="5"/><text class="sm" x="600" y="198.5" text-anchor="middle">rcu</text><text class="sm" x="600" y="212.5" text-anchor="middle">callbacks, GP kthreads</text>
+<rect class="box p8" x="490" y="180" width="220" height="42" rx="5"/><text class="sm" x="600" y="198.5" text-anchor="middle">rcu</text><text class="sm" x="600" y="212.5" text-anchor="middle">callbacks, GP kthreads</text>
 <rect class="box p10" x="490" y="235" width="220" height="42" rx="5"/><text class="sm" x="600" y="253.5" text-anchor="middle">misc, kthread</text><text class="sm" x="600" y="267.5" text-anchor="middle">unbound kthreads</text>
 <rect class="box p12" x="490" y="290" width="220" height="42" rx="5"/><text class="sm" x="600" y="308.5" text-anchor="middle">wq</text><text class="sm" x="600" y="322.5" text-anchor="middle">unbound workqueues</text>
 <rect class="step" x="50" y="21.5" width="200" height="29" rx="5"/><text class="lbl" x="150" y="40.5" text-anchor="middle">isolcpus=</text>
