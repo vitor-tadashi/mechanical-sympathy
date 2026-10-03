@@ -101,6 +101,25 @@ Wrap content in `<details>` when it is longer than about 15 lines and not needed
 
 Never fold a warning, a precondition or the command the reader must run.
 
+### 2.4 Decision aid
+
+A page that says how to change a setting must also let the reader decide whether to. Most settings are a trade: the default kernel behavior does a job, and removing it only pays on some workloads. Give every tunable a decision aid, directly under the text that explains it, with the heading `#### Keep or change <thing>?`.
+
+The aid has five parts, in this order:
+
+1. **What it does for a shared system.** One or two sentences: the job the default behavior does, and who needs it.
+2. **What each job is worth.** A table of jobs, why a shared system needs each one, and what happens on a system where it is not needed. Give the cost of removing it with a number and its unit.
+3. **A traits-to-verdict table.** Columns: `Your thread...` (or `Your host...`), the verdict and `Why`. A verdict is one of **change**, **keep**, **measure first** or **ask the owner**. Describe the reader's workload (for example "makes frequent syscalls"), never a product or a project.
+4. **A Validate note** (§2.2) for every number this repository does not measure.
+5. **How to decide with data.** One command, the value that tells the two cases apart, and a pointer to the baseline protocol in [Guide 09](guides/09-measuring-latency.md).
+
+Rules:
+
+- The aid describes the trade. It does not prescribe. The guide still names the value it applies, and the aid tells the reader when to choose another.
+- "Keep" and "measure first" are valid, common verdicts. An aid that always says "change" is advice, not a decision.
+- A guide links to the aid at the place where it applies the setting. It does not repeat the table.
+- Models: [`concepts/security-mitigations.md`](concepts/security-mitigations.md) §4 for an ordered decision, and `concepts/bootloader.md` for "Keep or stop the tick?".
+
 ## 3. Diagrams
 
 A diagram earns its place when it shows a **flow, a sequence, a layout or a decision** that prose would need a paragraph for. It never just decorates.
@@ -234,4 +253,5 @@ Embed it with an `<img>` that has an `alt` text, followed by the same one-senten
 - [ ] Every new abbreviation, product or unusual word has an entry in [`GLOSSARY.md`](GLOSSARY.md), in the same change (`make lint` keeps the entries sorted).
 - [ ] Link text says where the link goes ("Guide 05 §4.4, the cpuset trap"), never "here".
 - [ ] Unmeasured advice is marked (§2.2).
+- [ ] Every tunable the page explains has a decision aid (§2.4), or the page says why not.
 - [ ] `make lint` passes (links, anchors, Mermaid, SVG rules).
