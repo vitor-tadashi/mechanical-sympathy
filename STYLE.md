@@ -35,7 +35,7 @@ Every guide follows this order. Numbered sections stay numbered, because other p
 
 4. **Body sections** (`## 1.` …). They explain what each setting does, why the value was chosen, how to verify it, how to troubleshoot it and how to roll it back (AGENTS.md §3). The depth stays. Only the packaging changes.
 5. **Verification.** Commands, each with the expected result in a comment.
-6. **Troubleshooting.** A decision flowchart first (§3.4), then the symptom / cause / fix table.
+6. **Troubleshooting.** A troubleshooting tree first (§3.4), then the symptom / cause / fix table.
 7. **Rollback.** A task list (`- [ ]`) the reader can tick off in order.
 8. **Bare metal vs VM.**
 9. **Key takeaways.** 3 to 5 bullets. A reader who reads only this section should still leave with the right mental model.
@@ -123,7 +123,7 @@ A diagram earns its place when it shows a **flow, a sequence, a layout or a deci
 
 ### 3.1 Animated SVG, and nothing else
 
-Every diagram is a hand-written, animated SVG in `assets/diagrams/`. There is no Mermaid.
+Every diagram is a hand-written, animated SVG in `assets/diagrams/`. There is no Mermaid: `tools/lint-docs` rejects a `mermaid` code block and an SVG without `@keyframes`.
 
 - **Why motion.** A box-and-arrow picture shows what is connected. Motion also shows the order: the path a packet takes, the check a reader makes first, the moment a CPU is interrupted.
 - **Why one format.** Every diagram uses the same palette, fonts, dark-mode block and reduced-motion picture (§3.5), so the pages read as one system.
@@ -242,7 +242,7 @@ Embed it with an `<img>` that has an `alt` text, followed by the one-sentence su
 - [ ] No meaning is carried by color alone.
 - [ ] Long output and deep dives are folded. Warnings and required commands are not.
 - [ ] Headings are real headings, in order (no jump from `##` to `####`), so the GitHub outline works.
-- [ ] Abstract mechanisms have one **Picture it** line (§2.1), and each SVG passes the rules of §3.5 (`make lint` checks the size, title and desc, the font sizes, the loop length, the dark-mode and reduced-motion blocks).
+- [ ] Abstract mechanisms have one **Picture it** line (§2.1), and each SVG passes the rules of §3.5 (`make lint` checks the size, title and desc, the font sizes, that it animates, the loop length, the dark-mode and reduced-motion blocks).
 - [ ] Every new abbreviation, product or unusual word has an entry in [`GLOSSARY.md`](GLOSSARY.md), in the same change (`make lint` keeps the entries sorted).
 - [ ] Link text says where the link goes ("Guide 05 §4.4, the cpuset trap"), never "here".
 - [ ] Unmeasured advice is marked (§2.2).
