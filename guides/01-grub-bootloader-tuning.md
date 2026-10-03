@@ -212,6 +212,9 @@ The check shows the stale fallback. It does not yet run `grub2-mkconfig` after t
 
 > **Picture it.** The tick is a bell that rings in every office 1000 times a second, to check whether someone else should use the desk. `nohz_full` switches the bell off in an office where only one person works.
 
+> [!TIP]
+> **Keep or stop the tick?** Stop it for a thread that spins in user space alone on its CPU. Keep it, or measure first, for a thread that makes many syscalls or shares its CPU, because stopping the tick makes every kernel entry and exit slightly dearer. The full reasoning and a decision table are in [Concept: bootloader §4](../concepts/bootloader.md#keep-or-stop-the-tick).
+
 > [!WARNING]
 > **`rcu_nocbs` lists the isolated CPUs**, the ones whose callbacks move away. Setting it to the housekeeping CPUs, a mistake found in real tuning scripts, leaves the callbacks on the isolated CPUs.
 
