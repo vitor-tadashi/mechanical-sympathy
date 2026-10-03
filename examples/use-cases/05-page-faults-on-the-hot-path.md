@@ -25,16 +25,7 @@ Transparent huge pages do not fix this. THP allocates on a best-effort basis at 
 
 ## 2. Diagnose
 
-```mermaid
-flowchart TD
-  s(["Slow only in the first minutes"]) --> q1{"HugePages_Free<br/>dropped at start?"}
-  q1 -- no --> f1["The JVM fell back to 4 KiB pages:<br/>flags, pool size (Guide 03 §9)"]
-  q1 -- yes --> q2{"Huge pages on<br/>node 1?"}
-  q2 -- no --> f2["Bind the JVM to node 1<br/>(Guide 03 §5.3)"]
-  q2 -- yes --> q3{"AlwaysPreTouch<br/>on?"}
-  q3 -- no --> f3["Pre-touch the heap (§3)"]
-  q3 -- yes --> f4["JIT and cold caches:<br/>warm up before traffic"]
-```
+<img src="../../assets/diagrams/uc05-first-minutes.svg" alt="A troubleshooting tree for slowness in the first minutes: huge pages, the right node, pre-touch" width="720">
 
 *Did the heap get huge pages, on the right node, touched before the traffic came? Each "no" has its own fix.*
 

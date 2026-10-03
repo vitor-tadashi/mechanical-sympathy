@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" width="760" height="330" role="img" aria-labelledby="t d">
+<title id="t">Stock to tuned in one afternoon: prepare, apply with one reboot, check</title>
+<desc id="d">Scenario A, first host, from 09:00: about two hours to take the baseline, design the CPU layout and check the security sign-off, under an hour to dry-run, apply and reboot once for Guides 01, 02 and 03, then about 90 minutes to verify and run the application against the baseline. The times are indicative.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .grid { stroke: #d0d7de; stroke-width: 1; }
+  .h1 { transform: translateX(486px); animation: h1 10s linear infinite; }
+  @keyframes h1 { 0%, 4% { transform: translateX(0); } 92%, 100% { transform: translateX(486px); } }
+  .p2 { animation: p2 10s linear infinite; }
+  @keyframes p2 { 0%, 4.4% { fill: #cfe3ff; stroke-width: 1.5; } 6.5% { fill: #9cc3ff; stroke-width: 3; } 12.5%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  .p3 { animation: p3 10s linear infinite; }
+  @keyframes p3 { 0%, 19.07% { fill: #cfe3ff; stroke-width: 1.5; } 21.17% { fill: #9cc3ff; stroke-width: 3; } 27.17%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  .p4 { animation: p4 10s linear infinite; }
+  @keyframes p4 { 0%, 38.62% { fill: #cfe3ff; stroke-width: 1.5; } 40.72% { fill: #9cc3ff; stroke-width: 3; } 46.72%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  .p5 { animation: p5 10s linear infinite; }
+  @keyframes p5 { 0%, 43.51% { fill: #ffffff; stroke-width: 1.5; } 45.61% { fill: #ffe9a8; stroke-width: 3; } 51.61%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p6 { animation: p6 10s linear infinite; }
+  @keyframes p6 { 0%, 53.29% { fill: #ffffff; stroke-width: 1.5; } 55.39% { fill: #ffe9a8; stroke-width: 3; } 61.39%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p7 { animation: p7 10s linear infinite; }
+  @keyframes p7 { 0%, 58.18% { fill: #ffc9c9; stroke-width: 1.5; } 60.28% { fill: #ff9b9b; stroke-width: 3; } 66.28%, 100% { fill: #ffc9c9; stroke-width: 1.5; } }
+  .p8 { animation: p8 10s linear infinite; }
+  @keyframes p8 { 0%, 63.07% { fill: #c8f0d0; stroke-width: 1.5; } 65.17% { fill: #8fe0a0; stroke-width: 3; } 71.17%, 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  .p9 { animation: p9 10s linear infinite; }
+  @keyframes p9 { 0%, 72.84% { fill: #c8f0d0; stroke-width: 1.5; } 74.94% { fill: #8fe0a0; stroke-width: 3; } 80.94%, 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .h1, .p2, .p3, .p4, .p5, .p6, .p7, .p8, .p9 { animation: none; }
+    .h1 { display: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="330" rx="8"/>
+<line class="grid" x1="250" y1="26" x2="250" y2="300"/>
+<text class="note" x="250" y="316" text-anchor="middle">09:00</text>
+<line class="grid" x1="304" y1="26" x2="304" y2="300"/>
+<text class="note" x="304" y="316" text-anchor="middle">09:30</text>
+<line class="grid" x1="358" y1="26" x2="358" y2="300"/>
+<text class="note" x="358" y="316" text-anchor="middle">10:00</text>
+<line class="grid" x1="412" y1="26" x2="412" y2="300"/>
+<text class="note" x="412" y="316" text-anchor="middle">10:30</text>
+<line class="grid" x1="466" y1="26" x2="466" y2="300"/>
+<text class="note" x="466" y="316" text-anchor="middle">11:00</text>
+<line class="grid" x1="520" y1="26" x2="520" y2="300"/>
+<text class="note" x="520" y="316" text-anchor="middle">11:30</text>
+<line class="grid" x1="574" y1="26" x2="574" y2="300"/>
+<text class="note" x="574" y="316" text-anchor="middle">12:00</text>
+<line class="grid" x1="628" y1="26" x2="628" y2="300"/>
+<text class="note" x="628" y="316" text-anchor="middle">12:30</text>
+<line class="grid" x1="682" y1="26" x2="682" y2="300"/>
+<text class="note" x="682" y="316" text-anchor="middle">13:00</text>
+<line class="grid" x1="736" y1="26" x2="736" y2="300"/>
+<text class="note" x="736" y="316" text-anchor="middle">13:30</text>
+<text class="cap" x="18" y="44">Prepare</text>
+<text class="sm" x="26" y="66">Baseline and verify-tuning report</text>
+<text class="sm" x="26" y="92">CPU layout and lowlat.conf</text>
+<text class="sm" x="26" y="118">Security sign-off check</text>
+<text class="cap" x="18" y="144">Apply</text>
+<text class="sm" x="26" y="166">apply-all --dry-run and review</text>
+<text class="sm" x="26" y="192">apply-all --apply</text>
+<text class="sm" x="26" y="218">Reboot (01, 02, 03)</text>
+<text class="cap" x="18" y="244">Check</text>
+<text class="sm" x="26" y="266">verify-tuning and rtla osnoise</text>
+<text class="sm" x="26" y="292">Application launch and latency run</text>
+<rect class="box p2" x="250" y="54" width="81" height="16" rx="5"/><text class="sm" x="290.5" y="66.5" text-anchor="middle"></text>
+<rect class="box p3" x="331" y="80" width="108" height="16" rx="5"/><text class="sm" x="385" y="92.5" text-anchor="middle"></text>
+<rect class="box p4" x="439" y="106" width="27" height="16" rx="5"/><text class="sm" x="452.5" y="118.5" text-anchor="middle"></text>
+<rect class="step p5" x="466" y="154" width="54" height="16" rx="5"/><text class="sm" x="493" y="166.5" text-anchor="middle"></text>
+<rect class="step p6" x="520" y="180" width="27" height="16" rx="5"/><text class="sm" x="533.5" y="192.5" text-anchor="middle"></text>
+<rect class="wait p7" x="547" y="206" width="27" height="16" rx="5"/><text class="sm" x="560.5" y="218.5" text-anchor="middle"></text>
+<rect class="app p8" x="574" y="254" width="54" height="16" rx="5"/><text class="sm" x="601" y="266.5" text-anchor="middle"></text>
+<rect class="app p9" x="628" y="280" width="108" height="16" rx="5"/><text class="sm" x="682" y="292.5" text-anchor="middle"></text>
+<line class="head h1" x1="250" y1="24" x2="250" y2="302"/>
+</svg>

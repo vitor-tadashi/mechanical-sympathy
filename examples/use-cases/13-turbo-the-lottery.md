@@ -27,14 +27,7 @@ Nothing in the software differs. The hardware does: host B sits higher in the ra
 
 Three questions: is turbo on, does the clock move while the host warms up, and do the two hosts run at different clocks?
 
-```mermaid
-flowchart TD
-  s(["Two identical hosts, different tails"]) --> q1{"Turbo on?"}
-  q1 -- no --> f1["Not turbo: compare the BIOS<br/>and firmware versions (Guide 00)"]
-  q1 -- yes --> q2{"Bzy_MHz falls<br/>as PkgTmp rises?"}
-  q2 -- yes --> f2["Thermal limit: cooling first,<br/>then turbo off or a fixed clock (§3)"]
-  q2 -- no --> f3["Measure p99.9 with turbo<br/>on and off (Guide 00 §4.3)"]
-```
+<img src="../../assets/diagrams/uc13-turbo.svg" alt="A troubleshooting tree for two hosts with different tails: turbo, then thermal limits" width="720">
 
 *Read the turbo state, watch the clock through a warm-up, and decide by measuring both ways.*
 

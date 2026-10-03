@@ -39,15 +39,7 @@ sudo rtla osnoise top -c 3 -d 30s
 
 ## 3. Change
 
-```mermaid
-flowchart LR
-  pkt(["critical flow<br/>udp 10.10.1.10:5000"]) --> rule["ntuple rule"] --> q0["queue 0"] --> irq["its MSI-X vector"] --> c1["CPU 1: hard IRQ<br/>and softirq"] --> sock["socket"] --> rx[["net.rx spinning<br/>on CPU 3"]]
-  other(["every other flow"]) --> rss["RSS, weight 0 1"] --> q1["queue 1"] --> c1b["its IRQ CPU"]
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
-  class rx iso
-  class c1,c1b hk
-```
+<img src="../../assets/diagrams/uc04-steered-flow.svg" alt="The critical flow goes to its own queue and interrupts CPU 1, and only its data reaches net.rx on CPU 3; other flows go to queue 1" width="720">
 
 *Where the critical packet goes after the change: its own queue, an interrupt on the housekeeping CPU 1, and only the finished data reaches the isolated CPU 3. Every other flow is hashed to the other queue. The addresses are made up.*
 

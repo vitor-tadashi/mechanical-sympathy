@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 640" width="760" height="640" role="img" aria-labelledby="t d">
+<title id="t">How bin/launch builds the java command</title>
+<desc id="d">bin/launch picks jvm.options on bare metal or jvm-low-resource.options elsewhere. When affinity is enabled it adds the NUMA, large-page and pre-touch flags. When APP_NUMA_NODE is set it prefixes numactl --membind, and when a bypass launcher is installed it prefixes the bypass command, then it runs java.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(300px, 593.5px); animation: k1 10s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(300px, 42.5px); } 6% { transform: translate(300px, 42.5px); } 10% { transform: translate(300px, 42.5px); } 10.72% { transform: translate(300px, 73.5px); } 14.72% { transform: translate(300px, 73.5px); } 17.97% { transform: translate(160px, 88px); } 19.07% { transform: translate(160px, 136px); } 23.07% { transform: translate(160px, 136px); } 25.34% { transform: translate(160px, 234px); } 27.06% { transform: translate(234.5px, 234px); } 31.06% { transform: translate(234.5px, 234px); } 33.21% { transform: translate(300px, 300px); } 37.4% { transform: translate(481.5px, 300px); } 41.4% { transform: translate(481.5px, 300px); } 43.86% { transform: translate(560px, 372px); } 48.25% { transform: translate(370px, 372px); } 52.25% { transform: translate(370px, 372px); } 54.37% { transform: translate(300px, 432px); } 58.19% { transform: translate(465px, 432px); } 62.19% { transform: translate(465px, 432px); } 64.83% { transform: translate(560px, 496px); } 69.24% { transform: translate(369px, 496px); } 73.24% { transform: translate(369px, 496px); } 76% { transform: translate(300px, 593.5px); } 80% { transform: translate(300px, 593.5px); } 100% { transform: translate(300px, 593.5px); } }
+  .p2 { animation: p2 10s linear infinite; }
+  @keyframes p2 { 0%, 10.62% { fill: #ffffff; stroke-width: 1.5; } 12.72% { fill: #ffe9a8; stroke-width: 3; } 20.72%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p3 { animation: p3 10s linear infinite; }
+  @keyframes p3 { 0%, 18.97% { fill: #ffffff; stroke-width: 1.5; } 21.07% { fill: #ffe9a8; stroke-width: 3; } 29.07%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p4 { animation: p4 10s linear infinite; }
+  @keyframes p4 { 0%, 26.96% { fill: #ffffff; stroke-width: 1.5; } 29.06% { fill: #ffe9a8; stroke-width: 3; } 37.06%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p5 { animation: p5 10s linear infinite; }
+  @keyframes p5 { 0%, 37.3% { fill: #c8f0d0; stroke-width: 1.5; } 39.4% { fill: #8fe0a0; stroke-width: 3; } 47.4%, 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  .p6 { animation: p6 10s linear infinite; }
+  @keyframes p6 { 0%, 48.15% { fill: #ffffff; stroke-width: 1.5; } 50.25% { fill: #ffe9a8; stroke-width: 3; } 58.25%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p7 { animation: p7 10s linear infinite; }
+  @keyframes p7 { 0%, 58.09% { fill: #ffffff; stroke-width: 1.5; } 60.19% { fill: #ffe9a8; stroke-width: 3; } 68.19%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p8 { animation: p8 10s linear infinite; }
+  @keyframes p8 { 0%, 69.14% { fill: #ffffff; stroke-width: 1.5; } 71.24% { fill: #ffe9a8; stroke-width: 3; } 79.24%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p9 { animation: p9 10s linear infinite; }
+  @keyframes p9 { 0%, 75.9% { fill: #c8f0d0; stroke-width: 1.5; } 76%, 97% { fill: #8fe0a0; stroke-width: 3; } 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .p3, .p4, .p5, .p6, .p7, .p8, .p9 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="640" rx="8"/>
+<path class="walk" d="M300,42.5 L300,73.5" marker-end="url(#w)"/>
+<path class="walk" d="M245.5,88 L160,88 L160,136" marker-end="url(#w)"/>
+<path class="wire" d="M354.5,88 L450,88 L450,136" marker-end="url(#a)"/>
+<path class="walk" d="M160,180 L160,234 L234.5,234" marker-end="url(#w)"/>
+<path class="wire" d="M450,180 L450,234 L365.5,234" marker-end="url(#a)"/>
+<path class="walk" d="M300,256 L300,300 L481.5,300" marker-end="url(#w)"/>
+<path class="wire" d="M300,256 L300,350" marker-end="url(#a)"/>
+<path class="walk" d="M560,329.5 L560,372 L370,372" marker-end="url(#w)"/>
+<path class="walk" d="M300,394 L300,432 L465,432" marker-end="url(#w)"/>
+<path class="wire" d="M300,394 L300,474" marker-end="url(#a)"/>
+<path class="walk" d="M560,446.5 L560,496 L369,496" marker-end="url(#w)"/>
+<path class="wire" d="M300,518 L300,552 L474.5,552" marker-end="url(#a)"/>
+<path class="walk" d="M300,518 L300,593.5" marker-end="url(#w)"/>
+<path class="wire" d="M560,566.5 L560,608 L341,608" marker-end="url(#a)"/>
+<rect class="foc" x="259" y="13.5" width="82" height="29" rx="14.5"/><text class="lbl" x="300" y="32.5" text-anchor="middle">bin/launch</text>
+<polygon class="step p2" points="245.5,88 259.5,73.5 340.5,73.5 354.5,88 340.5,102.5 259.5,102.5"/><text class="lbl" x="300" y="92.5" text-anchor="middle">Host class?</text>
+<rect class="step p3" x="56" y="136" width="208" height="44" rx="5"/><text class="lbl" x="160" y="155" text-anchor="middle">jvm.options</text><text class="lbl" x="160" y="170" text-anchor="middle">-Xms=-Xmx, ZGC, -ZUncommit</text>
+<rect class="step" x="355.5" y="136" width="189" height="44" rx="5"/><text class="lbl" x="450" y="155" text-anchor="middle">jvm-low-resource.options</text><text class="lbl" x="450" y="170" text-anchor="middle">small, elastic heap</text>
+<polygon class="step p4" points="234.5,234 248.5,212 351.5,212 365.5,234 351.5,256 248.5,256"/><text class="lbl" x="300" y="231" text-anchor="middle">affinity.enable</text><text class="lbl" x="300" y="246" text-anchor="middle">= true?</text>
+<rect class="app p5" x="481.5" y="270.5" width="157" height="59" rx="5"/><text class="lbl" x="560" y="289.5" text-anchor="middle">+ -XX:+UseNUMA</text><text class="lbl" x="560" y="304.5" text-anchor="middle">-XX:+UseLargePages</text><text class="lbl" x="560" y="319.5" text-anchor="middle">-XX:+AlwaysPreTouch</text>
+<polygon class="step p6" points="230,372 244,350 356,350 370,372 356,394 244,394"/><text class="lbl" x="300" y="369" text-anchor="middle">APP_NUMA_NODE</text><text class="lbl" x="300" y="384" text-anchor="middle">set?</text>
+<rect class="step p7" x="465" y="417.5" width="190" height="29" rx="5"/><text class="lbl" x="560" y="436.5" text-anchor="middle">prefix: numactl --membind</text>
+<polygon class="step p8" points="231,496 245,474 355,474 369,496 355,518 245,518"/><text class="lbl" x="300" y="493" text-anchor="middle">bypass launcher</text><text class="lbl" x="300" y="508" text-anchor="middle">installed?</text>
+<rect class="step" x="474.5" y="537.5" width="171" height="29" rx="5"/><text class="lbl" x="560" y="556.5" text-anchor="middle">prefix: bypass command</text>
+<rect class="app p9" x="259" y="593.5" width="82" height="29" rx="14.5"/><text class="lbl" x="300" y="612.5" text-anchor="middle">exec java</text>
+<text class="el" x="166" y="82" text-anchor="start">bare_metal</text>
+<text class="el" x="444" y="82" text-anchor="end">VM or other</text>
+<text class="el" x="370" y="294" text-anchor="middle">yes</text>
+<text class="el" x="292" y="300" text-anchor="end">no</text>
+<text class="el" x="370" y="426" text-anchor="middle">yes</text>
+<text class="el" x="292" y="432" text-anchor="end">no</text>
+<text class="el" x="370" y="546" text-anchor="middle">yes</text>
+<text class="el" x="292" y="560" text-anchor="end">no</text>
+<circle class="tok k1" cx="0" cy="0" r="7"/>
+</svg>

@@ -27,14 +27,7 @@ Right after a reboot, memory is mostly free and those allocations are cheap. Lin
 
 Three questions: is free memory at the watermarks, did threads reclaim inline, and did anything wait for memory?
 
-```mermaid
-flowchart TD
-  s(["ms stalls when the journal rotates"]) --> q1{"allocstall rises<br/>at the stall?"}
-  q1 -- no --> f1["Not reclaim: look at fsync and<br/>the logger (use case 16)"]
-  q1 -- yes --> q2{"Zone free near<br/>its min?"}
-  q2 -- yes --> f2["Raise min_free_kbytes,<br/>fence the writer (§3)"]
-  q2 -- no --> f3["Check PSI and the slice limits<br/>(Guide 12 §4.6)"]
-```
+<img src="../../assets/diagrams/uc17-reclaim.svg" alt="A troubleshooting tree for stalls during journal rotation: inline reclaim, then the watermarks" width="720">
 
 *Count inline reclaim at the stall, compare free pages with the watermarks, and confirm with PSI.*
 

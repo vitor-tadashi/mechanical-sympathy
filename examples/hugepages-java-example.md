@@ -85,25 +85,7 @@ fi
 exec "${PREFIX[@]}" java "${PARAMS[@]}" -cp "build/classes/java/main:build/lib/*" com.example.lowlat.LatencyProbe
 ```
 
-```mermaid
-flowchart TD
-  s(["bin/launch"]) --> hc{"Host class?"}
-  hc -- bare_metal --> big["jvm.options<br/>-Xms=-Xmx, ZGC, -ZUncommit"]
-  hc -- "VM or other" --> small["jvm-low-resource.options<br/>small, elastic heap"]
-  big --> aff{"affinity.enable<br/>= true?"}
-  small --> aff
-  aff -- yes --> lp["+ -XX:+UseNUMA<br/>-XX:+UseLargePages<br/>-XX:+AlwaysPreTouch"]
-  aff -- no --> nb
-  lp --> nb{"APP_NUMA_NODE<br/>set?"}
-  nb -- yes --> nm["prefix: numactl --membind"]
-  nb -- no --> by
-  nm --> by{"bypass launcher<br/>installed?"}
-  by -- yes --> bp["prefix: bypass command"]
-  by -- no --> run(["exec java"])
-  bp --> run
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  class lp iso
-```
+<img src="../assets/diagrams/launch-flow.svg" alt="bin/launch picks the options file by host class, adds the large-page flags when pinned, and wraps java with optional numactl and bypass prefixes" width="720">
 
 *The host class picks the options file. Pinning turns on the large-page, NUMA and pre-touch flags. An optional node binding and an optional bypass launcher wrap the final `java` command.*
 
@@ -162,23 +144,7 @@ private static Thread pinnedThread(String name, int cpu, Runnable body) {
 }
 ```
 
-```mermaid
-flowchart TD
-  subgraph os1["OS CPUs (inherited launch mask)"]
-    direction LR
-    gc["GC workers, JIT compiler"]
-    other["logging, admin, main"]
-  end
-  subgraph iso1["Isolated CPUs, NUMA node 1"]
-    direction LR
-    ping["CPU 9 · ping thread"]
-    pong["CPU 11 · pong thread"]
-  end
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
-  class ping,pong iso
-  class gc,other hk
-```
+<img src="../assets/diagrams/probe-thread-pinning.svg" alt="The ping and pong threads are pinned to isolated CPUs 9 and 11; every other JVM thread stays on the OS CPUs" width="720">
 
 *Only the two measuring threads are pinned, one isolated CPU each, on the NIC's node. Every other JVM thread keeps the OS CPU mask it inherited from systemd.*
 

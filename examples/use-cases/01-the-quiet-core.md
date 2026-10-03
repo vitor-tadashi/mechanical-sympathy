@@ -25,16 +25,7 @@ A request loop spins on CPU 5 and answers in about 2 µs. The p50 is fine. The p
 
 Three questions, asked in this order, each with one command:
 
-```mermaid
-flowchart TD
-  s(["Spikes on CPU 5's tail"]) --> q1{"Other tasks<br/>on CPU 5?"}
-  q1 -- yes --> f1["Pin the thread, keep the rest on<br/>the OS CPUs (Guide 02 §4.1)"]
-  q1 -- no --> q2{"LOC near<br/>1000/s?"}
-  q2 -- yes --> f2["The tick is on: nohz_full missing,<br/>or two runnable tasks (Guide 01)"]
-  q2 -- no --> q3{"rtla blames<br/>an IRQ?"}
-  q3 -- yes --> f3["Move the interrupt away<br/>(use case 4)"]
-  q3 -- no --> f4["Name the source with<br/>rtla osnoise (§2)"]
-```
+<img src="../../assets/diagrams/uc01-quiet-core.svg" alt="A troubleshooting tree for spikes on an isolated CPU: other tasks, the tick, then an interrupt" width="720">
 
 *Start from the spikes: other tasks first, then the tick rate, then let `rtla osnoise` name what is left.*
 

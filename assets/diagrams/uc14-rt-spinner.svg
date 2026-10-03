@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 332" width="760" height="332" role="img" aria-labelledby="t d">
+<title id="t">A real-time spinner stalls the kernel on its CPU, and both branches end at SCHED_OTHER</title>
+<desc id="d">Find the FIFO thread on the stalled CPU and check the RT throttle. With throttling on, the thread loses 50 ms every second. With throttling off, ksoftirqd or a kworker waits behind the spinner. Both end at the same fix: the normal scheduling class.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(596.5px, 299px); animation: k1 7s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(140px, 49px); } 6% { transform: translate(140px, 49px); } 7.03% { transform: translate(140px, 75px); } 8.76% { transform: translate(140px, 119px); } 10.86% { transform: translate(140px, 172px); } 14.38% { transform: translate(226.5px, 194px); } 15.33% { transform: translate(250.5px, 194px); } 16.4% { transform: translate(250.5px, 167px); } 22.3% { transform: translate(400px, 167px); } 28.58% { transform: translate(559px, 167px); } 31.15% { transform: translate(624px, 167px); } 36.36% { transform: translate(624px, 299px); } 37.45% { transform: translate(596.5px, 299px); } 100% { transform: translate(596.5px, 299px); } }
+  .p2 { animation: p2 7s linear infinite; }
+  @keyframes p2 { 0%, 37.35% { fill: #ffc9c9; stroke-width: 1.5; } 39.45% { fill: #ff9b9b; stroke-width: 3; } 47.45%, 100% { fill: #ffc9c9; stroke-width: 1.5; } }
+  .k3 { transform: translate(504px, 284.5px); animation: k3 7s linear infinite; }
+  @keyframes k3 { 0% { transform: translate(140px, 49px); } 43% { transform: translate(140px, 49px); } 44.46% { transform: translate(140px, 75px); } 46.93% { transform: translate(140px, 119px); } 49.9% { transform: translate(140px, 172px); } 54.91% { transform: translate(226.5px, 194px); } 56.26% { transform: translate(250.5px, 194px); } 57.77% { transform: translate(250.5px, 221px); } 66.16% { transform: translate(400px, 221px); } 72.12% { transform: translate(504px, 243px); } 74.45% { transform: translate(504px, 284.5px); } 100% { transform: translate(504px, 284.5px); } }
+  .p4 { animation: p4 7s linear infinite; }
+  @keyframes p4 { 0%, 74.35% { fill: #ffc9c9; stroke-width: 1.5; } 76.45% { fill: #ff9b9b; stroke-width: 3; } 84.45%, 100% { fill: #ffc9c9; stroke-width: 1.5; } }
+  .p5 { animation: p5 7s linear infinite; }
+  @keyframes p5 { 0%, 77.9% { fill: #c8f0d0; stroke-width: 1.5; } 78%, 97% { fill: #8fe0a0; stroke-width: 3; } 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .k3, .p4, .p5 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="332" rx="8"/>
+<path class="wire" d="M140,49 L140,75" marker-end="url(#a)"/>
+<path class="wire" d="M203.5,97 L400,97" marker-end="url(#a)"/>
+<path class="wire" d="M140,119 L140,172" marker-end="url(#a)"/>
+<path class="wire" d="M226.5,194 L250.5,194 L250.5,167 L400,167" marker-end="url(#a)"/>
+<path class="wire" d="M226.5,194 L250.5,194 L250.5,221 L400,221" marker-end="url(#a)"/>
+<path class="wire" d="M504,243 L504,284.5" marker-end="url(#a)"/>
+<path class="wire" d="M559,167 L624,167 L624,299 L596.5,299" marker-end="url(#a)"/>
+<rect class="foc" x="23" y="20" width="234" height="29" rx="14.5"/><text class="lbl" x="140" y="39" text-anchor="middle">Network or disk stalls on one CPU</text>
+<polygon class="step" points="76.5,97 90.5,75 189.5,75 203.5,97 189.5,119 90.5,119"/><text class="lbl" x="140" y="94" text-anchor="middle">A FIFO thread</text><text class="lbl" x="140" y="109" text-anchor="middle">on it?</text>
+<rect class="mut" x="400" y="75" width="141" height="44" rx="5"/><text class="lbl" x="470.5" y="94" text-anchor="middle">Not this story: see</text><text class="lbl" x="470.5" y="109" text-anchor="middle">use case 4</text>
+<polygon class="step" points="53.5,194 67.5,172 212.5,172 226.5,194 212.5,216 67.5,216"/><text class="lbl" x="140" y="191" text-anchor="middle">sched_rt_runtime_us</text><text class="lbl" x="140" y="206" text-anchor="middle">is -1?</text>
+<rect class="wait p2" x="400" y="145" width="159" height="44" rx="5"/><text class="lbl" x="479.5" y="164" text-anchor="middle">50 ms throttling gaps</text><text class="lbl" x="479.5" y="179" text-anchor="middle">every second (act 1)</text>
+<rect class="wait p4" x="400" y="199" width="208" height="44" rx="5"/><text class="lbl" x="504" y="218" text-anchor="middle">ksoftirqd or a kworker waits</text><text class="lbl" x="504" y="233" text-anchor="middle">behind the spinner (act 2)</text>
+<rect class="app p5" x="411.5" y="284.5" width="185" height="29" rx="5"/><text class="lbl" x="504" y="303.5" text-anchor="middle">Back to SCHED_OTHER (§3)</text>
+<text class="el" x="235.5" y="92" text-anchor="start">no</text>
+<text class="el" x="146" y="149.5" text-anchor="start">yes</text>
+<text class="el" x="258.5" y="162" text-anchor="start">no</text>
+<text class="el" x="258.5" y="216" text-anchor="start">yes</text>
+<circle class="tok k1" cx="0" cy="0" r="6"/>
+<circle class="tok k3" cx="0" cy="0" r="6"/>
+</svg>

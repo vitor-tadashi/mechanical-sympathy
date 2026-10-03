@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 332" width="760" height="332" role="img" aria-labelledby="t d">
+<title id="t">A rare maximum: check SMIs, then frequency, then idle states</title>
+<desc id="d">Check the SMI count first, then whether the busy frequency varies, then whether deep idle states are listed. When all three are clean, the noise is not coming from the firmware.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(400px, 97px); animation: k1 7s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(140px, 49px); } 6% { transform: translate(140px, 49px); } 12% { transform: translate(140px, 49px); } 17.07% { transform: translate(140px, 75px); } 23.07% { transform: translate(140px, 75px); } 74% { transform: translate(400px, 97px); } 80% { transform: translate(400px, 97px); } 100% { transform: translate(400px, 97px); } }
+  .p2 { animation: p2 7s linear infinite; }
+  @keyframes p2 { 0%, 16.97% { fill: #ffffff; stroke-width: 1.5; } 19.07% { fill: #ffe9a8; stroke-width: 3; } 27.07%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p3 { animation: p3 7s linear infinite; }
+  @keyframes p3 { 0%, 73.9% { fill: #ffc9c9; stroke-width: 1.5; } 74%, 97% { fill: #ff9b9b; stroke-width: 3; } 100% { fill: #ffc9c9; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .p3 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="332" rx="8"/>
+<path class="walk" d="M140,49 L140,75" marker-end="url(#w)"/>
+<path class="walk" d="M191,97 L400,97" marker-end="url(#w)"/>
+<path class="wire" d="M140,119 L140,145" marker-end="url(#a)"/>
+<path class="wire" d="M185.5,167 L400,167" marker-end="url(#a)"/>
+<path class="wire" d="M140,189 L140,215" marker-end="url(#a)"/>
+<path class="wire" d="M203.5,237 L400,237" marker-end="url(#a)"/>
+<path class="wire" d="M140,259 L140,285" marker-end="url(#a)"/>
+<rect class="foc" x="40.5" y="20" width="199" height="29" rx="14.5"/><text class="lbl" x="140" y="39" text-anchor="middle">Rare max you cannot explain</text>
+<polygon class="step p2" points="89,97 103,75 177,75 191,97 177,119 103,119"/><text class="lbl" x="140" y="94" text-anchor="middle">SMI count</text><text class="lbl" x="140" y="109" text-anchor="middle">rising?</text>
+<rect class="wait p3" x="400" y="75" width="259" height="44" rx="5"/><text class="lbl" x="529.5" y="94" text-anchor="middle">A firmware feature: remove sources,</text><text class="lbl" x="529.5" y="109" text-anchor="middle">one change at a time</text>
+<polygon class="step" points="94.5,167 108.5,145 171.5,145 185.5,167 171.5,189 108.5,189"/><text class="lbl" x="140" y="164" text-anchor="middle">Bzy_MHz</text><text class="lbl" x="140" y="179" text-anchor="middle">varies?</text>
+<rect class="box" x="400" y="152.5" width="204" height="29" rx="5"/><text class="lbl" x="502" y="171.5" text-anchor="middle">Turbo, HWP or thermal limits</text>
+<polygon class="step" points="76.5,237 90.5,215 189.5,215 203.5,237 189.5,259 90.5,259"/><text class="lbl" x="140" y="234" text-anchor="middle">Deep idle</text><text class="lbl" x="140" y="249" text-anchor="middle">states listed?</text>
+<rect class="box" x="400" y="222.5" width="207" height="29" rx="5"/><text class="lbl" x="503.5" y="241.5" text-anchor="middle">C-states on, idle=poll missing</text>
+<rect class="mut" x="19" y="285" width="242" height="29" rx="5"/><text class="lbl" x="140" y="304" text-anchor="middle">Not firmware: back to rtla osnoise</text>
+<text class="el" x="223" y="92" text-anchor="start">yes</text>
+<text class="el" x="146" y="136" text-anchor="start">no</text>
+<text class="el" x="217.5" y="162" text-anchor="start">yes</text>
+<text class="el" x="146" y="206" text-anchor="start">no</text>
+<text class="el" x="235.5" y="232" text-anchor="start">yes</text>
+<text class="el" x="146" y="276" text-anchor="start">no</text>
+<circle class="tok k1" cx="0" cy="0" r="7"/>
+</svg>
