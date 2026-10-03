@@ -1,6 +1,6 @@
 # Guide 07 — Operating System Hygiene
 
-> **Script:** [`scripts/07-os-hygiene`](../scripts/07-os-hygiene) · **Previous:** [Guide 06](06-kernel-sysctl-tuning.md) · **Next:** [Guide 08 — Kernel bypass](08-kernel-bypass.md) (optional) · **Terms:** [Glossary](../GLOSSARY.md)
+> **Script:** [`scripts/07-os-hygiene`](../scripts/07-os-hygiene) · **Previous:** [Guide 06](06-kernel-sysctl-tuning.md) · **Next:** [Guide 08 — Kernel bypass](08-kernel-bypass.md) (optional), or [Guide 10 — Time synchronization](10-time-sync.md) · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|

@@ -1,6 +1,6 @@
 # Guide 00 — BIOS and Firmware
 
-> **Script:** [`scripts/00-bios-firmware`](../scripts/00-bios-firmware) · **Concepts:** [cpu-isolation §4](../concepts/cpu-isolation.md#4-sources-of-noise-on-a-cpu-and-what-removes-each), [bootloader](../concepts/bootloader.md) · **Next:** [Guide 01 — Kernel command line](01-grub-bootloader-tuning.md) · **Measure with:** [Guide 09](09-measuring-latency.md) · **Terms:** [Glossary](../GLOSSARY.md)
+> **Script:** [`scripts/00-bios-firmware`](../scripts/00-bios-firmware) · **Concepts:** [cpu-isolation §4](../concepts/cpu-isolation.md#4-sources-of-noise-on-a-cpu-and-what-removes-each), [bootloader](../concepts/bootloader.md) · **Previous:** [Guide 09 — Measuring latency](09-measuring-latency.md) (step 0: the baseline) · **Next:** [Guide 01 — Kernel command line](01-grub-bootloader-tuning.md) · **Measure with:** [Guide 09](09-measuring-latency.md) · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|
