@@ -39,14 +39,7 @@ mpstat -P ALL 1
 
 ## 3. Change
 
-```mermaid
-flowchart TD
-  s(["An agent to fence"]) --> q1{"A systemd<br/>unit?"}
-  q1 -- yes --> f1["List it in HOUSEKEEPING_SLICE_UNITS,<br/>restart it into the slice"]
-  q1 -- "no, or it respawns" --> f2["List it in HOUSEKEEPING_PIN_PROCESSES:<br/>pinned by name at every boot"]
-  f1 --> lim["Slice limits: CPUQuota,<br/>MemoryMax, IOWeight"]
-  f2 --> lim
-```
+<img src="../../assets/diagrams/uc03-fence-agent.svg" alt="Units go into the housekeeping slice, other agents are pinned by name, and both end under the slice limits" width="720">
 
 *Units go into the slice, where the kernel fences them. Agents that start outside systemd are pinned by name. Both end under the same limits.*
 

@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" width="760" height="300" role="img" aria-labelledby="t d">
+<title id="t">The critical flow gets its own queue, its interrupt lands on CPU 1, and only data reaches CPU 3</title>
+<desc id="d">An ntuple rule steers the critical flow to queue 0, whose MSI-X vector interrupts housekeeping CPU 1, which runs the hard IRQ and the softirq and queues the data on the socket that net.rx spins on, on isolated CPU 3. Every other flow is hashed by RSS, with weights 0 1, to queue 1 and its own IRQ CPU. The addresses are made up.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(694px, 76.5px); animation: k1 8s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(75.5px, 76.5px); } 5% { transform: translate(75.5px, 76.5px); } 13.98% { transform: translate(184.667px, 84px); } 21.36% { transform: translate(274.333px, 91.5px); } 29.68% { transform: translate(375.5px, 84px); } 39.02% { transform: translate(489.167px, 76.5px); } 45.02% { transform: translate(489.167px, 76.5px); } 53.61% { transform: translate(592.833px, 91.5px); } 62% { transform: translate(694px, 76.5px); } 100% { transform: translate(694px, 76.5px); } }
+  .p2 { animation: p2 8s linear infinite; }
+  @keyframes p2 { 0%, 38.92% { fill: #cfe3ff; stroke-width: 1.5; } 41.02% { fill: #9cc3ff; stroke-width: 3; } 47.02%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  .p3 { animation: p3 8s linear infinite; }
+  @keyframes p3 { 0%, 61.9% { fill: #c8f0d0; stroke-width: 1.5; } 62%, 97% { fill: #8fe0a0; stroke-width: 3; } 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  .k4 { transform: translate(513px, 233.5px); animation: k4 8s linear infinite; }
+  @keyframes k4 { 0% { transform: translate(86px, 233.5px); } 55% { transform: translate(86px, 233.5px); } 67.91% { transform: translate(253px, 233.5px); } 78.34% { transform: translate(388px, 233.5px); } 88% { transform: translate(513px, 233.5px); } 100% { transform: translate(513px, 233.5px); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .p3, .k4 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="300" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="140" rx="6"/>
+<text class="cap" x="24" y="34">Critical flow</text>
+<text class="sub" x="24" y="52">Its own queue and vector. The interrupt work stays on housekeeping CPU 1.</text>
+<path class="wire" d="M129,106 L154.667,106" marker-end="url(#a)"/>
+<path class="wire" d="M214.667,106 L240.333,106" marker-end="url(#a)"/>
+<path class="wire" d="M308.333,106 L334,106" marker-end="url(#a)"/>
+<path class="wire" d="M417,106 L442.667,106" marker-end="url(#a)"/>
+<path class="wire" d="M535.667,106 L561.333,106" marker-end="url(#a)"/>
+<path class="wire" d="M624.333,106 L650,106" marker-end="url(#a)"/>
+<rect class="lane" x="10" y="160" width="740" height="130" rx="6"/>
+<text class="cap" x="24" y="184">Every other flow</text>
+<text class="sub" x="24" y="202">Hashed to the other queue and its own IRQ CPU.</text>
+<path class="wire" d="M150,248 L196,248" marker-end="url(#a)"/>
+<path class="wire" d="M310,248 L356,248" marker-end="url(#a)"/>
+<path class="wire" d="M420,248 L466,248" marker-end="url(#a)"/>
+<rect class="foc" x="22" y="76.5" width="107" height="59" rx="29.5"/><text class="lbl" x="75.5" y="95.5" text-anchor="middle">critical flow</text><text class="lbl" x="75.5" y="110.5" text-anchor="middle">udp</text><text class="lbl" x="75.5" y="125.5" text-anchor="middle">10.10.1.10:5000</text>
+<rect class="step" x="154.667" y="84" width="60" height="44" rx="5"/><text class="lbl" x="184.667" y="103" text-anchor="middle">ntuple</text><text class="lbl" x="184.667" y="118" text-anchor="middle">rule</text>
+<rect class="step" x="240.333" y="91.5" width="68" height="29" rx="5"/><text class="lbl" x="274.333" y="110.5" text-anchor="middle">queue 0</text>
+<rect class="step" x="334" y="84" width="83" height="44" rx="5"/><text class="lbl" x="375.5" y="103" text-anchor="middle">its MSI-X</text><text class="lbl" x="375.5" y="118" text-anchor="middle">vector</text>
+<rect class="box p2" x="442.667" y="76.5" width="93" height="59" rx="5"/><text class="lbl" x="489.167" y="95.5" text-anchor="middle">CPU 1:</text><text class="lbl" x="489.167" y="110.5" text-anchor="middle">hard IRQ</text><text class="lbl" x="489.167" y="125.5" text-anchor="middle">and softirq</text>
+<rect class="step" x="561.333" y="91.5" width="63" height="29" rx="5"/><text class="lbl" x="592.833" y="110.5" text-anchor="middle">socket</text>
+<rect class="app p3" x="650" y="76.5" width="88" height="59" rx="2"/><line class="sl" x1="656" y1="76.5" x2="656" y2="135.5"/><line class="sl" x1="732" y1="76.5" x2="732" y2="135.5"/><text class="lbl" x="694" y="95.5" text-anchor="middle">net.rx</text><text class="lbl" x="694" y="110.5" text-anchor="middle">spinning</text><text class="lbl" x="694" y="125.5" text-anchor="middle">on CPU 3</text>
+<rect class="mut" x="22" y="233.5" width="128" height="29" rx="14.5"/><text class="lbl" x="86" y="252.5" text-anchor="middle">every other flow</text>
+<rect class="step" x="196" y="233.5" width="114" height="29" rx="5"/><text class="lbl" x="253" y="252.5" text-anchor="middle">RSS, weight 0 1</text>
+<rect class="step" x="356" y="233.5" width="64" height="29" rx="5"/><text class="lbl" x="388" y="252.5" text-anchor="middle">queue 1</text>
+<rect class="box" x="466" y="233.5" width="94" height="29" rx="5"/><text class="lbl" x="513" y="252.5" text-anchor="middle">its IRQ CPU</text>
+<circle class="tok k1" cx="0" cy="0" r="6"/>
+<circle class="tokb k4" cx="0" cy="0" r="6"/>
+</svg>

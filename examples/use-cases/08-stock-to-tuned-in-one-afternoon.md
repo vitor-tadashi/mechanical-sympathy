@@ -23,23 +23,7 @@ Before touching anything, know where the tail comes from. Each layer adds rare e
 
 ## 2. The afternoon
 
-```mermaid
-gantt
-  title Scenario A, first host (about half a day)
-  dateFormat HH:mm
-  axisFormat %H:%M
-  section Prepare
-    Baseline and verify-tuning report     :p1, 09:00, 45m
-    CPU layout and lowlat.conf            :p2, after p1, 60m
-    Security sign-off check               :p3, after p2, 15m
-  section Apply
-    apply-all --dry-run and review        :a1, after p3, 30m
-    apply-all --apply                     :a2, after a1, 15m
-    Reboot (one reboot for 01, 02, 03)    :crit, a3, after a2, 15m
-  section Check
-    verify-tuning and rtla osnoise        :c1, after a3, 30m
-    Application launch and latency run    :c2, after c1, 60m
-```
+<img src="../../assets/diagrams/afternoon-schedule.svg" alt="A schedule of the afternoon: prepare, apply with one reboot, then check" width="720">
 
 *About two hours to measure and design, under an hour to apply with a single reboot, then about 90 minutes to verify and compare against the baseline. The times are indicative.*
 
