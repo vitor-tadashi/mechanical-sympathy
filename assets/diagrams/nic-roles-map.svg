@@ -35,32 +35,26 @@
   .k1 { transform: translate(515px, 88px); animation: k1 8s linear infinite; }
   @keyframes k1 { 0% { transform: translate(274px, 64px); } 6% { transform: translate(274px, 64px); } 10.77% { transform: translate(394.5px, 64px); } 11.72% { transform: translate(394.5px, 88px); } 16.48% { transform: translate(515px, 88px); } 100% { transform: translate(515px, 88px); } }
   .p2 { animation: p2 8s linear infinite; }
-  @keyframes p2 { 0%, 16.38% { fill: #cfe3ff; stroke-width: 1.5; } 18.48% { fill: #9cc3ff; stroke-width: 3; } 26.48%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  @keyframes p2 { 0% { fill: #cfe3ff; stroke-width: 1.5; } 16.38% { fill: #cfe3ff; stroke-width: 1.5; } 18.48% { fill: #9cc3ff; stroke-width: 3; } 26.48% { fill: #cfe3ff; stroke-width: 1.5; } 28.72% { fill: #cfe3ff; stroke-width: 1.5; } 30.82% { fill: #9cc3ff; stroke-width: 3; } 38.82% { fill: #cfe3ff; stroke-width: 1.5; } 100% { fill: #cfe3ff; stroke-width: 1.5; } }
   .k3 { transform: translate(515px, 88px); animation: k3 8s linear infinite; }
   @keyframes k3 { 0% { transform: translate(274px, 112px); } 18.33% { transform: translate(274px, 112px); } 23.1% { transform: translate(394.5px, 112px); } 24.05% { transform: translate(394.5px, 88px); } 28.82% { transform: translate(515px, 88px); } 100% { transform: translate(515px, 88px); } }
-  .p4 { animation: p4 8s linear infinite; }
-  @keyframes p4 { 0%, 28.72% { fill: #cfe3ff; stroke-width: 1.5; } 30.82% { fill: #9cc3ff; stroke-width: 3; } 38.82%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
-  .k5 { transform: translate(515px, 228px); animation: k5 8s linear infinite; }
-  @keyframes k5 { 0% { transform: translate(274px, 204px); } 30.67% { transform: translate(274px, 204px); } 35.43% { transform: translate(394.5px, 204px); } 36.38% { transform: translate(394.5px, 228px); } 41.15% { transform: translate(515px, 228px); } 100% { transform: translate(515px, 228px); } }
-  .p6 { animation: p6 8s linear infinite; }
-  @keyframes p6 { 0%, 41.05% { fill: #cfe3ff; stroke-width: 1.5; } 43.15% { fill: #9cc3ff; stroke-width: 3; } 51.15%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
-  .k7 { transform: translate(515px, 228px); animation: k7 8s linear infinite; }
-  @keyframes k7 { 0% { transform: translate(274px, 252px); } 43% { transform: translate(274px, 252px); } 47.77% { transform: translate(394.5px, 252px); } 48.72% { transform: translate(394.5px, 228px); } 53.48% { transform: translate(515px, 228px); } 100% { transform: translate(515px, 228px); } }
+  .k4 { transform: translate(515px, 228px); animation: k4 8s linear infinite; }
+  @keyframes k4 { 0% { transform: translate(274px, 204px); } 30.67% { transform: translate(274px, 204px); } 35.43% { transform: translate(394.5px, 204px); } 36.38% { transform: translate(394.5px, 228px); } 41.15% { transform: translate(515px, 228px); } 100% { transform: translate(515px, 228px); } }
+  .p5 { animation: p5 8s linear infinite; }
+  @keyframes p5 { 0% { fill: #cfe3ff; stroke-width: 1.5; } 41.05% { fill: #cfe3ff; stroke-width: 1.5; } 43.15% { fill: #9cc3ff; stroke-width: 3; } 51.15% { fill: #cfe3ff; stroke-width: 1.5; } 53.38% { fill: #cfe3ff; stroke-width: 1.5; } 55.48% { fill: #9cc3ff; stroke-width: 3; } 63.48% { fill: #cfe3ff; stroke-width: 1.5; } 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  .k6 { transform: translate(515px, 228px); animation: k6 8s linear infinite; }
+  @keyframes k6 { 0% { transform: translate(274px, 252px); } 43% { transform: translate(274px, 252px); } 47.77% { transform: translate(394.5px, 252px); } 48.72% { transform: translate(394.5px, 228px); } 53.48% { transform: translate(515px, 228px); } 100% { transform: translate(515px, 228px); } }
+  .k7 { transform: translate(515px, 328px); animation: k7 8s linear infinite; }
+  @keyframes k7 { 0% { transform: translate(274px, 304px); } 55.33% { transform: translate(274px, 304px); } 60.1% { transform: translate(394.5px, 304px); } 61.05% { transform: translate(394.5px, 328px); } 65.82% { transform: translate(515px, 328px); } 100% { transform: translate(515px, 328px); } }
   .p8 { animation: p8 8s linear infinite; }
-  @keyframes p8 { 0%, 53.38% { fill: #cfe3ff; stroke-width: 1.5; } 55.48% { fill: #9cc3ff; stroke-width: 3; } 63.48%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  @keyframes p8 { 0% { fill: #cfe3ff; stroke-width: 1.5; } 65.72% { fill: #cfe3ff; stroke-width: 1.5; } 67.82% { fill: #9cc3ff; stroke-width: 3; } 75.82% { fill: #cfe3ff; stroke-width: 1.5; } 78.05% { fill: #cfe3ff; stroke-width: 1.5; } 80.15% { fill: #9cc3ff; stroke-width: 3; } 88.15% { fill: #cfe3ff; stroke-width: 1.5; } 100% { fill: #cfe3ff; stroke-width: 1.5; } }
   .k9 { transform: translate(515px, 328px); animation: k9 8s linear infinite; }
-  @keyframes k9 { 0% { transform: translate(274px, 304px); } 55.33% { transform: translate(274px, 304px); } 60.1% { transform: translate(394.5px, 304px); } 61.05% { transform: translate(394.5px, 328px); } 65.82% { transform: translate(515px, 328px); } 100% { transform: translate(515px, 328px); } }
-  .p10 { animation: p10 8s linear infinite; }
-  @keyframes p10 { 0%, 65.72% { fill: #cfe3ff; stroke-width: 1.5; } 67.82% { fill: #9cc3ff; stroke-width: 3; } 75.82%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
-  .k11 { transform: translate(515px, 328px); animation: k11 8s linear infinite; }
-  @keyframes k11 { 0% { transform: translate(274px, 352px); } 67.67% { transform: translate(274px, 352px); } 72.43% { transform: translate(394.5px, 352px); } 73.38% { transform: translate(394.5px, 328px); } 78.15% { transform: translate(515px, 328px); } 100% { transform: translate(515px, 328px); } }
-  .p12 { animation: p12 8s linear infinite; }
-  @keyframes p12 { 0%, 78.05% { fill: #cfe3ff; stroke-width: 1.5; } 80.15% { fill: #9cc3ff; stroke-width: 3; } 88.15%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  @keyframes k9 { 0% { transform: translate(274px, 352px); } 67.67% { transform: translate(274px, 352px); } 72.43% { transform: translate(394.5px, 352px); } 73.38% { transform: translate(394.5px, 328px); } 78.15% { transform: translate(515px, 328px); } 100% { transform: translate(515px, 328px); } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .k1, .p2, .k3, .p4, .k5, .p6, .k7, .p8, .k9, .p10, .k11, .p12 { animation: none; }
+    .k1, .p2, .k3, .k4, .p5, .k6, .k7, .p8, .k9 { animation: none; }
   }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="400" rx="8"/>
@@ -80,13 +74,13 @@
 <rect class="mut" x="54" y="232" width="220" height="40" rx="5"/><text class="sm" x="164" y="249.5" text-anchor="middle">eno2 · mgmt</text><text class="sm" x="164" y="263.5" text-anchor="middle">SSH, config (untouched)</text>
 <rect class="box" x="54" y="284" width="220" height="40" rx="5"/><text class="sm" x="164" y="301.5" text-anchor="middle">ens2f0 · bulk</text><text class="sm" x="164" y="315.5" text-anchor="middle">replication, archive</text>
 <rect class="box" x="54" y="332" width="220" height="40" rx="5"/><text class="sm" x="164" y="349.5" text-anchor="middle">ens2f1 · bulk</text><text class="sm" x="164" y="363.5" text-anchor="middle">logs, reports</text>
-<rect class="box p2 p4" x="515" y="66" width="170" height="44" rx="5"/><text class="lbl" x="600" y="85" text-anchor="middle">CPU 1</text><text class="lbl" x="600" y="100" text-anchor="middle">node-1 housekeeping</text>
-<rect class="box p6 p8" x="515" y="206" width="170" height="44" rx="5"/><text class="lbl" x="600" y="232.5" text-anchor="middle">CPU 0</text>
-<rect class="box p10 p12" x="515" y="306" width="170" height="44" rx="5"/><text class="lbl" x="600" y="325" text-anchor="middle">CPU 30</text><text class="lbl" x="600" y="340" text-anchor="middle">far from critical</text>
+<rect class="box p2" x="515" y="66" width="170" height="44" rx="5"/><text class="lbl" x="600" y="85" text-anchor="middle">CPU 1</text><text class="lbl" x="600" y="100" text-anchor="middle">node-1 housekeeping</text>
+<rect class="box p5" x="515" y="206" width="170" height="44" rx="5"/><text class="lbl" x="600" y="232.5" text-anchor="middle">CPU 0</text>
+<rect class="box p8" x="515" y="306" width="170" height="44" rx="5"/><text class="lbl" x="600" y="325" text-anchor="middle">CPU 30</text><text class="lbl" x="600" y="340" text-anchor="middle">far from critical</text>
 <circle class="tokb k1" cx="0" cy="0" r="6"/>
 <circle class="tokb k3" cx="0" cy="0" r="6"/>
-<circle class="tokb k5" cx="0" cy="0" r="6"/>
+<circle class="tokb k4" cx="0" cy="0" r="6"/>
+<circle class="tokb k6" cx="0" cy="0" r="6"/>
 <circle class="tokb k7" cx="0" cy="0" r="6"/>
 <circle class="tokb k9" cx="0" cy="0" r="6"/>
-<circle class="tokb k11" cx="0" cy="0" r="6"/>
 </svg>

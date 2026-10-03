@@ -35,16 +35,14 @@
   .k1 { transform: translate(685px, 125px); animation: k1 9s linear infinite; }
   @keyframes k1 { 0% { transform: translate(145.5px, 125px); } 6% { transform: translate(145.5px, 125px); } 7.31% { transform: translate(172.75px, 125px); } 10.42% { transform: translate(172.75px, 60px); } 11.73% { transform: translate(200px, 60px); } 15.56% { transform: translate(280px, 60px); } 17.48% { transform: translate(320px, 60px); } 21.31% { transform: translate(400px, 60px); } 21.88% { transform: translate(412px, 60px); } 25% { transform: translate(412px, 125px); } 25.57% { transform: translate(424px, 125px); } 30.37% { transform: translate(424px, 125px); } 30.57% { transform: translate(145.5px, 125px); } 33.19% { transform: translate(200px, 125px); } 37.02% { transform: translate(280px, 125px); } 38.94% { transform: translate(320px, 125px); } 42.77% { transform: translate(400px, 125px); } 43.92% { transform: translate(424px, 125px); } 48.72% { transform: translate(424px, 125px); } 48.92% { transform: translate(145.5px, 125px); } 50.23% { transform: translate(172.75px, 125px); } 53.34% { transform: translate(172.75px, 190px); } 54.65% { transform: translate(200px, 190px); } 58.48% { transform: translate(280px, 190px); } 60.4% { transform: translate(320px, 190px); } 64.23% { transform: translate(400px, 190px); } 64.8% { transform: translate(412px, 190px); } 67.92% { transform: translate(412px, 125px); } 68.49% { transform: translate(424px, 125px); } 75.2% { transform: translate(564px, 125px); } 76.35% { transform: translate(588px, 125px); } 80.09% { transform: translate(666px, 125px); } 81% { transform: translate(685px, 125px); } 85.8% { transform: translate(685px, 125px); } 100% { transform: translate(685px, 125px); } }
   .p2 { animation: p2 9s linear infinite; }
-  @keyframes p2 { 0%, 25.47% { fill: #cfe3ff; stroke-width: 1.5; } 27.57% { fill: #9cc3ff; stroke-width: 3; } 31.57%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  @keyframes p2 { 0% { fill: #cfe3ff; stroke-width: 1.5; } 25.47% { fill: #cfe3ff; stroke-width: 1.5; } 27.57% { fill: #9cc3ff; stroke-width: 3; } 31.57% { fill: #cfe3ff; stroke-width: 1.5; } 43.82% { fill: #cfe3ff; stroke-width: 1.5; } 45.92% { fill: #9cc3ff; stroke-width: 3; } 49.92% { fill: #cfe3ff; stroke-width: 1.5; } 100% { fill: #cfe3ff; stroke-width: 1.5; } }
   .p3 { animation: p3 9s linear infinite; }
-  @keyframes p3 { 0%, 43.82% { fill: #cfe3ff; stroke-width: 1.5; } 45.92% { fill: #9cc3ff; stroke-width: 3; } 49.92%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
-  .p4 { animation: p4 9s linear infinite; }
-  @keyframes p4 { 0%, 80.9% { fill: #c8f0d0; stroke-width: 1.5; } 81%, 97% { fill: #8fe0a0; stroke-width: 3; } 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  @keyframes p3 { 0%, 80.9% { fill: #c8f0d0; stroke-width: 1.5; } 81%, 97% { fill: #8fe0a0; stroke-width: 3; } 100% { fill: #c8f0d0; stroke-width: 1.5; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .k1, .p2, .p3, .p4 { animation: none; }
+    .k1, .p2, .p3 { animation: none; }
   }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="250" rx="8"/>
@@ -67,8 +65,8 @@
 <rect class="step" x="320" y="110.5" width="80" height="29" rx="5"/><text class="lbl" x="360" y="129.5" text-anchor="middle">IRQ 121</text>
 <rect class="step" x="200" y="175.5" width="80" height="29" rx="5"/><text class="lbl" x="240" y="194.5" text-anchor="middle">queue N</text>
 <rect class="step" x="320" y="175.5" width="80" height="29" rx="5"/><text class="lbl" x="360" y="194.5" text-anchor="middle">IRQ 12N</text>
-<rect class="box p2 p3" x="424" y="103" width="140" height="44" rx="5"/><text class="lbl" x="494" y="122" text-anchor="middle">CPU 1</text><text class="lbl" x="494" y="137" text-anchor="middle">(smp_affinity_list)</text>
+<rect class="box p2" x="424" y="103" width="140" height="44" rx="5"/><text class="lbl" x="494" y="122" text-anchor="middle">CPU 1</text><text class="lbl" x="494" y="137" text-anchor="middle">(smp_affinity_list)</text>
 <rect class="box" x="588" y="103" width="78" height="44" rx="5"/><text class="lbl" x="627" y="122" text-anchor="middle">NAPI poll</text><text class="lbl" x="627" y="137" text-anchor="middle">softirq</text>
-<rect class="app p4" x="685" y="110.5" width="60" height="29" rx="5"/><text class="lbl" x="715" y="129.5" text-anchor="middle">socket</text>
+<rect class="app p3" x="685" y="110.5" width="60" height="29" rx="5"/><text class="lbl" x="715" y="129.5" text-anchor="middle">socket</text>
 <circle class="tok k1" cx="0" cy="0" r="7"/>
 </svg>
