@@ -84,7 +84,13 @@ What the profile does **not** do, and the guides do:
 Do not run cpu-partitioning **and** Guides 01 and 02 on the same CPUs. Both write kernel arguments: tuned through its bootloader plugin, the scripts through `grubby`. Both write the systemd CPU mask too, and the next one to run wins. Pick one owner for each setting:
 
 - **Guides only** (the default of this repository). Guide 07 includes `network-latency`, which isolates nothing. Recent tuned versions (2.21 here) still add `skew_tick=1 tsc=reliable rcupdate.rcu_normal_after_boot=1` to the command line through it: `/etc/tuned/bootcmdline` shows what your version adds.
-- **The profile for the CPUs, the guides for the rest.** Set `isolated_cores` to `ISOLATED_CPUS`, and set `no_balance_cores` to the same list if you want `isolcpus`. Then skip `01-grub-bootloader` and `02-cpu-isolation`, and run the other guides. `verify-tuning` will still report the boot arguments that differ (`nohz=on`, no `isolcpus`) as FAIL. Read those lines against this table.
+- **The profile for the CPUs, the guides for the rest.** Set `isolated_cores` to `ISOLATED_CPUS`, and set `no_balance_cores` to the same list if you want `isolcpus`. Then skip `01-grub-bootloader` and `02-cpu-isolation`, and run the other guides. Those two scripts also set things the profile does not, so add them by hand, or other guides lose what they build on:
+  - the latency subset of [Guide 01 §5.1](../guides/01-grub-bootloader-tuning.md#51-latency-subset-bare-metal-and-vms) (`idle=poll`, the C-state caps, `transparent_hugepage=never`) and `rcu_nocb_poll`;
+  - the huge page size of [Guide 01 §5.5](../guides/01-grub-bootloader-tuning.md#55-huge-page-size) (`default_hugepagesz` and `hugepagesz`). Without `hugepagesz=` on the command line, the early-boot reservation of Guide 03 does not run, and only its best-effort runtime attempt is left;
+  - your IOMMU and mitigation choices from [Guide 01 §5.6](../guides/01-grub-bootloader-tuning.md#56-iommu-and-cpu-vulnerability-mitigations-security-sensitive);
+  - `kernel.sched_rt_runtime_us=-1` from [Guide 02 §4.4](../guides/02-cpu-core-isolation.md#44-real-time-throttling), which no profile but `realtime` sets, and the RT limits in `system.conf` from [Guide 02 §4.1](../guides/02-cpu-core-isolation.md#41-systemd-cpuaffinity-persistent).
+
+  `verify-tuning` will still report the boot arguments that differ (`nohz=on`, and no `isolcpus` without `no_balance_cores`) as FAIL. Read those lines against this table.
 
 > [!WARNING]
 > tuned writes its own boot arguments into every boot entry. After switching profiles, check the result with `grubby --info=ALL` and `/proc/cmdline` after a reboot, as in [Guide 01 §7](../guides/01-grub-bootloader-tuning.md#7-verification).
@@ -93,7 +99,7 @@ Do not run cpu-partitioning **and** Guides 01 and 02 on the same CPUs. Both writ
 
 The `realtime` profile is meant for hosts that boot the real-time kernel (§5). It includes `network-latency`, like the others, and adds:
 
-- `isolcpus=managed_irq,domain,<isolated_cores>`, so that kernel-managed interrupts also stay off the isolated CPUs ([boot path §3](bootloader.md#3-the-housekeeping-model)). `isolate_managed_irq=N` drops the flag.
+- `isolcpus=managed_irq,domain,<isolated_cores>`, so that kernel-managed interrupts move to a housekeeping CPU where they can ([boot path §3](bootloader.md#3-the-housekeeping-model)). It is best effort: a device queue whose mask holds only isolated CPUs keeps them. Check where each one lands with `/proc/irq/*/effective_affinity_list`, and watch its count in `/proc/interrupts`. `isolate_managed_irq=N` drops the flag.
 - `kernel.sched_rt_runtime_us = -1`: no RT throttling, as in [Guide 02 §4.4](../guides/02-cpu-core-isolation.md#44-real-time-throttling).
 - the same workqueue masks, irqbalance ban, scheduler plugin and `intel_pstate=disable` as cpu-partitioning.
 - The channel count of every NIC set to `netdev_queue_count`, or by default to the number of housekeeping CPUs. That overlaps [Guide 04 §5.1](../guides/04-network-optimization.md#51-queues-channels-ethtool--l), which sets channels per NIC role, so give it one owner.
