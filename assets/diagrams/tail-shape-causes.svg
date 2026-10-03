@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 370" width="760" height="370" role="img" aria-labelledby="t d">
+<title id="t">The shape of the tail points at its cause</title>
+<desc id="d">Spikes at a fixed period point at timers: every second the residual tick or RT throttling, every millisecond a full tick, every few seconds vmstat, a watchdog or an agent. Two humps point at two paths. Slowness only at the start points at faults and warm-up. A rare millisecond maximum points at SMIs, direct reclaim or a GC pause.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(470px, 38px); animation: k1 8s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(127px, 185px); } 6% { transform: translate(127px, 185px); } 6.58% { transform: translate(145px, 185px); } 9.56% { transform: translate(145px, 92px); } 11.01% { transform: translate(190px, 92px); } 14.86% { transform: translate(310px, 92px); } 15.63% { transform: translate(334px, 92px); } 17.36% { transform: translate(334px, 38px); } 21.72% { transform: translate(470px, 38px); } 100% { transform: translate(470px, 38px); } }
+  .p2 { animation: p2 8s linear infinite; }
+  @keyframes p2 { 0%, 21.62% { fill: #cfe3ff; stroke-width: 1.5; } 23.72% { fill: #9cc3ff; stroke-width: 3; } 31.73%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  .k3 { transform: translate(470px, 208px); animation: k3 8s linear infinite; }
+  @keyframes k3 { 0% { transform: translate(127px, 185px); } 24.5% { transform: translate(127px, 185px); } 25.27% { transform: translate(145px, 185px); } 26.26% { transform: translate(145px, 208px); } 28.54% { transform: translate(198px, 208px); } 33.01% { transform: translate(302px, 208px); } 40.23% { transform: translate(470px, 208px); } 100% { transform: translate(470px, 208px); } }
+  .p4 { animation: p4 8s linear infinite; }
+  @keyframes p4 { 0%, 40.12% { fill: #cfe3ff; stroke-width: 1.5; } 42.23% { fill: #9cc3ff; stroke-width: 3; } 50.22%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  .k5 { transform: translate(470px, 270px); animation: k5 8s linear infinite; }
+  @keyframes k5 { 0% { transform: translate(127px, 185px); } 43% { transform: translate(127px, 185px); } 43.66% { transform: translate(145px, 185px); } 46.78% { transform: translate(145px, 270px); } 48.57% { transform: translate(193.5px, 270px); } 52.72% { transform: translate(306.5px, 270px); } 58.73% { transform: translate(470px, 270px); } 100% { transform: translate(470px, 270px); } }
+  .p6 { animation: p6 8s linear infinite; }
+  @keyframes p6 { 0%, 58.63% { fill: #cfe3ff; stroke-width: 1.5; } 60.73% { fill: #9cc3ff; stroke-width: 3; } 68.73%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  .k7 { transform: translate(470px, 332px); animation: k7 8s linear infinite; }
+  @keyframes k7 { 0% { transform: translate(127px, 185px); } 61.5% { transform: translate(127px, 185px); } 62.08% { transform: translate(145px, 185px); } 66.8% { transform: translate(145px, 332px); } 67.2% { transform: translate(157.5px, 332px); } 73.13% { transform: translate(342.5px, 332px); } 77.23% { transform: translate(470px, 332px); } 100% { transform: translate(470px, 332px); } }
+  .p8 { animation: p8 8s linear infinite; }
+  @keyframes p8 { 0%, 77.12% { fill: #cfe3ff; stroke-width: 1.5; } 79.22% { fill: #9cc3ff; stroke-width: 3; } 87.22%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .k3, .p4, .k5, .p6, .k7, .p8 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="370" rx="8"/>
+<path class="wire" d="M310,92 L334,92 L334,38 L470,38" marker-end="url(#a)"/>
+<path class="wire" d="M310,92 L470,92" marker-end="url(#a)"/>
+<path class="wire" d="M310,92 L334,92 L334,146 L470,146" marker-end="url(#a)"/>
+<path class="wire" d="M302,208 L470,208" marker-end="url(#a)"/>
+<path class="wire" d="M306.5,270 L470,270" marker-end="url(#a)"/>
+<path class="wire" d="M342.5,332 L470,332" marker-end="url(#a)"/>
+<path class="wire" d="M127,185 L145,185 L145,92 L190,92" marker-end="url(#a)"/>
+<path class="wire" d="M127,185 L145,185 L145,208 L198,208" marker-end="url(#a)"/>
+<path class="wire" d="M127,185 L145,185 L145,270 L193.5,270" marker-end="url(#a)"/>
+<path class="wire" d="M127,185 L145,185 L145,332 L157.5,332" marker-end="url(#a)"/>
+<polygon class="step" points="190,92 204,70 296,70 310,92 296,114 204,114"/><text class="lbl" x="250" y="89" text-anchor="middle">Spikes at a</text><text class="lbl" x="250" y="104" text-anchor="middle">fixed period?</text>
+<rect class="box p2" x="470" y="16" width="209" height="44" rx="5"/><text class="lbl" x="574.5" y="35" text-anchor="middle">Residual tick or RT throttling</text><text class="lbl" x="574.5" y="50" text-anchor="middle">(Guide 01 §7, Guide 02 §4.4)</text>
+<rect class="box" x="470" y="70" width="233" height="44" rx="5"/><text class="lbl" x="586.5" y="89" text-anchor="middle">Full tick: nohz_full not active</text><text class="lbl" x="586.5" y="104" text-anchor="middle">or more than one task on the CPU</text>
+<rect class="box" x="470" y="124" width="227" height="44" rx="5"/><text class="lbl" x="583.5" y="143" text-anchor="middle">vmstat, a watchdog or an agent:</text><text class="lbl" x="583.5" y="158" text-anchor="middle">find it with rtla osnoise</text>
+<polygon class="step" points="198,208 212,186 288,186 302,208 288,230 212,230"/><text class="lbl" x="250" y="205" text-anchor="middle">Two humps</text><text class="lbl" x="250" y="220" text-anchor="middle">(bimodal)?</text>
+<rect class="box p4" x="470" y="186" width="233" height="44" rx="5"/><text class="lbl" x="586.5" y="205" text-anchor="middle">Two paths: cross-NUMA memory,</text><text class="lbl" x="586.5" y="220" text-anchor="middle">an SMT sibling, or two code paths</text>
+<polygon class="step" points="193.5,270 207.5,248 292.5,248 306.5,270 292.5,292 207.5,292"/><text class="lbl" x="250" y="267" text-anchor="middle">Slow only at</text><text class="lbl" x="250" y="282" text-anchor="middle">the start?</text>
+<rect class="box p6" x="470" y="248" width="233" height="44" rx="5"/><text class="lbl" x="586.5" y="267" text-anchor="middle">Page faults, JIT, cold caches:</text><text class="lbl" x="586.5" y="282" text-anchor="middle">pre-touch and warm up (Guide 03)</text>
+<polygon class="step" points="157.5,332 171.5,310 328.5,310 342.5,332 328.5,354 171.5,354"/><text class="lbl" x="250" y="329" text-anchor="middle">Rare ms-scale max</text><text class="lbl" x="250" y="344" text-anchor="middle">osnoise cannot explain?</text>
+<rect class="box p8" x="470" y="310" width="211" height="44" rx="5"/><text class="lbl" x="575.5" y="329" text-anchor="middle">SMIs (turbostat SMI column),</text><text class="lbl" x="575.5" y="344" text-anchor="middle">direct reclaim, or a GC pause</text>
+<rect class="foc" x="17" y="163" width="110" height="44" rx="22"/><text class="lbl" x="72" y="182" text-anchor="middle">What does the</text><text class="lbl" x="72" y="197" text-anchor="middle">tail look like?</text>
+<text class="el" x="342" y="33" text-anchor="start">every 1 s</text>
+<text class="el" x="342" y="87" text-anchor="start">every 1 ms</text>
+<text class="el" x="342" y="141" text-anchor="start">every few seconds</text>
+<text class="el" x="334" y="203" text-anchor="start">yes</text>
+<text class="el" x="338.5" y="265" text-anchor="start">yes</text>
+<text class="el" x="374.5" y="327" text-anchor="start">yes</text>
+<circle class="tok k1" cx="0" cy="0" r="6"/>
+<circle class="tok k3" cx="0" cy="0" r="6"/>
+<circle class="tok k5" cx="0" cy="0" r="6"/>
+<circle class="tok k7" cx="0" cy="0" r="6"/>
+</svg>

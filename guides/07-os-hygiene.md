@@ -32,19 +32,7 @@ After Guides 01–06, the isolated CPUs are quiet. This guide reduces what happe
 
 `disable_unnecessary_services` stops and disables everything in `DISABLE_SERVICES` (in `lowlat.conf`). Before adding a service to that list, ask:
 
-```mermaid
-flowchart TD
-  s(["Service found running"]) --> sec{"Security<br/>agent?"}
-  sec -- yes --> conf["Keep it. Confine it in housekeeping.slice<br/>and pin it (Guide 05), with the security team"]
-  sec -- no --> need{"Needed on<br/>this host?"}
-  need -- "yes, periodic job" --> tmr["Keep the work: a systemd timer<br/>in housekeeping.slice"]
-  need -- "yes, always on" --> keep["Keep it (sshd, rsyslog, chronyd)"]
-  need -- no --> dis["Add it to DISABLE_SERVICES"]
-  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  class conf risk
-  class dis iso
-```
+<img src="../assets/diagrams/service-decision.svg" alt="Security agents are confined, periodic jobs become timers, always-on services stay, and only unneeded services are disabled" width="720">
 
 *Security agents are confined, never silently disabled. Periodic jobs move to timers in the housekeeping slice. Only what the host really doesn't need is disabled.*
 
@@ -217,16 +205,7 @@ nft list ruleset | head; iptables -S | head; lsmod | grep -E 'nf_conntrack|ip_ta
 
 ## 10. Troubleshooting
 
-```mermaid
-flowchart TD
-  s(["Something broke after 07"]) --> q{"What?"}
-  q -- "logs not rotated" --> f1["RHEL 8: logrotate ran from cron.<br/>Enable logrotate.timer"]
-  q -- "ulimit still 1024<br/>in a service" --> f2["Services ignore limits.d:<br/>LimitNOFILE= in the unit"]
-  q -- "tuned-adm verify fails" --> f3["Another profile or a manual change:<br/>tuned-adm profile low-latency"]
-  q -- "remote access lost" --> f4["Firewall flush: out-of-band console,<br/>systemctl start firewalld"]
-  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
-  class f4 risk
-```
+<img src="../assets/diagrams/hygiene-troubleshoot.svg" alt="Four breakages after Guide 07, each mapped to its fix" width="720">
 
 *The common breakages map one-to-one to a section: cron and logrotate (§2), limits (§3), tuned (§5) and the opt-in firewall (§6).*
 

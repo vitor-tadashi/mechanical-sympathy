@@ -17,14 +17,7 @@
 
 **Time:** ~15 min for the first baseline, then minutes per run · **Do this if:** always, first · **Skip if:** never. Without a baseline, every later guide is guesswork.
 
-```mermaid
-flowchart LR
-  b(["Baseline<br/>09 --run"]) --> c["Change<br/>one thing"] --> m["Measure<br/>same load, same duration"] --> q{"Better<br/>tail?"}
-  q -- yes --> k["Keep it, and it becomes<br/>the new baseline"] --> c
-  q -- "no or worse" --> r["Roll it back"] --> c
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-  class b focus
-```
+<img src="../assets/diagrams/measure-loop.svg" alt="Baseline, change one thing, measure, then keep it or roll it back, and repeat" width="720">
 
 *Measure first, then change one thing at a time, measure the same way again, and keep only what improves the tail.*
 
@@ -107,17 +100,7 @@ Two measurements are only comparable if everything except the one change is the 
 
 ## 4. The tools, by question
 
-```mermaid
-flowchart LR
-  q(["What do you want to know?"]) --> n{"Is the CPU<br/>quiet?"}
-  q --> s{"Is the thread<br/>descheduled?"}
-  q --> h{"Is the hardware<br/>stealing time?"}
-  q --> e{"How fast is the<br/>whole path?"}
-  n --> t1["rtla osnoise top -c CPUS<br/>rtla timerlat top -c CPUS"]
-  s --> t2["perf stat -e context-switches,cpu-migrations -t TID<br/>perf sched latency"]
-  h --> t3["turbostat --show SMI<br/>rtla hwnoise (hwlat tracer)"]
-  e --> t4["application histogram (HdrHistogram)<br/>sockperf, hardware timestamps"]
-```
+<img src="../assets/diagrams/tools-by-question.svg" alt="Four questions, each linked to its measurement tools" width="720">
 
 *Four questions, four families of tools: OS noise on a CPU, scheduling of one thread, hardware and firmware interruptions, and end-to-end latency.*
 
@@ -198,19 +181,7 @@ A bundle is a directory named after its timestamp under `/var/lib/lowlat/measure
 
 Look at the **shape** first, then the numbers. [Concept: tail latency](../concepts/tail-latency.md#7-reading-the-shape) explains the statistics behind this section and what each histogram shape means.
 
-```mermaid
-flowchart LR
-  s(["What does the tail look like?"]) --> p1{"Spikes at a<br/>fixed period?"}
-  p1 -- "every 1 s" --> c1["Residual tick or RT throttling<br/>(Guide 01 §7, Guide 02 §4.4)"]
-  p1 -- "every 1 ms" --> c2["Full tick: nohz_full not active<br/>or more than one task on the CPU"]
-  p1 -- "every few seconds" --> c3["vmstat, a watchdog or an agent:<br/>find it with rtla osnoise"]
-  s --> p2{"Two humps<br/>(bimodal)?"}
-  p2 -- yes --> c4["Two paths: cross-NUMA memory,<br/>an SMT sibling, or two code paths"]
-  s --> p3{"Slow only at<br/>the start?"}
-  p3 -- yes --> c5["Page faults, JIT, cold caches:<br/>pre-touch and warm up (Guide 03)"]
-  s --> p4{"Rare ms-scale max<br/>osnoise cannot explain?"}
-  p4 -- yes --> c6["SMIs (turbostat SMI column),<br/>direct reclaim, or a GC pause"]
-```
+<img src="../assets/diagrams/tail-shape-causes.svg" alt="Four tail shapes, each linked to its likely causes" width="720">
 
 *Periodic spikes point at timers, two humps at two different paths, a slow start at faults and warm-up, and a rare unexplained max at firmware or memory reclaim.*
 
@@ -243,16 +214,7 @@ cat /var/lib/lowlat/measurements/<stamp>/osnoise.txt     # MAX SINGLE NOISE per 
 
 ## 9. Troubleshooting
 
-```mermaid
-flowchart TD
-  s(["The measurement itself fails"]) --> q1{"Tool missing?"}
-  q1 -- "rtla or rt-tests" --> f1["Enable the repository,<br/>or use the tracer in tracefs"]
-  q1 -- no --> q2{"No SMI column?"}
-  q2 -- yes --> f2["VM: expected.<br/>Bare metal: modprobe msr"]
-  q2 -- no --> q3{"Runs disagree?"}
-  q3 -- yes --> f3["Hold the load, the duration<br/>and the environment (§3.5)"]
-  q3 -- no --> f4["See the table below"]
-```
+<img src="../assets/diagrams/measure-troubleshoot.svg" alt="A troubleshooting tree for a measurement that fails: missing tool, missing SMI column, runs that disagree" width="720">
 
 *Start from what failed: a missing tool, a missing counter, or results that change between runs.*
 

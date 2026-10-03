@@ -18,18 +18,7 @@
 
 **Time:** 20 min · **Do this if:** the host runs a latency-critical service · **Skip if:** the host is shared with workloads that rely on swap, and you cannot cap them.
 
-```mermaid
-flowchart LR
-  leak(["A process grows:<br/>leak or burst"]) --> cap{"In a capped<br/>slice?"}
-  cap -- yes --> cg["cgroup OOM inside the slice:<br/>logged, restarted"]
-  cap -- no --> sw{"Swap?"}
-  sw -- "SWAP_POLICY=off" --> oom["Global OOM: highest oom_score<br/>killed, latency service last"]
-  sw -- "swap on" --> st["Swap-out, then swap-in stalls<br/>in every process: silent"]
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
-  class cg,oom focus
-  class st risk
-```
+<img src="../assets/diagrams/memory-exhaustion-ends.svg" alt="A growing process ends in a capped OOM kill, a global OOM kill, or silent swap stalls" width="720">
 
 *Memory exhaustion ends in one of three places. This guide, with the caps of Guide 05, makes it end in the first two: a logged kill, in an order you chose.*
 
@@ -212,17 +201,7 @@ journalctl -k | grep -i 'out of memory'           # empty, or the agents you exp
 
 ## 7. Troubleshooting
 
-```mermaid
-flowchart TD
-  s(["Memory symptom"]) --> q1{"Swap active<br/>after reboot?"}
-  q1 -- yes --> f1["A swap unit not in fstab:<br/>systemctl list-units --type=swap, mask it"]
-  q1 -- no --> q2{"OOM kills<br/>in the journal?"}
-  q2 -- "an agent" --> f2["Working as intended:<br/>raise its MemoryMax or fix the leak"]
-  q2 -- "the latency service" --> f3["It is the one growing:<br/>check its heap and off-heap memory"]
-  q2 -- no --> q3{"PSI or pswpin<br/>WARN?"}
-  q3 -- yes --> f4["Pressure without OOM:<br/>size the host, §3"]
-  q3 -- no --> t["See the table below"]
-```
+<img src="../assets/diagrams/memory-troubleshoot.svg" alt="A troubleshooting tree for swap that came back, an OOM kill, or pressure without a kill" width="720">
 
 *Start from what the host shows: swap that came back, a kill, or pressure without a kill. Each branch ends at a fix.*
 
