@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 230" width="760" height="230" role="img" aria-labelledby="t d">
+<title id="t">The TSC ticks, the time daemon steers, and the application reads through the vDSO</title>
+<desc id="d">The PTP grandmaster or NTP servers set the NIC hardware clock, and phc2sys or chrony steers the kernel clocks from it. The TSC, the CPU cycle counter, is the kernel's clocksource. The application reads the result through the vDSO, without a system call.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(504.5px, 172px); animation: k1 9s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(155px, 52px); } 6% { transform: translate(155px, 52px); } 21.8% { transform: translate(257.5px, 52px); } 33.48% { transform: translate(330px, 74px); } 45.19% { transform: translate(330px, 150px); } 50.99% { transform: translate(330px, 150px); } 51.19% { transform: translate(157.5px, 172px); } 62.44% { transform: translate(230.5px, 172px); } 68.24% { transform: translate(230.5px, 172px); } 68.44% { transform: translate(429.5px, 172px); } 80% { transform: translate(504.5px, 172px); } 85.8% { transform: translate(504.5px, 172px); } 100% { transform: translate(504.5px, 172px); } }
+  .p2 { animation: p2 9s linear infinite; }
+  @keyframes p2 { 0%, 45.09% { fill: #cfe3ff; stroke-width: 1.5; } 47.19% { fill: #9cc3ff; stroke-width: 3; } 55.19%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  .p3 { animation: p3 9s linear infinite; }
+  @keyframes p3 { 0%, 62.34% { fill: #cfe3ff; stroke-width: 1.5; } 64.44% { fill: #9cc3ff; stroke-width: 3; } 72.44%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  .p4 { animation: p4 9s linear infinite; }
+  @keyframes p4 { 0%, 79.9% { fill: #ffd166; stroke-width: 1.5; } 80%, 97% { fill: #ffb703; stroke-width: 3; } 100% { fill: #ffd166; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .p3, .p4 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="230" rx="8"/>
+<path class="wire" d="M155,52 L257.5,52" marker-end="url(#a)"/>
+<path class="wire" d="M330,74 L330,150" marker-end="url(#a)"/>
+<path class="wire" d="M157.5,172 L230.5,172" marker-end="url(#a)"/>
+<path class="wire" d="M429.5,172 L504.5,172" marker-end="url(#a)"/>
+<rect class="step" x="25" y="30" width="130" height="44" rx="22"/><text class="lbl" x="90" y="49" text-anchor="middle">PTP grandmaster</text><text class="lbl" x="90" y="64" text-anchor="middle">or NTP servers</text>
+<rect class="step" x="257.5" y="30" width="145" height="44" rx="5"/><text class="lbl" x="330" y="49" text-anchor="middle">NIC hardware clock</text><text class="lbl" x="330" y="64" text-anchor="middle">PHC, /dev/ptpN</text>
+<rect class="box p2 p3" x="230.5" y="150" width="199" height="44" rx="5"/><text class="lbl" x="330" y="169" text-anchor="middle">kernel timekeeping</text><text class="lbl" x="330" y="184" text-anchor="middle">REALTIME, MONOTONIC, TAI</text>
+<rect class="step" x="22.5" y="150" width="135" height="44" rx="5"/><text class="lbl" x="90" y="169" text-anchor="middle">TSC</text><text class="lbl" x="90" y="184" text-anchor="middle">CPU cycle counter</text>
+<rect class="foc p4" x="504.5" y="150" width="241" height="44" rx="2"/><line class="sl" x1="510.5" y1="150" x2="510.5" y2="194"/><line class="sl" x1="739.5" y1="150" x2="739.5" y2="194"/><text class="lbl" x="625" y="169" text-anchor="middle">application</text><text class="lbl" x="625" y="184" text-anchor="middle">clock_gettime, System.nanoTime</text>
+<text class="el" x="336" y="116" text-anchor="start">phc2sys or chrony</text>
+<text class="el" x="194" y="167" text-anchor="middle">clocksource</text>
+<text class="el" x="472" y="208" text-anchor="middle">vDSO, no system call</text>
+<circle class="tok k1" cx="0" cy="0" r="7"/>
+</svg>

@@ -83,16 +83,7 @@ A handler that touches 50 cache lines from another thread pays about 1 µs for t
 
 ## 4. Reading the topology from a host
 
-```mermaid
-flowchart LR
-  a["lscpu -e<br/>CPU, core, socket, node"] --> b["thread_siblings_list<br/>who shares a core"]
-  b --> c["cache/index3/shared_cpu_list<br/>who shares an L3"]
-  c --> d["numactl --hardware<br/>memory and distances"]
-  d --> e["device/numa_node<br/>where the NIC is"]
-  e --> f[["plan-layout<br/>a proposal"]]
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-  class f focus
-```
+<img src="../assets/diagrams/topology-reads.svg" alt="Five topology reads, from CPUs to the NIC's node, feed plan-layout" width="720">
 
 *Five reads, from the smallest level to the NIC, give everything `plan-layout` needs and the one thing it does not model, the L3 domains.*
 

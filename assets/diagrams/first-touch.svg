@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 355" width="760" height="355" role="img" aria-labelledby="t d">
+<title id="t">Memory lands on the node of the thread that writes it first</title>
+<desc id="d">Wrong: the main thread on node 0 writes the buffer first, so its pages are allocated on node 0, and after the hand-over every cache miss of the worker on node 1 crosses the socket interconnect. Right: the worker pins itself to a node-1 CPU and then writes first, so its pages are local.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .life { stroke: #8c959f; stroke-width: 1.5; stroke-dasharray: 3 4; }
+  .k1 { transform: translate(384px, 313px); animation: k1 9s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(114px, 101px); } 6% { transform: translate(114px, 101px); } 21.62% { transform: translate(646px, 101px); } 24.42% { transform: translate(646px, 101px); } 24.62% { transform: translate(646px, 137px); } 40.23% { transform: translate(114px, 137px); } 43.03% { transform: translate(114px, 137px); } 43.23% { transform: translate(114px, 173px); } 50.93% { transform: translate(376px, 173px); } 53.73% { transform: translate(376px, 173px); } 53.93% { transform: translate(384px, 209px); } 61.62% { transform: translate(646px, 209px); } 64.42% { transform: translate(646px, 209px); } 64.62% { transform: translate(384px, 277px); } 72.31% { transform: translate(646px, 277px); } 75.11% { transform: translate(646px, 277px); } 75.31% { transform: translate(646px, 313px); } 83% { transform: translate(384px, 313px); } 85.8% { transform: translate(384px, 313px); } 100% { transform: translate(384px, 313px); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="355" rx="8"/>
+<line class="life" x1="110" y1="43" x2="110" y2="339"/>
+<line class="life" x1="380" y1="43" x2="380" y2="339"/>
+<line class="life" x1="650" y1="43" x2="650" y2="339"/>
+<rect class="wait" x="50" y="56" width="660" height="22" rx="4"/>
+<text class="sm" x="380" y="71" text-anchor="middle">wrong: the main thread touches first</text>
+<path class="wire" d="M114,101 L646,101" marker-end="url(#a)"/>
+<path class="wire dash" d="M646,137 L114,137" marker-end="url(#a)"/>
+<path class="wire" d="M114,173 L376,173" marker-end="url(#a)"/>
+<path class="wire" d="M384,209 L646,209" marker-end="url(#a)"/>
+<rect class="app" x="50" y="232" width="660" height="22" rx="4"/>
+<text class="sm" x="380" y="247" text-anchor="middle">right: the worker pins itself, then touches</text>
+<path class="wire" d="M384,277 L646,277" marker-end="url(#a)"/>
+<path class="wire dash" d="M646,313 L384,313" marker-end="url(#a)"/>
+<rect class="box" x="36" y="14" width="148" height="29" rx="5"/><text class="lbl" x="110" y="33" text-anchor="middle">main thread (node 0)</text>
+<rect class="app" x="293.5" y="14" width="173" height="29" rx="5"/><text class="lbl" x="380" y="33" text-anchor="middle">worker, pinned on node 1</text>
+<rect class="step" x="620" y="14" width="60" height="29" rx="5"/><text class="lbl" x="650" y="33" text-anchor="middle">kernel</text>
+<text class="el" x="380" y="95" text-anchor="middle">first write to the buffer</text>
+<text class="el" x="380" y="131" text-anchor="middle">pages allocated on node 0</text>
+<text class="el" x="245" y="167" text-anchor="middle">hand over the buffer</text>
+<text class="el" x="515" y="203" text-anchor="middle">every cache miss crosses the socket interconnect</text>
+<text class="el" x="515" y="271" text-anchor="middle">sched_setaffinity(node-1 CPU), then first write</text>
+<text class="el" x="515" y="307" text-anchor="middle">pages allocated on node 1, local from then on</text>
+<circle class="tok k1" cx="0" cy="0" r="7"/>
+</svg>

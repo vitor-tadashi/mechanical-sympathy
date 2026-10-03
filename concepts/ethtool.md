@@ -38,37 +38,7 @@
 | `--show-eee` | `--set-eee` | Energy-Efficient Ethernet | may renegotiate | §14 |
 | `-m` | — | transceiver (SFP/QSFP) diagnostics | — | §14 |
 
-```mermaid
-flowchart TD
-  subgraph obs["Observe only"]
-    direction LR
-    I["-i driver"]
-    ST["-S counters"]
-    T["-T timestamping"]
-    M["-m transceiver"]
-  end
-  subgraph phy["Link"]
-    direction LR
-    A["-A PAUSE<br/>(may renegotiate)"]
-    S["-s speed, FEC, EEE<br/>(resets link)"]
-  end
-  subgraph bufs["Buffers and features"]
-    direction LR
-    G["-G rings<br/>(resets link)"]
-    K["-K offloads<br/>(some reset)"]
-  end
-  subgraph queues["Queues and interrupts"]
-    direction LR
-    L["-L channels<br/>(resets link)"]
-    C["-C coalescing"]
-    X["-X RSS table"]
-    N["-N hash fields, ntuple"]
-  end
-  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
-  classDef muted fill:#eeeeee,stroke:#777777,color:#333333
-  class L,G,S risk
-  class I,ST,T,M muted
-```
+<img src="../assets/diagrams/ethtool-groups.svg" alt="ethtool options in four groups, with the options that reset the link marked" width="720">
 
 *The options fall into four groups. The ones marked "resets link" (in red) stop traffic briefly and bring the queue interrupts back with default affinity. The observe-only group changes nothing.*
 
@@ -319,12 +289,7 @@ Nothing set with `ethtool` survives a reboot or driver reload. The options:
 
 The keys and their spelling are listed in `man nm-settings-nmcli` (section `ethtool`). Whatever the mechanism, the order is fixed:
 
-```mermaid
-flowchart LR
-  ch["-L channels"] --> rg["-G rings"] --> cf["-C coalescing,<br/>-K features"] --> rss["-X RSS,<br/>-N ntuple"] --> irq[["IRQ affinity<br/>/proc/irq"]]
-  ch -. "re-creates queues and vectors" .-> irq
-  rg -. "may reset the queues" .-> cf
-```
+<img src="../assets/diagrams/ethtool-order.svg" alt="NIC settings in order: channels, rings, coalescing and features, RSS and ntuple, then IRQ affinity" width="720">
 
 *Every earlier step can reset or re-create the queues that the later steps configure, so the order is channels, rings, coalescing and features, RSS and ntuple, and IRQ affinity last.*
 

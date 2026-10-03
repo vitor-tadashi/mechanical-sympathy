@@ -27,16 +27,7 @@ cat /sys/fs/cgroup/cgroup.controllers
 
 ## 3. The controllers that matter here
 
-```mermaid
-flowchart LR
-  cg[["a cgroup<br/>(slice or service)"]] --> cs["cpuset<br/>cpus, mems, partition<br/>AllowedCPUs="]
-  cg --> cpu["cpu<br/>weight, max (quota)<br/>CPUWeight=, CPUQuota="]
-  cg --> mem["memory<br/>max, high, low, min<br/>MemoryMax=, MemoryHigh="]
-  cg --> io["io<br/>weight, max, latency<br/>IOWeight=, IOReadBandwidthMax="]
-  cg --> psi["PSI<br/>cpu/memory/io.pressure<br/>who waited, how long"]
-  classDef muted fill:#eeeeee,stroke:#777777,color:#333333
-  class psi muted
-```
+<img src="../assets/diagrams/cgroup-controllers.svg" alt="A cgroup linked to its cpuset, cpu, memory, io and PSI files" width="720">
 
 *Each controller exposes a few files in the cgroup directory. systemd sets them through the resource directives shown on the second line of each box. PSI is read-only: it reports stalls instead of enforcing anything.*
 
