@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 334" width="760" height="334" role="img" aria-labelledby="t d">
+<title id="t">ethtool options in four groups, and the ones that reset the link</title>
+<desc id="d">ethtool options fall into four groups: observe only (-i, -S, -T, -m), link (-A, -s), buffers and features (-G, -K) and queues and interrupts (-L, -C, -X, -N). The options marked resets link (-s, -G, -L) stop traffic briefly and bring the queue interrupts back with default affinity.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .p1 { animation: p1 9s linear infinite; }
+  @keyframes p1 { 0%, 40.9% { fill: #ffc9c9; stroke-width: 1.5; } 43% { fill: #ff9b9b; stroke-width: 3; } 51%, 100% { fill: #ffc9c9; stroke-width: 1.5; } }
+  .p2 { animation: p2 9s linear infinite; }
+  @keyframes p2 { 0%, 47.9% { fill: #ffc9c9; stroke-width: 1.5; } 50% { fill: #ff9b9b; stroke-width: 3; } 58%, 100% { fill: #ffc9c9; stroke-width: 1.5; } }
+  .p3 { animation: p3 9s linear infinite; }
+  @keyframes p3 { 0%, 61.9% { fill: #ffc9c9; stroke-width: 1.5; } 64% { fill: #ff9b9b; stroke-width: 3; } 72%, 100% { fill: #ffc9c9; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .p1, .p2, .p3 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="334" rx="8"/>
+<rect class="grp" x="14" y="14" width="732" height="64" rx="6"/>
+<text class="gl" x="24" y="30">Observe only: changes nothing</text>
+<rect class="grp" x="14" y="92" width="732" height="64" rx="6"/>
+<text class="gl" x="24" y="108">Link</text>
+<rect class="grp" x="14" y="170" width="732" height="64" rx="6"/>
+<text class="gl" x="24" y="186">Buffers and features</text>
+<rect class="grp" x="14" y="248" width="732" height="64" rx="6"/>
+<text class="gl" x="24" y="264">Queues and interrupts</text>
+<text class="note" x="380" y="326" text-anchor="middle">Red boxes reset the link: traffic stops briefly and IRQ affinity returns to the default.</text>
+<rect class="mut" x="30" y="34" width="160" height="38" rx="5"/><text class="lbl" x="110" y="57.5" text-anchor="middle">-i driver</text>
+<rect class="mut" x="210" y="34" width="160" height="38" rx="5"/><text class="lbl" x="290" y="57.5" text-anchor="middle">-S counters</text>
+<rect class="mut" x="390" y="34" width="160" height="38" rx="5"/><text class="lbl" x="470" y="57.5" text-anchor="middle">-T timestamping</text>
+<rect class="mut" x="570" y="34" width="160" height="38" rx="5"/><text class="lbl" x="650" y="57.5" text-anchor="middle">-m transceiver</text>
+<rect class="step" x="30" y="112" width="160" height="38" rx="5"/><text class="sm" x="110" y="128.5" text-anchor="middle">-A PAUSE</text><text class="sm" x="110" y="142.5" text-anchor="middle">(may renegotiate)</text>
+<rect class="wait p1" x="210" y="112" width="160" height="38" rx="5"/><text class="sm" x="290" y="128.5" text-anchor="middle">-s speed, FEC, EEE</text><text class="sm" x="290" y="142.5" text-anchor="middle">(resets link)</text>
+<rect class="wait p2" x="30" y="190" width="160" height="38" rx="5"/><text class="sm" x="110" y="206.5" text-anchor="middle">-G rings</text><text class="sm" x="110" y="220.5" text-anchor="middle">(resets link)</text>
+<rect class="step" x="210" y="190" width="160" height="38" rx="5"/><text class="sm" x="290" y="206.5" text-anchor="middle">-K offloads</text><text class="sm" x="290" y="220.5" text-anchor="middle">(some reset)</text>
+<rect class="wait p3" x="30" y="268" width="160" height="38" rx="5"/><text class="sm" x="110" y="284.5" text-anchor="middle">-L channels</text><text class="sm" x="110" y="298.5" text-anchor="middle">(resets link)</text>
+<rect class="step" x="210" y="268" width="160" height="38" rx="5"/><text class="lbl" x="290" y="291.5" text-anchor="middle">-C coalescing</text>
+<rect class="step" x="390" y="268" width="160" height="38" rx="5"/><text class="lbl" x="470" y="291.5" text-anchor="middle">-X RSS table</text>
+<rect class="step" x="570" y="268" width="160" height="38" rx="5"/><text class="sm" x="650" y="284.5" text-anchor="middle">-N hash fields,</text><text class="sm" x="650" y="298.5" text-anchor="middle">ntuple</text>
+</svg>

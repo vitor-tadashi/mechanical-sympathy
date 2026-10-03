@@ -14,15 +14,7 @@ Every latency number in these guides is the difference of two clock readings. If
 
 ## 2. From a crystal to `clock_gettime()`
 
-```mermaid
-flowchart LR
-  gm(["PTP grandmaster<br/>or NTP servers"]) --> phc["NIC hardware clock<br/>PHC, /dev/ptpN"]
-  phc -- "phc2sys or chrony" --> sys["kernel timekeeping<br/>REALTIME, MONOTONIC, TAI"]
-  tsc["TSC<br/>CPU cycle counter"] -- clocksource --> sys
-  sys -- "vDSO, no system call" --> app[["application<br/>clock_gettime, System.nanoTime"]]
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-  class app focus
-```
+<img src="../assets/diagrams/clock-stack.svg" alt="The reference clock steers the kernel clocks, the TSC drives them, and the application reads them through the vDSO" width="720">
 
 *The TSC gives the kernel a fast, steady tick count. The time daemon steers the kernel's clocks toward the reference time. The application reads the result through the vDSO without entering the kernel.*
 

@@ -14,19 +14,7 @@ A pinned thread on an isolated CPU can still be interrupted by work it never ask
 
 ## 2. Execution contexts, from most urgent to least
 
-```mermaid
-flowchart TD
-  nmi["NMI<br/>watchdog, perf, machine check"] --> hard["Hard IRQ<br/>device interrupt handler, IPIs"]
-  hard --> soft["Softirq<br/>NET_RX, TIMER, RCU, ... on IRQ exit"]
-  soft --> thr["Kernel threads<br/>ksoftirqd, kworker, rcuo, irq/NN"]
-  thr --> app["User threads<br/>by scheduling class: FIFO, then OTHER"]
-  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
-  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  class nmi,hard risk
-  class soft,thr hk
-  class app iso
-```
+<img src="../assets/diagrams/exec-contexts.svg" alt="Execution contexts from NMI down to user threads, each able to interrupt the ones below" width="720">
 
 *Each level can interrupt every level below it on the same CPU. A user thread, however urgent, runs only when no interrupt, softirq or higher-class thread wants the CPU.*
 
