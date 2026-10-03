@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+#
+# changed-areas - which checks can a change affect?
+#
+# Reads the paths of a change and prints the areas it touches, one per line:
+#   scripts       ShellCheck and the layout and buffer checks (make lint-scripts)
+#   docs          links, anchors, Mermaid, SVG rules, glossary (make lint-docs)
+#   site          the hand-written pages and their ports of the scripts (make lint-site)
+#   java          the latency probe (make lint-java)
+#   integration   the guide scripts on fake hosts and in containers (tools/check-scripts)
+#   doc-health    offline links and American spelling of the Markdown and the site
+# This file is the only place that holds the rules. CI (.github/workflows) and the
+# pre-commit hook ask it, so they cannot drift apart. The path filter of vm.yml cannot call
+# a script: keep it equal to the integration rule plus tools/check-vm and tools/check-vm-guest.
+#
+# An added or deleted file turns on docs: links and anchors into it may break. A change to
+# this script, to a workflow or to the Makefile turns on what it drives. An unknown base
+# turns everything on.
+#
+# Usage: tools/changed-areas <base-ref>   changes since the merge base with <base-ref>
+#        tools/changed-areas --staged     the index
+#        tools/changed-areas --all        every area
+#        tools/changed-areas --stdin      "STATUS<TAB>PATH" lines, as git diff --name-status
+#                                         prints them (for tools/check-changed-areas)
+
+set -Eeuo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "${ROOT}"
+
+ALL_AREAS=(scripts docs site java integration doc-health)
+
+usage() {
+	printf 'usage: changed-areas <base-ref> | --staged | --all | --stdin\n' >&2
+	exit 2
+}
+
+# area_of_path <path> - the areas one path turns on, space separated.
+area_of_path() {
+	case "$1" in
+		tools/changed-areas | Makefile)
+			printf '%s' "${ALL_AREAS[*]}"
+			;;
+		.github/workflows/lint.yml)
+			printf 'scripts docs site java'
+			;;
+		.github/workflows/integration.yml)
+			printf 'integration'
+			;;
+		.github/workflows/doc-health.yml | .github/lychee.toml)
+			printf 'doc-health'
+			;;
+		examples/java-latency-probe/*.md)
+			printf 'docs doc-health'
+			;;
+		examples/java-latency-probe/bin/*)
+			printf 'scripts java'
+			;;
+		examples/java-latency-probe/*)
+			printf 'java'
+			;;
+		scripts/fixtures/hosts/* | scripts/fixtures/containers/* | scripts/fixtures/vm/*)
+			printf 'scripts integration'
+			;;
+		scripts/plan-layout | scripts/size-buffers | scripts/fixtures/*)
+			printf 'scripts site integration'
+			;;
+		scripts/* | .shellcheckrc | .editorconfig)
+			printf 'scripts integration'
+			;;
+		.githooks/*)
+			printf 'scripts'
+			;;
+		tools/lint-docs | tools/check-glossary)
+			printf 'scripts docs'
+			;;
+		tools/lint-site | tools/check-explorer | tools/check-buffers | tools/build-site)
+			printf 'scripts site doc-health'
+			;;
+		tools/check-scripts | tools/check-containers | tools/check-script-regressions | tools/check-container-image | tools/lib/* | tools/stubs/*)
+			printf 'scripts integration'
+			;;
+		tools/*)
+			printf 'scripts'
+			;;
+		site/* | assets/*)
+			printf 'docs site doc-health'
+			;;
+		*.md)
+			printf 'docs doc-health'
+			;;
+		*)
+			# Nothing else (LICENSE, CITATION.cff, the issue templates) is checked.
+			;;
+	esac
+}
+
+# diff_lines <base-ref> | --staged - git diff --name-status, with a rename as delete plus add.
+diff_lines() {
+	if [[ "$1" == "--staged" ]]; then
+		git diff --cached --name-status --no-renames
+		return
+	fi
+	git diff --name-status --no-renames "$1...HEAD"
+}
+
+main() {
+	(($# == 1)) || usage
+	local lines status path areas="" found
+	case "$1" in
+		--all)
+			printf '%s\n' "${ALL_AREAS[@]}"
+			return 0
+			;;
+		--stdin)
+			lines="$(cat)"
+			;;
+		--staged)
+			lines="$(diff_lines --staged)"
+			;;
+		-*)
+			usage
+			;;
+		*)
+			if ! git rev-parse --verify --quiet "$1^{commit}" >/dev/null; then
+				printf 'changed-areas: unknown base %s, so every area runs\n' "$1" >&2
+				printf '%s\n' "${ALL_AREAS[@]}"
+				return 0
+			fi
+			lines="$(diff_lines "$1")"
+			;;
+	esac
+
+	while IFS=$'\t' read -r status path; do
+		[[ -n "${path}" ]] || continue
+		found="$(area_of_path "${path}")"
+		[[ "${status}" == "A" || "${status}" == "D" ]] && found="${found} docs"
+		areas="${areas} ${found}"
+	done <<<"${lines}"
+
+	local area
+	for area in "${ALL_AREAS[@]}"; do
+		[[ " ${areas} " == *" ${area} "* ]] && printf '%s\n' "${area}"
+	done
+	return 0
+}
+
+main "$@"

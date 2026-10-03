@@ -2,8 +2,22 @@ name: doc-health
 
 on:
   pull_request:
+    paths:
+      - "**/*.md"
+      - "site/**"
+      - "assets/**"
+      - tools/build-site
+      - .github/lychee.toml
+      - .github/workflows/doc-health.yml
   push:
     branches: [main]
+    paths:
+      - "**/*.md"
+      - "site/**"
+      - "assets/**"
+      - tools/build-site
+      - .github/lychee.toml
+      - .github/workflows/doc-health.yml
   schedule:
     - cron: "23 7 * * 1"
   workflow_dispatch:

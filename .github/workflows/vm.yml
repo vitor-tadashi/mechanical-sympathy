@@ -10,12 +10,20 @@ on:
     branches: [main]
     paths:
       - scripts/**
-      - tools/**
+      - tools/check-vm
+      - tools/check-vm-guest
+      - tools/check-container-image
+      - tools/lib/**
+      - tools/stubs/**
       - .github/workflows/vm.yml
   pull_request:
     paths:
       - scripts/**
-      - tools/**
+      - tools/check-vm
+      - tools/check-vm-guest
+      - tools/check-container-image
+      - tools/lib/**
+      - tools/stubs/**
       - .github/workflows/vm.yml
   schedule:
     - cron: "17 3 * * *"

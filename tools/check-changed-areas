@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+#
+# check-changed-areas - test tools/changed-areas against a table of changes.
+#
+# Each case is "STATUS PATH ... => areas": the paths of one change and the areas that must
+# run, in the order tools/changed-areas prints them. A rule that gains or loses an area
+# fails here, so the CI and pre-commit path filters change on purpose.
+#
+# Usage: tools/check-changed-areas
+
+set -Eeuo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "${ROOT}"
+
+failures=0
+
+# expect <expected areas> <STATUS:PATH>... - one change.
+expect() {
+	local expected="$1" actual change input=""
+	shift
+	for change in "$@"; do
+		input+="${change%%:*}"$'\t'"${change#*:}"$'\n'
+	done
+	actual="$(tools/changed-areas --stdin <<<"${input}" | tr '\n' ' ')"
+	actual="${actual% }"
+	[[ "${actual}" == "${expected}" ]] && return 0
+	printf 'check-changed-areas: %s\n  expected: [%s]\n  actual:   [%s]\n' "$*" "${expected}" "${actual}" >&2
+	failures=$((failures + 1))
+}
+
+expect "docs doc-health" M:guides/01-bootloader.md M:GLOSSARY.md
+expect "docs doc-health" M:examples/java-latency-probe/CLAUDE.md
+expect "scripts integration" M:scripts/04-network
+expect "scripts integration" M:scripts/fixtures/hosts/rhel9/expected
+expect "scripts site integration" M:scripts/size-buffers
+expect "scripts site integration" M:scripts/fixtures/buffers/case.golden
+expect "scripts docs integration" D:scripts/old-helper
+expect "docs site doc-health" M:site/layout.js
+expect "docs site doc-health" M:assets/diagrams/flow.svg
+expect "scripts" M:.githooks/pre-commit
+expect "scripts" M:tools/check-commit-title
+expect "scripts docs" M:tools/lint-docs
+expect "scripts integration" M:tools/check-scripts
+expect "java" M:examples/java-latency-probe/build.gradle.kts
+expect "scripts java" M:examples/java-latency-probe/bin/probe
+expect "integration" M:.github/workflows/integration.yml
+expect "doc-health" M:.github/workflows/doc-health.yml
+expect "scripts docs site java" M:.github/workflows/lint.yml
+expect "scripts docs site java integration doc-health" M:Makefile
+expect "scripts docs site java integration doc-health" M:tools/changed-areas
+expect "" M:LICENSE
+expect "" M:.github/workflows/pages.yml
+
+if ((failures > 0)); then
+	printf 'check-changed-areas: %d case(s) failed\n' "${failures}" >&2
+	exit 1
+fi
+printf 'check-changed-areas: ok\n'

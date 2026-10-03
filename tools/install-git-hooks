@@ -2,7 +2,8 @@
 #
 # install-git-hooks - opt in to the repository git hooks (.githooks/).
 #
-# pre-commit runs `make lint` (ShellCheck + Checkstyle), the same gate CI enforces.
+# pre-commit runs tools/lint-changed --staged: the lint targets of the areas that the staged
+# changes touch. `make lint` is the full gate that CI enforces.
 # commit-msg runs tools/check-commit-title and tools/check-description (AGENTS.md section 8).
 # Undo with: git config --unset core.hooksPath
 
@@ -10,4 +11,4 @@ set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 git -C "${ROOT}" config core.hooksPath .githooks
-printf 'install-git-hooks: core.hooksPath=.githooks (pre-commit runs make lint, commit-msg checks title and description)\n'
+printf 'install-git-hooks: core.hooksPath=.githooks (pre-commit lints the staged areas, commit-msg checks title and description)\n'

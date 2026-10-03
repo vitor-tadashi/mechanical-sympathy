@@ -8,6 +8,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions: {}
 
@@ -16,7 +17,41 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    # Which areas does the change touch? The rules live in tools/changed-areas.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      integration: ${{ steps.areas.outputs.integration }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: areas
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [[ "${EVENT}" == "workflow_dispatch" ]]; then
+            areas="$(tools/changed-areas --all)"
+          else
+            areas="$(tools/changed-areas "${BASE_SHA}")"
+          fi
+          printf 'Areas: %s\n' "$(tr '\n' ' ' <<<"${areas}")"
+          for area in scripts docs site java integration doc-health; do
+            if grep -qx "${area}" <<<"${areas}"; then
+              echo "${area}=true" >> "${GITHUB_OUTPUT}"
+            else
+              echo "${area}=false" >> "${GITHUB_OUTPUT}"
+            fi
+          done
+
   fake-hosts:
+    needs: changes
+    if: needs.changes.outputs.integration == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -35,6 +70,8 @@ jobs:
       - run: tools/check-scripts
 
   containers:
+    needs: changes
+    if: needs.changes.outputs.integration == 'true'
     name: containers (${{ matrix.name }})
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -68,3 +105,16 @@ jobs:
           name: check-containers-${{ matrix.name }}
           path: ${{ runner.temp }}/check-containers
           if-no-files-found: ignore
+
+  # The one check to require: skipped jobs pass, failed or cancelled ones do not.
+  integration-ok:
+    if: always()
+    needs: [changes, fake-hosts, containers]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Results: ${RESULTS}"
+          [[ " ${RESULTS} " != *" failure "* && " ${RESULTS} " != *" cancelled "* ]]
