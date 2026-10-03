@@ -124,12 +124,12 @@ What each tick job is worth, and what you lose when you stop it:
 |---|---|---|
 | Time-slice check | Takes the CPU from a thread that ran too long, so the others get a turn | Nothing else to give the CPU to |
 | CPU-time accounting | Feeds `top`, `/proc/stat` and cgroup limits | Replaced by context tracking, at a cost on every syscall |
-| Timer expiry | Fires timeouts at about 1 ms resolution | Precise timers (`hrtimer`) fire on their own and need no tick |
+| Timer expiry | Fires coarse timeouts at about 1 ms resolution | Stopping the tick does not remove timers: a timer that the thread arms on its own CPU still interrupts it when it fires ([Interrupts §6](interrupts-and-deferred-work.md#6-workqueues-and-timers)) |
 | RCU progress | Tells RCU the CPU is idle of readers | `rcu_nocbs` and the extended quiescent state cover it |
 
 The benefit is the 1–5 µs stall, 1000 times a second. That is 0.1–0.5 % of the CPU, a small average, but the stall lands on the thread you care about, right in its tail (p99.9 and beyond, see [Guide 09](../guides/09-measuring-latency.md)).
 
-The cost is context tracking at every kernel entry and exit, and a CPU that is no longer fair to a second task: with two runnable tasks the tick comes back, and `nohz_full` gives you nothing.
+The cost is context tracking at every kernel entry and exit. When a second runnable task appears, the tick starts again, so time slices and accounting work as usual. Nothing is starved, but `nohz_full` then gives you no quiet CPU while you still pay the context-tracking cost.
 
 > [!NOTE]
 > **Validate on your hardware.** How much a syscall slows down under context tracking depends on the CPU, the kernel and the mitigations. Measure your own workload with and without `nohz_full` before you rely on either number.
@@ -142,7 +142,7 @@ The cost is context tracking at every kernel entry and exit, and a CPU that is n
 | is on a CPU whose tail latency you have not measured yet | keep it for now | Take a baseline first, then change one thing ([Guide 09](../guides/09-measuring-latency.md)) |
 | runs in a VM | check with the platform owner | The hypervisor's own timers and steal time can hide the gain |
 
-To decide with data, read the `LOC` row of `/proc/interrupts` on the CPU for ten seconds. Near 1000 per second means the tick runs. About 1 per second means it stopped. Then compare the tail latency of your thread in both cases.
+To decide with data, read the `LOC` row of `/proc/interrupts` on the CPU for ten seconds. `LOC` counts every local timer interrupt, not only the scheduler tick, so read it only on a thread that arms no timers, such as a pure spinner. There, near 1000 per second means the tick runs and about 1 per second means it stopped. A thread that sleeps with a timeout, or that has a 1 kHz application timer, adds its own `LOC` counts and can look like a running tick. For that thread, trace the interrupt source instead: record the `irq_vectors:local_timer_entry` tracepoint on that CPU with `perf` or `trace-cmd` and look at what runs after each one. Then compare the tail latency of your thread in both cases.
 
 ### `rcu_nocbs=<list>` and `rcu_nocb_poll`
 
