@@ -36,6 +36,27 @@ restore_graphical_console() {
 	done <"${CONSOLE_STATE}"
 }
 
+# grub_defaults - lowlat.conf files written before GRUB_ISOLCPUS_MANAGED_IRQ have no such key.
+grub_defaults() {
+	GRUB_ISOLCPUS_MANAGED_IRQ="${GRUB_ISOLCPUS_MANAGED_IRQ:-no}"
+	case "${GRUB_ISOLCPUS_MANAGED_IRQ}" in
+	yes | no) ;;
+	*) die "GRUB_ISOLCPUS_MANAGED_IRQ must be yes or no, not '${GRUB_ISOLCPUS_MANAGED_IRQ}'" "${EXIT_PRECHECK}" ;;
+	esac
+}
+
+# isolcpus_value - the isolcpus= value: the isolated CPUs, after the managed_irq flag
+# when it is wanted. Any flag drops the default domain flag, so domain is written out.
+isolcpus_value() {
+	local isolated
+	isolated="$(cpu_list_join "${ISOLATED_CPUS[@]}")"
+	if [[ "${GRUB_ISOLCPUS_MANAGED_IRQ}" == yes ]]; then
+		printf 'managed_irq,domain,%s\n' "${isolated}"
+		return 0
+	fi
+	printf '%s\n' "${isolated}"
+}
+
 # grub_set_arg <name> [value] - removes any previous value, then adds the new one.
 # Removing first matters: grubby --args does not replace "isolcpus=1-3" when you
 # add "isolcpus=5-7", you would end up with both.
@@ -68,12 +89,17 @@ apply_latency_grub_subset() {
 
 # The arguments that only make sense when we own the physical cores.
 apply_isolation_grub_set() {
-	local isolated rcu
+	local isolated rcu isolcpus
 	isolated="$(cpu_list_join "${ISOLATED_CPUS[@]}")"
 	rcu="$(cpu_list_join "${ISOLATED_CPUS[@]}")"
+	isolcpus="$(isolcpus_value)"
 
-	log_sub_step "Removing CPUs ${isolated} from the scheduler (isolcpus)"
-	grub_set_arg isolcpus "${isolated}"
+	if [[ "${GRUB_ISOLCPUS_MANAGED_IRQ}" == yes ]]; then
+		log_sub_step "Removing CPUs ${isolated} from the scheduler and from managed IRQs (isolcpus=managed_irq,domain)"
+	else
+		log_sub_step "Removing CPUs ${isolated} from the scheduler (isolcpus)"
+	fi
+	grub_set_arg isolcpus "${isolcpus}"
 
 	log_sub_step "Stopping the scheduler tick on ${isolated} (nohz_full)"
 	grub_set_arg nohz_full "${isolated}"
@@ -140,6 +166,7 @@ apply_isolation_grub_set() {
 
 apply_grub_kernel_parameters() {
 	require_commands grubby
+	grub_defaults
 
 	log_step "Kernel command line: latency subset (host_class=${HOST_CLASS})"
 	if require_capability latency_grub; then
@@ -180,7 +207,8 @@ cmdline_has() {
 }
 
 verify_grub_kernel_parameters() {
-	local isolated kernel value
+	local isolated isolcpus kernel value
+	grub_defaults
 	kernel="$(uname -r)"
 	verify_info "running kernel ${kernel}"
 	verify_check "idle=poll" cmdline_has idle poll
@@ -189,7 +217,8 @@ verify_grub_kernel_parameters() {
 	verify_check "transparent_hugepage=never" cmdline_has transparent_hugepage never
 	if host_is_bare_metal; then
 		isolated="$(cpu_list_join "${ISOLATED_CPUS[@]}")"
-		verify_check "isolcpus=${isolated}" cmdline_has isolcpus "${isolated}"
+		isolcpus="$(isolcpus_value)"
+		verify_check "isolcpus=${isolcpus}" cmdline_has isolcpus "${isolcpus}"
 		verify_check "nohz_full=${isolated}" cmdline_has nohz_full "${isolated}"
 		verify_check "rcu_nocbs=${isolated}" cmdline_has rcu_nocbs "${isolated}"
 		verify_check "rcu_nocb_poll" cmdline_has rcu_nocb_poll
