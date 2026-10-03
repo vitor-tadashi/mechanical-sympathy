@@ -14,22 +14,7 @@ On a well-tuned host, the time between a packet arriving at the NIC and the appl
 
 ## 2. The receive path, step by step
 
-```mermaid
-sequenceDiagram
-  participant N as NIC
-  participant H as IRQ CPU (housekeeping)
-  participant S as Socket
-  participant A as App thread (isolated CPU)
-  N->>N: FCS check, MAC/VLAN filter, RSS picks a queue
-  N->>N: DMA into the RX ring
-  Note over N: coalescing: wait rx-usecs or rx-frames
-  N->>H: MSI-X interrupt (hard IRQ)
-  H->>H: softirq: NAPI poll, GRO, netfilter, IP, UDP/TCP
-  H->>S: enqueue on the socket
-  S->>A: wake a blocked reader (IPI), or a spinning reader sees data
-  A->>S: recv() copies the data to user space
-  H->>N: NAPI re-enables the queue interrupt once the ring is drained
-```
+<img src="../assets/diagrams/rx-sequence.svg" alt="The receive path as messages between the NIC, the IRQ CPU, the socket and the application thread" width="720">
 
 *The NIC receives, hashes and DMAs the frame, may wait for the coalescing timer, and interrupts the housekeeping CPU. That CPU runs the protocol stack in softirq and queues the data on the socket, where the application thread on its isolated CPU picks it up. FCS is the frame's checksum, RSS the hash that picks a queue, and GRO the merging of consecutive TCP segments.*
 

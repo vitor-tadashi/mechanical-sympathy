@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 230" width="760" height="230" role="img" aria-labelledby="t d">
+<title id="t">A message crosses several queues in series, each in front of a server</title>
+<desc id="d">A message goes from the wire into the NIC ring, is served by net.rx, waits in an SPSC ring, is served by event.loop, and waits in another SPSC ring for worker.0. event.loop also feeds the logger through a logger ring. The response time is the sum of every wait plus every service time.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(706px, 53.5px); animation: k1 9s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(46px, 53.5px); } 5% { transform: translate(46px, 53.5px); } 11.96% { transform: translate(148px, 45px); } 20.96% { transform: translate(148px, 45px); } 28.73% { transform: translate(262px, 53.5px); } 32.73% { transform: translate(262px, 53.5px); } 40.23% { transform: translate(372px, 45px); } 49.23% { transform: translate(372px, 45px); } 57.14% { transform: translate(488px, 53.5px); } 61.14% { transform: translate(488px, 53.5px); } 68.77% { transform: translate(600px, 45px); } 77.77% { transform: translate(600px, 45px); } 85% { transform: translate(706px, 53.5px); } 100% { transform: translate(706px, 53.5px); } }
+  .p2 { animation: p2 9s linear infinite; }
+  @keyframes p2 { 0%, 11.86% { fill: #ffd166; stroke-width: 1.5; } 13.96% { fill: #ffb703; stroke-width: 3; } 20.96%, 100% { fill: #ffd166; stroke-width: 1.5; } }
+  .p3 { animation: p3 9s linear infinite; }
+  @keyframes p3 { 0%, 28.63% { fill: #c8f0d0; stroke-width: 1.5; } 30.73% { fill: #8fe0a0; stroke-width: 3; } 37.73%, 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  .p4 { animation: p4 9s linear infinite; }
+  @keyframes p4 { 0%, 40.13% { fill: #ffd166; stroke-width: 1.5; } 42.23% { fill: #ffb703; stroke-width: 3; } 49.23%, 100% { fill: #ffd166; stroke-width: 1.5; } }
+  .p5 { animation: p5 9s linear infinite; }
+  @keyframes p5 { 0%, 57.04% { fill: #c8f0d0; stroke-width: 1.5; } 59.14% { fill: #8fe0a0; stroke-width: 3; } 66.14%, 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  .p6 { animation: p6 9s linear infinite; }
+  @keyframes p6 { 0%, 68.67% { fill: #ffd166; stroke-width: 1.5; } 70.77% { fill: #ffb703; stroke-width: 3; } 77.77%, 100% { fill: #ffd166; stroke-width: 1.5; } }
+  .p7 { animation: p7 9s linear infinite; }
+  @keyframes p7 { 0%, 84.9% { fill: #c8f0d0; stroke-width: 1.5; } 87% { fill: #8fe0a0; stroke-width: 3; } 94%, 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .p3, .p4, .p5, .p6, .p7 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="230" rx="8"/>
+<path class="wire" d="M70.5,70 L103,70" marker-end="url(#a)"/>
+<path class="wire" d="M193,70 L232,70" marker-end="url(#a)"/>
+<path class="wire" d="M292,70 L324,70" marker-end="url(#a)"/>
+<path class="wire" d="M420,70 L445,70" marker-end="url(#a)"/>
+<path class="wire" d="M531,70 L552,70" marker-end="url(#a)"/>
+<path class="wire" d="M648,70 L667,70" marker-end="url(#a)"/>
+<path class="wire" d="M652,160 L676,160" marker-end="url(#a)"/>
+<path class="wire" d="M488,84.5 L488,160 L548,160" marker-end="url(#a)"/>
+<text class="note" x="380" y="214" text-anchor="middle">Cylinders are queues and boxes are servers: response time = every wait + every service time.</text>
+<rect class="step" x="21.5" y="55.5" width="49" height="29" rx="14.5"/><text class="lbl" x="46" y="74.5" text-anchor="middle">wire</text>
+<path class="foc p2" d="M103,53 a45,6 0 0 1 90,0 v34 a45,6 0 0 1 -90,0 z"/><path class="sl" d="M103,53 a45,6 0 0 0 90,0"/><text class="lbl" x="148" y="74.5" text-anchor="middle">NIC ring</text>
+<rect class="app p3" x="232" y="55.5" width="60" height="29" rx="5"/><text class="lbl" x="262" y="74.5" text-anchor="middle">net.rx</text>
+<path class="foc p4" d="M324,53 a48,6 0 0 1 96,0 v34 a48,6 0 0 1 -96,0 z"/><path class="sl" d="M324,53 a48,6 0 0 0 96,0"/><text class="lbl" x="372" y="74.5" text-anchor="middle">SPSC ring</text>
+<rect class="app p5" x="445" y="55.5" width="86" height="29" rx="5"/><text class="lbl" x="488" y="74.5" text-anchor="middle">event.loop</text>
+<path class="foc p6" d="M552,53 a48,6 0 0 1 96,0 v34 a48,6 0 0 1 -96,0 z"/><path class="sl" d="M552,53 a48,6 0 0 0 96,0"/><text class="lbl" x="600" y="74.5" text-anchor="middle">SPSC ring</text>
+<rect class="app p7" x="667" y="55.5" width="78" height="29" rx="5"/><text class="lbl" x="706" y="74.5" text-anchor="middle">worker.0</text>
+<path class="foc" d="M548,143 a52,6 0 0 1 104,0 v34 a52,6 0 0 1 -104,0 z"/><path class="sl" d="M548,143 a52,6 0 0 0 104,0"/><text class="lbl" x="600" y="164.5" text-anchor="middle">logger ring</text>
+<rect class="box" x="676" y="145.5" width="60" height="29" rx="5"/><text class="lbl" x="706" y="164.5" text-anchor="middle">logger</text>
+<circle class="tok k1" cx="0" cy="0" r="6"/>
+</svg>

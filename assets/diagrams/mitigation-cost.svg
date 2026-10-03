@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 288" width="760" height="288" role="img" aria-labelledby="t d">
+<title id="t">The cost of mitigations follows the crossings a thread makes</title>
+<desc id="d">A thread that spins in user space or uses kernel bypass pays almost nothing. One system call per message pays the entry and exit cost on every message, a thread that blocks and wakes also pays the context switch, and a thread in a VM pays the VM entry and exit cost too.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(455px, 51px); animation: k1 8s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(168.5px, 144px); } 6% { transform: translate(168.5px, 144px); } 6.65% { transform: translate(184.25px, 144px); } 10.51% { transform: translate(184.25px, 51px); } 11.16% { transform: translate(200px, 51px); } 19.45% { transform: translate(400px, 51px); } 21.73% { transform: translate(455px, 51px); } 100% { transform: translate(455px, 51px); } }
+  .p2 { animation: p2 8s linear infinite; }
+  @keyframes p2 { 0%, 21.62% { fill: #c8f0d0; stroke-width: 1.5; } 23.72% { fill: #8fe0a0; stroke-width: 3; } 31.73%, 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  .k3 { transform: translate(455px, 113px); animation: k3 8s linear infinite; }
+  @keyframes k3 { 0% { transform: translate(168.5px, 144px); } 24.5% { transform: translate(168.5px, 144px); } 25.28% { transform: translate(184.25px, 144px); } 26.82% { transform: translate(184.25px, 113px); } 27.6% { transform: translate(200px, 113px); } 37.5% { transform: translate(400px, 113px); } 40.22% { transform: translate(455px, 113px); } 100% { transform: translate(455px, 113px); } }
+  .p4 { animation: p4 8s linear infinite; }
+  @keyframes p4 { 0%, 40.12% { fill: #ffc9c9; stroke-width: 1.5; } 42.23% { fill: #ff9b9b; stroke-width: 3; } 50.22%, 100% { fill: #ffc9c9; stroke-width: 1.5; } }
+  .k5 { transform: translate(455px, 175px); animation: k5 8s linear infinite; }
+  @keyframes k5 { 0% { transform: translate(168.5px, 144px); } 43% { transform: translate(168.5px, 144px); } 43.78% { transform: translate(184.25px, 144px); } 45.32% { transform: translate(184.25px, 175px); } 46.1% { transform: translate(200px, 175px); } 56% { transform: translate(400px, 175px); } 58.72% { transform: translate(455px, 175px); } 100% { transform: translate(455px, 175px); } }
+  .p6 { animation: p6 8s linear infinite; }
+  @keyframes p6 { 0%, 58.63% { fill: #ffc9c9; stroke-width: 1.5; } 60.73% { fill: #ff9b9b; stroke-width: 3; } 68.73%, 100% { fill: #ffc9c9; stroke-width: 1.5; } }
+  .k7 { transform: translate(455px, 237px); animation: k7 8s linear infinite; }
+  @keyframes k7 { 0% { transform: translate(168.5px, 144px); } 61.5% { transform: translate(168.5px, 144px); } 62.15% { transform: translate(184.25px, 144px); } 66.01% { transform: translate(184.25px, 237px); } 66.66% { transform: translate(200px, 237px); } 74.95% { transform: translate(400px, 237px); } 77.23% { transform: translate(455px, 237px); } 100% { transform: translate(455px, 237px); } }
+  .p8 { animation: p8 8s linear infinite; }
+  @keyframes p8 { 0%, 77.12% { fill: #ffc9c9; stroke-width: 1.5; } 79.22% { fill: #ff9b9b; stroke-width: 3; } 87.22%, 100% { fill: #ffc9c9; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .k3, .p4, .k5, .p6, .k7, .p8 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="288" rx="8"/>
+<path class="wire" d="M168.5,144 L184.25,144 L184.25,51 L200,51" marker-end="url(#a)"/>
+<path class="wire" d="M400,51 L455,51" marker-end="url(#a)"/>
+<path class="wire" d="M168.5,144 L184.25,144 L184.25,113 L200,113" marker-end="url(#a)"/>
+<path class="wire" d="M400,113 L455,113" marker-end="url(#a)"/>
+<path class="wire" d="M168.5,144 L184.25,144 L184.25,175 L200,175" marker-end="url(#a)"/>
+<path class="wire" d="M400,175 L455,175" marker-end="url(#a)"/>
+<path class="wire" d="M168.5,144 L184.25,144 L184.25,237 L200,237" marker-end="url(#a)"/>
+<path class="wire" d="M400,237 L455,237" marker-end="url(#a)"/>
+<rect class="step" x="200" y="28" width="200" height="46" rx="5"/><text class="lbl" x="300" y="48" text-anchor="middle">spins in user space,</text><text class="lbl" x="300" y="63" text-anchor="middle">kernel bypass</text>
+<rect class="app p2" x="455" y="28" width="230" height="46" rx="5"/><text class="lbl" x="570" y="55.5" text-anchor="middle">almost no cost</text>
+<rect class="step" x="200" y="90" width="200" height="46" rx="5"/><text class="lbl" x="300" y="110" text-anchor="middle">one syscall per message</text><text class="lbl" x="300" y="125" text-anchor="middle">recv, send, epoll</text>
+<rect class="wait p4" x="455" y="90" width="230" height="46" rx="5"/><text class="lbl" x="570" y="110" text-anchor="middle">entry and exit cost</text><text class="lbl" x="570" y="125" text-anchor="middle">on every message</text>
+<rect class="step" x="200" y="152" width="200" height="46" rx="5"/><text class="lbl" x="300" y="172" text-anchor="middle">blocks and wakes</text><text class="lbl" x="300" y="187" text-anchor="middle">context switch</text>
+<rect class="wait p6" x="455" y="152" width="230" height="46" rx="5"/><text class="lbl" x="570" y="172" text-anchor="middle">entry, exit and</text><text class="lbl" x="570" y="187" text-anchor="middle">switch cost</text>
+<rect class="step" x="200" y="214" width="200" height="46" rx="5"/><text class="lbl" x="300" y="234" text-anchor="middle">runs in a VM</text><text class="lbl" x="300" y="249" text-anchor="middle">with exits</text>
+<rect class="wait p8" x="455" y="214" width="230" height="46" rx="5"/><text class="lbl" x="570" y="234" text-anchor="middle">VM entry and exit</text><text class="lbl" x="570" y="249" text-anchor="middle">cost too</text>
+<rect class="foc" x="11.5" y="122" width="157" height="44" rx="22"/><text class="lbl" x="90" y="141" text-anchor="middle">What does the thread</text><text class="lbl" x="90" y="156" text-anchor="middle">do per message?</text>
+<circle class="tok k1" cx="0" cy="0" r="6"/>
+<circle class="tok k3" cx="0" cy="0" r="6"/>
+<circle class="tok k5" cx="0" cy="0" r="6"/>
+<circle class="tok k7" cx="0" cy="0" r="6"/>
+</svg>

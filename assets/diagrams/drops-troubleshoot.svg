@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 417" width="760" height="417" role="img" aria-labelledby="t d">
+<title id="t">Find the earliest stage that counts drops</title>
+<desc id="d">Starting from missing packets, check the stages in the order the packet crosses them: the NIC counters, softnet column 3, softnet column 2, the socket counters, and only then look outside the host. If several moved, fix the earliest.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(400px, 167px); animation: k1 7s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(140px, 49px); } 6% { transform: translate(140px, 49px); } 12% { transform: translate(140px, 49px); } 16.6% { transform: translate(140px, 82.5px); } 22.6% { transform: translate(140px, 82.5px); } 32.22% { transform: translate(140px, 152.5px); } 38.22% { transform: translate(140px, 152.5px); } 74% { transform: translate(400px, 167px); } 80% { transform: translate(400px, 167px); } 100% { transform: translate(400px, 167px); } }
+  .p2 { animation: p2 7s linear infinite; }
+  @keyframes p2 { 0%, 16.5% { fill: #ffffff; stroke-width: 1.5; } 18.6% { fill: #ffe9a8; stroke-width: 3; } 26.6%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p3 { animation: p3 7s linear infinite; }
+  @keyframes p3 { 0%, 32.12% { fill: #ffffff; stroke-width: 1.5; } 34.22% { fill: #ffe9a8; stroke-width: 3; } 42.22%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p4 { animation: p4 7s linear infinite; }
+  @keyframes p4 { 0%, 73.9% { fill: #cfe3ff; stroke-width: 1.5; } 74%, 97% { fill: #9cc3ff; stroke-width: 3; } 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .p3, .p4 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="417" rx="8"/>
+<path class="walk" d="M140,49 L140,82.5" marker-end="url(#w)"/>
+<path class="wire" d="M216,97 L400,97" marker-end="url(#a)"/>
+<path class="walk" d="M140,111.5 L140,152.5" marker-end="url(#w)"/>
+<path class="walk" d="M216,167 L400,167" marker-end="url(#w)"/>
+<path class="wire" d="M140,181.5 L140,222.5" marker-end="url(#a)"/>
+<path class="wire" d="M216,237 L400,237" marker-end="url(#a)"/>
+<path class="wire" d="M140,251.5 L140,292.5" marker-end="url(#a)"/>
+<path class="wire" d="M221,307 L400,307" marker-end="url(#a)"/>
+<path class="wire" d="M140,321.5 L140,355" marker-end="url(#a)"/>
+<rect class="foc" x="34" y="20" width="212" height="29" rx="14.5"/><text class="lbl" x="140" y="39" text-anchor="middle">Symptom: packets are missing</text>
+<polygon class="step p2" points="64,97 78,82.5 202,82.5 216,97 202,111.5 78,111.5"/><text class="lbl" x="140" y="101.5" text-anchor="middle">ethtool -S moved?</text>
+<rect class="box" x="400" y="75" width="273" height="44" rx="5"/><text class="lbl" x="536.5" y="94" text-anchor="middle">NIC or ring full: raise the ring, give the</text><text class="lbl" x="536.5" y="109" text-anchor="middle">IRQ CPU less work, check PAUSE</text>
+<polygon class="step p3" points="64,167 78,152.5 202,152.5 216,167 202,181.5 78,181.5"/><text class="lbl" x="140" y="171.5" text-anchor="middle">softnet column 3?</text>
+<rect class="box p4" x="400" y="145" width="261" height="44" rx="5"/><text class="lbl" x="530.5" y="164" text-anchor="middle">Softirq out of budget: more IRQ CPUs</text><text class="lbl" x="530.5" y="179" text-anchor="middle">and queues, or busy polling</text>
+<polygon class="step" points="64,237 78,222.5 202,222.5 216,237 202,251.5 78,251.5"/><text class="lbl" x="140" y="241.5" text-anchor="middle">softnet column 2?</text>
+<rect class="box" x="400" y="215" width="258" height="44" rx="5"/><text class="lbl" x="529" y="234" text-anchor="middle">Backlog full (RPS, loopback, veth):</text><text class="lbl" x="529" y="249" text-anchor="middle">netdev_max_backlog, or turn RPS off</text>
+<polygon class="step" points="59,307 73,292.5 207,292.5 221,307 207,321.5 73,321.5"/><text class="lbl" x="140" y="311.5" text-anchor="middle">nstat drops moved?</text>
+<rect class="box" x="400" y="285" width="269" height="44" rx="5"/><text class="lbl" x="534.5" y="304" text-anchor="middle">Socket full: SO_RCVBUF and rmem_max,</text><text class="lbl" x="534.5" y="319" text-anchor="middle">or the reader is too slow</text>
+<rect class="mut" x="18.5" y="355" width="243" height="44" rx="5"/><text class="lbl" x="140" y="374" text-anchor="middle">Not on this host: check the switch,</text><text class="lbl" x="140" y="389" text-anchor="middle">the sender and your own queue</text>
+<text class="el" x="248" y="92" text-anchor="start">yes</text>
+<text class="el" x="146" y="136" text-anchor="start">no</text>
+<text class="el" x="248" y="162" text-anchor="start">yes</text>
+<text class="el" x="146" y="206" text-anchor="start">no</text>
+<text class="el" x="248" y="232" text-anchor="start">yes</text>
+<text class="el" x="146" y="276" text-anchor="start">no</text>
+<text class="el" x="253" y="302" text-anchor="start">yes</text>
+<text class="el" x="146" y="342.25" text-anchor="start">no</text>
+<circle class="tok k1" cx="0" cy="0" r="7"/>
+</svg>

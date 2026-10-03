@@ -14,21 +14,7 @@ The [huge pages concept](huge-pages.md) explains how a page gets mapped the firs
 
 ## 2. Where the memory goes
 
-```mermaid
-flowchart LR
-  ram(["Physical memory"]) --> hp["hugetlb pool<br/>reserved, never reclaimed"]
-  ram --> anon["Anonymous<br/>heap, stacks"]
-  ram --> file["Page cache<br/>file data, code"]
-  ram --> slab["Kernel<br/>slab, page tables"]
-  ram --> free["Free<br/>above the watermarks"]
-  file --> clean["clean: drop at once"]
-  file --> dirty["dirty: write back first"]
-  anon --> swap["only to swap,<br/>if there is swap"]
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
-  class hp iso
-  class dirty,swap risk
-```
+<img src="../assets/diagrams/memory-pools.svg" alt="Physical memory split into pools, with what reclaim can do to each" width="720">
 
 *Memory is a set of pools. The kernel can take back clean page cache cheaply, dirty page cache only after writing it, and anonymous memory only to swap. The hugetlb pool is never taken back.*
 
