@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 410" width="760" height="410" role="img" aria-labelledby="t d">
+<title id="t">Troubleshooting cgroups: pinning, agents that escape, limits that are too tight</title>
+<desc id="d">Check pinning failures first, because they hurt the application. Then check agents that escape the fence, then limits that are too tight.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(400px, 221px); animation: k1 7s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(140px, 49px); } 6% { transform: translate(140px, 49px); } 12% { transform: translate(140px, 49px); } 15.15% { transform: translate(140px, 75px); } 21.15% { transform: translate(140px, 75px); } 32.9% { transform: translate(140px, 172px); } 38.9% { transform: translate(140px, 172px); } 49.24% { transform: translate(222.5px, 194px); } 52.5% { transform: translate(222.5px, 221px); } 74% { transform: translate(400px, 221px); } 80% { transform: translate(400px, 221px); } 100% { transform: translate(400px, 221px); } }
+  .p2 { animation: p2 7s linear infinite; }
+  @keyframes p2 { 0%, 15.05% { fill: #ffffff; stroke-width: 1.5; } 17.15% { fill: #ffe9a8; stroke-width: 3; } 25.15%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p3 { animation: p3 7s linear infinite; }
+  @keyframes p3 { 0%, 32.8% { fill: #ffffff; stroke-width: 1.5; } 34.9% { fill: #ffe9a8; stroke-width: 3; } 42.9%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p4 { animation: p4 7s linear infinite; }
+  @keyframes p4 { 0%, 73.9% { fill: #cfe3ff; stroke-width: 1.5; } 74%, 97% { fill: #9cc3ff; stroke-width: 3; } 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .p3, .p4 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="410" rx="8"/>
+<path class="walk" d="M140,49 L140,75" marker-end="url(#w)"/>
+<path class="wire" d="M204,97 L400,97" marker-end="url(#a)"/>
+<path class="walk" d="M140,119 L140,172" marker-end="url(#w)"/>
+<path class="wire" d="M198.5,194 L222.5,194 L222.5,167 L400,167" marker-end="url(#a)"/>
+<path class="walk" d="M198.5,194 L222.5,194 L222.5,221 L400,221" marker-end="url(#w)"/>
+<path class="wire" d="M140,216 L140,281" marker-end="url(#a)"/>
+<path class="wire" d="M211.5,303 L235.5,303 L235.5,283.5 L400,283.5" marker-end="url(#a)"/>
+<path class="wire" d="M211.5,303 L235.5,303 L235.5,322.5 L400,322.5" marker-end="url(#a)"/>
+<path class="wire" d="M140,325 L140,363" marker-end="url(#a)"/>
+<rect class="foc" x="81.5" y="20" width="117" height="29" rx="14.5"/><text class="lbl" x="140" y="39" text-anchor="middle">cgroup problem</text>
+<polygon class="step p2" points="76,97 90,75 190,75 204,97 190,119 90,119"/><text class="lbl" x="140" y="94" text-anchor="middle">App cannot pin</text><text class="lbl" x="140" y="109" text-anchor="middle">(EINVAL)?</text>
+<rect class="wait" x="400" y="75" width="212" height="44" rx="5"/><text class="lbl" x="506" y="94" text-anchor="middle">Cpuset without isolated CPUs:</text><text class="lbl" x="506" y="109" text-anchor="middle">run it in latency.slice (§4.4)</text>
+<polygon class="step p3" points="81.5,194 95.5,172 184.5,172 198.5,194 184.5,216 95.5,216"/><text class="lbl" x="140" y="191" text-anchor="middle">Agent on the</text><text class="lbl" x="140" y="206" text-anchor="middle">wrong CPU?</text>
+<rect class="box" x="400" y="145" width="170" height="44" rx="5"/><text class="lbl" x="485" y="164" text-anchor="middle">Restart the unit, check</text><text class="lbl" x="485" y="179" text-anchor="middle">cat /proc/pid/cgroup</text>
+<rect class="box p4" x="400" y="199" width="291" height="44" rx="5"/><text class="lbl" x="545.5" y="218" text-anchor="middle">Agent resets affinity: AllowedCPUs (v2) or</text><text class="lbl" x="545.5" y="233" text-anchor="middle">pin_housekeeping_processes on a timer</text>
+<polygon class="step" points="68.5,303 82.5,281 197.5,281 211.5,303 197.5,325 82.5,325"/><text class="lbl" x="140" y="300" text-anchor="middle">Agent OOM-killed</text><text class="lbl" x="140" y="315" text-anchor="middle">or throttled?</text>
+<rect class="box" x="400" y="269" width="219" height="29" rx="5"/><text class="lbl" x="509.5" y="288" text-anchor="middle">Raise MemoryMax for that unit</text>
+<rect class="box" x="400" y="308" width="267" height="29" rx="5"/><text class="lbl" x="533.5" y="327" text-anchor="middle">cpu.stat nr_throttled: raise CPUQuota</text>
+<rect class="mut" x="68" y="363" width="144" height="29" rx="5"/><text class="lbl" x="140" y="382" text-anchor="middle">See the table below</text>
+<text class="el" x="236" y="92" text-anchor="start">yes</text>
+<text class="el" x="146" y="149.5" text-anchor="start">no</text>
+<text class="el" x="230.5" y="162" text-anchor="start">after moving it</text>
+<text class="el" x="230.5" y="216" text-anchor="start">drifts back later</text>
+<text class="el" x="146" y="252.5" text-anchor="start">no</text>
+<text class="el" x="243.5" y="278.5" text-anchor="start">OOM</text>
+<text class="el" x="243.5" y="317.5" text-anchor="start">monitoring gaps</text>
+<text class="el" x="146" y="348" text-anchor="start">no</text>
+<circle class="tok k1" cx="0" cy="0" r="7"/>
+</svg>

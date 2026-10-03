@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 136" width="760" height="136" role="img" aria-labelledby="t d">
+<title id="t">Spin only on a CPU the thread owns</title>
+<desc id="d">One question decides the wait strategy. A thread that owns an isolated physical CPU on bare metal busy-spins. A thread on a VM or a shared CPU backs off: it spins, then yields, then parks.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(470px, 42px); animation: k1 7s linear infinite; }
+  @keyframes k1 { 0%, 5.8% { transform: translate(195.5px, 69px); opacity: 0; } 6% { transform: translate(195.5px, 69px); opacity: 1; } 8.5% { transform: translate(219.5px, 69px); opacity: 1; } 11.32% { transform: translate(219.5px, 42px); opacity: 1; } 37.45% { transform: translate(470px, 42px); opacity: 1; } 42.8% { transform: translate(470px, 42px); opacity: 1; } 43%, 100% { transform: translate(470px, 42px); opacity: 0; } }
+  .p2 { animation: p2 7s linear infinite; }
+  @keyframes p2 { 0%, 37.35% { fill: #c8f0d0; stroke-width: 1.5; } 39.45% { fill: #8fe0a0; stroke-width: 3; } 47.45%, 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  .k3 { transform: translate(470px, 96px); animation: k3 7s linear infinite; }
+  @keyframes k3 { 0%, 42.8% { transform: translate(195.5px, 69px); opacity: 0; } 43% { transform: translate(195.5px, 69px); opacity: 1; } 45.5% { transform: translate(219.5px, 69px); opacity: 1; } 48.32% { transform: translate(219.5px, 96px); opacity: 1; } 74.45% { transform: translate(470px, 96px); opacity: 1; } 79.8% { transform: translate(470px, 96px); opacity: 1; } 80%, 100% { transform: translate(470px, 96px); opacity: 0; } }
+  .p4 { animation: p4 7s linear infinite; }
+  @keyframes p4 { 0%, 74.35% { fill: #cfe3ff; stroke-width: 1.5; } 76.45% { fill: #9cc3ff; stroke-width: 3; } 84.45%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .k3, .p4 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="136" rx="8"/>
+<path class="wire" d="M195.5,69 L219.5,69 L219.5,42 L470,42" marker-end="url(#a)"/>
+<path class="wire" d="M195.5,69 L219.5,69 L219.5,96 L470,96" marker-end="url(#a)"/>
+<polygon class="step" points="24.5,69 38.5,47 181.5,47 195.5,69 181.5,91 38.5,91"/><text class="lbl" x="110" y="66" text-anchor="middle">Does this thread own</text><text class="lbl" x="110" y="81" text-anchor="middle">a physical CPU?</text>
+<rect class="app p2" x="470" y="20" width="145" height="44" rx="5"/><text class="lbl" x="542.5" y="39" text-anchor="middle">busy-spin</text><text class="lbl" x="542.5" y="54" text-anchor="middle">(Thread.onSpinWait)</text>
+<rect class="box p4" x="470" y="74" width="185" height="44" rx="5"/><text class="lbl" x="562.5" y="93" text-anchor="middle">backoff:</text><text class="lbl" x="562.5" y="108" text-anchor="middle">spin, then yield, then park</text>
+<text class="el" x="227.5" y="37" text-anchor="start">yes: isolated CPU on bare metal</text>
+<text class="el" x="227.5" y="91" text-anchor="start">no: VM or shared CPU</text>
+<circle class="tok k1" cx="0" cy="0" r="6"/>
+<circle class="tok k3" cx="0" cy="0" r="6"/>
+</svg>

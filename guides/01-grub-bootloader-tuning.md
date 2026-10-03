@@ -54,18 +54,7 @@ The goal is **not** a lower *average* latency. The goal is to remove the causes 
 
 The script enforces this split automatically, using host-class detection (`systemd-detect-virt` → DMI → the CPU `hypervisor` flag):
 
-```mermaid
-flowchart LR
-  d{"Host class?"} -- bare_metal --> full["Latency subset<br/>+ isolation set"]
-  d -- virtual_machine --> sub["Latency subset only:<br/>idle=poll, C-state caps, THP off"]
-  d -- "container / unknown" --> no["Refuse:<br/>tune the host kernel instead"]
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
-  classDef muted fill:#eeeeee,stroke:#777777,color:#333333
-  class full iso
-  class sub hk
-  class no muted
-```
+<img src="../assets/diagrams/host-class-args.svg" alt="Bare metal gets both parameter sets, a VM the latency subset, and a container is refused" width="720">
 
 *Bare metal gets both parameter sets, a VM gets only the latency subset, and a container is refused because the kernel belongs to the host.*
 
@@ -122,20 +111,7 @@ grubby --update-kernel=ALL --args="isolcpus=3,5,7,9"           # add the new one
 
 Always **remove before adding**. `grubby --args` does not *replace* an existing `name=value`; it adds another one, and then the kernel sees both.
 
-```mermaid
-sequenceDiagram
-  participant S as 01-grub-bootloader
-  participant G as grubby
-  participant B as /boot/loader/entries/*.conf
-  participant K as Kernel at next boot
-  S->>G: --remove-args=isolcpus
-  S->>G: --args=isolcpus=3,5,7,...
-  G->>B: rewrite the options line of every entry
-  S->>S: grub2-mkconfig (grub.cfg)
-  Note over K: reboot
-  B->>K: GRUB passes the options line
-  K->>K: /proc/cmdline, /sys/devices/system/cpu/isolated
-```
+<img src="../assets/diagrams/grubby-sequence.svg" alt="The script calls grubby, grubby rewrites the BLS entries, and the kernel reads the new line at the next boot" width="720">
 
 *The script removes and re-adds each argument through `grubby`, which rewrites every BLS entry. Nothing changes until the reboot, when GRUB hands the new line to the kernel.*
 
@@ -387,20 +363,7 @@ After every kernel update, check that the **new** entry kept these arguments bef
 
 ## 8. Troubleshooting
 
-```mermaid
-flowchart TD
-  s(["Problem after the reboot"]) --> b{"Boots?"}
-  b -- no --> f1["GRUB menu: e, delete the argument<br/>from the linux line, Ctrl-x"]
-  b -- yes --> i{"isolated file<br/>empty?"}
-  i -- yes --> f2["Args never reached BLS:<br/>grubby --info=DEFAULT, re-apply"]
-  i -- no --> t{"LOC still<br/>ticks at HZ?"}
-  t -- yes --> f3["More than one task on the CPU,<br/>or a stray kworker: fix the<br/>workqueue mask (Guide 02)"]
-  t -- no --> p{"Threads stacked<br/>on one CPU?"}
-  p -- yes --> f4["Pin each thread to one CPU<br/>(Guide 02 §6)"]
-  p -- no --> f5["See the table below"]
-  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
-  class f1 risk
-```
+<img src="../assets/diagrams/grub-troubleshoot.svg" alt="A troubleshooting tree that checks boot, the isolated CPU list, the tick and thread placement in order" width="720">
 
 *Check in order: whether the host boots, whether the kernel accepted the CPU list, whether the tick stopped, and whether each thread has its own CPU.*
 

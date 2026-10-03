@@ -71,19 +71,7 @@ This documentation turns THP **off** at boot (`transparent_hugepage=never`, [Gui
 
 Add up **everything that will map huge pages**, per NUMA node:
 
-```mermaid
-flowchart LR
-  heap["JVM heap<br/>(-Xmx)"] --> sum(("sum"))
-  cc["Code cache<br/>(rounded to 2 MiB)"] --> sum
-  bp["Bypass packet<br/>buffers"] --> sum
-  cpp["C/C++ pools,<br/>ring buffers"] --> sum
-  sum --> hr["+10 to 20 %<br/>headroom"] --> pool[["HUGEPAGES_PER_NODE<br/>for that node"]]
-  pool --> check{"Node RAM left<br/>for the OS?"}
-  check -- enough --> ok["Reserve it"]
-  check -- "too little" --> fix["Shrink the heap,<br/>or add RAM"]
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-  class pool focus
-```
+<img src="../assets/diagrams/hugepage-sizing.svg" alt="Huge page consumers are summed, headroom is added, and the node must keep enough RAM for the OS" width="720">
 
 *Sum every huge-page consumer on the node, add 10–20 % headroom, and make sure the node still has enough ordinary memory for everything else that runs there.*
 
@@ -113,13 +101,7 @@ There are three ways to fill the pool:
 | `vm.nr_hugepages=N` (sysctl) | **evenly** (round-robin) | Depends on fragmentation at the time it runs |
 | `/sys/devices/system/node/nodeX/hugepages/hugepages-2048kB/nr_hugepages` | **per node, exactly as you ask** | High if done early in boot |
 
-```mermaid
-flowchart LR
-  k["Kernel boots<br/>(hugepagesz=2M)"] --> r[["hugetlb-reserve-pages.service<br/>writes nr_hugepages per node"]]
-  r --> m["dev-hugepages.mount"] --> svc["Other services start,<br/>memory fragments"] --> app["Application starts,<br/>maps and pre-touches the pool"]
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-  class r focus
-```
+<img src="../assets/diagrams/hugepage-boot-order.svg" alt="The huge page reservation runs early in boot, before other services fragment memory" width="720">
 
 *The reservation runs in `sysinit.target`, before other services have fragmented memory, so the contiguous 2 MiB blocks are still there to take.*
 
@@ -373,18 +355,7 @@ grep -B11 'KernelPageSize: *2048 kB' /proc/<pid>/smaps | grep -E '^[0-9a-f]+-' |
 
 ## 9. Troubleshooting
 
-```mermaid
-flowchart TD
-  s(["JVM will not use large pages"]) --> u{"Unit ran?"}
-  u -- "condition failed" --> f1["hugepagesz=2M missing:<br/>apply Guide 01, reboot"]
-  u -- "yes" --> n{"Pool short<br/>after boot?"}
-  n -- yes --> f2["Fragmented or too little RAM on the node:<br/>journalctl -b -u hugetlb-reserve-pages"]
-  n -- no --> w{"Enough free on<br/>the JVM's node?"}
-  w -- no --> f3["numastat -p: bind with numactl --membind,<br/>or size both nodes (§5.3)"]
-  w -- yes --> fl{"Flags on the<br/>running JVM?"}
-  fl -- no --> f4["Launcher did not see affinity.enable=true:<br/>jcmd pid VM.flags"]
-  fl -- yes --> f5["See the table below"]
-```
+<img src="../assets/diagrams/hugepage-troubleshoot.svg" alt="A troubleshooting tree from the boot unit to the per-node pool to the JVM flags" width="720">
 
 *Walk from the boot unit to the node pool to the JVM flags. Most failures are a pool on the wrong node or a launcher that did not add the flags.*
 

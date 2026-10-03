@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 321" width="760" height="321" role="img" aria-labelledby="t d">
+<title id="t">Boot arguments travel from the script through grubby to the kernel at the next boot</title>
+<desc id="d">The script removes and re-adds each argument through grubby, which rewrites the options line of every BLS entry, then regenerates grub.cfg. Nothing changes until the reboot, when GRUB passes the new line to the kernel.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .life { stroke: #8c959f; stroke-width: 1.5; stroke-dasharray: 3 4; }
+  .k1 { transform: translate(664px, 285px); animation: k1 8s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(94px, 69px); } 6% { transform: translate(94px, 69px); } 18.92% { transform: translate(279.333px, 69px); } 21.72% { transform: translate(279.333px, 69px); } 21.92% { transform: translate(94px, 103px); } 34.84% { transform: translate(279.333px, 103px); } 37.64% { transform: translate(279.333px, 103px); } 37.84% { transform: translate(287.333px, 137px); } 50.76% { transform: translate(472.667px, 137px); } 53.56% { transform: translate(472.667px, 137px); } 53.76% { transform: translate(94px, 165px); } 55.85% { transform: translate(124px, 165px); } 56.97% { transform: translate(124px, 181px); } 58.92% { transform: translate(96px, 181px); } 61.72% { transform: translate(96px, 181px); } 61.92% { transform: translate(480.667px, 241px); } 74.84% { transform: translate(666px, 241px); } 77.64% { transform: translate(666px, 241px); } 77.84% { transform: translate(666px, 269px); } 79.93% { transform: translate(636px, 269px); } 81.05% { transform: translate(636px, 285px); } 83% { transform: translate(664px, 285px); } 85.8% { transform: translate(664px, 285px); } 100% { transform: translate(664px, 285px); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="321" rx="8"/>
+<line class="life" x1="90" y1="43" x2="90" y2="305"/>
+<line class="life" x1="283.333" y1="43" x2="283.333" y2="305"/>
+<line class="life" x1="476.667" y1="43" x2="476.667" y2="305"/>
+<line class="life" x1="670" y1="43" x2="670" y2="305"/>
+<path class="wire" d="M94,69 L279.333,69" marker-end="url(#a)"/>
+<path class="wire" d="M94,103 L279.333,103" marker-end="url(#a)"/>
+<path class="wire" d="M287.333,137 L472.667,137" marker-end="url(#a)"/>
+<path class="wire" d="M94,165 L124,165 L124,181 L96,181" marker-end="url(#a)"/>
+<rect class="mut" x="610" y="198" width="120" height="22" rx="4"/>
+<text class="sm" x="670" y="213" text-anchor="middle">reboot</text>
+<path class="wire" d="M480.667,241 L666,241" marker-end="url(#a)"/>
+<path class="wire" d="M666,269 L636,269 L636,285 L664,285" marker-end="url(#a)"/>
+<rect class="foc" x="18" y="14" width="144" height="29" rx="5"/><text class="lbl" x="90" y="33" text-anchor="middle">01-grub-bootloader</text>
+<rect class="box" x="251.833" y="14" width="63" height="29" rx="5"/><text class="lbl" x="283.333" y="33" text-anchor="middle">grubby</text>
+<rect class="step" x="380.667" y="14" width="192" height="29" rx="5"/><text class="lbl" x="476.667" y="33" text-anchor="middle">/boot/loader/entries/*.conf</text>
+<rect class="app" x="597.5" y="14" width="145" height="29" rx="5"/><text class="lbl" x="670" y="33" text-anchor="middle">Kernel at next boot</text>
+<text class="el" x="186.667" y="63" text-anchor="middle">--remove-args=isolcpus</text>
+<text class="el" x="186.667" y="97" text-anchor="middle">--args=isolcpus=3,5,7,...</text>
+<text class="el" x="380" y="131" text-anchor="middle">rewrite the options line of every entry</text>
+<text class="el" x="132" y="177" text-anchor="start">grub2-mkconfig (grub.cfg)</text>
+<text class="el" x="573.333" y="235" text-anchor="middle">GRUB passes the options line</text>
+<text class="el" x="628" y="281" text-anchor="end">/proc/cmdline, .../cpu/isolated</text>
+<circle class="tok k1" cx="0" cy="0" r="7"/>
+</svg>

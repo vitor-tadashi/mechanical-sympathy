@@ -151,18 +151,7 @@ Pin them to **one** housekeeping CPU that serves no IRQs. Letting a scanner roam
 > [!WARNING]
 > **Do not put `AllowedCPUs=` on `system.slice` or `user.slice` unless the application runs in its own slice.**
 
-```mermaid
-sequenceDiagram
-  participant T as critical thread
-  participant K as kernel
-  Note over T,K: app in user.slice with AllowedCPUs=OS_CPUS (cpuset)
-  T->>K: sched_setaffinity(CPU 9, isolated)
-  K-->>T: EINVAL, CPU 9 is outside the cpuset
-  Note over T: crashes, or runs "pinned" threads unpinned
-  Note over T,K: app in latency.slice with AllowedCPUs=0-31
-  T->>K: sched_setaffinity(CPU 9, isolated)
-  K-->>T: 0, pinned
-```
+<img src="../assets/diagrams/cpuset-pin-sequence.svg" alt="The pinning call fails with EINVAL in a cpuset without the isolated CPUs and succeeds in latency.slice" width="720">
 
 *The same pinning call fails inside a slice whose cpuset excludes the isolated CPUs, and succeeds inside a slice that includes them.*
 
@@ -272,18 +261,7 @@ cat /sys/fs/cgroup/housekeeping.slice/cpu.stat
 
 ## 7. Troubleshooting
 
-```mermaid
-flowchart TD
-  s(["cgroup problem"]) --> a{"App cannot pin<br/>(EINVAL)?"}
-  a -- yes --> f1["Cpuset without isolated CPUs:<br/>run it in latency.slice (§4.4)"]
-  a -- no --> g{"Agent on the<br/>wrong CPU?"}
-  g -- "after moving it" --> f2["Restart the unit, check<br/>cat /proc/pid/cgroup"]
-  g -- "drifts back later" --> f3["Agent resets affinity: AllowedCPUs (v2)<br/>or pin_housekeeping_processes on a timer"]
-  g -- no --> o{"Agent OOM-killed<br/>or throttled?"}
-  o -- OOM --> f4["Raise MemoryMax for that unit"]
-  o -- "monitoring gaps" --> f5["cpu.stat nr_throttled: raise CPUQuota"]
-  o -- no --> f6["See the table below"]
-```
+<img src="../assets/diagrams/cgroup-troubleshoot.svg" alt="A troubleshooting tree that checks pinning, then agents that escape, then limits" width="720">
 
 *Check pinning failures first, because they hurt the application. Then check agents escaping the fence, then limits that are too tight.*
 
