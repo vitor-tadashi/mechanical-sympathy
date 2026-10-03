@@ -35,16 +35,14 @@
   .k1 { transform: translate(504.5px, 172px); animation: k1 9s linear infinite; }
   @keyframes k1 { 0% { transform: translate(155px, 52px); } 6% { transform: translate(155px, 52px); } 21.8% { transform: translate(257.5px, 52px); } 33.48% { transform: translate(330px, 74px); } 45.19% { transform: translate(330px, 150px); } 50.99% { transform: translate(330px, 150px); } 51.19% { transform: translate(157.5px, 172px); } 62.44% { transform: translate(230.5px, 172px); } 68.24% { transform: translate(230.5px, 172px); } 68.44% { transform: translate(429.5px, 172px); } 80% { transform: translate(504.5px, 172px); } 85.8% { transform: translate(504.5px, 172px); } 100% { transform: translate(504.5px, 172px); } }
   .p2 { animation: p2 9s linear infinite; }
-  @keyframes p2 { 0%, 45.09% { fill: #cfe3ff; stroke-width: 1.5; } 47.19% { fill: #9cc3ff; stroke-width: 3; } 55.19%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  @keyframes p2 { 0% { fill: #cfe3ff; stroke-width: 1.5; } 45.09% { fill: #cfe3ff; stroke-width: 1.5; } 47.19% { fill: #9cc3ff; stroke-width: 3; } 55.19% { fill: #cfe3ff; stroke-width: 1.5; } 62.34% { fill: #cfe3ff; stroke-width: 1.5; } 64.44% { fill: #9cc3ff; stroke-width: 3; } 72.44% { fill: #cfe3ff; stroke-width: 1.5; } 100% { fill: #cfe3ff; stroke-width: 1.5; } }
   .p3 { animation: p3 9s linear infinite; }
-  @keyframes p3 { 0%, 62.34% { fill: #cfe3ff; stroke-width: 1.5; } 64.44% { fill: #9cc3ff; stroke-width: 3; } 72.44%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
-  .p4 { animation: p4 9s linear infinite; }
-  @keyframes p4 { 0%, 79.9% { fill: #ffd166; stroke-width: 1.5; } 80%, 97% { fill: #ffb703; stroke-width: 3; } 100% { fill: #ffd166; stroke-width: 1.5; } }
+  @keyframes p3 { 0%, 79.9% { fill: #ffd166; stroke-width: 1.5; } 80%, 97% { fill: #ffb703; stroke-width: 3; } 100% { fill: #ffd166; stroke-width: 1.5; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .k1, .p2, .p3, .p4 { animation: none; }
+    .k1, .p2, .p3 { animation: none; }
   }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="230" rx="8"/>
@@ -54,9 +52,9 @@
 <path class="wire" d="M429.5,172 L504.5,172" marker-end="url(#a)"/>
 <rect class="step" x="25" y="30" width="130" height="44" rx="22"/><text class="lbl" x="90" y="49" text-anchor="middle">PTP grandmaster</text><text class="lbl" x="90" y="64" text-anchor="middle">or NTP servers</text>
 <rect class="step" x="257.5" y="30" width="145" height="44" rx="5"/><text class="lbl" x="330" y="49" text-anchor="middle">NIC hardware clock</text><text class="lbl" x="330" y="64" text-anchor="middle">PHC, /dev/ptpN</text>
-<rect class="box p2 p3" x="230.5" y="150" width="199" height="44" rx="5"/><text class="lbl" x="330" y="169" text-anchor="middle">kernel timekeeping</text><text class="lbl" x="330" y="184" text-anchor="middle">REALTIME, MONOTONIC, TAI</text>
+<rect class="box p2" x="230.5" y="150" width="199" height="44" rx="5"/><text class="lbl" x="330" y="169" text-anchor="middle">kernel timekeeping</text><text class="lbl" x="330" y="184" text-anchor="middle">REALTIME, MONOTONIC, TAI</text>
 <rect class="step" x="22.5" y="150" width="135" height="44" rx="5"/><text class="lbl" x="90" y="169" text-anchor="middle">TSC</text><text class="lbl" x="90" y="184" text-anchor="middle">CPU cycle counter</text>
-<rect class="foc p4" x="504.5" y="150" width="241" height="44" rx="2"/><line class="sl" x1="510.5" y1="150" x2="510.5" y2="194"/><line class="sl" x1="739.5" y1="150" x2="739.5" y2="194"/><text class="lbl" x="625" y="169" text-anchor="middle">application</text><text class="lbl" x="625" y="184" text-anchor="middle">clock_gettime, System.nanoTime</text>
+<rect class="foc p3" x="504.5" y="150" width="241" height="44" rx="2"/><line class="sl" x1="510.5" y1="150" x2="510.5" y2="194"/><line class="sl" x1="739.5" y1="150" x2="739.5" y2="194"/><text class="lbl" x="625" y="169" text-anchor="middle">application</text><text class="lbl" x="625" y="184" text-anchor="middle">clock_gettime, System.nanoTime</text>
 <text class="el" x="336" y="116" text-anchor="start">phc2sys or chrony</text>
 <text class="el" x="194" y="167" text-anchor="middle">clocksource</text>
 <text class="el" x="472" y="208" text-anchor="middle">vDSO, no system call</text>
