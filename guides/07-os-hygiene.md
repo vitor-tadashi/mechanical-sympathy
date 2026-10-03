@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **Risk level** | **2 / 5** for services, limits, noatime and tuned. **5 / 5** for the opt-in firewall and netfilter section (§6): that removes a security control. |
-| **Reboot required** | No. The boot arguments that tuned adds (§5) take effect at the next reboot. |
+| **Reboot required** | Yes, once, when the installed `network-latency` profile has a `[bootloader]` section (tuned 2.21 has one): its boot arguments (§5) take effect only after a reboot. Everything else applies at once. |
 | **Applies to** | Bare metal and VMs |
 
 ## At a glance
@@ -14,7 +14,7 @@
 - **Why:** none of these is large on its own, but together they are the background noise behind unexplained p99.9 spikes on the housekeeping CPUs, where your NIC interrupts are served.
 - **Cost:** fewer conveniences (cron, `sar` history). The opt-in firewall section removes a security control.
 
-**Time:** ~30 min, no reboot · **Do this if:** always, on bare metal and VMs · **Skip if:** never. Skip §6 unless security has signed off in writing.
+**Time:** ~30 min, plus one reboot for tuned's boot arguments (§5) · **Do this if:** always, on bare metal and VMs · **Skip if:** never. Skip §6 unless security has signed off in writing.
 
 ```mermaid
 flowchart LR
@@ -145,7 +145,7 @@ What `network-latency` brings (through `latency-performance`). The rows marked *
 **tuned also changes the command line.** Because of its `[bootloader]` section, the profile is not only runtime settings. When the profile is applied, tuned writes its arguments to `/etc/tuned/bootcmdline` and into every boot entry, and the kernel gets them at the next reboot. [Guide 01](01-grub-bootloader-tuning.md#4-how-the-arguments-are-applied-rhel-8-9-and-10) writes its own arguments with `grubby`, so two tools now write the command line:
 
 - **`skew_tick=1` comes from both.** Rolling back only one of the two guides can leave the other's copy on the command line.
-- **`tsc=reliable` changes behavior.** [Concept: clocks and time §3](../concepts/clocks-and-time.md#3-the-tsc-and-the-clocksource) explains the watchdog, and advises adding the argument only after the watchdog has wrongly switched the clocksource on your hardware. With this profile it is there from the first reboot. On a host whose TSC is really unstable, the kernel then keeps the bad clock instead of switching away. Check that the TSC is invariant first: `grep -o -w -e constant_tsc -e nonstop_tsc /proc/cpuinfo | sort -u` lists both flags. To keep the watchdog, a custom profile can set the same key, `cmdline_network_latency=`, in its own `[bootloader]` section, which replaces the included one. The script does not do this.
+- **`tsc=reliable` changes behavior.** It turns off the clocksource watchdog for the TSC and the TSC stability checks at boot. [Concept: clocks and time §3](../concepts/clocks-and-time.md#3-the-tsc-and-the-clocksource) explains the watchdog, and advises adding the argument only after the watchdog has wrongly switched the clocksource on your hardware. With this profile it is there from the first reboot, so a TSC that really drifts goes unnoticed and the kernel keeps the bad clock. The `constant_tsc` and `nonstop_tsc` flags in `/proc/cpuinfo` are not enough: they say that the rate is steady, not that the counters of different sockets agree. Keep the argument only when the platform vendor states that the TSC is synchronized across sockets, or when the watchdog has misfired on this hardware. Otherwise keep the watchdog: a custom profile can set the same key, `cmdline_network_latency=`, in its own `[bootloader]` section, which replaces the included one. The script does not do this.
 - **Check the result after a reboot.** `cat /etc/tuned/bootcmdline` shows what tuned adds, `sudo grubby --info=ALL` what each boot entry holds, and `cat /proc/cmdline` what the kernel got, as in [Guide 01 §7](01-grub-bootloader-tuning.md#7-verification). On RHEL 8, the entries hold `$tuned_params`, which GRUB fills from `grub2-editenv list` at boot, so `grubby` shows the name and not the arguments. `/proc/cmdline` is the final word.
 
 > [!NOTE]
