@@ -194,6 +194,25 @@ By default, `SCHED_FIFO`/`SCHED_RR` tasks may consume at most 950 ms of every 1 
 > [!WARNING]
 > `-1` removes the cap. **Risk:** a runaway FIFO thread on a *housekeeping* CPU now starves everything on it, kernel threads included, and the host may appear hung. Only run FIFO spinners on isolated CPUs.
 
+#### RHEL 10: the fair server
+
+Upstream kernel 6.12, the base of RHEL 10, adds a second guard that `-1` does not switch off: the **fair server**. Every CPU has one. It is a [deadline](../GLOSSARY.md#deadline-server) entity that runs ordinary (`SCHED_OTHER`) tasks when real-time tasks starve them, for up to **50 ms in every 1 s** by default.
+
+- **When it acts.** Only when an ordinary task is runnable on that CPU and has not run. It is deferred: it steps in near the end of the period, after the task has waited about 950 ms. Then it preempts the FIFO thread for up to 50 ms.
+- **What it means here.** An isolated CPU that runs one FIFO spinner and nothing else never meets it. A `kworker` or `ksoftirqd` queued on that CPU no longer waits forever ([use case 14](../examples/use-cases/14-the-spinner-that-stalled-the-kernel.md)). It waits up to about a second, and then the spinner loses up to 50 ms. The cure is the same as before: a `SCHED_OTHER` spinner (§6.5), and no kernel work on the isolated CPUs.
+- **How to check.** The directory exists only on kernels that have the fair server, whatever their version:
+
+  ```bash
+  ls /sys/kernel/debug/sched/fair_server/                 # cpu0 cpu1 …   (needs debugfs mounted)
+  cat /sys/kernel/debug/sched/fair_server/cpu3/runtime    # 50000000 (ns) = 50 ms
+  cat /sys/kernel/debug/sched/fair_server/cpu3/period     # 1000000000 (ns) = 1 s
+  ```
+
+- **Do not set the runtime to 0.** Writing `0` disables the server on that CPU, and the kernel logs *"Fair server disabled in CPU N, system may crash due to starvation"*. The scripts leave it alone.
+
+> [!NOTE]
+> **Validate on your hardware.** This follows the kernel's scheduler documentation and source (`Documentation/scheduler/sched-rt-group.rst`, `kernel/sched/deadline.c`). This repository does not measure it, and RHEL kernels can carry backports, so trust the `fair_server` directory over the version number.
+
 ## 5. Kernel threads that stay on isolated CPUs
 
 After isolation, `ps -eLo psr,comm | awk '$1==5'` still shows a few kernel threads on CPU 5. That is expected:

@@ -35,6 +35,8 @@ Guide 02 sets `kernel.sched_rt_runtime_us=-1`, and the 50 ms cluster is gone.
 
 *Act 2: without throttling, nothing takes the CPU from a FIFO spinner, not even the kernel threads that feed it.*
 
+On a kernel with the fair server (RHEL 10, [Guide 02 §4.4](../../guides/02-cpu-core-isolation.md#rhel-10-the-fair-server)), act 2 changes shape but does not go away. The waiting kernel threads get up to 50 ms after about a second of waiting, so the spinner stalls once a second again, and the packets still wait for the kernel threads in between.
+
 ## 2. Diagnose
 
 Three questions: which threads run in a real-time class, is the kernel throttling them, and what is waiting on their CPU?

@@ -80,6 +80,20 @@ Not to start. Tune the kernel path first (Guides 01–07) and measure it. Bypass
 </details>
 
 <details>
+<summary><b>Why not just run <code>tuned-adm profile cpu-partitioning</code>?</b></summary>
+
+You can, if CPU isolation is all you need. The profile writes about the same boot arguments and CPU masks as Guides 01 and 02, from one list of CPUs, and Red Hat supports it. It does not reserve huge pages per node, tune the NICs, fence agents, handle memory pressure or report drift, which is what the other guides add. Do not let both own the same settings. See [RHEL's own tuning tools](concepts/rhel-tuning-tools.md).
+
+</details>
+
+<details>
+<summary><b>Do I need the real-time kernel?</b></summary>
+
+Usually not, when the critical threads spin alone on isolated CPUs: there is nothing left for the real-time kernel to preempt. It helps when a critical thread must block and its worst wake-up time matters more than throughput. Then use `kernel-rt` with the `realtime` tuned profile, and keep the isolation from these guides. See [the real-time kernel](concepts/rhel-tuning-tools.md#5-the-real-time-kernel-kernel-rt).
+
+</details>
+
+<details>
 <summary><b>Does this work on AMD CPUs?</b></summary>
 
 Most of it does. The examples use Intel names, and the guides note where AMD differs (for example `amd_pstate` instead of `intel_pstate`). AMD-specific advice follows the kernel documentation and is marked "validate on your hardware".

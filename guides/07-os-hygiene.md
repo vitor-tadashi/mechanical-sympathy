@@ -134,6 +134,8 @@ What `network-latency` brings (through `latency-performance`):
 
 **Ordering with Guide 06.** tuned applies its `[sysctl]` values and then, because `reapply_sysctl = 1` is the default in `/etc/tuned/tuned-main.conf`, re-applies `/etc/sysctl.d/`. So on any conflict the Guide 06 file wins, and the script makes sure the option has not been turned off. Some scripts run `tuned-adm profile network-latency` *before* writing their sysctls with `sysctl -w`. That works until the next reboot, when tuned and the missing persistence change the result.
 
+**Why not cpu-partitioning?** Red Hat's `cpu-partitioning` profile also writes the isolation boot arguments and the CPU masks, which Guides 01 and 02 already own. This profile adds only what the scripts leave to tuned. [Concept: RHEL's own tuning tools](../concepts/rhel-tuning-tools.md) compares them setting by setting, and says when the profile is the better choice.
+
 ```bash
 tuned-adm active                  # Current active profile: low-latency
 tuned-adm verify                  # checks that the profile's settings are in effect

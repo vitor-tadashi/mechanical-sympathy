@@ -54,7 +54,7 @@ flowchart TD
 [Guide 04](guides/04-network-optimization.md) → [concepts/network-tuning](concepts/network-tuning.md) → [concepts/ethtool](concepts/ethtool.md) → [Guide 08 — kernel bypass](guides/08-kernel-bypass.md) → [segmentation example](examples/network-segmentation-example.md) → [Guide 06 §3–6](guides/06-kernel-sysctl-tuning.md#3-tcp-behavior) → [Guide 10 — time sync](guides/10-time-sync.md)
 
 **Learner of mechanisms: understand the machine (about three hours)**
-[Hardware topology](concepts/hardware-topology.md) → [power and frequency](concepts/power-and-frequency.md) → [clocks and time](concepts/clocks-and-time.md) → [boot path](concepts/bootloader.md) → [CPU isolation](concepts/cpu-isolation.md) → [interrupts and deferred work](concepts/interrupts-and-deferred-work.md) → [security mitigations](concepts/security-mitigations.md) → [cgroups](concepts/cgroups.md) → [huge pages and NUMA](concepts/huge-pages.md) → [memory reclaim](concepts/memory-reclaim.md) → [swap and the OOM killer](concepts/swap-and-oom.md) → [network path](concepts/network-tuning.md) → [network buffers](concepts/network-buffers.md) → [ethtool](concepts/ethtool.md) → [thread handoff](concepts/thread-handoff.md) → [logging and I/O](concepts/logging-and-io.md) → [JVM pauses](concepts/jvm-pauses.md) → [tail latency](concepts/tail-latency.md) → [queueing](concepts/queueing.md). The [concept map](#concepts) shows how they build on each other.
+[Hardware topology](concepts/hardware-topology.md) → [power and frequency](concepts/power-and-frequency.md) → [clocks and time](concepts/clocks-and-time.md) → [boot path](concepts/bootloader.md) → [CPU isolation](concepts/cpu-isolation.md) → [interrupts and deferred work](concepts/interrupts-and-deferred-work.md) → [security mitigations](concepts/security-mitigations.md) → [cgroups](concepts/cgroups.md) → [RHEL's own tuning tools](concepts/rhel-tuning-tools.md) → [huge pages and NUMA](concepts/huge-pages.md) → [memory reclaim](concepts/memory-reclaim.md) → [swap and the OOM killer](concepts/swap-and-oom.md) → [network path](concepts/network-tuning.md) → [network buffers](concepts/network-buffers.md) → [ethtool](concepts/ethtool.md) → [thread handoff](concepts/thread-handoff.md) → [logging and I/O](concepts/logging-and-io.md) → [JVM pauses](concepts/jvm-pauses.md) → [tail latency](concepts/tail-latency.md) → [queueing](concepts/queueing.md). The [concept map](#concepts) shows how they build on each other.
 
 ## Guides
 
@@ -82,7 +82,7 @@ The concepts explain why the guides work. They build on each other from the hard
 %%{init: {"flowchart": {"wrappingWidth": 260}}}%%
 flowchart TD
   hw["Hardware<br/>topology · power and frequency · clocks"]
-  kern["Kernel and CPU<br/>boot path · CPU isolation · interrupts and deferred work · mitigations · cgroups"]
+  kern["Kernel and CPU<br/>boot path · CPU isolation · interrupts and deferred work · mitigations · cgroups · RHEL tools"]
   mem["Memory<br/>huge pages and NUMA · reclaim and faults · swap and OOM"]
   net["Network<br/>network path · network buffers · ethtool"]
   app["Application<br/>thread handoff · logging and I/O · JVM pauses"]
@@ -115,6 +115,7 @@ flowchart TD
 | Kernel and CPU | [Interrupts & deferred work](concepts/interrupts-and-deferred-work.md) | ~10 min | What runs after an interrupt, and where? When does ksoftirqd take over? Which IPIs reach an isolated CPU, and why? Where do RCU callbacks and kworkers run? |
 | Kernel and CPU | [Security mitigations](concepts/security-mitigations.md) | ~8 min | What do Spectre and Meltdown fixes cost, and where? Who pays: a spinning thread or a blocking one? How do I measure it before opting out? |
 | Kernel and CPU | [cgroups](concepts/cgroups.md) | ~5 min | Affinity vs cpuset? What do quota, memory.max, io.weight do? How does systemd map onto cgroups? |
+| Kernel and CPU | [RHEL's own tuning tools](concepts/rhel-tuning-tools.md) | ~9 min | Why not just use the cpu-partitioning tuned profile? What does it set, and what does it leave out? When does the real-time kernel help? What is the fair server? |
 | Memory | [Huge pages & NUMA](concepts/huge-pages.md) | ~7 min | What is TLB reach? Why pre-touch? Why is THP unpredictable? Why reserve per node? |
 | Memory | [Memory reclaim & faults](concepts/memory-reclaim.md) | ~10 min | Where does the memory go? Who reclaims it, kswapd or my thread? What does a minor or major fault cost? Why do stalls appear only after days of uptime? |
 | Memory | [Swap & the OOM killer](concepts/swap-and-oom.md) | ~9 min | What can be swapped, and what does a swap-in cost? What does swappiness really do? How does the OOM killer choose? Why prefer a loud failure? |
