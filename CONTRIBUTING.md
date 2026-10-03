@@ -23,7 +23,7 @@ Thank you for reading closely enough to want to fix something. This repository i
 ```bash
 make install-git-hooks        # optional: pre-commit lints the areas you staged, commit-msg checks titles
 git switch -c docs/short-slug # Conventional Branch: <type>/<kebab-slug>
-make lint                     # links, anchors, Mermaid, SVG rules, ShellCheck, site, Checkstyle
+make lint                     # links, anchors, no Mermaid, SVG rules, ShellCheck, site, Checkstyle
 make check-scripts            # script changes: every script end to end on fake hosts (Linux only)
 make check-containers         # script changes: the same in systemd containers of RHEL-family images (podman or docker)
 make check-vm                 # script changes: the same on a real kernel in KVM guests (Linux with /dev/kvm; CI runs it)

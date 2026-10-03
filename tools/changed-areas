@@ -4,7 +4,7 @@
 #
 # Reads the paths of a change and prints the areas it touches, one per line:
 #   scripts       ShellCheck and the layout and buffer checks (make lint-scripts)
-#   docs          links, anchors, Mermaid, SVG rules, glossary (make lint-docs)
+#   docs          links, anchors, no Mermaid, SVG rules, glossary (make lint-docs)
 #   site          the hand-written pages and their ports of the scripts (make lint-site)
 #   java          the latency probe (make lint-java)
 #   integration   the guide scripts on fake hosts and in containers (tools/check-scripts)
