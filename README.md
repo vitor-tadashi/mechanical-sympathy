@@ -119,24 +119,7 @@ Plus:
 
 ## How it fits together
 
-```mermaid
-%%{init: {"flowchart": {"wrappingWidth": 480}}}%%
-flowchart TD
-  conf[("<b>/etc/lowlat/lowlat.conf</b><br/>CPU layout · NIC roles · huge pages per node")]
-  once["<b>Apply once, then reboot</b> (persistent)<br/>00 BIOS setup (by hand) · 01 kernel command line: isolcpus, nohz_full, rcu_nocbs, idle=poll, THP off<br/>02 systemd CPUAffinity, RT limits · 03 huge pages per NUMA node<br/>05 housekeeping.slice · 06 sysctl profile · 07 services, limits, noatime, tuned · 10 time sync<br/>12 swap off, OOM order and memlock of the latency services"]
-  boot["<b>Every boot</b>: lowlat-runtime.service<br/>00 PCIe power policy · 02 workqueue cpumask · 08 DPDK port binding<br/>04 NIC coalescing, offloads, IRQ affinity · 05 pin agents · 07 opt-in firewall and modules · 12 zswap off"]
-  app["<b>Application launcher</b><br/>JVM options by host class · large pages, NUMA, pre-touch when pinned<br/>threads pinned to isolated CPUs · busy-spin idle strategy"]
-  verify{{"<b>scripts/verify-tuning</b><br/>PASS / WARN / FAIL"}}
-  watch["<b>11 Day-2</b>: lowlat-verify.timer<br/>daily and 10 min after every boot"]
-  conf --> once --> boot --> app --> verify
-  verify -.-> watch
-  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-  class conf focus
-  class once,boot,watch hk
-  class app iso
-```
+<img src="assets/diagrams/how-it-fits.svg" alt="lowlat.conf feeds the persistent settings, the every-boot runtime settings and the launcher, then verify-tuning and the day-2 timer check the result" width="720">
 
 *One config file drives everything. Persistent settings are applied once and take effect at the next boot. Runtime settings are re-applied at every boot by `lowlat-runtime.service`. The application pins its threads last, and `verify-tuning` checks the result. A timer then repeats that check daily and after every boot, so drift shows up as a failed unit.*
 

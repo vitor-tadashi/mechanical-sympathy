@@ -9,18 +9,7 @@ Prefer to learn from a worked problem? The [use cases](examples/use-cases/README
 
 ## Which scenario am I?
 
-```mermaid
-flowchart TD
-  start(["Start: one host to tune"]) --> vm{"Bare metal?"}
-  vm -- "no: systemd-detect-virt<br/>prints a hypervisor" --> B["<b>Scenario B</b><br/>Virtual machine"]
-  vm -- yes --> shared{"One critical<br/>app only?"}
-  shared -- "no, several tenants" --> C["<b>Scenario C</b><br/>Shared bare-metal host"]
-  shared -- yes --> pins{"Threads<br/>pinnable?"}
-  pins -- "yes, one per CPU" --> A["<b>Scenario A</b><br/>Dedicated bare metal, full treatment"]
-  pins -- "no, large dynamic thread pools" --> C
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-  class A,B,C focus
-```
+<img src="assets/diagrams/scenario-picker.svg" alt="A decision tree that picks Scenario A, B or C from the host type, the tenants and whether threads can be pinned" width="720">
 
 *A VM goes to Scenario B. A physical host shared by several tenants, or one whose application cannot pin its threads, goes to Scenario C. A dedicated physical host with pinnable threads gets the full treatment, Scenario A.*
 
@@ -64,23 +53,7 @@ scripts/verify-tuning
 
 **Time:** about half a day for the first host, including the reboot and verification. The next hosts with the same hardware take minutes (same `lowlat.conf`).
 
-```mermaid
-gantt
-  title Scenario A, first host (about half a day)
-  dateFormat HH:mm
-  axisFormat %H:%M
-  section Prepare
-    Baseline and verify-tuning report     :p1, 09:00, 45m
-    CPU layout and lowlat.conf            :p2, after p1, 60m
-    Security sign-off check               :p3, after p2, 15m
-  section Apply
-    apply-all --dry-run and review        :a1, after p3, 30m
-    apply-all --apply                     :a2, after a1, 15m
-    Reboot (one reboot for 01, 02, 03)    :crit, a3, after a2, 15m
-  section Check
-    verify-tuning and rtla osnoise        :c1, after a3, 30m
-    Application launch and latency run    :c2, after c1, 60m
-```
+<img src="assets/diagrams/afternoon-schedule.svg" alt="A schedule of the first host: prepare, apply with one reboot, then check" width="720">
 
 *About two hours to measure and design, under an hour to apply with a single reboot, then about 90 minutes to verify and compare against the baseline. The times are indicative.*
 
@@ -149,21 +122,7 @@ systemctl list-timers lowlat-verify.timer         # the verification timer of Gu
 
 ## When something goes wrong
 
-```mermaid
-flowchart TD
-  s(["Something is wrong after tuning"]) --> boot{"Boots?"}
-  boot -- no --> f1["GRUB menu, e, remove the last added arguments, Ctrl-x.<br/>Then 01-grub-bootloader --rollback"]
-  boot -- yes --> slow{"SSH slow?"}
-  slow -- yes --> f2["Too few OS CPUs: check mpstat -P ALL 1,<br/>give CPUs back in lowlat.conf"]
-  slow -- no --> app{"App fails?"}
-  app -- "cannot pin threads" --> f3["cpuset trap: Guide 05 §4.4"]
-  app -- "JVM large pages fail" --> f4["Pool on the wrong node or too small:<br/>Guide 03 §9"]
-  app -- no --> net{"NIC settings<br/>lost at boot?"}
-  net -- yes --> f5["systemctl status lowlat-runtime"]
-  net -- no --> f6["Find the row in the table below"]
-  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
-  class f1 risk
-```
+<img src="assets/diagrams/quick-troubleshoot.svg" alt="A troubleshooting tree that checks boot, SSH, the application and the runtime settings in order" width="720">
 
 *Check in this order: does it boot, is the OS starved, does the application start and pin, did runtime settings survive the reboot. Each branch ends at the first action from the table.*
 
@@ -187,10 +146,7 @@ sudo systemctl reboot
 
 Use the same `--config` file and path overrides as for the apply.
 
-```mermaid
-flowchart LR
-  stop["Stop and disable<br/>lowlat-runtime.service"] --> g["Roll back the guides<br/>11 → 08 → 04 → 05 → 10 → 12 → 07 → 06 → 03 → 02 → 01 → 00"] --> unit["Remove or restore<br/>the runtime unit"] --> boot(["Reboot"])
-```
+<img src="assets/diagrams/rollback-order.svg" alt="The rollback stops the runtime unit, undoes the guides in reverse run order, restores the unit and reboots" width="720">
 
 *The wrapper undoes the guides in reverse run order. Guide 08 comes before 04, because its driver reload would reset the NIC settings that 04 restores.*
 

@@ -4,37 +4,7 @@
 
 Pick the lane that matches your role. Each box is one page, read left to right, and the links for every step are listed under the diagram.
 
-```mermaid
-flowchart TD
-  subgraph op["Operator: apply the tuning (about half a day for the first host)"]
-    direction LR
-    o0["Quick start"] --> o09(["Step 0<br/>09 Baseline"]) --> o00["00<br/>BIOS"] --> o1["01<br/>GRUB"] --> o2["02<br/>CPUs"] --> o3["03<br/>Huge pages"] --> o4["04<br/>Network"] --> o5["05<br/>cgroups"] --> o6["06<br/>sysctl"] --> o7["07<br/>Hygiene"] --> o10["10 Time<br/>11 Day-2<br/>12 Memory"] --> ov[["verify-tuning"]]
-    o7 -.-> o8["08 Bypass<br/>(only with a<br/>bypass stack)"] -.-> o10
-  end
-  subgraph story["Learner: from stories"]
-    direction LR
-    s1["Use case 1<br/>The quiet core"] --> s2["Use case 2<br/>Critical and<br/>non-critical"] --> s3["Use case 8<br/>Capstone"] --> s4["Layout<br/>explorer"]
-  end
-  subgraph dev["Application developer: how my code should behave"]
-    direction LR
-    d1["02 §6<br/>Pinning"] --> d2["03 §5<br/>Java flags"] --> d3["Java example"] --> d4["Concept:<br/>caches and coherence"]
-  end
-  subgraph mgr["Manager or reviewer: what, why, what can go wrong"]
-    direction LR
-    m1["README<br/>Read this first"] --> m1b["Safety"] --> m2["Risk tables<br/>atop each guide"] --> m3["01 §5.6<br/>Mitigations"] --> m4["07 §6<br/>Firewall"]
-  end
-  subgraph net["Network engineer"]
-    direction LR
-    n1["04<br/>Network"] --> n2["Concept:<br/>network path"] --> n3["Concept:<br/>ethtool"] --> n4["08<br/>Bypass"] --> n5["Segmentation<br/>example"] --> n6["06 §3-6<br/>TCP, buffers"] --> n7["10<br/>Time sync"]
-  end
-  subgraph learn["Learner of mechanisms: understand the machine (about three hours)"]
-    direction LR
-    u1["Concepts:<br/>hardware"] --> u2["Kernel<br/>and CPU"] --> u3["Memory"] --> u4["Network"] --> u5["Application"] --> u6["Measurement"]
-  end
-  op ~~~ story ~~~ dev ~~~ mgr ~~~ net ~~~ learn
-  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
-  class m3,m4 risk
-```
+<img src="assets/diagrams/reading-lanes.svg" alt="Six reading lanes, one per role, each a sequence of pages read left to right" width="720">
 
 *Six lanes: the operator takes a baseline with Guide 09, walks guides 00 to 07, then 10, 11 and 12 (08 only with kernel bypass), and ends at verify-tuning; the learner follows three use cases and the layout explorer; the developer reads the pinning and Java sections and the Java example; the reviewer reads the safety page and the risks, with mitigations and firewall highlighted; the network engineer goes from Guide 04 through the network concepts to bypass, segmentation and time sync; the learner of mechanisms reads every concept, from the hardware up to measurement.*
 
@@ -78,30 +48,7 @@ flowchart TD
 
 The concepts explain why the guides work. They build on each other from the hardware up:
 
-```mermaid
-%%{init: {"flowchart": {"wrappingWidth": 260}}}%%
-flowchart TD
-  hw["Hardware<br/>topology · power and frequency · clocks"]
-  kern["Kernel and CPU<br/>boot path · CPU isolation · interrupts and deferred work · mitigations · cgroups · RHEL tools"]
-  mem["Memory<br/>huge pages and NUMA · reclaim and faults · swap and OOM"]
-  net["Network<br/>network path · network buffers · ethtool"]
-  app["Application<br/>thread handoff · logging and I/O · JVM pauses"]
-  meas["Measurement<br/>tail latency · queueing"]
-  hw --> kern
-  hw --> mem
-  kern --> net
-  kern --> app
-  mem --> app
-  net --> app
-  app --> meas
-  net --> meas
-  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-  class hw,kern,mem,net hk
-  class app iso
-  class meas focus
-```
+<img src="assets/diagrams/concept-map.svg" alt="The concept groups build on each other: hardware, then kernel and memory, then network and application, then measurement" width="720">
 
 *Hardware sets the costs, the kernel and memory decide who pays them, the network and the application are where a message spends its time, and measurement tells you whether any of it worked.*
 

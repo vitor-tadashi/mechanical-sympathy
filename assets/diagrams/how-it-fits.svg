@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 398" width="760" height="398" role="img" aria-labelledby="t d">
+<title id="t">One config file drives everything, applied once, re-applied every boot, then verified</title>
+<desc id="d">lowlat.conf holds the CPU layout, the NIC roles and the huge pages per node. Persistent settings are applied once and take effect at the next boot. Runtime settings are re-applied at every boot by lowlat-runtime.service. The application launcher pins its threads last, verify-tuning checks the result, and the day-2 timer repeats that check daily and after every boot.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(454px, 361px); animation: k1 10s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(380px, 56px); } 8% { transform: translate(380px, 56px); } 13% { transform: translate(380px, 56px); } 14.82% { transform: translate(380px, 78px); } 19.82% { transform: translate(380px, 78px); } 28.57% { transform: translate(380px, 184px); } 33.57% { transform: translate(380px, 184px); } 40.01% { transform: translate(380px, 262px); } 45.01% { transform: translate(380px, 262px); } 58.24% { transform: translate(240px, 340px); } 63.24% { transform: translate(240px, 340px); } 81% { transform: translate(454px, 361px); } 86% { transform: translate(454px, 361px); } 100% { transform: translate(454px, 361px); } }
+  .p2 { animation: p2 10s linear infinite; }
+  @keyframes p2 { 0%, 14.72% { fill: #cfe3ff; stroke-width: 1.5; } 16.82% { fill: #9cc3ff; stroke-width: 3; } 24.82%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  .p3 { animation: p3 10s linear infinite; }
+  @keyframes p3 { 0%, 28.47% { fill: #cfe3ff; stroke-width: 1.5; } 30.57% { fill: #9cc3ff; stroke-width: 3; } 38.57%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  .p4 { animation: p4 10s linear infinite; }
+  @keyframes p4 { 0%, 39.91% { fill: #c8f0d0; stroke-width: 1.5; } 42.01% { fill: #8fe0a0; stroke-width: 3; } 50.01%, 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  .p5 { animation: p5 10s linear infinite; }
+  @keyframes p5 { 0%, 58.14% { fill: #ffffff; stroke-width: 1.5; } 60.24% { fill: #ffe9a8; stroke-width: 3; } 68.24%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p6 { animation: p6 10s linear infinite; }
+  @keyframes p6 { 0%, 80.9% { fill: #cfe3ff; stroke-width: 1.5; } 81%, 97% { fill: #9cc3ff; stroke-width: 3; } 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .p3, .p4, .p5, .p6 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="398" rx="8"/>
+<path class="wire" d="M380,56 L380,78" marker-end="url(#a)"/>
+<path class="wire" d="M380,162 L380,184" marker-end="url(#a)"/>
+<path class="wire" d="M380,240 L380,262" marker-end="url(#a)"/>
+<path class="wire" d="M240,318 L240,340" marker-end="url(#a)"/>
+<path class="wire dash" d="M321.5,361 L454,361" marker-end="url(#a)"/>
+<path class="foc" d="M215,20 a165,6 0 0 1 330,0 v30 a165,6 0 0 1 -330,0 z"/><path class="sl" d="M215,20 a165,6 0 0 0 330,0"/><text class="sm" x="380" y="32.5" text-anchor="middle">/etc/lowlat/lowlat.conf</text><text class="sm" x="380" y="46.5" text-anchor="middle">CPU layout · NIC roles · huge pages per node</text>
+<rect class="box p2" x="30" y="78" width="700" height="84" rx="5"/><text class="sm" x="380" y="96.5" text-anchor="middle">Apply once, then reboot (persistent)</text><text class="sm" x="380" y="110.5" text-anchor="middle">00 BIOS setup (by hand) · 01 kernel command line: isolcpus, nohz_full, rcu_nocbs, idle=poll, THP off</text><text class="sm" x="380" y="124.5" text-anchor="middle">02 systemd CPUAffinity, RT limits · 03 huge pages per NUMA node</text><text class="sm" x="380" y="138.5" text-anchor="middle">05 housekeeping.slice · 06 sysctl profile · 07 services, limits, noatime, tuned · 10 time sync</text><text class="sm" x="380" y="152.5" text-anchor="middle">12 swap off, OOM order and memlock of the latency services</text>
+<rect class="box p3" x="30" y="184" width="700" height="56" rx="5"/><text class="sm" x="380" y="202.5" text-anchor="middle">Every boot: lowlat-runtime.service</text><text class="sm" x="380" y="216.5" text-anchor="middle">00 PCIe power policy · 02 workqueue cpumask · 08 DPDK port binding</text><text class="sm" x="380" y="230.5" text-anchor="middle">04 NIC coalescing, offloads, IRQ affinity · 05 pin agents · 07 opt-in firewall and modules · 12 zswap off</text>
+<rect class="app p4" x="30" y="262" width="700" height="56" rx="5"/><text class="sm" x="380" y="280.5" text-anchor="middle">Application launcher</text><text class="sm" x="380" y="294.5" text-anchor="middle">JVM options by host class · large pages, NUMA, pre-touch when pinned</text><text class="sm" x="380" y="308.5" text-anchor="middle">threads pinned to isolated CPUs · busy-spin idle strategy</text>
+<polygon class="step p5" points="158.5,361 172.5,340 307.5,340 321.5,361 307.5,382 172.5,382"/><text class="sm" x="240" y="358.5" text-anchor="middle">scripts/verify-tuning</text><text class="sm" x="240" y="372.5" text-anchor="middle">PASS / WARN / FAIL</text>
+<rect class="box p6" x="454" y="340" width="212" height="42" rx="5"/><text class="sm" x="560" y="358.5" text-anchor="middle">11 Day-2: lowlat-verify.timer</text><text class="sm" x="560" y="372.5" text-anchor="middle">daily and 10 min after every boot</text>
+<circle class="tok k1" cx="0" cy="0" r="7"/>
+</svg>
