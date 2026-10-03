@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 261" width="760" height="261" role="img" aria-labelledby="t d">
+<title id="t">When memory runs out: a cgroup OOM, swap stalls, or a global OOM</title>
+<desc id="d">A cgroup at memory.max kills inside that cgroup only. Without a limit, a host with free swap swaps out anonymous pages and stalls later, and a host without swap kills the process with the highest oom_score.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(400px, 97px); animation: k1 7s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(140px, 49px); } 6% { transform: translate(140px, 49px); } 7.88% { transform: translate(140px, 75px); } 13.17% { transform: translate(209.5px, 97px); } 26.97% { transform: translate(400px, 97px); } 100% { transform: translate(400px, 97px); } }
+  .p2 { animation: p2 7s linear infinite; }
+  @keyframes p2 { 0%, 26.87% { fill: #cfe3ff; stroke-width: 1.5; } 28.97% { fill: #9cc3ff; stroke-width: 3; } 36.97%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  .k3 { transform: translate(400px, 167px); animation: k3 7s linear infinite; }
+  @keyframes k3 { 0% { transform: translate(140px, 49px); } 30.67% { transform: translate(140px, 49px); } 31.98% { transform: translate(140px, 75px); } 34.21% { transform: translate(140px, 119px); } 36.89% { transform: translate(140px, 172px); } 39.94% { transform: translate(196px, 194px); } 41.15% { transform: translate(220px, 194px); } 42.52% { transform: translate(220px, 167px); } 51.63% { transform: translate(400px, 167px); } 100% { transform: translate(400px, 167px); } }
+  .p4 { animation: p4 7s linear infinite; }
+  @keyframes p4 { 0%, 51.53% { fill: #ffc9c9; stroke-width: 1.5; } 53.63% { fill: #ff9b9b; stroke-width: 3; } 61.63%, 100% { fill: #ffc9c9; stroke-width: 1.5; } }
+  .k5 { transform: translate(400px, 221px); animation: k5 7s linear infinite; }
+  @keyframes k5 { 0% { transform: translate(140px, 49px); } 55.33% { transform: translate(140px, 49px); } 56.65% { transform: translate(140px, 75px); } 58.88% { transform: translate(140px, 119px); } 61.56% { transform: translate(140px, 172px); } 64.61% { transform: translate(196px, 194px); } 65.82% { transform: translate(220px, 194px); } 67.19% { transform: translate(220px, 221px); } 76.3% { transform: translate(400px, 221px); } 100% { transform: translate(400px, 221px); } }
+  .p6 { animation: p6 7s linear infinite; }
+  @keyframes p6 { 0%, 76.2% { fill: #cfe3ff; stroke-width: 1.5; } 78.3% { fill: #9cc3ff; stroke-width: 3; } 86.3%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .k3, .p4, .k5, .p6 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="261" rx="8"/>
+<path class="wire" d="M140,49 L140,75" marker-end="url(#a)"/>
+<path class="wire" d="M209.5,97 L400,97" marker-end="url(#a)"/>
+<path class="wire" d="M140,119 L140,172" marker-end="url(#a)"/>
+<path class="wire" d="M196,194 L220,194 L220,167 L400,167" marker-end="url(#a)"/>
+<path class="wire" d="M196,194 L220,194 L220,221 L400,221" marker-end="url(#a)"/>
+<rect class="foc" x="76" y="20" width="128" height="29" rx="14.5"/><text class="lbl" x="140" y="39" text-anchor="middle">Memory runs out</text>
+<polygon class="step" points="70.5,97 84.5,75 195.5,75 209.5,97 195.5,119 84.5,119"/><text class="lbl" x="140" y="94" text-anchor="middle">In a cgroup</text><text class="lbl" x="140" y="109" text-anchor="middle">at memory.max?</text>
+<rect class="box p2" x="400" y="75" width="160" height="44" rx="5"/><text class="lbl" x="480" y="94" text-anchor="middle">cgroup OOM:</text><text class="lbl" x="480" y="109" text-anchor="middle">kill inside that cgroup</text>
+<polygon class="step" points="84,194 98,172 182,172 196,194 182,216 98,216"/><text class="lbl" x="140" y="191" text-anchor="middle">Swap with</text><text class="lbl" x="140" y="206" text-anchor="middle">free space?</text>
+<rect class="wait p4" x="400" y="145" width="194" height="44" rx="5"/><text class="lbl" x="497" y="164" text-anchor="middle">Swap out anonymous pages:</text><text class="lbl" x="497" y="179" text-anchor="middle">silent stalls later</text>
+<rect class="box p6" x="400" y="199" width="188" height="44" rx="5"/><text class="lbl" x="494" y="218" text-anchor="middle">Global OOM:</text><text class="lbl" x="494" y="233" text-anchor="middle">kill the highest oom_score</text>
+<text class="el" x="241.5" y="92" text-anchor="start">yes</text>
+<text class="el" x="146" y="149.5" text-anchor="start">no</text>
+<text class="el" x="228" y="162" text-anchor="start">yes</text>
+<text class="el" x="228" y="216" text-anchor="start">no</text>
+<circle class="tok k1" cx="0" cy="0" r="6"/>
+<circle class="tok k3" cx="0" cy="0" r="6"/>
+<circle class="tok k5" cx="0" cy="0" r="6"/>
+</svg>

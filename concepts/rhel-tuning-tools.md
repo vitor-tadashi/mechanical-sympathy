@@ -21,22 +21,7 @@ This page answers it setting by setting. It also says when the profile, or the r
 
 tuned profiles are layered. A profile names another one in `include=`, takes all of its settings, and adds or overrides its own.
 
-```mermaid
-flowchart TD
-  lp["latency-performance<br/>PM QoS, performance governor"]
-  nl["network-latency<br/>THP never, busy polling, numa_balancing off"]
-  cp["cpu-partitioning<br/>isolated_cores: boot args, masks, irqbalance ban"]
-  rt["realtime<br/>for kernel-rt: isolcpus, RT throttling off"]
-  ll["low-latency (Guide 07)<br/>performance governor, min_perf_pct"]
-  lp --> nl
-  nl --> cp
-  nl --> rt
-  nl --> ll
-  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-  class lp,nl hk
-  class cp,rt,ll focus
-```
+<img src="../assets/diagrams/tuned-layers.svg" alt="latency-performance is included by network-latency, which is included by cpu-partitioning, realtime and low-latency" width="720">
 
 *All three profiles that isolate or tune for latency start from `network-latency`, which starts from `latency-performance`. They differ in what they add on top, and the profile of Guide 07 adds the least, because the scripts do the rest.*
 
@@ -146,16 +131,7 @@ Both the guides and the `realtime` profile turn RT throttling off. Neither switc
 
 ## 7. Which one for my host?
 
-```mermaid
-flowchart TD
-  s(["One latency host"]) --> q1{"Threads<br/>block?"}
-  q1 -- "yes, and the worst<br/>wake-up matters most" --> rt["kernel-rt<br/>+ realtime profile<br/>+ Guides 00, 03 to 12"]
-  q1 -- "no, they spin" --> q2{"Only CPU<br/>isolation?"}
-  q2 -- "yes, and vendor<br/>support required" --> cp["cpu-partitioning"]
-  q2 -- "no: NICs, huge pages,<br/>agents, drift checks" --> g["Guides 00 to 12<br/>(low-latency profile)"]
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-  class rt,cp,g focus
-```
+<img src="../assets/diagrams/rt-or-guides.svg" alt="A decision tree that picks kernel-rt, cpu-partitioning or these guides from how the critical threads wait" width="720">
 
 *Start from how the critical threads wait. Blocking threads whose worst wake-up matters point to the real-time kernel. Spinning threads that need only isolation can use cpu-partitioning. Everything else is what these guides are for.*
 

@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 350" width="760" height="350" role="img" aria-labelledby="t d">
+<title id="t">Memory is a set of pools, and each one is taken back at a different cost</title>
+<desc id="d">Physical memory is split into the hugetlb pool, anonymous memory, the page cache, kernel memory and free pages. Clean page cache can be dropped at once, dirty page cache must be written back first, anonymous memory can only go to swap if there is swap, and the hugetlb pool is never reclaimed.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(235px, 40px); animation: k1 9s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(142.5px, 175px); } 6% { transform: translate(142.5px, 175px); } 7.6% { transform: translate(188.75px, 175px); } 12.26% { transform: translate(188.75px, 40px); } 13.86% { transform: translate(235px, 40px); } 100% { transform: translate(235px, 40px); } }
+  .p2 { animation: p2 9s linear infinite; }
+  @keyframes p2 { 0%, 13.76% { fill: #c8f0d0; stroke-width: 1.5; } 15.86% { fill: #8fe0a0; stroke-width: 3; } 23.86%, 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  .k3 { transform: translate(235px, 105px); animation: k3 9s linear infinite; }
+  @keyframes k3 { 0% { transform: translate(142.5px, 175px); } 15.25% { transform: translate(142.5px, 175px); } 17.49% { transform: translate(188.75px, 175px); } 20.87% { transform: translate(188.75px, 105px); } 23.11% { transform: translate(235px, 105px); } 100% { transform: translate(235px, 105px); } }
+  .p4 { animation: p4 9s linear infinite; }
+  @keyframes p4 { 0%, 23.01% { fill: #ffffff; stroke-width: 1.5; } 25.11% { fill: #ffe9a8; stroke-width: 3; } 33.11%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .k5 { transform: translate(235px, 190px); animation: k5 9s linear infinite; }
+  @keyframes k5 { 0% { transform: translate(142.5px, 175px); } 24.5% { transform: translate(142.5px, 175px); } 27.88% { transform: translate(188.75px, 175px); } 28.98% { transform: translate(188.75px, 190px); } 32.36% { transform: translate(235px, 190px); } 100% { transform: translate(235px, 190px); } }
+  .p6 { animation: p6 9s linear infinite; }
+  @keyframes p6 { 0%, 32.26% { fill: #ffffff; stroke-width: 1.5; } 34.36% { fill: #ffe9a8; stroke-width: 3; } 42.36%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .k7 { transform: translate(235px, 255px); animation: k7 9s linear infinite; }
+  @keyframes k7 { 0% { transform: translate(142.5px, 175px); } 33.75% { transform: translate(142.5px, 175px); } 35.86% { transform: translate(188.75px, 175px); } 39.5% { transform: translate(188.75px, 255px); } 41.61% { transform: translate(235px, 255px); } 100% { transform: translate(235px, 255px); } }
+  .p8 { animation: p8 9s linear infinite; }
+  @keyframes p8 { 0%, 41.51% { fill: #ffffff; stroke-width: 1.5; } 43.61% { fill: #ffe9a8; stroke-width: 3; } 51.61%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .k9 { transform: translate(235px, 315px); animation: k9 9s linear infinite; }
+  @keyframes k9 { 0% { transform: translate(142.5px, 175px); } 43% { transform: translate(142.5px, 175px); } 44.56% { transform: translate(188.75px, 175px); } 49.3% { transform: translate(188.75px, 315px); } 50.86% { transform: translate(235px, 315px); } 100% { transform: translate(235px, 315px); } }
+  .p10 { animation: p10 9s linear infinite; }
+  @keyframes p10 { 0%, 50.76% { fill: #ffffff; stroke-width: 1.5; } 52.86% { fill: #ffe9a8; stroke-width: 3; } 60.86%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .k11 { transform: translate(510px, 105px); animation: k11 9s linear infinite; }
+  @keyframes k11 { 0% { transform: translate(425px, 105px); } 52.25% { transform: translate(425px, 105px); } 60.11% { transform: translate(510px, 105px); } 100% { transform: translate(510px, 105px); } }
+  .p12 { animation: p12 9s linear infinite; }
+  @keyframes p12 { 0%, 60.01% { fill: #ffc9c9; stroke-width: 1.5; } 62.11% { fill: #ff9b9b; stroke-width: 3; } 70.11%, 100% { fill: #ffc9c9; stroke-width: 1.5; } }
+  .k13 { transform: translate(510px, 165px); animation: k13 9s linear infinite; }
+  @keyframes k13 { 0% { transform: translate(425px, 190px); } 61.5% { transform: translate(425px, 190px); } 64.54% { transform: translate(467.5px, 190px); } 66.32% { transform: translate(467.5px, 165px); } 69.36% { transform: translate(510px, 165px); } 100% { transform: translate(510px, 165px); } }
+  .p14 { animation: p14 9s linear infinite; }
+  @keyframes p14 { 0%, 69.26% { fill: #c8f0d0; stroke-width: 1.5; } 71.36% { fill: #8fe0a0; stroke-width: 3; } 79.36%, 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  .k15 { transform: translate(510px, 215px); animation: k15 9s linear infinite; }
+  @keyframes k15 { 0% { transform: translate(425px, 190px); } 70.75% { transform: translate(425px, 190px); } 73.79% { transform: translate(467.5px, 190px); } 75.57% { transform: translate(467.5px, 215px); } 78.61% { transform: translate(510px, 215px); } 100% { transform: translate(510px, 215px); } }
+  .p16 { animation: p16 9s linear infinite; }
+  @keyframes p16 { 0%, 78.51% { fill: #ffc9c9; stroke-width: 1.5; } 80.61% { fill: #ff9b9b; stroke-width: 3; } 88.61%, 100% { fill: #ffc9c9; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .k3, .p4, .k5, .p6, .k7, .p8, .k9, .p10, .k11, .p12, .k13, .p14, .k15, .p16 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="350" rx="8"/>
+<path class="wire" d="M142.5,175 L188.75,175 L188.75,40 L235,40" marker-end="url(#a)"/>
+<path class="wire" d="M142.5,175 L188.75,175 L188.75,105 L235,105" marker-end="url(#a)"/>
+<path class="wire" d="M142.5,175 L188.75,175 L188.75,190 L235,190" marker-end="url(#a)"/>
+<path class="wire" d="M142.5,175 L188.75,175 L188.75,255 L235,255" marker-end="url(#a)"/>
+<path class="wire" d="M142.5,175 L188.75,175 L188.75,315 L235,315" marker-end="url(#a)"/>
+<path class="wire" d="M425,105 L510,105" marker-end="url(#a)"/>
+<path class="wire" d="M425,190 L467.5,190 L467.5,165 L510,165" marker-end="url(#a)"/>
+<path class="wire" d="M425,190 L467.5,190 L467.5,215 L510,215" marker-end="url(#a)"/>
+<rect class="foc" x="17.5" y="160.5" width="125" height="29" rx="14.5"/><text class="lbl" x="80" y="179.5" text-anchor="middle">Physical memory</text>
+<rect class="app p2" x="235" y="18" width="190" height="44" rx="5"/><text class="lbl" x="330" y="37" text-anchor="middle">hugetlb pool</text><text class="lbl" x="330" y="52" text-anchor="middle">reserved, never reclaimed</text>
+<rect class="step p4" x="235" y="83" width="190" height="44" rx="5"/><text class="lbl" x="330" y="102" text-anchor="middle">Anonymous</text><text class="lbl" x="330" y="117" text-anchor="middle">heap, stacks</text>
+<rect class="step p6" x="235" y="168" width="190" height="44" rx="5"/><text class="lbl" x="330" y="187" text-anchor="middle">Page cache</text><text class="lbl" x="330" y="202" text-anchor="middle">file data, code</text>
+<rect class="step p8" x="235" y="233" width="190" height="44" rx="5"/><text class="lbl" x="330" y="252" text-anchor="middle">Kernel</text><text class="lbl" x="330" y="267" text-anchor="middle">slab, page tables</text>
+<rect class="step p10" x="235" y="293" width="190" height="44" rx="5"/><text class="lbl" x="330" y="312" text-anchor="middle">Free</text><text class="lbl" x="330" y="327" text-anchor="middle">above the watermarks</text>
+<rect class="wait p12" x="510" y="83" width="200" height="44" rx="5"/><text class="lbl" x="610" y="102" text-anchor="middle">only to swap,</text><text class="lbl" x="610" y="117" text-anchor="middle">if there is swap</text>
+<rect class="app p14" x="510" y="147" width="200" height="36" rx="5"/><text class="lbl" x="610" y="169.5" text-anchor="middle">clean: drop at once</text>
+<rect class="wait p16" x="510" y="197" width="200" height="36" rx="5"/><text class="lbl" x="610" y="219.5" text-anchor="middle">dirty: write back first</text>
+<circle class="tok k1" cx="0" cy="0" r="6"/>
+<circle class="tok k3" cx="0" cy="0" r="6"/>
+<circle class="tok k5" cx="0" cy="0" r="6"/>
+<circle class="tok k7" cx="0" cy="0" r="6"/>
+<circle class="tok k9" cx="0" cy="0" r="6"/>
+<circle class="tok k11" cx="0" cy="0" r="6"/>
+<circle class="tok k13" cx="0" cy="0" r="6"/>
+<circle class="tok k15" cx="0" cy="0" r="6"/>
+</svg>

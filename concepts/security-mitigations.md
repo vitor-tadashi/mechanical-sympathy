@@ -42,17 +42,7 @@ The list grows. A kernel update or a microcode update can add a mitigation, and 
 
 *The useful work of a small system call is short. On an affected CPU, the protection on the way in and out can take longer than the work.*
 
-```mermaid
-flowchart LR
-  q(["What does the thread<br/>do per message?"]) --> s["spins in user space,<br/>kernel bypass"] --> s1["almost no cost"]
-  q --> b["one syscall per message<br/>recv, send, epoll"] --> b1["entry and exit cost<br/>on every message"]
-  q --> w["blocks and wakes<br/>context switch"] --> w1["entry, exit and<br/>switch cost"]
-  q --> v["runs in a VM<br/>with exits"] --> v1["VM entry and exit<br/>cost too"]
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
-  class s1 iso
-  class b1,w1,v1 risk
-```
+<img src="../assets/diagrams/mitigation-cost.svg" alt="Four kinds of thread, each linked to the mitigation cost it pays" width="720">
 
 *The cost follows the crossings a thread makes, not the work it does.*
 
