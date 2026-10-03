@@ -185,20 +185,35 @@ while IFS= read -r svg; do
 				$rm = $1;
 				$css =~ s/\@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}//s;
 			}
+			my %keyframes = map { $_ => 1 } $css =~ /\@keyframes\s+([\w-]+)/g;
 			$css =~ s/\@keyframes[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}//gs;
+			(my $markup = $_) =~ s{<style[^>]*>.*?</style>}{}s;
 			my %stopped;
 			while ($rm =~ /([^{}]+)\{([^{}]*)\}/g) {
 				my ($sel, $body) = ($1, $2);
 				next unless $body =~ /animation:\s*none/;
 				$stopped{$_} = 1 for map { s/^\s+|\s+$//gr } split /,/, $sel;
 			}
+			# Something must run: a rule outside the reduced-motion block that applies a
+			# defined @keyframes for a nonzero duration, on a selector the markup uses.
+			my $applied = 0;
 			while ($css =~ /([^{}]+)\{([^{}]*)\}/g) {
 				my ($sel, $body) = ($1, $2);
 				next unless $body =~ /animation(?:-name)?:\s*(?!none)\S/;
-				for my $s (map { s/^\s+|\s+$//gr } split /,/, $sel) {
+				my @sels = map { s/^\s+|\s+$//gr } split /,/, $sel;
+				for my $s (@sels) {
 					print "the reduced-motion block does not stop $s\n" unless $stopped{$s};
 				}
+				my ($list) = $body =~ /animation(?:-name)?:\s*([^;}]*)/;
+				my ($dur) = $body =~ /animation-duration:\s*([^;}]*)/;
+				for my $entry (split /,/, $list) {
+					next unless grep { $keyframes{$_} } split /\s+/, $entry;
+					my ($num) = (($entry . " " . ($dur // "")) =~ /(?<![\w.-])(\d+(?:\.\d+)?)(?:ms|s)\b/);
+					next unless defined $num && $num > 0;
+					$applied ||= grep { !/^\.([\w-]+)$/ || $markup =~ /class="[^"]*\b\Q$1\E\b/ } @sels;
+				}
 			}
+			print "\@keyframes is never applied to an element, so nothing moves\n" unless $applied;
 		}
 	' "${svg}")"
 	while IFS= read -r problem; do
