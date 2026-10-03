@@ -104,6 +104,40 @@ console_restore() {
 	expect_status 0 "${REPO}/scripts/01-grub-bootloader" --rollback
 }
 
+grub_managed_irq() {
+	local entry conf cpus
+	setup rhel9-2s-ref
+	entry="${LOWLAT_ROOT}/boot/loader/entries/0f1e2d3c4b5a69788796a5b4c3d2e1f0-${KERNEL}.conf"
+	conf="${LOWLAT_ROOT}/etc/lowlat/lowlat.conf"
+	# The inner shell reads ISOLATED_CPUS from the fixture configuration.
+	# shellcheck disable=SC2016
+	cpus="$(bash -c '. "$1"; IFS=,; printf "%s\n" "${ISOLATED_CPUS[*]}"' _ "${conf}")"
+	sed -i 's/^GRUB_ISOLCPUS_MANAGED_IRQ=.*/GRUB_ISOLCPUS_MANAGED_IRQ=yes/' "${conf}"
+	expect_status 0 "${REPO}/scripts/01-grub-bootloader" --apply
+	expect_status 0 "${REPO}/scripts/01-grub-bootloader" --apply
+	grep -o ' isolcpus=[^ ]*' "${entry}" >"${WORK}/isolcpus"
+	printf ' isolcpus=managed_irq,domain,%s\n' "${cpus}" >"${WORK}/expected-isolcpus"
+	expect_status 0 diff "${WORK}/expected-isolcpus" "${WORK}/isolcpus"
+	host_boot "${LOWLAT_ROOT}" "${WORK}/pristine" >"${WORK}/output" 2>&1
+	grep -qx "${cpus}" "${LOWLAT_ROOT}/sys/devices/system/cpu/isolated" || fail "fake kernel kept the flags in its isolated list"
+	expect_status 0 "${REPO}/scripts/01-grub-bootloader" --verify
+	grep -q "PASS isolcpus=managed_irq,domain,${cpus}$" "${WORK}/output" || fail "the flagged form was not verified"
+	# The running kernel still has the flags, so the plain form is a FAIL until the next boot.
+	sed -i 's/^GRUB_ISOLCPUS_MANAGED_IRQ=.*/GRUB_ISOLCPUS_MANAGED_IRQ=no/' "${conf}"
+	expect_status 5 "${REPO}/scripts/01-grub-bootloader" --verify
+	expect_status 0 "${REPO}/scripts/01-grub-bootloader" --apply
+	grep -o ' isolcpus=[^ ]*' "${entry}" >"${WORK}/isolcpus"
+	printf ' isolcpus=%s\n' "${cpus}" >"${WORK}/expected-isolcpus"
+	expect_status 0 diff "${WORK}/expected-isolcpus" "${WORK}/isolcpus"
+	expect_status 0 "${REPO}/scripts/01-grub-bootloader" --rollback
+	if grep -q 'isolcpus=' "${entry}"; then fail "rollback left isolcpus behind"; fi
+	sed -i 's/^GRUB_ISOLCPUS_MANAGED_IRQ=.*/GRUB_ISOLCPUS_MANAGED_IRQ=maybe/' "${conf}"
+	cp "${entry}" "${WORK}/entry-before"
+	expect_status 3 "${REPO}/scripts/01-grub-bootloader" --apply
+	grep -q "GRUB_ISOLCPUS_MANAGED_IRQ must be yes or no, not 'maybe'" "${WORK}/output" || fail "the bad value was not explained"
+	expect_status 0 diff "${WORK}/entry-before" "${entry}"
+}
+
 virtio_placement() {
 	setup rhel9-vm-kvm
 	expect_status 0 "${REPO}/scripts/04-network" --apply
@@ -556,7 +590,7 @@ if [[ "${1:-}" == --case ]]; then
 	"$2"
 	exit 0
 fi
-cases=(missing_system_conf tuned_layout missing_chrony existing_manager missing_chrony_unit console_restore virtio_placement unknown_irq unreadable_irq cpu_rollback cpu_absent_files cpu_lost_backup cpu_no_apply cpu_missing_knob cpu_runtime_only cpu_corrupt_state network_rollback network_missing_interface network_no_apply network_recreated_irqs network_driver_failure network_unsupported bypass_vm_verify network_missing_state os_rollback os_no_apply os_existing_files os_runtime_optins os_missing_state os_restore_failure os_masked_active_service wrapper_rollback wrapper_existing_unit wrapper_no_apply wrapper_missing_state wrapper_partial_apply wrapper_skipped_stage wrapper_legacy_unit wrapper_foreign_unit wrapper_guide_failure os_refuse_manual_start memory_swapoff_precheck memory_rollback memory_keeps_noatime memory_zswap_restore memory_protect memory_bad_policy)
+cases=(missing_system_conf tuned_layout missing_chrony existing_manager missing_chrony_unit console_restore grub_managed_irq virtio_placement unknown_irq unreadable_irq cpu_rollback cpu_absent_files cpu_lost_backup cpu_no_apply cpu_missing_knob cpu_runtime_only cpu_corrupt_state network_rollback network_missing_interface network_no_apply network_recreated_irqs network_driver_failure network_unsupported bypass_vm_verify network_missing_state os_rollback os_no_apply os_existing_files os_runtime_optins os_missing_state os_restore_failure os_masked_active_service wrapper_rollback wrapper_existing_unit wrapper_no_apply wrapper_missing_state wrapper_partial_apply wrapper_skipped_stage wrapper_legacy_unit wrapper_foreign_unit wrapper_guide_failure os_refuse_manual_start memory_swapoff_precheck memory_rollback memory_keeps_noatime memory_zswap_restore memory_protect memory_bad_policy)
 for name in "${cases[@]}"; do
 	bash "$0" --case "${name}"
 done

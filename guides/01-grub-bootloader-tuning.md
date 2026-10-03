@@ -233,21 +233,19 @@ The check shows the stale fallback. It does not yet run `grub2-mkconfig` after t
 
 Some drivers (NVMe, and some NIC drivers on newer kernels) ask the kernel to spread their queue interrupts over all CPUs and to own that placement. These are **managed IRQs**. Their affinity cannot be changed from user space: a write to `/proc/irq/N/smp_affinity` fails with `EIO`, so [Guide 04 §6.2](04-network-optimization.md#62-how-the-script-finds-and-moves-the-irqs) cannot move them.
 
-The `managed_irq` flag of `isolcpus` asks the kernel to keep them off the isolated CPUs:
+The `managed_irq` flag of `isolcpus` asks the kernel to keep them off the isolated CPUs. Turn it on in `lowlat.conf`, and the script writes it for you:
 
 ```bash
-grubby --update-kernel=ALL --remove-args="isolcpus"
-grubby --update-kernel=ALL --args="isolcpus=managed_irq,domain,3,5,7,9"   # same CPU list as before
+sudo vi /etc/lowlat/lowlat.conf              # GRUB_ISOLCPUS_MANAGED_IRQ=yes (add the line to an older file)
+sudo scripts/01-grub-bootloader --apply      # isolcpus=managed_irq,domain,3,5,7,...
+sudo systemctl reboot
 ```
 
 - **What it does.** When a queue's interrupt mask holds both isolated and housekeeping CPUs, the kernel delivers the interrupt to a housekeeping CPU in that mask. It is best effort. A queue whose mask holds only isolated CPUs keeps them, but it only fires when a thread on those CPUs submits I/O, and the critical threads should not.
-- **Why `domain` is written out.** `domain` is the default flag of `isolcpus`. As soon as you give any flag, the default no longer applies, so leaving out `domain` would also drop the load-balancing isolation.
-- **When to use it.** Only when `04-network` warns `IRQ N is kernel-managed, affinity not changed` for an interrupt you need to move, or when `/proc/interrupts` shows a disk or NIC queue counting on an isolated CPU. On the reference host, the critical NICs use ordinary IRQs and the plain form is enough.
-- **How to verify.** After the reboot, read the CPU each managed interrupt really uses: `grep -H . /proc/irq/*/effective_affinity_list`. A queue whose mask holds both kinds of CPU should now list only housekeeping CPUs. A queue whose mask holds only isolated CPUs may still list one, because the flag cannot move it. For those, check in `/proc/interrupts` that the count does not grow while the critical threads run.
-- **How to roll back.** Run the same two `grubby` lines with the plain list (`isolcpus=3,5,7,9`), then reboot.
-
-> [!IMPORTANT]
-> `01-grub-bootloader` writes and checks the **plain** form, `isolcpus=<cpus>`. With the flags added by hand, `--verify` reports `isolcpus` as FAIL, and the next `--apply` replaces the value with the plain form. Re-add the flags after every `--apply`, and read that FAIL as expected.
+- **Why `domain` is written out.** `domain` is the default flag of `isolcpus`. As soon as you give any flag, the default no longer applies, so leaving out `domain` would also drop the load-balancing isolation. The script always writes both.
+- **When to use it.** Only when `04-network` warns `IRQ N is kernel-managed, affinity not changed` for an interrupt you need to move, or when `/proc/interrupts` shows a disk or NIC queue counting on an isolated CPU. On the reference host, the critical NICs use ordinary IRQs and the plain form is enough, so the setting defaults to `no`.
+- **How to verify.** `scripts/01-grub-bootloader --verify` checks that `/proc/cmdline` holds exactly `isolcpus=managed_irq,domain,<cpus>`. Flags written by hand in another order, or other flags, are a FAIL, and the next `--apply` replaces them. Then read the CPU each managed interrupt really uses: `grep -H . /proc/irq/*/effective_affinity_list`. A queue whose mask holds both kinds of CPU should now list only housekeeping CPUs. A queue whose mask holds only isolated CPUs may still list one, because the flag cannot move it. For those, check in `/proc/interrupts` that the count does not grow while the critical threads run.
+- **How to roll back.** Set `GRUB_ISOLCPUS_MANAGED_IRQ=no`, run `--apply` and reboot: the script writes the plain `isolcpus=<cpus>` again. Between the `--apply` and the reboot, `--verify` reports `isolcpus` as FAIL, because the running kernel still has the flags.
 
 > [!NOTE]
 > **Validate on your hardware.** This follows the kernel documentation of `isolcpus` (`Documentation/admin-guide/kernel-parameters.txt`). The flag appeared upstream in kernel 5.6. Check that your RHEL 8 kernel accepts it before relying on it, and this repository does not measure it.

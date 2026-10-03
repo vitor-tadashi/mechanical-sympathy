@@ -318,6 +318,8 @@ host_kernel_boot() {
 	cmdline="BOOT_IMAGE=(hd0,gpt2)/vmlinuz-${kernel} ${device:+root=${device} }${entry}"
 	printf '%s\n' "${cmdline}" >"${root}/proc/cmdline"
 	value="$(host_cmdline_value "${cmdline}" isolcpus)"
+	# Flags such as managed_irq,domain come before the CPU list; the file shows only the CPUs.
+	while [[ "${value}" == [a-z]*,* ]]; do value="${value#*,}"; done
 	[[ -n "${value}" ]] && printf '%s\n' "${value}" >"${root}/sys/devices/system/cpu/isolated"
 	value="$(host_cmdline_value "${cmdline}" nohz_full)"
 	[[ -n "${value}" ]] && printf '%s\n' "${value}" >"${root}/sys/devices/system/cpu/nohz_full"
