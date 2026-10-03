@@ -35,22 +35,20 @@
   .k1 { transform: translate(696px, 83px); animation: k1 9s linear infinite; }
   @keyframes k1 { 0% { transform: translate(119px, 60px); } 6% { transform: translate(119px, 60px); } 7.19% { transform: translate(153px, 60px); } 12.71% { transform: translate(311px, 60px); } 13.53% { transform: translate(334.5px, 60px); } 18.81% { transform: translate(485.5px, 60px); } 19.79% { transform: translate(513.5px, 60px); } 23.04% { transform: translate(606.5px, 60px); } 26.16% { transform: translate(696px, 60px); } 26.97% { transform: translate(696px, 83px); } 100% { transform: translate(696px, 83px); } }
   .p2 { animation: p2 9s linear infinite; }
-  @keyframes p2 { 0%, 26.87% { fill: #ffffff; stroke-width: 1.5; } 28.97% { fill: #ffe9a8; stroke-width: 3; } 36.97%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  @keyframes p2 { 0% { fill: #ffffff; stroke-width: 1.5; } 26.87% { fill: #ffffff; stroke-width: 1.5; } 28.97% { fill: #ffe9a8; stroke-width: 3; } 36.97% { fill: #ffffff; stroke-width: 1.5; } 51.53% { fill: #ffffff; stroke-width: 1.5; } 53.63% { fill: #ffe9a8; stroke-width: 3; } 61.63% { fill: #ffffff; stroke-width: 1.5; } 100% { fill: #ffffff; stroke-width: 1.5; } }
   .k3 { transform: translate(696px, 127px); animation: k3 9s linear infinite; }
   @keyframes k3 { 0% { transform: translate(232px, 82px); } 30.67% { transform: translate(232px, 82px); } 31.57% { transform: translate(232px, 105px); } 38.52% { transform: translate(410px, 105px); } 39.42% { transform: translate(410px, 128px); } 42.29% { transform: translate(480px, 150px); } 42.9% { transform: translate(495.5px, 150px); } 47.94% { transform: translate(624.5px, 150px); } 50.73% { transform: translate(696px, 150px); } 51.63% { transform: translate(696px, 127px); } 100% { transform: translate(696px, 127px); } }
-  .p4 { animation: p4 9s linear infinite; }
-  @keyframes p4 { 0%, 51.53% { fill: #ffffff; stroke-width: 1.5; } 53.63% { fill: #ffe9a8; stroke-width: 3; } 61.63%, 100% { fill: #ffffff; stroke-width: 1.5; } }
-  .k5 { transform: translate(216px, 240px); animation: k5 9s linear infinite; }
-  @keyframes k5 { 0% { transform: translate(134.5px, 240px); } 55.33% { transform: translate(134.5px, 240px); } 76.3% { transform: translate(216px, 240px); } 100% { transform: translate(216px, 240px); } }
-  .p6 { animation: p6 9s linear infinite; }
-  @keyframes p6 { 0%, 76.2% { fill: #ffc9c9; stroke-width: 1.5; } 78.3% { fill: #ff9b9b; stroke-width: 3; } 86.3%, 100% { fill: #ffc9c9; stroke-width: 1.5; } }
-  .c7 { animation: c7 9s linear infinite; }
-  @keyframes c7 { 0%, 78.9% { opacity: 0; } 79%, 100% { opacity: 1; } }
+  .k4 { transform: translate(216px, 240px); animation: k4 9s linear infinite; }
+  @keyframes k4 { 0% { transform: translate(134.5px, 240px); } 55.33% { transform: translate(134.5px, 240px); } 76.3% { transform: translate(216px, 240px); } 100% { transform: translate(216px, 240px); } }
+  .p5 { animation: p5 9s linear infinite; }
+  @keyframes p5 { 0%, 76.2% { fill: #ffc9c9; stroke-width: 1.5; } 78.3% { fill: #ff9b9b; stroke-width: 3; } 86.3%, 100% { fill: #ffc9c9; stroke-width: 1.5; } }
+  .c6 { animation: c6 9s linear infinite; }
+  @keyframes c6 { 0%, 78.9% { opacity: 0; } 79%, 100% { opacity: 1; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .k1, .p2, .k3, .p4, .k5, .p6, .c7 { animation: none; }
+    .k1, .p2, .k3, .k4, .p5, .c6 { animation: none; }
   }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="290" rx="8"/>
@@ -66,14 +64,14 @@
 <rect class="step" x="153" y="38" width="158" height="44" rx="5"/><text class="lbl" x="232" y="57" text-anchor="middle">format the line</text><text class="lbl" x="232" y="72" text-anchor="middle">allocation, timestamp</text>
 <rect class="step" x="334.5" y="38" width="151" height="44" rx="5"/><text class="lbl" x="410" y="57" text-anchor="middle">write()</text><text class="lbl" x="410" y="72" text-anchor="middle">copy into page cache</text>
 <rect class="step" x="513.5" y="45.5" width="93" height="29" rx="5"/><text class="lbl" x="560" y="64.5" text-anchor="middle">dirty pages</text>
-<path class="step p2 p4" d="M656,89 a40,6 0 0 1 80,0 v32 a40,6 0 0 1 -80,0 z"/><path class="sl" d="M656,89 a40,6 0 0 0 80,0"/><text class="lbl" x="696" y="109.5" text-anchor="middle">disk</text>
+<path class="step p2" d="M656,89 a40,6 0 0 1 80,0 v32 a40,6 0 0 1 -80,0 z"/><path class="sl" d="M656,89 a40,6 0 0 0 80,0"/><text class="lbl" x="696" y="109.5" text-anchor="middle">disk</text>
 <rect class="step" x="340" y="128" width="140" height="44" rx="5"/><text class="lbl" x="410" y="147" text-anchor="middle">syslog() / stdout</text><text class="lbl" x="410" y="162" text-anchor="middle">socket to journald</text>
 <rect class="step" x="495.5" y="135.5" width="129" height="29" rx="5"/><text class="lbl" x="560" y="154.5" text-anchor="middle">journald, rsyslog</text>
 <rect class="step" x="17.5" y="218" width="117" height="44" rx="22"/><text class="lbl" x="76" y="237" text-anchor="middle">kernel message</text><text class="lbl" x="76" y="252" text-anchor="middle">printk</text>
-<rect class="wait p6" x="216" y="218" width="88" height="44" rx="5"/><text class="lbl" x="260" y="237" text-anchor="middle">console</text><text class="lbl" x="260" y="252" text-anchor="middle">serial, VGA</text>
+<rect class="wait p5" x="216" y="218" width="88" height="44" rx="5"/><text class="lbl" x="260" y="237" text-anchor="middle">console</text><text class="lbl" x="260" y="252" text-anchor="middle">serial, VGA</text>
 <text class="el" x="690" y="52" text-anchor="end">flusher threads</text>
 <circle class="tok k1" cx="0" cy="0" r="6"/>
 <circle class="tok k3" cx="0" cy="0" r="6"/>
-<circle class="tok k5" cx="0" cy="0" r="6"/>
-<text class="done c7" x="316" y="244" text-anchor="start">at once, on the CPU that printed it</text>
+<circle class="tok k4" cx="0" cy="0" r="6"/>
+<text class="done c6" x="316" y="244" text-anchor="start">at once, on the CPU that printed it</text>
 </svg>

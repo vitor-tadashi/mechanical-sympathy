@@ -35,16 +35,14 @@
   .k1 { transform: translate(485px, 205px); animation: k1 9s linear infinite; }
   @keyframes k1 { 0% { transform: translate(100px, 92px); } 6% { transform: translate(100px, 92px); } 12.94% { transform: translate(100px, 205px); } 24.91% { transform: translate(295px, 205px); } 29.71% { transform: translate(295px, 205px); } 29.91% { transform: translate(148px, 70px); } 38.44% { transform: translate(287px, 70px); } 43.24% { transform: translate(287px, 70px); } 43.44% { transform: translate(403px, 70px); } 46.14% { transform: translate(447px, 70px); } 55.1% { transform: translate(593px, 70px); } 57.09% { transform: translate(625.5px, 70px); } 61.89% { transform: translate(625.5px, 70px); } 62.09% { transform: translate(680px, 92px); } 69.03% { transform: translate(680px, 205px); } 81% { transform: translate(485px, 205px); } 85.8% { transform: translate(485px, 205px); } 100% { transform: translate(485px, 205px); } }
   .p2 { animation: p2 9s linear infinite; }
-  @keyframes p2 { 0%, 24.81% { fill: #ffffff; stroke-width: 1.5; } 26.91% { fill: #ffe9a8; stroke-width: 3; } 34.91%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  @keyframes p2 { 0% { fill: #ffffff; stroke-width: 1.5; } 24.81% { fill: #ffffff; stroke-width: 1.5; } 26.91% { fill: #ffe9a8; stroke-width: 3; } 34.91% { fill: #ffffff; stroke-width: 1.5; } 80.9% { fill: #ffffff; stroke-width: 1.5; } 83% { fill: #ffe9a8; stroke-width: 3; } 89% { fill: #ffffff; stroke-width: 1.5; } 100% { fill: #ffffff; stroke-width: 1.5; } }
   .p3 { animation: p3 9s linear infinite; }
   @keyframes p3 { 0%, 38.34% { fill: #ffd166; stroke-width: 1.5; } 40.44% { fill: #ffb703; stroke-width: 3; } 48.44%, 100% { fill: #ffd166; stroke-width: 1.5; } }
-  .p4 { animation: p4 9s linear infinite; }
-  @keyframes p4 { 0%, 80.9% { fill: #ffffff; stroke-width: 1.5; } 83% { fill: #ffe9a8; stroke-width: 3; } 89%, 100% { fill: #ffffff; stroke-width: 1.5; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .k1, .p2, .p3, .p4 { animation: none; }
+    .k1, .p2, .p3 { animation: none; }
   }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="260" rx="8"/>
@@ -57,7 +55,7 @@
 <rect class="foc p3" x="287" y="48" width="116" height="44" rx="5"/><text class="lbl" x="345" y="67" text-anchor="middle">PMD core</text><text class="lbl" x="345" y="82" text-anchor="middle">rx_burst of 32</text>
 <rect class="app" x="447" y="48" width="146" height="44" rx="5"/><text class="lbl" x="520" y="67" text-anchor="middle">your code</text><text class="lbl" x="520" y="82" text-anchor="middle">works on the mbufs</text>
 <rect class="step" x="625.5" y="48" width="109" height="44" rx="5"/><text class="lbl" x="680" y="67" text-anchor="middle">tx_burst</text><text class="lbl" x="680" y="82" text-anchor="middle">to the TX ring</text>
-<path class="step p2 p4" d="M295,184 a95,6 0 0 1 190,0 v42 a95,6 0 0 1 -190,0 z"/><path class="sl" d="M295,184 a95,6 0 0 0 190,0"/><text class="lbl" x="390" y="202" text-anchor="middle">mempool of mbufs</text><text class="lbl" x="390" y="217" text-anchor="middle">in huge pages</text>
+<path class="step p2" d="M295,184 a95,6 0 0 1 190,0 v42 a95,6 0 0 1 -190,0 z"/><path class="sl" d="M295,184 a95,6 0 0 0 190,0"/><text class="lbl" x="390" y="202" text-anchor="middle">mempool of mbufs</text><text class="lbl" x="390" y="217" text-anchor="middle">in huge pages</text>
 <text class="el" x="108" y="160" text-anchor="start">DMA into an mbuf</text>
 <text class="el" x="217.5" y="50" text-anchor="middle">reads descriptors,</text>
 <text class="el" x="217.5" y="104" text-anchor="middle">takes mbuf pointers</text>
