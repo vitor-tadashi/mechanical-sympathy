@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+#
+# lint-changed - run only the lint targets that a change can affect.
+#
+# tools/changed-areas names the areas; each of scripts, docs, site and java maps to its
+# make lint-<area> target. `make lint` stays the full gate.
+#
+# Usage: tools/lint-changed             changes since the merge base with origin/main
+#        tools/lint-changed --staged    the index (the pre-commit hook)
+#        tools/lint-changed <base-ref>  changes since the merge base with <base-ref>
+
+set -Eeuo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "${ROOT}"
+
+base="${1:-origin/main}"
+areas="$(tools/changed-areas "${base}")"
+
+targets=()
+while IFS= read -r area; do
+	case "${area}" in
+		scripts | docs | site | java)
+			targets+=("lint-${area}")
+			;;
+		*)
+			# integration and doc-health run in CI only.
+			;;
+	esac
+done <<<"${areas}"
+
+if ((${#targets[@]} == 0)); then
+	printf 'lint-changed: nothing to lint\n'
+	exit 0
+fi
+printf 'lint-changed: %s\n' "${targets[*]}"
+exec make --no-print-directory "${targets[@]}"
