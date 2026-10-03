@@ -24,8 +24,19 @@
   .rl { font: 10px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #333333; text-anchor: middle; }
   .arr { stroke: #1f4e8c; stroke-width: 2.5; fill: none; }
   .pcie { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .tk1 { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; transform: translate(24px, 129px); animation: tk1 7s linear infinite; }
+  @keyframes tk1 { 0% { transform: translate(26px, 25px); } 6% { transform: translate(26px, 25px); } 7.05% { transform: translate(17px, 25px); } 19.18% { transform: translate(17px, 129px); } 20% { transform: translate(24px, 129px); } 100% { transform: translate(24px, 129px); } }
+  .tk2 { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; transform: translate(24px, 129px); animation: tk2 7s linear infinite; }
+  @keyframes tk2 { 0% { transform: translate(26px, 25px); } 32% { transform: translate(26px, 25px); } 33.05% { transform: translate(17px, 25px); } 45.18% { transform: translate(17px, 129px); } 46% { transform: translate(24px, 129px); } 100% { transform: translate(24px, 129px); } }
+  .tk3 { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; transform: translate(24px, 129px); animation: tk3 7s linear infinite; }
+  @keyframes tk3 { 0% { transform: translate(26px, 25px); } 58% { transform: translate(26px, 25px); } 59.05% { transform: translate(17px, 25px); } 71.18% { transform: translate(17px, 129px); } 72% { transform: translate(24px, 129px); } 100% { transform: translate(24px, 129px); } }
+  .pl4 { animation: pl4 7s linear infinite; }
+  @keyframes pl4 { 0% { fill: #cfe3ff; } 19.9% { fill: #cfe3ff; } 22% { fill: #9cc3ff; stroke-width: 3; } 28% { fill: #cfe3ff; } 45.9% { fill: #cfe3ff; } 48% { fill: #9cc3ff; stroke-width: 3; } 54% { fill: #cfe3ff; } 71.9% { fill: #cfe3ff; } 74% { fill: #9cc3ff; stroke-width: 3; } 80% { fill: #cfe3ff; } 100% { fill: #cfe3ff; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tk1, .tk2, .tk3, .pl4 { animation: none; }
   }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="484" rx="8"/>
@@ -36,7 +47,7 @@
 <rect class="lane" x="10" y="50" width="740" height="170" rx="6"/>
 <text class="cap" x="24" y="74">NUMA node 1 (odd CPUs): critical NICs, memory and threads</text>
 <text class="sub" x="24" y="92">One housekeeping CPU for interrupts, everything else isolated. Each pinned role owns its CPU.</text>
-<rect class="box" x="26" y="106" width="82" height="46" rx="4"/>
+<rect class="box pl4" x="26" y="106" width="82" height="46" rx="4"/>
 <text class="num" x="67" y="125">CPU 1</text>
 <text class="rl" x="67" y="141">critical IRQs</text>
 <rect class="app" x="114" y="106" width="82" height="46" rx="4"/>
@@ -146,4 +157,7 @@
 <text class="role" x="610" y="426">agents, cpuset fence</text>
 <text class="sub" x="20" y="454">The reference host of scripts/lowlat.conf.example: 2 sockets x 16 cores, Hyper-Threading off.</text>
 <text class="sub" x="20" y="472">ISOLATED_CPUS are the odd CPUs from 3 to 31. OS_CPUS is every other CPU.</text>
+<circle class="tk1" cx="0" cy="0" r="5"/>
+<circle class="tk2" cx="0" cy="0" r="5"/>
+<circle class="tk3" cx="0" cy="0" r="5"/>
 </svg>

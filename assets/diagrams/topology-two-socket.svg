@@ -18,8 +18,27 @@
   .wire { fill: none; stroke: #1f4e8c; stroke-width: 2; }
   .num { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
   .numt { font: 700 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; text-anchor: middle; }
+  .tk1 { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; transform: translate(536px, 104px); animation: tk1 9s linear infinite; }
+  @keyframes tk1 { 0% { transform: translate(474px, 104px); } 4% { transform: translate(474px, 104px); } 4.56% { transform: translate(477.9px, 101.4px); } 5.1% { transform: translate(481.8px, 99.2px); } 5.61% { transform: translate(485.6px, 97.3px); } 6.11% { transform: translate(489.5px, 95.8px); } 6.6% { transform: translate(493.4px, 94.5px); } 7.06% { transform: translate(497.2px, 93.7px); } 7.53% { transform: translate(501.1px, 93.2px); } 8% { transform: translate(505px, 93px); } 8.47% { transform: translate(508.9px, 93.2px); } 8.94% { transform: translate(512.8px, 93.7px); } 9.4% { transform: translate(516.6px, 94.5px); } 9.89% { transform: translate(520.5px, 95.8px); } 10.39% { transform: translate(524.4px, 97.3px); } 10.9% { transform: translate(528.2px, 99.2px); } 11.44% { transform: translate(532.1px, 101.4px); } 12% { transform: translate(536px, 104px); } 100% { transform: translate(536px, 104px); } }
+  .tk2 { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; transform: translate(624px, 104px); animation: tk2 9s linear infinite; }
+  @keyframes tk2 { 0% { transform: translate(474px, 104px); } 18% { transform: translate(474px, 104px); } 19.4% { transform: translate(483.4px, 97.7px); } 20.74% { transform: translate(492.8px, 92.2px); } 22.03% { transform: translate(502.1px, 87.5px); } 23.27% { transform: translate(511.5px, 83.8px); } 24.49% { transform: translate(520.9px, 80.8px); } 25.67% { transform: translate(530.2px, 78.7px); } 26.84% { transform: translate(539.6px, 77.4px); } 28% { transform: translate(549px, 77px); } 29.16% { transform: translate(558.4px, 77.4px); } 30.33% { transform: translate(567.8px, 78.7px); } 31.51% { transform: translate(577.1px, 80.8px); } 32.73% { transform: translate(586.5px, 83.8px); } 33.97% { transform: translate(595.9px, 87.5px); } 35.26% { transform: translate(605.2px, 92.2px); } 36.6% { transform: translate(614.6px, 97.7px); } 38% { transform: translate(624px, 104px); } 100% { transform: translate(624px, 104px); } }
+  .tk3 { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; transform: translate(74px, 104px); animation: tk3 9s linear infinite; }
+  @keyframes tk3 { 0% { transform: translate(474px, 104px); } 44% { transform: translate(474px, 104px); } 44.99% { transform: translate(472px, 91.5px); } 45.98% { transform: translate(466.1px, 80.2px); } 47.07% { transform: translate(456.8px, 69.9px); } 48.27% { transform: translate(444.4px, 60.7px); } 49.62% { transform: translate(429.2px, 52.5px); } 51.11% { transform: translate(411.5px, 45.5px); } 52.72% { transform: translate(391.8px, 39.5px); } 54.44% { transform: translate(370.3px, 34.7px); } 56.25% { transform: translate(347.4px, 30.9px); } 58.13% { transform: translate(323.5px, 28.2px); } 60.05% { transform: translate(298.9px, 26.5px); } 62% { transform: translate(274px, 26px); } 63.95% { transform: translate(249.1px, 26.5px); } 65.87% { transform: translate(224.5px, 28.2px); } 67.75% { transform: translate(200.6px, 30.9px); } 69.56% { transform: translate(177.7px, 34.7px); } 71.28% { transform: translate(156.2px, 39.5px); } 72.89% { transform: translate(136.5px, 45.5px); } 74.38% { transform: translate(118.8px, 52.5px); } 75.73% { transform: translate(103.6px, 60.7px); } 76.93% { transform: translate(91.2px, 69.9px); } 78.02% { transform: translate(81.9px, 80.2px); } 79.01% { transform: translate(76px, 91.5px); } 80% { transform: translate(74px, 104px); } 100% { transform: translate(74px, 104px); } }
+  .tk4 { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; transform: translate(505px, 250px); animation: tk4 9s linear infinite; }
+  @keyframes tk4 { 0% { transform: translate(505px, 316px); } 84% { transform: translate(505px, 316px); } 88.85% { transform: translate(505px, 284px); } 94% { transform: translate(505px, 250px); } 100% { transform: translate(505px, 250px); } }
+  .pl5 { animation: pl5 9s linear infinite; }
+  @keyframes pl5 { 0%, 11.9% { fill: #ffd166; } 14% { fill: #ffb703; } 22%, 100% { fill: #ffd166; } }
+  .pl6 { animation: pl6 9s linear infinite; }
+  @keyframes pl6 { 0%, 37.9% { fill: #ffd166; } 40% { fill: #ffb703; } 48%, 100% { fill: #ffd166; } }
+  .pl7 { animation: pl7 9s linear infinite; }
+  @keyframes pl7 { 0%, 79.9% { fill: #ffd166; } 82% { fill: #ffb703; } 90%, 100% { fill: #ffd166; } }
+  .pl8 { animation: pl8 9s linear infinite; }
+  @keyframes pl8 { 0%, 93.9% { fill: #ffd166; } 96% { fill: #ffb703; } 99%, 100% { fill: #ffd166; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tk1, .tk2, .tk3, .tk4, .pl5, .pl6, .pl7, .pl8 { animation: none; }
   }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="480" rx="8"/>
@@ -79,10 +98,10 @@
 <path class="arc" d="M474 104 Q505 82 536 104"/>
 <path class="arc" d="M474 104 Q549 50 624 104"/>
 <path class="arc" d="M474 104 C474 0 74 0 74 104"/>
-<circle class="num" cx="505" cy="93" r="9"/><text class="numt" x="505" y="97">1</text>
-<circle class="num" cx="549" cy="77" r="9"/><text class="numt" x="549" y="81">2</text>
-<circle class="num" cx="274" cy="25" r="9"/><text class="numt" x="274" y="29">3</text>
-<circle class="num" cx="590" cy="332" r="9"/><text class="numt" x="590" y="336">4</text>
+<circle class="num pl5" cx="505" cy="93" r="9"/><text class="numt" x="505" y="97">1</text>
+<circle class="num pl6" cx="549" cy="77" r="9"/><text class="numt" x="549" y="81">2</text>
+<circle class="num pl7" cx="274" cy="25" r="9"/><text class="numt" x="274" y="29">3</text>
+<circle class="num pl8" cx="590" cy="332" r="9"/><text class="numt" x="590" y="336">4</text>
 
 <!-- Legend -->
 <text class="cap" x="24" y="376">Seen from net.rx on CPU 3:</text>
@@ -91,4 +110,8 @@
 <text class="leg" x="24" y="438">3  Other socket: across the socket link, about 130–200 ns, and every miss to node 0 DRAM pays it too.</text>
 <text class="leg" x="24" y="458">4  The NIC is on socket 1's PCIe root, so its DMA writes land in socket 1's L3 and DRAM.</text>
 <text class="note" x="24" y="474">Typical orders of magnitude, not measurements. Domain sizes and CPU numbers are illustrative.</text>
+<circle class="tk1" cx="0" cy="0" r="5"/>
+<circle class="tk2" cx="0" cy="0" r="5"/>
+<circle class="tk3" cx="0" cy="0" r="5"/>
+<circle class="tk4" cx="0" cy="0" r="5"/>
 </svg>

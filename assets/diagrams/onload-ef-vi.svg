@@ -24,8 +24,19 @@
   .tick { stroke: #8c959f; stroke-width: 1; }
   .arrow { stroke: #57606a; stroke-width: 1.5; fill: none; marker-end: url(#ah); }
   .arrowr { stroke: #9b1c1c; stroke-width: 1.5; fill: none; marker-end: url(#ahr); }
+  .tk1 { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; transform: translate(630px, 250px); animation: tk1 8s linear infinite; }
+  @keyframes tk1 { 0% { transform: translate(130px, 113px); } 5% { transform: translate(130px, 113px); } 13.29% { transform: translate(62px, 183px); } 19.29% { transform: translate(62px, 183px); } 34.18% { transform: translate(237px, 190px); } 37.83% { transform: translate(280px, 190px); } 45.21% { transform: translate(302px, 106px); } 55.21% { transform: translate(302px, 106px); } 72.09% { transform: translate(482px, 190px); } 75.57% { transform: translate(523px, 190px); } 86% { transform: translate(630px, 250px); } 100% { transform: translate(630px, 250px); } }
+  .pl2 { animation: pl2 8s linear infinite; }
+  @keyframes pl2 { 0%, 13.19% { fill: #cfe3ff; } 15.29% { fill: #3d7fd9; } 21.29%, 100% { fill: #cfe3ff; } }
+  .pl3 { animation: pl3 8s linear infinite; }
+  @keyframes pl3 { 0%, 45.11% { fill: #cfe3ff; } 47.21% { fill: #3d7fd9; } 57.21%, 100% { fill: #cfe3ff; } }
+  .pl4 { animation: pl4 8s linear infinite; }
+  @keyframes pl4 { 0%, 85.9% { fill: #c8f0d0; } 86%, 97% { fill: #8fe0a0; } 100% { fill: #c8f0d0; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tk1, .pl2, .pl3, .pl4 { animation: none; }
   }
 </style>
 <defs>
@@ -42,7 +53,7 @@
 <text class="tiny" x="130" y="125" text-anchor="middle">IP and port steer each flow to a VI</text>
 <rect class="app" x="24" y="144" width="212" height="84" rx="5"/>
 <text class="smb" x="32" y="161">VI 1: one Onload stack</text>
-<rect class="box" x="32" y="170" width="60" height="26" rx="3"/>
+<rect class="box pl2" x="32" y="170" width="60" height="26" rx="3"/>
 <text class="smb" x="62" y="187" text-anchor="middle">RXQ</text>
 <rect class="box" x="98" y="170" width="60" height="26" rx="3"/>
 <text class="smb" x="128" y="187" text-anchor="middle">TXQ</text>
@@ -60,7 +71,7 @@
 <text class="tiny" x="32" y="306">ARP, ICMP, other sockets</text>
 <rect class="lane" x="280" y="60" width="200" height="266" rx="6"/>
 <text class="cap" x="294" y="82">Host memory, huge pages</text>
-<rect class="box" x="294" y="98" width="17" height="17" rx="2"/>
+<rect class="box pl3" x="294" y="98" width="17" height="17" rx="2"/>
 <rect class="box" x="315" y="98" width="17" height="17" rx="2"/>
 <rect class="box" x="336" y="98" width="17" height="17" rx="2"/>
 <rect class="box" x="357" y="98" width="17" height="17" rx="2"/>
@@ -110,7 +121,7 @@
 <text class="sm" x="534" y="146">socket buffers per socket</text>
 <text class="sm" x="534" y="162">(EF_UDP_RCVBUF, EF_TCP_RCVBUF)</text>
 <text class="tiny" x="534" y="180">ef_vi programs skip this box</text>
-<rect class="app" x="524" y="206" width="212" height="108" rx="5"/>
+<rect class="app pl4" x="524" y="206" width="212" height="108" rx="5"/>
 <text class="smb" x="534" y="224">application thread</text>
 <text class="sm" x="534" y="242">spins on the EVQ (EF_POLL_USEC)</text>
 <text class="sm" x="534" y="258">no interrupt, no system call</text>
@@ -131,4 +142,5 @@
 <line class="tick" x1="280" y1="416" x2="280" y2="424"/>
 <line class="tick" x1="736" y1="416" x2="736" y2="424"/>
 <text class="sm" x="508" y="436" text-anchor="middle">Onload: ef_vi plus TCP and UDP, sockets and their limits</text>
+<circle class="tk1" cx="0" cy="0" r="6"/>
 </svg>

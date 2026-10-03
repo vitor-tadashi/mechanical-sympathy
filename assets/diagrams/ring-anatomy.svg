@@ -24,8 +24,15 @@
   .tick { stroke: #8c959f; stroke-width: 1; }
   .arrow { stroke: #57606a; stroke-width: 1.5; fill: none; marker-end: url(#ah); }
   .arrowr { stroke: #9b1c1c; stroke-width: 1.5; fill: none; marker-end: url(#ahr); }
-.wedge { stroke-width: 1.5; }  @media (prefers-color-scheme: dark) {
+.wedge { stroke-width: 1.5; }  .tk1 { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; transform: translate(267.9px, 285.9px); animation: tk1 10s linear infinite; }
+  @keyframes tk1 { 0% { transform: translate(267.9px, 285.9px); } 0% { transform: translate(267.9px, 285.9px); } 4.16% { transform: translate(248px, 301.1px); } 8.34% { transform: translate(224.8px, 310.7px); } 12.5% { transform: translate(200px, 314px); } 16.66% { transform: translate(175.2px, 310.7px); } 20.84% { transform: translate(152px, 301.1px); } 25% { transform: translate(132.1px, 285.9px); } 29.16% { transform: translate(116.9px, 266px); } 33.34% { transform: translate(107.3px, 242.8px); } 37.5% { transform: translate(104px, 218px); } 41.66% { transform: translate(107.3px, 193.2px); } 45.84% { transform: translate(116.9px, 170px); } 50% { transform: translate(132.1px, 150.1px); } 54.16% { transform: translate(152px, 134.9px); } 58.34% { transform: translate(175.2px, 125.3px); } 62.5% { transform: translate(200px, 122px); } 66.66% { transform: translate(224.8px, 125.3px); } 70.84% { transform: translate(248px, 134.9px); } 75% { transform: translate(267.9px, 150.1px); } 79.16% { transform: translate(283.1px, 170px); } 83.34% { transform: translate(292.7px, 193.2px); } 87.5% { transform: translate(296px, 218px); } 91.66% { transform: translate(292.7px, 242.8px); } 95.84% { transform: translate(283.1px, 266px); } 100% { transform: translate(267.9px, 285.9px); } 100% { transform: translate(267.9px, 285.9px); } }
+  .tk2 { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; transform: translate(200px, 122px); animation: tk2 10s linear infinite; }
+  @keyframes tk2 { 0% { transform: translate(200px, 122px); } 0% { transform: translate(200px, 122px); } 4.16% { transform: translate(224.8px, 125.3px); } 8.34% { transform: translate(248px, 134.9px); } 12.5% { transform: translate(267.9px, 150.1px); } 16.66% { transform: translate(283.1px, 170px); } 20.84% { transform: translate(292.7px, 193.2px); } 25% { transform: translate(296px, 218px); } 29.16% { transform: translate(292.7px, 242.8px); } 33.34% { transform: translate(283.1px, 266px); } 37.5% { transform: translate(267.9px, 285.9px); } 41.66% { transform: translate(248px, 301.1px); } 45.84% { transform: translate(224.8px, 310.7px); } 50% { transform: translate(200px, 314px); } 54.16% { transform: translate(175.2px, 310.7px); } 58.34% { transform: translate(152px, 301.1px); } 62.5% { transform: translate(132.1px, 285.9px); } 66.66% { transform: translate(116.9px, 266px); } 70.84% { transform: translate(107.3px, 242.8px); } 75% { transform: translate(104px, 218px); } 79.16% { transform: translate(107.3px, 193.2px); } 83.34% { transform: translate(116.9px, 170px); } 87.5% { transform: translate(132.1px, 150.1px); } 91.66% { transform: translate(152px, 134.9px); } 95.84% { transform: translate(175.2px, 125.3px); } 100% { transform: translate(200px, 122px); } 100% { transform: translate(200px, 122px); } }
+  @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tk1, .tk2 { animation: none; }
   }
 </style>
 <defs>
@@ -79,4 +86,6 @@
 <text class="smb" x="430" y="362">Memory per queue = descriptors x buffer size</text>
 <text class="sm" x="430" y="378">4096 x 2 KiB = 8 MiB. With 63 queues: 504 MiB.</text>
 <text class="tiny" x="430" y="391">Illustrative: sizes and queue counts depend on the driver.</text>
+<circle class="tk1" cx="0" cy="0" r="7"/>
+<circle class="tk2" cx="0" cy="0" r="7"/>
 </svg>

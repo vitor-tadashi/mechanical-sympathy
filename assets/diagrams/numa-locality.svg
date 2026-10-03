@@ -15,8 +15,17 @@
   .bad { stroke: #9b1c1c; stroke-width: 3; fill: none; stroke-dasharray: 7 4; }
   .gtxt { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; text-anchor: middle; }
   .btxt { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; text-anchor: middle; }
+  .tk1 { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; transform: translate(535px, 122px); animation: tk1 7s linear infinite; }
+  @keyframes tk1 { 0% { transform: translate(665px, 122px); } 5% { transform: translate(665px, 122px); } 8.76% { transform: translate(665px, 150px); } 17.5% { transform: translate(600px, 150px); } 26.24% { transform: translate(535px, 150px); } 30% { transform: translate(535px, 122px); } 100% { transform: translate(535px, 122px); } }
+  .tk2 { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; transform: translate(478px, 173px); animation: tk2 7s linear infinite; }
+  @keyframes tk2 { 0% { transform: translate(258px, 110px); } 40% { transform: translate(258px, 110px); } 47.89% { transform: translate(320px, 110px); } 55.89% { transform: translate(320px, 110px); } 71.15% { transform: translate(440px, 110px); } 79.15% { transform: translate(440px, 110px); } 82.97% { transform: translate(470px, 110px); } 90.98% { transform: translate(470px, 173px); } 92% { transform: translate(478px, 173px); } 100% { transform: translate(478px, 173px); } }
+  .pl3 { animation: pl3 7s linear infinite; }
+  @keyframes pl3 { 0%, 47.79% { fill: #eeeeee; } 49.89% { fill: #ff9b9b; } 65.89%, 100% { fill: #eeeeee; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tk1, .tk2, .pl3 { animation: none; }
   }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="300" rx="8"/>
@@ -31,7 +40,7 @@
 <text class="lbl" x="160" y="178">node 0 memory</text>
 
 <!-- Interconnect -->
-<rect class="link" x="320" y="95" width="120" height="30" rx="4"/>
+<rect class="link pl3" x="320" y="95" width="120" height="30" rx="4"/>
 <text class="lbl" x="380" y="115">interconnect</text>
 
 <!-- Node 1 -->
@@ -56,4 +65,6 @@
 <text class="btxt" x="190" y="244">Remote: every cache miss crosses sockets,</text>
 <text class="btxt" x="190" y="262">about +60–100 ns each.</text>
 <text class="sub" x="380" y="288">Solid green = local access. Dashed red = cross-socket access.</text>
+<circle class="tk1" cx="0" cy="0" r="6"/>
+<circle class="tk2" cx="0" cy="0" r="6"/>
 </svg>
