@@ -45,7 +45,7 @@ flowchart TD
 | 4 | [02](guides/02-cpu-core-isolation.md) | systemd CPUAffinity, workqueues, irqbalance off, RT throttling | ✔ (same reboot) |
 | 5 | [03](guides/03-huge-pages-configuration.md) | Per-NUMA huge page reservation, sized for heap + code cache + bypass buffers | ✔ (same reboot) |
 | 6 | [06](guides/06-kernel-sysctl-tuning.md) | sysctl profile | |
-| 7 | [07](guides/07-os-hygiene.md) | Services, limits, noatime, tuned. Firewall section only with sign-off. | |
+| 7 | [07](guides/07-os-hygiene.md) | Services, limits, noatime, tuned. Firewall section only with sign-off. | ✔ (same reboot, for tuned's boot arguments) |
 | 8 | [12](guides/12-memory-pressure.md) | Swap off (or `SWAP_POLICY=protect`), OOM order and memlock of the latency services | |
 | 9 | [10](guides/10-time-sync.md) | chrony, or PTP on the timing NIC, with the daemons pinned to an OS CPU | |
 | 10 | [05](guides/05-cgroup-isolation.md) | housekeeping.slice for agents, pin EDR/AV | |
