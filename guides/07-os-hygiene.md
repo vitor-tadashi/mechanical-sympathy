@@ -1,6 +1,6 @@
 # Guide 07 — Operating System Hygiene
 
-> **Script:** [`scripts/07-os-hygiene`](../scripts/07-os-hygiene) · **Previous:** [Guide 06](06-kernel-sysctl-tuning.md) · **Next:** [Guide 08 — Kernel bypass](08-kernel-bypass.md) (optional) · **Terms:** [Glossary](../GLOSSARY.md)
+> **Script:** [`scripts/07-os-hygiene`](../scripts/07-os-hygiene) · **Previous:** [Guide 06](06-kernel-sysctl-tuning.md) · **Next:** [Guide 08 — Kernel bypass](08-kernel-bypass.md) (optional), or [Guide 10 — Time synchronization](10-time-sync.md) · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|
@@ -18,7 +18,7 @@
 
 ```mermaid
 flowchart LR
-  g00["00<br/>BIOS"] --> g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g09m(["Step 0<br/>09 Measure"]) --> g00["00<br/>BIOS"] --> g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
   g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
   class g07 focus
   classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px

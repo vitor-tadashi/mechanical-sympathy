@@ -1,6 +1,6 @@
 # Guide 09 — Measuring Latency
 
-> **Script:** [`scripts/09-measure-latency`](../scripts/09-measure-latency) · **Concepts:** [cpu-isolation §8](../concepts/cpu-isolation.md#8-measuring-noise), [network-tuning §10](../concepts/network-tuning.md#10-measuring) · **Example:** [Java latency probe](../examples/hugepages-java-example.md) · **Previous:** [Guide 08](08-kernel-bypass.md) · **Next:** [Guide 10 — Time synchronization](10-time-sync.md) · **Use it:** before [Guide 00](00-bios-firmware.md), and after every guide · **Terms:** [Glossary](../GLOSSARY.md)
+> **Script:** [`scripts/09-measure-latency`](../scripts/09-measure-latency) · **Concepts:** [cpu-isolation §8](../concepts/cpu-isolation.md#8-measuring-noise), [network-tuning §10](../concepts/network-tuning.md#10-measuring) · **Example:** [Java latency probe](../examples/hugepages-java-example.md) · **Previous:** [Quick start](../QUICK_START.md) · **Next:** [Guide 00 — BIOS and firmware](00-bios-firmware.md) · **Use it:** before Guide 00 (step 0), and after every guide · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|

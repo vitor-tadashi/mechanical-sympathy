@@ -1,6 +1,6 @@
 # Guide 00 — BIOS and Firmware
 
-> **Script:** [`scripts/00-bios-firmware`](../scripts/00-bios-firmware) · **Concepts:** [cpu-isolation §4](../concepts/cpu-isolation.md#4-sources-of-noise-on-a-cpu-and-what-removes-each), [bootloader](../concepts/bootloader.md) · **Next:** [Guide 01 — Kernel command line](01-grub-bootloader-tuning.md) · **Measure with:** [Guide 09](09-measuring-latency.md) · **Terms:** [Glossary](../GLOSSARY.md)
+> **Script:** [`scripts/00-bios-firmware`](../scripts/00-bios-firmware) · **Concepts:** [cpu-isolation §4](../concepts/cpu-isolation.md#4-sources-of-noise-on-a-cpu-and-what-removes-each), [bootloader](../concepts/bootloader.md) · **Previous:** [Guide 09 — Measuring latency](09-measuring-latency.md) (step 0: the baseline) · **Next:** [Guide 01 — Kernel command line](01-grub-bootloader-tuning.md) · **Measure with:** [Guide 09](09-measuring-latency.md) · **Terms:** [Glossary](../GLOSSARY.md)
 
 | | |
 |---|---|
@@ -19,13 +19,13 @@
 
 ```mermaid
 flowchart LR
-  g00["00<br/>BIOS"] --> g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
+  g09m(["Step 0<br/>09 Measure"]) --> g00["00<br/>BIOS"] --> g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
   g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
   class g00 focus
   classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
 ```
 
-*Guide 00 comes before everything else. The firmware decides what the kernel can even ask for.*
+*Guide 00 is the first change, right after the baseline from Guide 09. The firmware decides what the kernel can even ask for.*
 
 ---
 
