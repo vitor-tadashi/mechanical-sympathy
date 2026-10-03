@@ -30,10 +30,7 @@ Every guide follows this order. Numbered sections stay numbered, because other p
 
    **Time:** ~20 min + reboot · **Do this if:** … · **Skip if:** …
 
-   ```mermaid
-   flowchart LR
-     here["Copy the you-are-here strip from §3.3"]
-   ```
+   <img src="../assets/diagrams/strip-guide-NN.svg" alt="The tuning order, from the Guide 09 baseline through Guides 00 to 08, with Guide NN highlighted" width="720">
    ~~~~
 
 4. **Body sections** (`## 1.` …). They explain what each setting does, why the value was chosen, how to verify it, how to troubleshoot it and how to roll it back (AGENTS.md §3). The depth stays. Only the packaging changes.
@@ -124,77 +121,71 @@ Rules:
 
 A diagram earns its place when it shows a **flow, a sequence, a layout or a decision** that prose would need a paragraph for. It never just decorates.
 
-### 3.1 Mermaid
+### 3.1 Animated SVG, and nothing else
 
-Mermaid renders natively on GitHub, in both themes. Use only these diagram types: `flowchart`, `sequenceDiagram`, `stateDiagram-v2`, `timeline`, `gantt`, `quadrantChart`. `tools/lint-docs` parses every block, so a broken diagram fails `make lint`.
+Every diagram is a hand-written, animated SVG in `assets/diagrams/`. There is no Mermaid.
 
-- Keep a diagram under about 15 nodes. Split it or use `subgraph` when it grows.
-- Put the flow left-to-right (`LR`) for pipelines and top-down (`TD`) for decisions.
-- Quote labels that contain punctuation: `A["idle=poll (C0 only)"]`.
-- Keep decision (`{ }`) labels to two or three words, such as `{"Bare metal?"}`, and put the detail on the edge label. Mermaid sizes a diamond from its text, so a long question becomes a huge diamond.
-- Mermaid wraps node text at 200 px. For wide multi-line boxes, raise the limit with `%%{init: {"flowchart": {"wrappingWidth": 480}}}%%` as the first line of the block.
-- `direction` inside a `subgraph` is ignored as soon as a node inside it is linked from outside. For stacked lists, use one multi-line node instead.
-- Nodes with no edges between them share a rank, so they line up **across** the flow direction. For side-by-side columns (one per NUMA node, say), use `flowchart TD` with `direction LR` inside each subgraph. For stacked lanes, link the subgraphs with invisible edges (`laneA ~~~ laneB`).
-- Give subgraphs descriptive ids (`kpath`, `numa0`). One-letter ids such as `b` can collide with Mermaid internals and silently break the layout.
+- **Why motion.** A box-and-arrow picture shows what is connected. Motion also shows the order: the path a packet takes, the check a reader makes first, the moment a CPU is interrupted.
+- **Why one format.** Every diagram uses the same palette, fonts, dark-mode block and reduced-motion picture (§3.5), so the pages read as one system.
+- **The cost.** Text inside an image is not searchable, cannot be copied and is not translated by the browser. The one-sentence summary under each diagram carries the point in text, so write it with care.
+
+Pick the motion for the kind of diagram:
+
+| Diagram | Motion | Picture without motion |
+|---|---|---|
+| A pipeline or a flow | A token travels the stages and waits where the real thing waits, as in [`spin-vs-block.svg`](assets/diagrams/spin-vs-block.svg) | The token at its destination, every caption visible |
+| A decision or troubleshooting tree | A token starts at the symptom and walks one path, and each box pulses as the token reaches it, as in [`bios-troubleshoot.svg`](assets/diagrams/bios-troubleshoot.svg) | The whole tree, with the walked path drawn bold |
+| A layout or a map (NICs to CPUs, slices, sockets) | Tokens travel each link and show where the work lands | The tokens at their destinations |
+| A sequence of messages | Messages travel between the participants in order | Every message drawn |
+| A timeline, a schedule | A playhead sweeps, and each event pulses as the playhead reaches it, as in [`tick-nohz.svg`](assets/diagrams/tick-nohz.svg) | No playhead, every event drawn |
+| Where a guide sits in the order | A token walks from step 0 to the current guide, which then pulses (§3.3) | The current guide highlighted |
+
+Layout rules:
+
+- Keep a diagram under about 15 boxes. Split it when it grows.
+- Put the flow left to right for pipelines and top down for decisions.
+- Keep a decision label to two or three words, such as "Bare metal?", and put the detail on the edge label.
 - **Right after every diagram, one plain sentence says what it shows.** Screen readers and readers who skip images get the same point.
 
-### 3.2 Palette
+### 3.2 Palette and shapes
 
-These classes read well in both light and dark themes: dark text on a mid-light fill, with a strong border. **Color is never the only signal.** The label or the shape (`([ ])` for start/end, `{ }` for decisions, `[[ ]]` for scripts) carries the meaning too.
+These classes read well in both light and dark themes: dark text on a mid-light fill, with a strong border. **Color is never the only signal.** The label or the shape carries the meaning too.
 
-```text
-classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-classDef hk    fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
-classDef iso   fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-classDef risk  fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
-classDef muted fill:#eeeeee,stroke:#777777,color:#333333
-```
+| Class | Fill, border | Meaning |
+|---|---|---|
+| `.foc` | `#ffd166`, `#8a5a00` | "You are here", or the element the diagram is about |
+| `.box` | `#cfe3ff`, `#1f4e8c` | Housekeeping: OS CPUs, IRQ CPUs, system services |
+| `.app` | `#c8f0d0`, `#1d6b33` | Isolated / latency-critical: pinned threads, critical NIC |
+| `.wait` | `#ffc9c9`, `#9b1c1c` | Something that breaks the host, removes a security control, or makes the reader wait |
+| `.mut` | `#eeeeee`, `#777777` | Out of scope, optional, or skipped on this host class |
 
-| Class | Meaning |
+| Shape | Meaning |
 |---|---|
-| `focus` | "You are here", or the element the diagram is about |
-| `hk` | Housekeeping: OS CPUs, IRQ CPUs, system services |
-| `iso` | Isolated / latency-critical: pinned threads, critical NIC |
-| `risk` | Something that breaks the host or removes a security control |
-| `muted` | Out of scope, optional, or skipped on this host class |
+| Rounded ends (a pill) | Start or end: the symptom, step 0 |
+| Pointed sides | A decision |
+| A box with a bar inside each side | A script or a unit file |
+| A cylinder | A store: a file, a buffer pool |
+| A dashed frame | A group: a NUMA node, a slice, a host |
 
 ### 3.3 The "you are here" strip
 
-The ordered tuning guides (00 to 08) show where they sit in the sequence. The strip opens with Guide 09 as **step 0**, because the baseline measurement comes before Guide 00 and repeats after every guide. Guides 09 to 12 are cross-cutting (measuring, clocks, keeping a host tuned, memory pressure), so they open with a diagram of their own instead. Copy this block, and point the `class … focus` line at the current guide:
+The ordered tuning guides (00 to 08) show where they sit in the sequence. The strip opens with Guide 09 as **step 0**, because the baseline measurement comes before Guide 00 and repeats after every guide. Guides 09 to 12 are cross-cutting (measuring, clocks, keeping a host tuned, memory pressure), so they open with a diagram of their own instead. Each guide has its own strip, `strip-guide-NN.svg`, with the current guide in `.foc`:
 
-```mermaid
-flowchart LR
-  g09m(["Step 0<br/>09 Measure"]) --> g00["00<br/>BIOS"] --> g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
-  g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
-  class g01 focus
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-```
+<img src="assets/diagrams/strip-guide-01.svg" alt="The tuning order, from the Guide 09 baseline through Guides 00 to 08, with Guide 01 highlighted" width="720">
 
 *Guide 01 is the current step. The rounded box is the baseline from Guide 09, taken before Guide 00. The dotted arrow marks Guide 08 as optional.*
 
-### 3.4 Troubleshooting flowcharts
+### 3.4 Troubleshooting trees
 
-Start from the **symptom** the reader sees, ask **one check per decision**, and end at a **fix** or a link to the table row:
+Start from the **symptom** the reader sees, ask **one check per decision**, and end at a **fix** or a link to the table row. The token walks the most common path:
 
-```mermaid
-flowchart TD
-  s(["Symptom: SSH is slow after reboot"]) --> q1{"mpstat: OS CPUs above 80%?"}
-  q1 -- yes --> f1["Too few OS CPUs: give CPUs back in lowlat.conf"]
-  q1 -- no --> q2{"irqbalance running?"}
-  q2 -- yes --> f2["systemctl disable --now irqbalance"]
-  q2 -- no --> t["See the table below"]
-```
+<img src="assets/diagrams/bios-troubleshoot.svg" alt="A troubleshooting tree that checks SMIs, then frequency, then idle states, before it rules out the firmware" width="720">
 
-*Starting from slow SSH, check OS CPU load first, then irqbalance, then fall back to the table.*
+*Starting from an unexplained maximum, check SMIs first, then frequency changes, then deep idle states, and fall back to Guide 09 when all three are clean.*
 
 ### 3.5 Hand-written SVG
 
-Mermaid lays out boxes and arrows. It cannot show **time** or **physical geometry**, and some ideas need them:
-
-- **Animated SVG, for time.** A packet waiting for interrupt coalescing, a tick interrupting a CPU, a thread stalled for 50 ms. The animation shows the wait itself.
-- **Static SVG, for geometry.** Two sockets and the interconnect between them, or where a CPU sits relative to the NIC and memory. The picture shows the distance.
-
-Everything else stays in Mermaid. Each SVG makes **one point that a reader gets in about 5 seconds**, usually by comparing two cases in lanes. If you cannot say the point in one sentence, split the SVG or drop it.
+Each SVG makes **one point that a reader gets in about 5 seconds**. A comparison puts each case in its own lane. If you cannot say the point in one sentence, split the SVG or drop it.
 
 Rules for every SVG:
 
@@ -210,17 +201,17 @@ Rules for every SVG:
 - Color is never the only signal. Every colored box or bar carries a text label.
 - At most 30 KB.
 
-Extra rules for an animated SVG:
+Rules for the motion:
 
-- Animate with CSS `@keyframes` inside the file.
+- Animate with CSS `@keyframes` inside the file. Every diagram animates (§3.1).
 - **Two kinds of motion, pick the one the idea needs:**
   - **A playhead, for timelines.** One playhead sweeps across all lanes, and each event pulses briefly as the playhead reaches it, as in [`tick-nohz.svg`](assets/diagrams/tick-nohz.svg) and [`tail-spikes.svg`](assets/diagrams/tail-spikes.svg). Time a pulse with a negative `animation-delay` computed from the event's position, so it fires exactly when the playhead gets there.
-  - **Moving tokens, for a path.** A packet or a message travels through the stages, waits where it really waits, and arrives, as in [`spin-vs-block.svg`](assets/diagrams/spin-vs-block.svg). A short caption ("handled late") may appear when the token arrives.
-- **The lanes stay comparable.** Every box, lane and label of the comparison is drawn all the time. Only tokens move, and only arrival captions may fade in.
+  - **Moving tokens, for a path.** A packet or a message travels through the stages, waits where it really waits, and arrives, as in [`spin-vs-block.svg`](assets/diagrams/spin-vs-block.svg). A short caption ("handled late") may appear when the token arrives. A decision tree is a path too: the token walks one branch and each box it reaches pulses.
+- **Everything stays drawn.** Every box, edge, lane and label is drawn all the time. Only tokens move, boxes pulse, and only arrival captions may fade in.
 - The base styles draw the complete picture: the tokens at their destination, every caption visible. An `@media (prefers-reduced-motion: reduce)` block stops every animation and hides the playhead, so the complete picture is what those readers see. It must make the point on its own.
 - A loop of 4 to 10 seconds, and no flashing faster than 3 times per second.
 
-Structure, as in [`tick-nohz.svg`](assets/diagrams/tick-nohz.svg): a `viewBox` 760 wide, one lane per case (default on top, tuned below), a caption and a one-line subcaption in each lane.
+Structure: a `viewBox` 760 wide. A comparison, as in [`tick-nohz.svg`](assets/diagrams/tick-nohz.svg), has one lane per case (default on top, tuned below), a caption and a one-line subcaption in each lane. A flow, a tree or a map needs no lane.
 
 | Class | Use | Style |
 |---|---|---|
@@ -229,14 +220,16 @@ Structure, as in [`tick-nohz.svg`](assets/diagrams/tick-nohz.svg): a `viewBox` 7
 | `.cap` | Lane caption | 600 14px, `#1a1a1a` |
 | `.sub` | One-line subcaption | 12px, `#444444` |
 | `.lbl` | Labels in and next to boxes | 600 12–13px, `#1a1a1a` |
+| `.el` | Edge labels ("yes", "no") | 600 11px, `#444444`, with a white halo |
 | `.axis`, `.note` | Axis labels and footnotes | 11px, `#57606a` |
 | `.head` | The playhead | `#8a5a00`, 2px, dashed |
+| `.tok`, `.walk` | The token, and the path it walks | `#8a5a00`; the path 3px |
 
-Text is 11px or larger. 10px is the floor, for a label inside a narrow bar, and `tools/lint-docs` rejects anything smaller. A pulse brightens its own color: `#ff3b3b` for a red event, `#3d7fd9` for a blue one.
+Text is 11px or larger. 10px is the floor, for a label inside a narrow bar, and `tools/lint-docs` rejects anything smaller. A pulse brightens its own color: `#ff3b3b` for a red event, `#3d7fd9` for a blue one. A box that pulses gets a brighter fill and a 3px border.
 
 **One signature animation per guide.** Each guide shows, in its first sections, the one animation that makes its point: the boot arguments for Guide 01, the PAUSE frame or the interrupt for Guide 04, the fenced agent for Guide 05. A reader who only watches the pictures should still learn what each guide removes.
 
-Embed it with an `<img>` that has an `alt` text, followed by the same one-sentence summary as a Mermaid diagram:
+Embed it with an `<img>` that has an `alt` text, followed by the one-sentence summary of §3.1:
 
 ```markdown
 <img src="../assets/diagrams/rx-coalescing.svg" alt="A packet waits in the NIC for the coalescing timer before the interrupt fires" width="720">
@@ -245,7 +238,7 @@ Embed it with an `<img>` that has an `alt` text, followed by the same one-senten
 ## 4. Accessibility checklist (every PR that touches docs)
 
 - [ ] The page opens with the short answer (At a glance / TL;DR).
-- [ ] Each diagram, Mermaid or SVG, has a one-sentence text summary. Each image has `alt` text. `make lint` fails on an image without `alt` and on an SVG that no page uses.
+- [ ] Each diagram has a one-sentence text summary. Each image has `alt` text. `make lint` fails on an image without `alt` and on an SVG that no page uses.
 - [ ] No meaning is carried by color alone.
 - [ ] Long output and deep dives are folded. Warnings and required commands are not.
 - [ ] Headings are real headings, in order (no jump from `##` to `####`), so the GitHub outline works.
@@ -254,4 +247,4 @@ Embed it with an `<img>` that has an `alt` text, followed by the same one-senten
 - [ ] Link text says where the link goes ("Guide 05 §4.4, the cpuset trap"), never "here".
 - [ ] Unmeasured advice is marked (§2.2).
 - [ ] Every tunable a concept page explains has a decision aid (§2.4), and a guide that applies the setting links to it, or the page says why not.
-- [ ] `make lint` passes (links, anchors, Mermaid, SVG rules).
+- [ ] `make lint` passes (links, anchors, SVG rules).

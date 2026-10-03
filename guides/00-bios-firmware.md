@@ -17,13 +17,7 @@
 
 **Time:** ~30–60 min per server model + 1 reboot, then minutes per host with a saved profile · **Do this if:** bare metal, before Guide 01 · **Skip if:** it's a VM. Ask the hypervisor owner for the equivalent (§10).
 
-```mermaid
-flowchart LR
-  g09m(["Step 0<br/>09 Measure"]) --> g00["00<br/>BIOS"] --> g01["01<br/>GRUB"] --> g02["02<br/>CPUs"] --> g03["03<br/>Huge pages"] --> g04["04<br/>Network"]
-  g04 --> g05["05<br/>cgroups"] --> g06["06<br/>sysctl"] --> g07["07<br/>Hygiene"] -.-> g08["08<br/>Bypass"]
-  class g00 focus
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-```
+<img src="../assets/diagrams/strip-guide-00.svg" alt="The tuning order, from the Guide 09 baseline through Guides 00 to 08, with Guide 00 highlighted" width="720">
 
 *Guide 00 is the first change, right after the baseline from Guide 09. The firmware decides what the kernel can even ask for.*
 
@@ -248,16 +242,7 @@ A host whose SMI count keeps increasing while idle has an SMI source left. Go ba
 
 ## 8. Troubleshooting
 
-```mermaid
-flowchart TD
-  s(["Rare max you cannot explain"]) --> smi{"turbostat SMI<br/>count rising?"}
-  smi -- yes --> f1["Firmware feature generating SMIs:<br/>§4.6, one change at a time"]
-  smi -- no --> mhz{"Bzy_MHz<br/>varies?"}
-  mhz -- yes --> f2["Turbo, HWP or thermal limits:<br/>§4.1, §4.3, §4.8"]
-  mhz -- no --> cst{"Deep cpuidle<br/>states listed?"}
-  cst -- yes --> f3["C-states enabled and idle=poll missing:<br/>§4.1, Guide 01"]
-  cst -- no --> f4["Not firmware: go back to<br/>rtla osnoise (Guide 09)"]
-```
+<img src="../assets/diagrams/bios-troubleshoot.svg" alt="A troubleshooting tree that checks SMIs, then frequency, then idle states, before it rules out the firmware" width="720">
 
 *Look for SMIs first, then frequency changes, then deep idle states. When all three are clean, the noise is not coming from the firmware.*
 
