@@ -60,22 +60,7 @@ That brings one-way latency down to roughly **1–2 µs**, with a much tighter t
 
 Which one fits depends on the NIC and on whether the application can change:
 
-```mermaid
-flowchart TD
-  s(["Pick a stack"]) --> c{"NIC?"}
-  c -- "Solarflare / AMD (sfc)" --> sa{"App can<br/>change?"}
-  sa -- "no" --> on["Onload<br/>(§5)"]
-  sa -- "yes" --> ef["ef_vi or DPDK"]
-  c -- "NVIDIA ConnectX (mlx5)" --> na{"App can<br/>change?"}
-  na -- "no" --> xl["XLIO (§7)"]
-  na -- "yes" --> dm["DPDK, bifurcated"]
-  c -- "Intel (ice, i40e, ixgbe)" --> ia{"App can<br/>change?"}
-  ia -- "no" --> bp["Kernel stack + busy polling,<br/>ADQ on E810, or evaluate<br/>Onload over AF_XDP (§7)"]
-  ia -- "yes" --> dp["DPDK (§6) or AF_XDP"]
-  c -- "virtio / cloud" --> vb["Kernel stack + busy polling"]
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  class on iso
-```
+<img src="../assets/diagrams/bypass-stack-picker.svg" alt="The NIC vendor and whether the application can change pick the bypass stack" width="720">
 
 *An unmodified application on an Intel NIC has no vendor socket-acceleration stack, so start with busy polling.*
 
@@ -308,19 +293,7 @@ Then measure against your baseline: kernel-stack p50/p99/p99.9 against bypass. R
 
 ## 10. Troubleshooting
 
-```mermaid
-flowchart TD
-  s(["Bypass not working"]) --> st{"Which stack?"}
-  st -- Onload --> acc{"Stack in<br/>onload_stackdump?"}
-  acc -- no --> f1["Not accelerated: launcher skipped the prefix,<br/>check LD_PRELOAD in /proc/pid/environ"]
-  acc -- yes --> irq{"IRQs on an<br/>isolated CPU?"}
-  irq -- yes --> f2["Onload vectors created late:<br/>04-network --runtime after start-up"]
-  irq -- no --> f3["See the table below"]
-  st -- DPDK --> io{"Ports bound?"}
-  io -- "IOMMU off warning" --> f4["Reboot with intel_iommu=on iommu=pt"]
-  io -- "group not viable" --> f5["Bind the whole IOMMU group"]
-  io -- "yes, no hugepages" --> f6["--socket-mem on the NIC's node"]
-```
+<img src="../assets/diagrams/bypass-troubleshoot.svg" alt="A troubleshooting tree with one branch for Onload and one for DPDK" width="720">
 
 *For Onload, first check that the process is accelerated at all, then where its interrupts land. For DPDK, check the IOMMU, then the IOMMU group, then huge pages.*
 

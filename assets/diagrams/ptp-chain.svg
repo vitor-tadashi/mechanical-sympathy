@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 230" width="760" height="230" role="img" aria-labelledby="t d">
+<title id="t">PTP disciplines the NIC clock from the grandmaster, then the system clock from the NIC</title>
+<desc id="d">With PTP, time flows from the GPS grandmaster through a boundary or transparent clock switch to the timing NIC's hardware clock, which ptp4l disciplines. phc2sys then steers the system clock from the NIC clock. With chrony, the alternative, the system clock follows NTP servers directly.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(655px, 58px); animation: k1 8s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(70px, 58px); } 5% { transform: translate(70px, 58px); } 31.75% { transform: translate(400px, 58px); } 35.75% { transform: translate(400px, 58px); } 38.97% { transform: translate(430px, 32px); } 42.19% { transform: translate(460px, 58px); } 46.19% { transform: translate(460px, 58px); } 62% { transform: translate(655px, 58px); } 100% { transform: translate(655px, 58px); } }
+  .p2 { animation: p2 8s linear infinite; }
+  @keyframes p2 { 0%, 42.09% { fill: #ffd166; stroke-width: 1.5; } 44.19% { fill: #ffb703; stroke-width: 3; } 52.19%, 100% { fill: #ffd166; stroke-width: 1.5; } }
+  .p3 { animation: p3 8s linear infinite; }
+  @keyframes p3 { 0%, 61.9% { fill: #c8f0d0; stroke-width: 1.5; } 64% { fill: #8fe0a0; stroke-width: 3; } 70%, 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  .k4 { transform: translate(655px, 102px); animation: k4 8s linear infinite; }
+  @keyframes k4 { 0% { transform: translate(479px, 186px); } 70% { transform: translate(479px, 186px); } 83.54% { transform: translate(655px, 186px); } 90% { transform: translate(655px, 102px); } 100% { transform: translate(655px, 102px); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .p3, .k4 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="230" rx="8"/>
+<path class="wire" d="M121.5,80 L162,80" marker-end="url(#a)"/>
+<path class="wire" d="M298,80 L353.5,80" marker-end="url(#a)"/>
+<path class="wire" d="M506.5,80 L589,80" marker-end="url(#a)"/>
+<path class="wire" d="M400,58 C400,24 460,24 460,58" marker-end="url(#a)"/>
+<path class="wire dash" d="M479,186 L655,186 L655,102" marker-end="url(#a)"/>
+<rect class="step" x="18.5" y="58" width="103" height="44" rx="22"/><text class="lbl" x="70" y="77" text-anchor="middle">Grandmaster</text><text class="lbl" x="70" y="92" text-anchor="middle">(GPS)</text>
+<rect class="step" x="162" y="50.5" width="136" height="59" rx="5"/><text class="lbl" x="230" y="69.5" text-anchor="middle">Switch</text><text class="lbl" x="230" y="84.5" text-anchor="middle">boundary or</text><text class="lbl" x="230" y="99.5" text-anchor="middle">transparent clock</text>
+<rect class="foc p2" x="353.5" y="58" width="153" height="44" rx="5"/><text class="lbl" x="430" y="77" text-anchor="middle">Timing NIC</text><text class="lbl" x="430" y="92" text-anchor="middle">hardware clock (PHC)</text>
+<rect class="app p3" x="589" y="58" width="132" height="44" rx="5"/><text class="lbl" x="655" y="77" text-anchor="middle">System clock</text><text class="lbl" x="655" y="92" text-anchor="middle">CLOCK_REALTIME</text>
+<rect class="mut" x="381" y="171.5" width="98" height="29" rx="14.5"/><text class="lbl" x="430" y="190.5" text-anchor="middle">NTP servers</text>
+<text class="el" x="547.75" y="75" text-anchor="middle">phc2sys</text>
+<text class="el" x="430" y="28" text-anchor="middle">ptp4l</text>
+<text class="el" x="567" y="181" text-anchor="middle">chrony (alternative)</text>
+<circle class="tok k1" cx="0" cy="0" r="6"/>
+<circle class="tokb k4" cx="0" cy="0" r="6"/>
+</svg>
