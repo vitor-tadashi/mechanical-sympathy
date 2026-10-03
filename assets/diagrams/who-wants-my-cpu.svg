@@ -25,8 +25,39 @@
   .ok { stroke: #1d6b33; stroke-width: 2; fill: none; }
   .big { font: 700 16px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0b2613; text-anchor: middle; }
   .bigs { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0b2613; text-anchor: middle; }
+  .tk1 { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; transform: translate(588px, 66px); animation: tk1 10s linear infinite; }
+  @keyframes tk1 { 0% { transform: translate(256px, 66px); } 4% { transform: translate(256px, 66px); } 4.93% { transform: translate(300px, 66px); } 7.93% { transform: translate(300px, 66px); } 13.11% { transform: translate(546px, 66px); } 14% { transform: translate(588px, 66px); } 100% { transform: translate(588px, 66px); } }
+  .pl2 { animation: pl2 10s linear infinite; }
+  @keyframes pl2 { 0%, 4.83% { fill: #cfe3ff; } 6.93% { fill: #9cc3ff; stroke-width: 3; } 10.93%, 100% { fill: #cfe3ff; } }
+  .tk3 { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; transform: translate(588px, 116px); animation: tk3 10s linear infinite; }
+  @keyframes tk3 { 0% { transform: translate(256px, 116px); } 16% { transform: translate(256px, 116px); } 16.93% { transform: translate(300px, 116px); } 19.93% { transform: translate(300px, 116px); } 25.11% { transform: translate(546px, 116px); } 26% { transform: translate(588px, 116px); } 100% { transform: translate(588px, 116px); } }
+  .pl4 { animation: pl4 10s linear infinite; }
+  @keyframes pl4 { 0%, 16.83% { fill: #cfe3ff; } 18.93% { fill: #9cc3ff; stroke-width: 3; } 22.93%, 100% { fill: #cfe3ff; } }
+  .tk5 { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; transform: translate(588px, 166px); animation: tk5 10s linear infinite; }
+  @keyframes tk5 { 0% { transform: translate(256px, 166px); } 28% { transform: translate(256px, 166px); } 28.93% { transform: translate(300px, 166px); } 31.93% { transform: translate(300px, 166px); } 37.11% { transform: translate(546px, 166px); } 38% { transform: translate(588px, 166px); } 100% { transform: translate(588px, 166px); } }
+  .pl6 { animation: pl6 10s linear infinite; }
+  @keyframes pl6 { 0%, 28.83% { fill: #cfe3ff; } 30.93% { fill: #9cc3ff; stroke-width: 3; } 34.93%, 100% { fill: #cfe3ff; } }
+  .tk7 { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; transform: translate(588px, 216px); animation: tk7 10s linear infinite; }
+  @keyframes tk7 { 0% { transform: translate(256px, 216px); } 40% { transform: translate(256px, 216px); } 40.93% { transform: translate(300px, 216px); } 43.93% { transform: translate(300px, 216px); } 49.11% { transform: translate(546px, 216px); } 50% { transform: translate(588px, 216px); } 100% { transform: translate(588px, 216px); } }
+  .pl8 { animation: pl8 10s linear infinite; }
+  @keyframes pl8 { 0%, 40.83% { fill: #cfe3ff; } 42.93% { fill: #9cc3ff; stroke-width: 3; } 46.93%, 100% { fill: #cfe3ff; } }
+  .tk9 { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; transform: translate(588px, 266px); animation: tk9 10s linear infinite; }
+  @keyframes tk9 { 0% { transform: translate(256px, 266px); } 52% { transform: translate(256px, 266px); } 52.93% { transform: translate(300px, 266px); } 55.93% { transform: translate(300px, 266px); } 61.11% { transform: translate(546px, 266px); } 62% { transform: translate(588px, 266px); } 100% { transform: translate(588px, 266px); } }
+  .pl10 { animation: pl10 10s linear infinite; }
+  @keyframes pl10 { 0%, 52.83% { fill: #cfe3ff; } 54.93% { fill: #9cc3ff; stroke-width: 3; } 58.93%, 100% { fill: #cfe3ff; } }
+  .tk11 { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; transform: translate(588px, 316px); animation: tk11 10s linear infinite; }
+  @keyframes tk11 { 0% { transform: translate(256px, 316px); } 64% { transform: translate(256px, 316px); } 64.93% { transform: translate(300px, 316px); } 67.93% { transform: translate(300px, 316px); } 73.11% { transform: translate(546px, 316px); } 74% { transform: translate(588px, 316px); } 100% { transform: translate(588px, 316px); } }
+  .pl12 { animation: pl12 10s linear infinite; }
+  @keyframes pl12 { 0%, 64.83% { fill: #cfe3ff; } 66.93% { fill: #9cc3ff; stroke-width: 3; } 70.93%, 100% { fill: #cfe3ff; } }
+  .tk13 { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; transform: translate(588px, 366px); animation: tk13 10s linear infinite; }
+  @keyframes tk13 { 0% { transform: translate(256px, 366px); } 76% { transform: translate(256px, 366px); } 76.93% { transform: translate(300px, 366px); } 79.93% { transform: translate(300px, 366px); } 85.11% { transform: translate(546px, 366px); } 86% { transform: translate(588px, 366px); } 100% { transform: translate(588px, 366px); } }
+  .pl14 { animation: pl14 10s linear infinite; }
+  @keyframes pl14 { 0%, 76.83% { fill: #cfe3ff; } 78.93% { fill: #9cc3ff; stroke-width: 3; } 82.93%, 100% { fill: #cfe3ff; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tk1, .pl2, .tk3, .pl4, .tk5, .pl6, .tk7, .pl8, .tk9, .pl10, .tk11, .pl12, .tk13, .pl14 { animation: none; }
   }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="420" rx="8"/>
@@ -38,7 +69,7 @@
 <text class="lbl" x="32" y="63">Other runnable tasks</text>
 <text class="role" x="32" y="78">a whole time slice, ms</text>
 <line class="arr" x1="258" y1="66" x2="296" y2="66" marker-end="url(#a)"/>
-<rect class="box" x="300" y="46" width="246" height="40" rx="5"/>
+<rect class="box pl2" x="300" y="46" width="246" height="40" rx="5"/>
 <text class="lbl" x="312" y="63">isolcpus + CPUAffinity</text>
 <text class="role" x="312" y="78">Guides 01, 02</text>
 <line class="ok" x1="548" y1="66" x2="590" y2="66" marker-end="url(#g)"/>
@@ -46,7 +77,7 @@
 <text class="lbl" x="32" y="113">Scheduler tick</text>
 <text class="role" x="32" y="128">1-5 µs, 1000 times a second</text>
 <line class="arr" x1="258" y1="116" x2="296" y2="116" marker-end="url(#a)"/>
-<rect class="box" x="300" y="96" width="246" height="40" rx="5"/>
+<rect class="box pl4" x="300" y="96" width="246" height="40" rx="5"/>
 <text class="lbl" x="312" y="113">nohz_full</text>
 <text class="role" x="312" y="128">Guide 01</text>
 <line class="ok" x1="548" y1="116" x2="590" y2="116" marker-end="url(#g)"/>
@@ -54,7 +85,7 @@
 <text class="lbl" x="32" y="163">RCU callbacks</text>
 <text class="role" x="32" y="178">µs to 100s of µs</text>
 <line class="arr" x1="258" y1="166" x2="296" y2="166" marker-end="url(#a)"/>
-<rect class="box" x="300" y="146" width="246" height="40" rx="5"/>
+<rect class="box pl6" x="300" y="146" width="246" height="40" rx="5"/>
 <text class="lbl" x="312" y="163">rcu_nocbs</text>
 <text class="role" x="312" y="178">Guide 01</text>
 <line class="ok" x1="548" y1="166" x2="590" y2="166" marker-end="url(#g)"/>
@@ -62,7 +93,7 @@
 <text class="lbl" x="32" y="213">Kernel workers (kworker)</text>
 <text class="role" x="32" y="228">µs to ms</text>
 <line class="arr" x1="258" y1="216" x2="296" y2="216" marker-end="url(#a)"/>
-<rect class="box" x="300" y="196" width="246" height="40" rx="5"/>
+<rect class="box pl8" x="300" y="196" width="246" height="40" rx="5"/>
 <text class="lbl" x="312" y="213">workqueue cpumask</text>
 <text class="role" x="312" y="228">Guide 02</text>
 <line class="ok" x1="548" y1="216" x2="590" y2="216" marker-end="url(#g)"/>
@@ -70,7 +101,7 @@
 <text class="lbl" x="32" y="263">Device IRQs and softirq</text>
 <text class="role" x="32" y="278">1-50 µs each</text>
 <line class="arr" x1="258" y1="266" x2="296" y2="266" marker-end="url(#a)"/>
-<rect class="box" x="300" y="246" width="246" height="40" rx="5"/>
+<rect class="box pl10" x="300" y="246" width="246" height="40" rx="5"/>
 <text class="lbl" x="312" y="263">IRQ affinity, irqbalance off</text>
 <text class="role" x="312" y="278">Guides 02, 04</text>
 <line class="ok" x1="548" y1="266" x2="590" y2="266" marker-end="url(#g)"/>
@@ -78,7 +109,7 @@
 <text class="lbl" x="32" y="313">Third-party agents</text>
 <text class="role" x="32" y="328">bursts, on any CPU they like</text>
 <line class="arr" x1="258" y1="316" x2="296" y2="316" marker-end="url(#a)"/>
-<rect class="box" x="300" y="296" width="246" height="40" rx="5"/>
+<rect class="box pl12" x="300" y="296" width="246" height="40" rx="5"/>
 <text class="lbl" x="312" y="313">housekeeping.slice</text>
 <text class="role" x="312" y="328">Guide 05</text>
 <line class="ok" x1="548" y1="316" x2="590" y2="316" marker-end="url(#g)"/>
@@ -86,7 +117,7 @@
 <text class="lbl" x="32" y="363">Migration, cold caches</text>
 <text class="role" x="32" y="378">µs to 10s of µs</text>
 <line class="arr" x1="258" y1="366" x2="296" y2="366" marker-end="url(#a)"/>
-<rect class="box" x="300" y="346" width="246" height="40" rx="5"/>
+<rect class="box pl14" x="300" y="346" width="246" height="40" rx="5"/>
 <text class="lbl" x="312" y="363">one pinned thread per CPU</text>
 <text class="role" x="312" y="378">Guide 02 section 6</text>
 <line class="ok" x1="548" y1="366" x2="590" y2="366" marker-end="url(#g)"/>
@@ -96,4 +127,11 @@
 <text class="bigs" x="667" y="236">one pinned thread</text>
 <text class="bigs" x="667" y="254">runs uninterrupted</text>
 <text class="sub" x="20" y="410">Costs from the table in Guide 02 section 1. Each source has one removal, and every removal is a setting in this repository.</text>
+<circle class="tk1" cx="0" cy="0" r="5"/>
+<circle class="tk3" cx="0" cy="0" r="5"/>
+<circle class="tk5" cx="0" cy="0" r="5"/>
+<circle class="tk7" cx="0" cy="0" r="5"/>
+<circle class="tk9" cx="0" cy="0" r="5"/>
+<circle class="tk11" cx="0" cy="0" r="5"/>
+<circle class="tk13" cx="0" cy="0" r="5"/>
 </svg>

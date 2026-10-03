@@ -23,8 +23,40 @@
   .grid { stroke: #d0d7de; stroke-width: 1; }
   .val { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
   .grp { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .hd1 { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(450px); animation: hd1 10s linear infinite; }
+  @keyframes hd1 { 0%, 4% { transform: translateX(0); } 92%, 100% { transform: translateX(450px); } }
+  .pl2 { animation: pl2 10s linear infinite; }
+  @keyframes pl2 { 0%, 4.29% { fill: #c8f0d0; } 6.39% { fill: #8fe0a0; } 11.39%, 100% { fill: #c8f0d0; } }
+  .pl3 { animation: pl3 10s linear infinite; }
+  @keyframes pl3 { 0%, 10.92% { fill: #c8f0d0; } 13.02% { fill: #8fe0a0; } 18.02%, 100% { fill: #c8f0d0; } }
+  .pl4 { animation: pl4 10s linear infinite; }
+  @keyframes pl4 { 0%, 17.24% { fill: #c8f0d0; } 19.34% { fill: #8fe0a0; } 24.34%, 100% { fill: #c8f0d0; } }
+  .pl5 { animation: pl5 10s linear infinite; }
+  @keyframes pl5 { 0%, 20.54% { fill: #cfe3ff; } 22.64% { fill: #3d7fd9; } 27.64%, 100% { fill: #cfe3ff; } }
+  .pl6 { animation: pl6 10s linear infinite; }
+  @keyframes pl6 { 0%, 25.22% { fill: #cfe3ff; } 27.32% { fill: #3d7fd9; } 32.32%, 100% { fill: #cfe3ff; } }
+  .pl7 { animation: pl7 10s linear infinite; }
+  @keyframes pl7 { 0%, 27.89% { fill: #cfe3ff; } 29.99% { fill: #3d7fd9; } 34.99%, 100% { fill: #cfe3ff; } }
+  .pl8 { animation: pl8 10s linear infinite; }
+  @keyframes pl8 { 0%, 33.98% { fill: #cfe3ff; } 36.08% { fill: #3d7fd9; } 41.08%, 100% { fill: #cfe3ff; } }
+  .pl9 { animation: pl9 10s linear infinite; }
+  @keyframes pl9 { 0%, 37.3% { fill: #cfe3ff; } 39.4% { fill: #3d7fd9; } 44.4%, 100% { fill: #cfe3ff; } }
+  .pl10 { animation: pl10 10s linear infinite; }
+  @keyframes pl10 { 0%, 44.99% { fill: #cfe3ff; } 47.09% { fill: #3d7fd9; } 52.09%, 100% { fill: #cfe3ff; } }
+  .pl11 { animation: pl11 10s linear infinite; }
+  @keyframes pl11 { 0%, 55.98% { fill: #ffc9c9; } 58.08% { fill: #ff3b3b; } 63.08%, 100% { fill: #ffc9c9; } }
+  .pl12 { animation: pl12 10s linear infinite; }
+  @keyframes pl12 { 0%, 51.6% { fill: #ffc9c9; } 53.7% { fill: #ff3b3b; } 58.7%, 100% { fill: #ffc9c9; } }
+  .pl13 { animation: pl13 10s linear infinite; }
+  @keyframes pl13 { 0%, 70.29% { fill: #ffc9c9; } 72.39% { fill: #ff3b3b; } 77.39%, 100% { fill: #ffc9c9; } }
+  .pl14 { animation: pl14 10s linear infinite; }
+  @keyframes pl14 { 0%, 88.99% { fill: #ffc9c9; } 91.09% { fill: #ff3b3b; } 96.09%, 100% { fill: #ffc9c9; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hd1, .pl2, .pl3, .pl4, .pl5, .pl6, .pl7, .pl8, .pl9, .pl10, .pl11, .pl12, .pl13, .pl14 { animation: none; }
+    .hd1 { display: none; }
   }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="489" rx="8"/>
@@ -49,44 +81,45 @@
 <line class="grid" x1="740.0" y1="54" x2="740.0" y2="413"/>
 <text class="axis" x="740.0" y="429">100 ms</text>
 <text class="lbl" x="20" y="76" style="font-weight:500">L1 cache hit</text>
-<rect class="app" x="290.0" y="64" width="6.4" height="18" rx="3"/>
+<rect class="app pl2" x="290.0" y="64" width="6.4" height="18" rx="3"/>
 <text class="val" x="302.4" y="77">~1 ns</text>
 <text class="lbl" x="20" y="103" style="font-weight:500">L2 cache hit</text>
-<rect class="app" x="323.9" y="91" width="9.9" height="18" rx="3"/>
+<rect class="app pl3" x="323.9" y="91" width="9.9" height="18" rx="3"/>
 <text class="val" x="339.8" y="104">~5 ns</text>
 <text class="lbl" x="20" y="130" style="font-weight:500">L3 cache hit</text>
-<rect class="app" x="356.2" y="118" width="7.0" height="18" rx="3"/>
+<rect class="app pl4" x="356.2" y="118" width="7.0" height="18" rx="3"/>
 <text class="val" x="369.2" y="131">15-20 ns</text>
 <text class="lbl" x="20" y="157" style="font-weight:500">TLB miss (page walk)</text>
-<rect class="box" x="373.1" y="145" width="39.3" height="18" rx="3"/>
+<rect class="box pl5" x="373.1" y="145" width="39.3" height="18" rx="3"/>
 <text class="val" x="418.4" y="158">tens of ns, 100+ if uncached</text>
 <text class="lbl" x="20" y="184" style="font-weight:500">Local DRAM</text>
-<rect class="box" x="397.0" y="172" width="9.9" height="18" rx="3"/>
+<rect class="box pl6" x="397.0" y="172" width="9.9" height="18" rx="3"/>
 <text class="val" x="413.0" y="185">80-120 ns</text>
 <text class="lbl" x="20" y="211" style="font-weight:500">Remote DRAM (other socket)</text>
-<rect class="box" x="410.7" y="199" width="11.0" height="18" rx="3"/>
+<rect class="box pl7" x="410.7" y="199" width="11.0" height="18" rx="3"/>
 <text class="val" x="427.8" y="212">+60-100 ns over local</text>
 <text class="lbl" x="20" y="238" style="font-weight:500">Minor page fault</text>
-<rect class="box" x="441.8" y="226" width="33.9" height="18" rx="3"/>
+<rect class="box pl8" x="441.8" y="226" width="33.9" height="18" rx="3"/>
 <text class="val" x="481.7" y="239">0.5-2 µs</text>
 <text class="lbl" x="20" y="265" style="font-weight:500">Context switch, then cold caches</text>
-<rect class="box" x="458.8" y="253" width="90.1" height="18" rx="3"/>
+<rect class="box pl9" x="458.8" y="253" width="90.1" height="18" rx="3"/>
 <text class="val" x="554.9" y="266">1-40 µs</text>
 <text class="lbl" x="20" y="292" style="font-weight:500">Kernel network path, one way</text>
-<rect class="box" x="498.1" y="280" width="16.9" height="18" rx="3"/>
+<rect class="box pl10" x="498.1" y="280" width="16.9" height="18" rx="3"/>
 <text class="val" x="521.0" y="293">5-10 µs</text>
 <text class="lbl" x="20" y="319" style="font-weight:500">Zeroing a 2 MiB page (first touch)</text>
-<rect class="wait" x="554.3" y="307" width="16.9" height="18" rx="3"/>
+<rect class="wait pl11" x="554.3" y="307" width="16.9" height="18" rx="3"/>
 <text class="val" x="548.3" y="320" style="text-anchor:end">50-100 µs</text>
 <text class="lbl" x="20" y="346" style="font-weight:500">SMI or deep C-state exit</text>
-<rect class="wait" x="531.9" y="334" width="78.6" height="18" rx="3"/>
+<rect class="wait pl12" x="531.9" y="334" width="78.6" height="18" rx="3"/>
 <text class="val" x="525.9" y="347" style="text-anchor:end">tens to hundreds of µs</text>
 <text class="lbl" x="20" y="373" style="font-weight:500">Direct reclaim, THP compaction</text>
-<rect class="wait" x="627.5" y="361" width="39.3" height="18" rx="3"/>
+<rect class="wait pl13" x="627.5" y="361" width="39.3" height="18" rx="3"/>
 <text class="val" x="621.5" y="374" style="text-anchor:end">ms-scale</text>
 <text class="lbl" x="20" y="400" style="font-weight:500">RT throttling</text>
-<rect class="wait" x="723.1" y="388" width="6.0" height="18" rx="3"/>
+<rect class="wait pl14" x="723.1" y="388" width="6.0" height="18" rx="3"/>
 <text class="val" x="717.1" y="401" style="text-anchor:end">50 ms every second</text>
 <text class="sub" x="20" y="457">Typical orders of magnitude, not measurements. Measure your own host.</text>
 <text class="sub" x="20" y="475">Sources: Guides 00, 02, 03, 08 and the concept pages on CPU isolation and huge pages.</text>
+<line class="hd1" x1="290" y1="56" x2="290" y2="412"/>
 </svg>

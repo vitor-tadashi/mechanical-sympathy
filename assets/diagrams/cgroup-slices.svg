@@ -25,8 +25,27 @@
   .adv { stroke-dasharray: 3 2; }
   .fence { stroke-width: 2.5; }
   .dir { font: 11px ui-monospace, "SF Mono", Menlo, Consolas, monospace; fill: #1a1a1a; }
+  .tk1 { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; transform: translate(44px, 136px); animation: tk1 8s linear infinite; }
+  @keyframes tk1 { 0% { transform: translate(30px, 104px); } 5% { transform: translate(30px, 104px); } 14.74% { transform: translate(30px, 136px); } 19% { transform: translate(44px, 136px); } 100% { transform: translate(44px, 136px); } }
+  .pl2 { animation: pl2 8s linear infinite; }
+  @keyframes pl2 { 0%, 18.9% { fill: #ffffff; } 21% { fill: #ffe9a8; stroke-width: 3; } 33%, 100% { fill: #ffffff; } }
+  .tk3 { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; transform: translate(44px, 200px); animation: tk3 8s linear infinite; }
+  @keyframes tk3 { 0% { transform: translate(30px, 104px); } 25% { transform: translate(30px, 104px); } 37.22% { transform: translate(30px, 200px); } 39% { transform: translate(44px, 200px); } 100% { transform: translate(44px, 200px); } }
+  .pl4 { animation: pl4 8s linear infinite; }
+  @keyframes pl4 { 0%, 38.9% { fill: #ffffff; } 41% { fill: #ffe9a8; stroke-width: 3; } 53%, 100% { fill: #ffffff; } }
+  .tk5 { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; transform: translate(44px, 264px); animation: tk5 8s linear infinite; }
+  @keyframes tk5 { 0% { transform: translate(30px, 104px); } 45% { transform: translate(30px, 104px); } 57.87% { transform: translate(30px, 264px); } 59% { transform: translate(44px, 264px); } 100% { transform: translate(44px, 264px); } }
+  .pl6 { animation: pl6 8s linear infinite; }
+  @keyframes pl6 { 0%, 58.9% { fill: #ffffff; } 61% { fill: #ffe9a8; stroke-width: 3; } 73%, 100% { fill: #ffffff; } }
+  .tk7 { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; transform: translate(44px, 328px); animation: tk7 8s linear infinite; }
+  @keyframes tk7 { 0% { transform: translate(30px, 104px); } 65% { transform: translate(30px, 104px); } 78.18% { transform: translate(30px, 328px); } 79% { transform: translate(44px, 328px); } 100% { transform: translate(44px, 328px); } }
+  .pl8 { animation: pl8 8s linear infinite; }
+  @keyframes pl8 { 0%, 78.9% { fill: #ffffff; } 81% { fill: #ffe9a8; stroke-width: 3; } 93%, 100% { fill: #ffffff; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tk1, .pl2, .tk3, .pl4, .tk5, .pl6, .tk7, .pl8 { animation: none; }
   }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="408" rx="8"/>
@@ -98,7 +117,7 @@
 <text class="lbl" x="24" y="98">-.slice (root)</text>
 <line class="tree" x1="30" y1="104" x2="30" y2="328"/>
 <line class="tree" x1="30" y1="136" x2="44" y2="136"/>
-<rect class="box" x="44" y="110" width="244" height="52" rx="5" style="fill:#ffffff"/>
+<rect class="box pl2" x="44" y="110" width="244" height="52" rx="5" style="fill:#ffffff"/>
 <text class="lbl" x="54" y="127">system.slice</text>
 <text class="role" x="54" y="141">OS services</text>
 <text class="dir" x="54" y="155">CPUAffinity = OS_CPUS</text>
@@ -136,7 +155,7 @@
 <rect class="off" x="734" y="120" width="14" height="32"/>
 <text class="role" x="744" y="166" style="text-anchor:end">advisory: a process can change it</text>
 <line class="tree" x1="30" y1="200" x2="44" y2="200"/>
-<rect class="box" x="44" y="174" width="244" height="52" rx="5" style="fill:#ffffff"/>
+<rect class="box pl4" x="44" y="174" width="244" height="52" rx="5" style="fill:#ffffff"/>
 <text class="lbl" x="54" y="191">user.slice</text>
 <text class="role" x="54" y="205">SSH sessions</text>
 <text class="dir" x="54" y="219">CPUAffinity = OS_CPUS</text>
@@ -174,7 +193,7 @@
 <rect class="off" x="734" y="184" width="14" height="32"/>
 <text class="role" x="744" y="230" style="text-anchor:end">advisory: a process can change it</text>
 <line class="tree" x1="30" y1="264" x2="44" y2="264"/>
-<rect class="box" x="44" y="238" width="244" height="52" rx="5" style="fill:#ffffff"/>
+<rect class="box pl6" x="44" y="238" width="244" height="52" rx="5" style="fill:#ffffff"/>
 <text class="lbl" x="54" y="255">housekeeping.slice</text>
 <text class="role" x="54" y="269">agents, shippers, EDR</text>
 <text class="dir" x="54" y="283">AllowedCPUs=4 6</text>
@@ -212,7 +231,7 @@
 <rect class="off" x="734" y="248" width="14" height="32"/>
 <text class="role" x="744" y="294" style="text-anchor:end">hard fence: the kernel enforces it</text>
 <line class="tree" x1="30" y1="328" x2="44" y2="328"/>
-<rect class="box" x="44" y="302" width="244" height="52" rx="5" style="fill:#ffffff"/>
+<rect class="box pl8" x="44" y="302" width="244" height="52" rx="5" style="fill:#ffffff"/>
 <text class="lbl" x="54" y="319">latency.slice (optional)</text>
 <text class="role" x="54" y="333">the application</text>
 <text class="dir" x="54" y="347">AllowedCPUs = all, threads pin</text>
@@ -250,4 +269,8 @@
 <rect class="app fence" x="734" y="312" width="14" height="32"/>
 <text class="role" x="744" y="358" style="text-anchor:end">hard fence: the kernel enforces it</text>
 <text class="sub" x="20" y="396">Colored cells are the CPUs a slice may use. Dashed outline = affinity (advisory), solid outline = cpuset (hard fence).</text>
+<circle class="tk1" cx="0" cy="0" r="5"/>
+<circle class="tk3" cx="0" cy="0" r="5"/>
+<circle class="tk5" cx="0" cy="0" r="5"/>
+<circle class="tk7" cx="0" cy="0" r="5"/>
 </svg>

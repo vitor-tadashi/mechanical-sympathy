@@ -28,8 +28,24 @@
   .rate { fill: none; stroke: #1f4e8c; stroke-width: 2; }
   .capl { fill: none; stroke: #9b1c1c; stroke-width: 1.5; stroke-dasharray: 5 3; }
   .exc { fill: #ffc9c9; stroke: none; }
+  .hd1 { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; transform: translateX(250px); animation: hd1 9s linear infinite; }
+  @keyframes hd1 { 0%, 4% { transform: translateX(0); } 90%, 100% { transform: translateX(250px); } }
+  .pl2 { animation: pl2 9s linear infinite; }
+  @keyframes pl2 { 0%, 40.12% { fill: #ffc9c9; } 42.22% { fill: #ff3b3b; } 52.22%, 100% { fill: #ffc9c9; } }
+  .pl3 { animation: pl3 9s linear infinite; }
+  @keyframes pl3 { 0%, 37.27% { fill: #ffc9c9; } 39.37% { fill: #ff3b3b; } 49.37%, 100% { fill: #ffc9c9; } }
+  .pl4 { animation: pl4 9s linear infinite; }
+  @keyframes pl4 { 0%, 34.1% { fill: #ffc9c9; } 36.2% { fill: #ff3b3b; } 46.2%, 100% { fill: #ffc9c9; } }
+  .pl5 { animation: pl5 9s linear infinite; }
+  @keyframes pl5 { 0%, 4.59% { fill: #ffc9c9; } 6.69% { fill: #ff3b3b; } 16.69%, 100% { fill: #ffc9c9; } }
+  .pl6 { animation: pl6 9s linear infinite; }
+  @keyframes pl6 { 0%, 57.32% { fill: #ffc9c9; } 59.42% { fill: #ff3b3b; } 69.42%, 100% { fill: #ffc9c9; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hd1, .pl2, .pl3, .pl4, .pl5, .pl6 { animation: none; }
+    .hd1 { display: none; }
   }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="500" rx="8"/>
@@ -47,7 +63,7 @@
 <text class="lbl" x="24" y="156">Microburst</text>
 <text class="tiny" x="24" y="174">a 1 to 2 ms spike</text>
 <line class="tick" x1="200" y1="186" x2="450" y2="186"/>
-<polygon class="exc" points="303.3,157.5 305.0,142.8 325.0,142.8 326.7,157.5 326.7,163.0 303.3,163.0"/>
+<polygon class="exc pl2" points="303.3,157.5 305.0,142.8 325.0,142.8 326.7,157.5 326.7,163.0 303.3,163.0"/>
 <path class="capl" d="M200.0 163.0 L450.0 163.0"/>
 <path class="rate" d="M200.0 175.9 L300.8 175.9 L301.7 172.2 L305.0 142.8 L325.0 142.8 L328.3 172.2 L329.2 175.9 L450.0 175.9"/>
 <text class="smb" x="470" y="155">The RX ring, sized to the burst.</text>
@@ -56,7 +72,7 @@
 <text class="lbl" x="24" y="226">Incast storm</text>
 <text class="tiny" x="24" y="244">many senders at once</text>
 <line class="tick" x1="200" y1="256" x2="450" y2="256"/>
-<polygon class="exc" points="295.0,228.4 319.2,228.4 320.0,219.2 344.2,219.2 345.0,212.3 379.2,212.3 379.2,233.0 295.0,233.0"/>
+<polygon class="exc pl3" points="295.0,228.4 319.2,228.4 320.0,219.2 344.2,219.2 345.0,212.3 379.2,212.3 379.2,233.0 295.0,233.0"/>
 <path class="capl" d="M200.0 233.0 L450.0 233.0"/>
 <path class="rate" d="M200.0 246.8 L269.2 246.8 L270.0 237.6 L294.2 237.6 L295.0 228.4 L319.2 228.4 L320.0 219.2 L344.2 219.2 L345.0 212.3 L379.2 212.3 L380.0 246.8 L450.0 246.8"/>
 <text class="smb" x="470" y="225">The ring first, then the socket buffer.</text>
@@ -65,7 +81,7 @@
 <text class="lbl" x="24" y="296">Consumer pause</text>
 <text class="tiny" x="24" y="314">GC pause, page fault, preemption</text>
 <line class="tick" x1="200" y1="326" x2="450" y2="326"/>
-<polygon class="exc" points="285.8,307.6 356.7,307.6 356.7,310.7 355.0,326.0 287.5,326.0 285.8,310.7"/>
+<polygon class="exc pl4" points="285.8,307.6 356.7,307.6 356.7,310.7 355.0,326.0 287.5,326.0 285.8,310.7"/>
 <path class="capl" d="M200.0 303.0 L285.0 303.0 L287.5 326.0 L355.0 326.0 L357.5 303.0 L450.0 303.0"/>
 <path class="rate" d="M200.0 307.6 L450.0 307.6"/>
 <text class="smb" x="470" y="295">The socket buffer holds the pause.</text>
@@ -74,7 +90,7 @@
 <text class="lbl" x="24" y="366">Small-packet flood</text>
 <text class="tiny" x="24" y="384">64-byte frames near line rate</text>
 <line class="tick" x1="200" y1="396" x2="450" y2="396"/>
-<polygon class="exc" points="200.0,369.3 204.2,366.8 207.5,366.9 215.0,371.7 218.3,371.8 226.7,366.8 230.0,367.0 237.5,371.7 240.8,371.8 249.2,366.7 252.5,367.0 260.0,371.8 263.3,371.8 271.7,366.7 275.0,367.0 282.5,371.8 285.8,371.8 294.2,366.7 297.5,367.0 305.0,371.8 308.3,371.8 316.7,366.7 320.0,367.1 327.5,371.8 330.8,371.7 339.2,366.7 342.5,367.1 350.0,371.8 353.3,371.7 360.8,366.9 364.2,366.8 372.5,371.9 375.8,371.7 383.3,366.9 386.7,366.8 395.0,371.9 398.3,371.7 405.8,366.9 409.2,366.8 417.5,371.9 420.8,371.6 428.3,366.9 431.7,366.9 440.0,371.9 443.3,371.6 450.0,367.2 450.0,373.0 200.0,373.0"/>
+<polygon class="exc pl5" points="200.0,369.3 204.2,366.8 207.5,366.9 215.0,371.7 218.3,371.8 226.7,366.8 230.0,367.0 237.5,371.7 240.8,371.8 249.2,366.7 252.5,367.0 260.0,371.8 263.3,371.8 271.7,366.7 275.0,367.0 282.5,371.8 285.8,371.8 294.2,366.7 297.5,367.0 305.0,371.8 308.3,371.8 316.7,366.7 320.0,367.1 327.5,371.8 330.8,371.7 339.2,366.7 342.5,367.1 350.0,371.8 353.3,371.7 360.8,366.9 364.2,366.8 372.5,371.9 375.8,371.7 383.3,366.9 386.7,366.8 395.0,371.9 398.3,371.7 405.8,366.9 409.2,366.8 417.5,371.9 420.8,371.6 428.3,366.9 431.7,366.9 440.0,371.9 443.3,371.6 450.0,367.2 450.0,373.0 200.0,373.0"/>
 <path class="capl" d="M200.0 373.0 L450.0 373.0"/>
 <path class="rate" d="M200.0 369.3 L204.2 366.8 L207.5 366.9 L215.0 371.7 L218.3 371.8 L226.7 366.8 L230.0 367.0 L237.5 371.7 L240.8 371.8 L249.2 366.7 L252.5 367.0 L260.0 371.8 L263.3 371.8 L271.7 366.7 L275.0 367.0 L282.5 371.8 L285.8 371.8 L294.2 366.7 L297.5 367.0 L305.0 371.8 L308.3 371.8 L316.7 366.7 L320.0 367.1 L327.5 371.8 L330.8 371.7 L339.2 366.7 L342.5 367.1 L350.0 371.8 L353.3 371.7 L360.8 366.9 L364.2 366.8 L372.5 371.9 L375.8 371.7 L383.3 366.9 L386.7 366.8 L395.0 371.9 L398.3 371.7 L405.8 366.9 L409.2 366.8 L417.5 371.9 L420.8 371.6 L428.3 366.9 L431.7 366.9 L440.0 371.9 L443.3 371.6 L450.0 367.2"/>
 <text class="smb" x="470" y="365">CPU per packet is the limit, not buffers.</text>
@@ -83,7 +99,7 @@
 <text class="lbl" x="24" y="436">Idle, then a burst</text>
 <text class="tiny" x="24" y="454">quiet link, first packet</text>
 <line class="tick" x1="200" y1="466" x2="450" y2="466"/>
-<polygon class="exc" points="353.3,441.6 355.0,423.2 380.0,423.2 381.7,441.6 381.7,443.0 353.3,443.0"/>
+<polygon class="exc pl6" points="353.3,441.6 355.0,423.2 380.0,423.2 381.7,441.6 381.7,443.0 353.3,443.0"/>
 <path class="capl" d="M200.0 443.0 L450.0 443.0"/>
 <path class="rate" d="M200.0 464.6 L350.8 464.6 L351.7 460.0 L355.0 423.2 L380.0 423.2 L383.3 460.0 L384.2 464.6 L450.0 464.6"/>
 <circle cx="355.0" cy="464.6" r="4" fill="#ffd166" stroke="#8a5a00" stroke-width="2"/>
@@ -91,4 +107,5 @@
 <text class="smb" x="470" y="435">The first packet waits: timer, cold cache.</text>
 <text class="mono" x="470" y="455">rx-usecs 0, busy polling, pre-touch</text>
 <text class="sub" x="380" y="494" text-anchor="middle">Schematic shapes, not measurements. BDP = bandwidth-delay product, the data in flight on a TCP path.</text>
+<line class="hd1" x1="200" y1="62" x2="200" y2="476"/>
 </svg>
