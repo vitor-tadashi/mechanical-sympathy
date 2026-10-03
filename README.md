@@ -106,7 +106,7 @@ Plus:
 
 - **Concepts**: why it works, from the hardware up ([concept map](INDEX.md#concepts)).
   - Hardware: [topology](concepts/hardware-topology.md) · [power & frequency](concepts/power-and-frequency.md) · [clocks & time](concepts/clocks-and-time.md)
-  - Kernel and CPU: [boot path](concepts/bootloader.md) · [CPU isolation](concepts/cpu-isolation.md) · [interrupts & deferred work](concepts/interrupts-and-deferred-work.md) · [security mitigations](concepts/security-mitigations.md) · [cgroups](concepts/cgroups.md)
+  - Kernel and CPU: [boot path](concepts/bootloader.md) · [CPU isolation](concepts/cpu-isolation.md) · [interrupts & deferred work](concepts/interrupts-and-deferred-work.md) · [security mitigations](concepts/security-mitigations.md) · [cgroups](concepts/cgroups.md) · [RHEL's tuning tools](concepts/rhel-tuning-tools.md)
   - Memory: [huge pages & NUMA](concepts/huge-pages.md) · [reclaim & faults](concepts/memory-reclaim.md) · [swap & OOM](concepts/swap-and-oom.md)
   - Network: [network path](concepts/network-tuning.md) · [network buffers](concepts/network-buffers.md) · [`ethtool` reference](concepts/ethtool.md)
   - Application: [thread handoff](concepts/thread-handoff.md) · [logging & I/O](concepts/logging-and-io.md) · [JVM pauses](concepts/jvm-pauses.md)
@@ -187,7 +187,7 @@ Choose your scenario in [QUICK_START.md](QUICK_START.md), and use [INDEX.md](IND
 ├── README.md  QUICK_START.md  INDEX.md  CHEATSHEET.md  FAQ.md  STYLE.md
 ├── SAFETY.md  CONTRIBUTING.md  SECURITY.md  CITATION.cff  AGENTS.md
 ├── guides/          00..12 step-by-step guides
-├── concepts/        19 deep dives
+├── concepts/        20 deep dives
 ├── examples/        use-cases/ (19 stories), Java on a tuned host (+ runnable probe), multi-NIC segmentation
 ├── assets/          diagrams/ (hand-written SVGs), social-preview.svg (source of the repository card)
 ├── site/            the GitHub Pages site, the CPU layout explorer and the buffer simulator (no dependencies)

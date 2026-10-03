@@ -80,7 +80,7 @@
 
 <section id="concepts">
 	<div class="wrap">
-		<h2>Nineteen concepts: how the machine works</h2>
+		<h2>Twenty concepts: how the machine works</h2>
 		<p class="lead">The guides say what to set. The concepts say why: what the hardware and the kernel do, the numbers to remember, the myths, and a read-only lab to see it on your own host. Read them from the hardware up.</p>
 		<div class="grid">
 			<div class="card"><span class="meta">Hardware · about 9 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/hardware-topology.md">Hardware topology</a><p>Which CPUs share a core, an L3, a node? How far is the NIC from my thread? How do I read the topology before writing a layout?</p></div>
@@ -91,6 +91,7 @@
 			<div class="card"><span class="meta">Kernel and CPU · about 10 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/interrupts-and-deferred-work.md">Interrupts and deferred work</a><p>What runs after an interrupt, and where? When does ksoftirqd take over? Which IPIs reach an isolated CPU, and why? Where do RCU callbacks and kworkers run?</p></div>
 			<div class="card"><span class="meta">Kernel and CPU · about 8 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/security-mitigations.md">Security mitigations</a><p>What do Spectre and Meltdown fixes cost, and where? Who pays: a spinning thread or a blocking one? How do I measure it before opting out?</p></div>
 			<div class="card"><span class="meta">Kernel and CPU · about 5 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/cgroups.md">cgroups</a><p>Affinity vs cpuset? What do quota, memory.max, io.weight do? How does systemd map onto cgroups?</p></div>
+			<div class="card"><span class="meta">Kernel and CPU · about 9 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/rhel-tuning-tools.md">RHEL's own tuning tools</a><p>Why not just use the cpu-partitioning tuned profile? What does it leave out? When does the real-time kernel help? What is the fair server?</p></div>
 			<div class="card"><span class="meta">Memory · about 7 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/huge-pages.md">Huge pages and NUMA</a><p>What is TLB reach? Why pre-touch? Why is THP unpredictable? Why reserve per node?</p></div>
 			<div class="card"><span class="meta">Memory · about 10 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/memory-reclaim.md">Memory reclaim and faults</a><p>Where does the memory go? Who reclaims it, kswapd or my thread? What does a minor or major fault cost? Why do stalls appear only after days of uptime?</p></div>
 			<div class="card"><span class="meta">Memory · about 9 min</span><a class="title" href="https://github.com/vitor-tadashi/mechanical-sympathy/blob/main/concepts/swap-and-oom.md">Swap and the OOM killer</a><p>What can be swapped, and what does a swap-in cost? What does swappiness really do? How does the OOM killer choose? Why prefer a loud failure?</p></div>
