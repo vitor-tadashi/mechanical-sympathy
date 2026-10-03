@@ -171,9 +171,13 @@ The default runs RCU callbacks on the CPU that queued them. That is cheap and fa
 | Your situation | Verdict | Why |
 |---|---|---|
 | The CPU runs one critical thread and `nohz_full` is on | **keep** (list the same CPUs) | `nohz_full` offloads the callbacks anyway, and `rcu_nocbs` says so explicitly |
-| The CPU is shared, or you do not use `nohz_full` | **keep the default** | There is no burst to remove, and the housekeeping CPUs pay for the move |
+| The CPU is shared with other busy tasks | **keep the default** | A shared CPU has no quiet period to protect, and the housekeeping CPUs pay for the move |
+| One critical thread on an isolated CPU, but no `nohz_full` | **change** (`rcu_nocbs` alone still works) | The callbacks run in softirq on the CPU that queued them, so the bursts stay unless you move them |
 | You have very few housekeeping CPUs | **measure first** | The `rcuo*` threads need CPU time there |
 | Isolated CPUs go idle between bursts | **measure first** for `rcu_nocb_poll` | The poll removes a wake-up IPI from the isolated CPU, and costs a periodic wake-up on the housekeeping side |
+
+> [!NOTE]
+> **Validate on your hardware.** This repository does not measure the callback bursts or the load of the `rcuo*` threads on your housekeeping CPUs.
 
 To decide with data, check that the `rcuo*` threads sit on housekeeping CPUs (`ps -eLo psr,comm | grep rcuo`), then compare the p99.9 of the critical thread with and without the setting, as in [Guide 09](../guides/09-measuring-latency.md).
 
@@ -215,7 +219,10 @@ Transparent huge pages give an application bigger pages with no change to the ap
 | The host is memory-tight | **ask the owner** | The explicit pool is reserved for good, and small hosts may not have room |
 | The critical process cannot ask for huge pages (no `MAP_HUGETLB`, no hugetlbfs) | **measure first** | `never` takes THP away and gives nothing back |
 
-To decide with data, read the counters before and after a run (`grep -E 'thp_fault_alloc|compact_stall' /proc/vmstat`) and the mode in `/sys/kernel/mm/transparent_hugepage/enabled`. A growing `compact_stall` while the critical thread allocates points to THP as the cause.
+> [!NOTE]
+> **Validate on your hardware.** This repository does not measure THP stalls. The stall size depends on memory fragmentation and the kernel version.
+
+To decide with data, read the mode in `/sys/kernel/mm/transparent_hugepage/enabled`, and the counters before and after a run (`grep -E 'thp_fault_alloc|compact_stall' /proc/vmstat`). Both counters are system-wide, so on a host with other workloads they cannot tell you which process caused a stall. To attribute it to the critical thread, run it alone with THP on and then off and compare its tail latency, or trace the allocations and compaction events of that process.
 
 ### Mitigation switches (`pti=off`, `nospectre_v2`, `mds=off`, ...)
 
