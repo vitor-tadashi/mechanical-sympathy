@@ -29,16 +29,7 @@ The host's kickstart left two settings behind from a debugging session: `kernel.
 
 Three questions: does each stall match a kernel message, which messages go to the console, and which consoles are there?
 
-```mermaid
-flowchart TD
-  s(["Rare ms stalls on CPU 1"]) --> q1{"Kernel message<br/>at that time?"}
-  q1 -- no --> f1["Not the console: rtla osnoise<br/>on CPU 1 (Guide 09)"]
-  q1 -- yes --> q2{"Console level<br/>above 1?"}
-  q2 -- no --> f1b["The message is filtered, so it is<br/>not the console: back to rtla osnoise"]
-  q2 -- yes --> f2["kernel.printk = 1 4 1 7<br/>(Guide 06 §2)"]
-  f2 --> q3{"Graphical console<br/>in /proc/consoles?"}
-  q3 -- yes --> f3["Also remove console=tty0<br/>(Guide 01 §5.7)"]
-```
+<img src="../../assets/diagrams/uc16-console.svg" alt="A troubleshooting tree for rare stalls: a kernel message, the console level, the consoles" width="720">
 
 *Match the stall to a kernel message, then check the console level: only a message above it reaches the consoles. Then list the consoles that get each line.*
 

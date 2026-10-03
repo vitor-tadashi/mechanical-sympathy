@@ -39,14 +39,7 @@ worker.2.cpu.affinity=39      # "a free isolated CPU", but the sibling of 15
 
 Three questions: is Hyper-Threading on, which CPUs share a core, and which threads run on them?
 
-```mermaid
-flowchart TD
-  s(["CPU 15 slower than its peers"]) --> q1{"SMT active?"}
-  q1 -- no --> f1["Not a sibling: see use case 1"]
-  q1 -- yes --> q2{"A thread on<br/>CPU 39?"}
-  q2 -- yes --> f2["Move it, or count cores<br/>in affinity.properties (§3)"]
-  q2 -- no --> f3["Turn HT off in the BIOS<br/>(Guide 00 §4.4)"]
-```
+<img src="../../assets/diagrams/uc12-smt-sibling.svg" alt="A troubleshooting tree for a slow CPU: SMT active, then a thread on its sibling" width="720">
 
 *Confirm Hyper-Threading, find the sibling of the slow CPU, and look for a thread on it.*
 
