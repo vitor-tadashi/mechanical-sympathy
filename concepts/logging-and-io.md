@@ -14,20 +14,7 @@ Every latency-critical application logs: audit trails, journals, errors, metrics
 
 ## 2. The path of a log line
 
-```mermaid
-flowchart LR
-  logcall(["log call on<br/>event.loop"]) --> fmt["format the line<br/>allocation, timestamp"]
-  fmt --> wr["write()<br/>copy into page cache"]
-  wr --> pc["dirty pages"]
-  pc -- "flusher threads" --> disk[("disk")]
-  fmt --> sock["syslog() / stdout<br/>socket to journald"]
-  sock --> jd["journald, rsyslog"] --> disk
-  k(["kernel message<br/>printk"]) --> con["console<br/>serial, VGA"]
-  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-  class logcall focus
-  class con risk
-```
+<img src="../assets/diagrams/log-line-path.svg" alt="An application log line goes through the page cache or a logging daemon to disk later, and a kernel message goes to the console at once" width="720">
 
 *An application line goes to the page cache or to a logging daemon, and reaches the disk later. A kernel line more urgent than the console log level goes to the console at once, on the CPU that printed it.*
 

@@ -72,18 +72,7 @@ The victim is the process with the highest **`oom_score`** (0–1000). The score
 
 systemd sets it per service with `OOMScoreAdjust=`. Every kill is logged: `journalctl -k | grep -i 'out of memory'`.
 
-```mermaid
-flowchart TD
-  s(["Memory runs out"]) --> q1{"In a cgroup<br/>at memory.max?"}
-  q1 -- yes --> c["cgroup OOM:<br/>kill inside that cgroup"]
-  q1 -- no --> q2{"Swap with<br/>free space?"}
-  q2 -- yes --> sw["Swap out anonymous pages:<br/>silent stalls later"]
-  q2 -- no --> g["Global OOM:<br/>kill the highest oom_score"]
-  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
-  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
-  class sw risk
-  class c,g hk
-```
+<img src="../assets/diagrams/oom-path.svg" alt="Running out of memory ends in a cgroup OOM, swap stalls or a global OOM" width="720">
 
 *A cgroup limit contains the damage to its own group. Without a limit, a host with swap degrades every process, and a host without swap kills one, chosen by score.*
 
