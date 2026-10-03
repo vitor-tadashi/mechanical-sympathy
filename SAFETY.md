@@ -10,18 +10,7 @@ Tuning a kernel feels risky when you have never done it. This page explains what
 - **Every change is recorded and can be undone.** The first time a script touches a file, it keeps the original. `sudo scripts/apply-all --rollback` restores the host, with the few exceptions listed in [§6](#6-what-this-project-does-not-do-yet).
 - **Only one kind of change can stop a boot:** the kernel command line (Guide 01). It has a documented way back through the out-of-band console, so test that console before you start.
 
-```mermaid
-flowchart LR
-  plan["--plan<br/>what applies here"] --> dry["--dry-run<br/>every command and file"] --> apply["--apply<br/>originals saved first"] --> verify{"reboot,<br/>verify, measure"}
-  verify -- good --> keep(["keep it"])
-  verify -- bad --> back(["--rollback, reboot"])
-  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
-  class plan,dry hk
-  class keep iso
-  class back risk
-```
+<img src="assets/diagrams/safety-steps.svg" alt="Plan and dry-run change nothing, apply saves the originals, and after the reboot you keep the result or roll back" width="720">
 
 *The first two steps change nothing. Apply saves the originals before it writes. After the reboot you keep the result or roll it back.*
 
@@ -60,24 +49,7 @@ Sorted from the worst outcome to the mildest. "Reboot alone fixes it" means that
 
 ## 3. How far each change reaches
 
-```mermaid
-flowchart TD
-  runtime["<b>Runtime only</b><br/>NIC coalescing, offloads, IRQ affinity<br/>workqueue cpumask"]
-  persistent["<b>Persistent, the host still boots</b><br/>sysctl.d, systemd units and limits<br/>huge page reservation, services"]
-  boot["<b>Boot path</b><br/>kernel command line (Guide 01)"]
-  r1(["reboot with lowlat-runtime disabled"])
-  r2(["--rollback, then reboot"])
-  r3(["out-of-band console, GRUB e,<br/>then --rollback"])
-  runtime --> r1
-  persistent --> r2
-  boot --> r3
-  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
-  class runtime iso
-  class persistent hk
-  class boot risk
-```
+<img src="assets/diagrams/change-reach.svg" alt="Runtime, persistent and boot-path changes, each linked to how it is undone" width="720">
 
 *Most changes are undone over SSH. Only the kernel command line can need the console, and only when the host does not come back.*
 
