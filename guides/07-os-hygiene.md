@@ -5,12 +5,12 @@
 | | |
 |---|---|
 | **Risk level** | **2 / 5** for services, limits, noatime and tuned. **5 / 5** for the opt-in firewall and netfilter section (§6): that removes a security control. |
-| **Reboot required** | No |
+| **Reboot required** | No. The boot arguments that tuned adds (§5) take effect at the next reboot. |
 | **Applies to** | Bare metal and VMs |
 
 ## At a glance
 
-- **What:** stop periodic and idle-time services, set per-application resource limits, mount local filesystems `noatime`, and install a `tuned` profile that fixes frequency and C-states.
+- **What:** stop periodic and idle-time services, set per-application resource limits, mount local filesystems `noatime`, and install a `tuned` profile that fixes frequency and C-states and adds a few boot arguments.
 - **Why:** none of these is large on its own, but together they are the background noise behind unexplained p99.9 spikes on the housekeeping CPUs, where your NIC interrupts are served.
 - **Cost:** fewer conveniences (cron, `sar` history). The opt-in firewall section removes a security control.
 
@@ -121,7 +121,7 @@ min_perf_pct=100
 
 `min_perf_pct` only acts through `intel_pstate`. [Guide 01](01-grub-bootloader-tuning.md#53-frequency-and-power) turns that driver off, so on a host with the full command line the `performance` governor of `acpi-cpufreq` holds the clock, and the line is harmless.
 
-What `network-latency` brings (through `latency-performance`):
+What `network-latency` brings (through `latency-performance`). The rows marked *recent tuned* are in the upstream profile file of tuned 2.21, and not in every version: the list changes from one tuned version to the next. Read the file your host has (`rpm -ql tuned | grep network-latency`), and `/etc/tuned/bootcmdline` for the boot arguments it adds.
 
 | Setting | Effect |
 |---|---|
@@ -131,8 +131,25 @@ What `network-latency` brings (through `latency-performance`):
 | `kernel.numa_balancing=0` | Same as [Guide 06](06-kernel-sysctl-tuning.md#2-kernel-logging-and-debug) |
 | `net.core.busy_read=50`, `net.core.busy_poll=50` | **Busy polling** for all sockets: a blocking `recv`/`poll` spins on the NIC queue for up to 50 µs before sleeping ([Guide 04 §6.1](04-network-optimization.md#61-choosing-the-cpu), model B). A thread that already spins on a non-blocking socket (model A) is not affected. |
 | `net.ipv4.tcp_fastopen=3` | Same as Guide 06 |
+| `kernel.nmi_watchdog=0` *(recent tuned)* | Same as [Guide 06 §2](06-kernel-sysctl-tuning.md#2-kernel-logging-and-debug), and as `nmi_watchdog=0` on the command line ([Guide 01 §5.4](01-grub-bootloader-tuning.md#54-silence-the-watchdogs-and-error-pollers)) |
+| `vm.stat_interval=10` *(recent tuned)* | Folds the per-CPU memory counters every 10 s instead of every second. [Guide 06 §8](06-kernel-sysctl-tuning.md#8-virtual-memory) sets `60`, and its file wins (see the ordering below). |
+| `kernel.timer_migration=0` *(recent tuned)* | Turns off [timer migration](../GLOSSARY.md#timer-migration): a timer stays on the CPU that armed it. With `1`, the default, the kernel may hand the timers of an idle CPU to a busy one, so that the idle CPU sleeps longer. The guides do not set it. |
+| `kernel.hung_task_timeout_secs=600` *(recent tuned)* | The [hung task](../GLOSSARY.md#hung-task) warning comes after 600 s instead of 120 s. A task that waits for work queued on a CPU where a real-time thread spins can look hung, so the longer timeout cuts false reports. A real hang is reported later. The guides do not set it. |
+| `[rtentsk]` plugin *(recent tuned)* | Keeps one socket with packet timestamps open. Without it, the kernel switches timestamping on and off for the whole host whenever the first such socket opens or the last one closes, and each switch patches kernel code and sends an [IPI](../GLOSSARY.md#ipi) to every CPU. |
+| `skew_tick=1` *(boot, recent tuned)* | Same as [Guide 01 §5.2](01-grub-bootloader-tuning.md#52-cpu-isolation-bare-metal-only). tuned adds it in a VM too, where Guide 01 leaves it out. |
+| `tsc=reliable` *(boot, recent tuned)* | Turns off the [clocksource watchdog](../GLOSSARY.md#clocksource-watchdog) for the TSC. Guide 01 does not set it (see below). |
+| `rcupdate.rcu_normal_after_boot=1` *(boot, recent tuned)* | Once boot is done, RCU uses normal [grace periods](../GLOSSARY.md#grace-period) instead of [expedited](../GLOSSARY.md#expedited-grace-period) ones, which send an IPI to other CPUs to finish sooner. Code that waits for a grace period, such as some network configuration changes, then takes longer. The guides do not set it. |
 
 **Ordering with Guide 06.** tuned applies its `[sysctl]` values and then, because `reapply_sysctl = 1` is the default in `/etc/tuned/tuned-main.conf`, re-applies `/etc/sysctl.d/`. So on any conflict the Guide 06 file wins, and the script makes sure the option has not been turned off. Some scripts run `tuned-adm profile network-latency` *before* writing their sysctls with `sysctl -w`. That works until the next reboot, when tuned and the missing persistence change the result.
+
+**tuned also changes the command line.** Because of its `[bootloader]` section, the profile is not only runtime settings. When the profile is applied, tuned writes its arguments to `/etc/tuned/bootcmdline` and into every boot entry, and the kernel gets them at the next reboot. [Guide 01](01-grub-bootloader-tuning.md#4-how-the-arguments-are-applied-rhel-8-9-and-10) writes its own arguments with `grubby`, so two tools now write the command line:
+
+- **`skew_tick=1` comes from both.** Rolling back only one of the two guides can leave the other's copy on the command line.
+- **`tsc=reliable` changes behavior.** [Concept: clocks and time §3](../concepts/clocks-and-time.md#3-the-tsc-and-the-clocksource) explains the watchdog, and advises adding the argument only after the watchdog has wrongly switched the clocksource on your hardware. With this profile it is there from the first reboot. On a host whose TSC is really unstable, the kernel then keeps the bad clock instead of switching away. Check that the TSC is invariant first: `grep -o -w -e constant_tsc -e nonstop_tsc /proc/cpuinfo | sort -u` lists both flags. To keep the watchdog, a custom profile can set the same key, `cmdline_network_latency=`, in its own `[bootloader]` section, which replaces the included one. The script does not do this.
+- **Check the result after a reboot.** `cat /etc/tuned/bootcmdline` shows what tuned adds, `sudo grubby --info=ALL` what each boot entry holds, and `cat /proc/cmdline` what the kernel got, as in [Guide 01 §7](01-grub-bootloader-tuning.md#7-verification). On RHEL 8, the entries hold `$tuned_params`, which GRUB fills from `grub2-editenv list` at boot, so `grubby` shows the name and not the arguments. `/proc/cmdline` is the final word.
+
+> [!NOTE]
+> **Validate on your hardware.** The *recent tuned* rows come from the tuned 2.21 profile file and the kernel documentation, and this repository does not measure them. Compare them with the profile file and `/etc/tuned/bootcmdline` on your host after every tuned update.
 
 **Why not cpu-partitioning?** Red Hat's `cpu-partitioning` profile also writes the isolation boot arguments and the CPU masks, which Guides 01 and 02 already own. This profile adds only what the scripts leave to tuned. [Concept: RHEL's own tuning tools](../concepts/rhel-tuning-tools.md) compares them setting by setting, and says when the profile is the better choice.
 
@@ -199,6 +216,7 @@ systemctl list-timers --all --no-pager                              # periodic w
 ulimit -a        # as app-user in a new SSH session: nofile, nproc, rtprio, memlock
 findmnt -t xfs,ext4 -o TARGET,OPTIONS                               # noatime
 tuned-adm active && tuned-adm verify
+cat /etc/tuned/bootcmdline; cat /proc/cmdline                      # tuned's boot arguments, after a reboot on the command line
 cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor          # performance
 nft list ruleset | head; iptables -S | head; lsmod | grep -E 'nf_conntrack|ip_tables'
 ```
@@ -223,6 +241,7 @@ flowchart TD
 | Logs no longer rotated (RHEL 8) | `crond` disabled | `systemctl enable --now logrotate.timer` (or keep a cron replacement timer) |
 | `ulimit -n` still 1024 in a service | Services do not read `limits.d` | `LimitNOFILE=` in the unit |
 | `tuned-adm verify` fails | Another profile or a manual change overrides a setting | `tuned-adm profile low-latency`; check `/var/log/tuned/tuned.log` |
+| `skew_tick=1` or `tsc=reliable` still in `/proc/cmdline` after a Guide 01 rollback | tuned's `network-latency` adds them too (§5) | Expected while this guide is applied. Check `/etc/tuned/bootcmdline` |
 | `modprobe -r` "Module is in use" | Rules or another module still reference it | Flush rules first; containers/libvirt may hold them |
 | Remote access lost after flushing rules | Policy was ACCEPT but a network ACL relied on host state | Use the out-of-band console; restore with `systemctl start firewalld` |
 
@@ -238,6 +257,7 @@ flowchart TD
 - [ ] Mounts: `findmnt -rn -t xfs,ext4 -o TARGET,OPTIONS`, and `/etc/fstab` against the saved original.
 - [ ] Limits: the limits file against the saved original. New sessions get the old limits; running applications keep theirs until restarted.
 - [ ] tuned and services: `tuned-adm active`, and `systemctl is-enabled` and `systemctl is-active` for each affected service.
+- [ ] Boot arguments: after the next reboot, compare `/proc/cmdline` with the command line from before the apply. The arguments tuned adds (§5) depend on the profile it now runs and on its version.
 - [ ] If §6 ran: `nft list ruleset`, `iptables-save`, `ip6tables-save` and `/proc/modules` against the saved files. A firewall manager may change rules when it restarts, so check the resulting policy too.
 
 What the rollback restores, and when it refuses:
@@ -267,6 +287,7 @@ What the rollback restores, and when it refuses:
 - Disable what the host does not need, move periodic work to timers in `housekeeping.slice`, and never silently disable security agents.
 - Limits go to the application's group only, in `limits.d`. Services take `Limit*=` in their unit.
 - tuned holds frequency and C-states steady at every boot, and `sysctl.d` still wins on conflicts.
+- Recent tuned versions also add boot arguments through `network-latency` (`skew_tick=1 tsc=reliable rcupdate.rcu_normal_after_boot=1` in 2.21). Check `/proc/cmdline` after a reboot.
 - Removing host packet filtering is opt-in, needs written sign-off, and has lower-risk alternatives (`notrack`, bypass).
 
 ## 14. References
