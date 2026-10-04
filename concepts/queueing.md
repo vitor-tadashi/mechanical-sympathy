@@ -14,18 +14,7 @@ The other concepts remove the stalls that make one message slow. This one explai
 
 A message on a latency host crosses several queues in series, each one in front of a server:
 
-```mermaid
-flowchart LR
-  wire(["wire"]) --> ring[("NIC ring")] --> rx["net.rx"] --> q1[("SPSC ring")] --> ev["event.loop"]
-  ev --> q2[("SPSC ring")] --> wk["worker.0"]
-  ev --> q3[("logger ring")] --> lg["logger"]
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
-  class ring,q1,q2,q3 focus
-  class rx,ev,wk iso
-  class lg hk
-```
+<img src="../assets/diagrams/queues-in-series.svg" alt="A message waits in the NIC ring and two SPSC rings, served in turn by net.rx, event.loop and worker.0" width="720">
 
 *Every cylinder is a queue and every box a server. The response time of a message is the sum of its waits in each queue plus each service time.*
 

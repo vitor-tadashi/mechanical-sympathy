@@ -12,15 +12,7 @@
 
 A server's default settings save power, and a CPU saves power by doing less: sleeping deeper, running slower. Every saving has a wake-up cost, and a latency-critical thread pays it at the worst moment, when a message arrives after a pause. The settings in [Guide 00](../guides/00-bios-firmware.md), [Guide 01](../guides/01-grub-bootloader-tuning.md) and the tuned profile of [Guide 07](../guides/07-os-hygiene.md) trade that power for a CPU that is always awake and always at the same clock. This page explains what each mechanism does, so the trade is a decision and not a recipe.
 
-```mermaid
-flowchart LR
-  q(["Where does the CPU<br/>lose time?"]) --> c["Asleep<br/>C-states"] --> fc["idle=poll, C-state caps,<br/>PM QoS, BIOS"]
-  q --> p["Slow clock<br/>P-states, HWP"] --> fp["acpi-cpufreq +<br/>performance governor"]
-  q --> t["Varying clock<br/>turbo, power limits"] --> ft["measure on and off,<br/>or cap the clock"]
-  q --> s["Stopped by firmware<br/>SMIs"] --> fs["BIOS sources off,<br/>count with turbostat"]
-  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
-  class c,p,t,s risk
-```
+<img src="../assets/diagrams/power-time-loss.svg" alt="Four ways a CPU loses time to power management, each linked to the setting that removes it" width="720">
 
 *Four ways a CPU can lose time to power and firmware management, each with the setting that removes it.*
 

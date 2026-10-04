@@ -156,18 +156,7 @@ Each stage of the receive path has its own counter. Counters only grow, so read 
 
 **Fix the earliest stage that counts drops.** Later stages only see what the earlier ones let through, so a full ring hides what the socket would have done.
 
-```mermaid
-flowchart TD
-  s(["Symptom: packets are missing"]) --> q1{"ethtool -S moved?"}
-  q1 -- yes --> f1["NIC or ring full: raise the ring, give the IRQ CPU less work, check PAUSE"]
-  q1 -- no --> q2{"softnet column 3?"}
-  q2 -- yes --> f2["Softirq out of budget: more IRQ CPUs and queues, or busy polling"]
-  q2 -- no --> q3{"softnet column 2?"}
-  q3 -- yes --> f3["Backlog full (RPS, loopback, veth): netdev_max_backlog, or turn RPS off"]
-  q3 -- no --> q4{"nstat drops moved?"}
-  q4 -- yes --> f4["Socket full: SO_RCVBUF and rmem_max, or the reader is too slow"]
-  q4 -- no --> f5["Not on this host: check the switch, the sender and your own queue"]
-```
+<img src="../assets/diagrams/drops-troubleshoot.svg" alt="A troubleshooting tree that checks drop counters in the order the packet crosses the stages" width="720">
 
 *Starting from missing packets, check the stages in the order the packet crosses them: the NIC counters, the two softnet columns, the socket counters, and only then look outside the host. If several moved, fix the earliest.*
 
@@ -196,15 +185,7 @@ Bypass keeps the same ideas (a ring, a buffer pool, a burst) and changes who own
 
 ### 7.1 DPDK
 
-```mermaid
-flowchart LR
-  nic["NIC RX ring<br/>descriptors"] -- "DMA into an mbuf" --> mp[("mempool of mbufs<br/>in huge pages")]
-  pmd["PMD core<br/>rx_burst of 32"] -- "reads descriptors,<br/>takes mbuf pointers" --> nic
-  pmd --> app["your code<br/>works on the mbufs"] --> tx["tx_burst<br/>to the TX ring"]
-  tx -- "mbuf freed after send" --> mp
-  class pmd focus
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-```
+<img src="../assets/diagrams/dpdk-mbuf-cycle.svg" alt="An mbuf goes from the mempool into the RX ring, through the poll-mode core and your code, and back to the mempool after send" width="720">
 
 *A poll-mode core reads descriptors from the ring, works on packets in `mbuf` buffers taken from one mempool, and frees each buffer back to the pool when it is sent.*
 
@@ -256,16 +237,7 @@ If the RX ring itself is too small, raise `EF_RXQ_SIZE` first. If `memory_pressu
 
 AF_XDP keeps the kernel driver and lets it hand packets to your memory through four rings that share one block of memory, the [UMEM](../GLOSSARY.md#umem).
 
-```mermaid
-flowchart LR
-  app["your program"] -- "fill ring: empty frames" --> drv["NIC driver<br/>XDP hook"]
-  drv -- "RX ring: filled frames" --> app
-  app -- "TX ring: frames to send" --> drv
-  drv -- "completion ring: sent frames" --> app
-  umem[("UMEM<br/>one block, frames of 2 or 4 KiB")]
-  app --- umem
-  drv --- umem
-```
+<img src="../assets/diagrams/af-xdp-rings.svg" alt="Four rings pass frame numbers between your program and the driver, while the frames stay in the UMEM" width="720">
 
 *Frames live in the UMEM. The four rings only pass around the numbers of frames: empty ones going in, filled ones coming back, and the same for transmit.*
 

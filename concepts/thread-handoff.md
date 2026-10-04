@@ -14,18 +14,7 @@ The layouts in these guides split work across pinned threads: `net.rx` receives,
 
 ## 2. A handoff, counted in cache lines
 
-```mermaid
-sequenceDiagram
-  participant P as net.rx, CPU 3 (producer)
-  participant L as shared cache lines
-  participant C as event.loop, CPU 5 (consumer)
-  P->>L: write the message into slot n
-  P->>L: release-write head = n
-  C->>L: acquire-read head (line moves to CPU 5)
-  C->>L: read slot n (line moves to CPU 5)
-  C->>L: release-write tail = n
-  Note over P,C: The producer reads tail only when its cached copy says the ring may be full
-```
+<img src="../assets/diagrams/handoff-lines.svg" alt="The producer writes the slot and the head, and the consumer reads both, moving their cache lines to its CPU" width="720">
 
 *One message moves at least two lines from the producer's core to the consumer's: the index and the slot. The consumer's progress moves back only when the producer needs it.*
 
