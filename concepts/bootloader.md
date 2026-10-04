@@ -14,17 +14,7 @@ A handful of kernel decisions can only be made **once**, while the kernel initia
 
 ## 2. From power-on to `/proc/cmdline` (RHEL 8, 9 and 10)
 
-```mermaid
-flowchart TD
-  fw["Firmware<br/>UEFI or BIOS"] --> grub["shim + GRUB2<br/>reads grub.cfg"]
-  grub --> bls[["blscfg loads a BLS entry<br/>/boot/loader/entries/*.conf<br/>options = the command line"]]
-  bls --> early["Kernel: early_param() handlers<br/>memory, CPUs, IOMMU, mitigations"]
-  early --> setup["Kernel: __setup() handlers<br/>unknown name=value goes to init as env"]
-  setup --> init["initramfs (dracut), switch_root"]
-  init --> sd(["systemd, PID 1"])
-  classDef focus fill:#ffd166,stroke:#8a5a00,color:#1a1a1a,stroke-width:2px
-  class bls focus
-```
+<img src="../assets/diagrams/boot-chain.svg" alt="Firmware, GRUB and the BLS entry hand the command line to the kernel, which parses it and starts systemd" width="720">
 
 *The command line is the `options` line of a BLS entry. GRUB hands it to the kernel, which parses the early parameters (`early_param()` handlers) before anything else runs, then the rest (`__setup()` handlers), and passes anything it does not recognize to init.*
 
@@ -69,18 +59,7 @@ Recent kernels organize CPU isolation around a **housekeeping mask**: the set of
 | `misc`, `kthread` | `nohz_full=` | Unbound kernel threads created at runtime (children of `kthreadd`, the parent of all kernel threads) |
 | `wq` | `nohz_full=` (default unbound workqueue mask) | Unbound workqueue items. Refine with `/sys/devices/virtual/workqueue/cpumask`. |
 
-```mermaid
-flowchart LR
-  iso["isolcpus="] --> dom["domain<br/>load balancing"]
-  isoirq["isolcpus=managed_irq,"] --> mirq["managed_irq<br/>managed IRQ vectors"]
-  nohz["nohz_full="] --> tim["timer<br/>unbound timers, do_timer"]
-  nohz --> rcu["rcu<br/>callbacks, GP kthreads"]
-  nocb["rcu_nocbs="] --> rcu
-  nohz --> kt["misc, kthread<br/>unbound kthreads"]
-  nohz --> wq["wq<br/>unbound workqueues"]
-  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
-  class dom,mirq,tim,rcu,kt,wq hk
-```
+<img src="../assets/diagrams/housekeeping-types.svg" alt="isolcpus, managed_irq, nohz_full and rcu_nocbs, each linked to the housekeeping types it removes" width="720">
 
 *Each parameter removes the isolated CPUs from one or more housekeeping types. `nohz_full` covers most of them, `isolcpus` covers load balancing, and only together do they leave the CPU quiet.*
 

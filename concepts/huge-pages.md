@@ -103,20 +103,7 @@ The buddy allocator hands out physical memory in power-of-two blocks. After a ho
 On a multi-socket server, each socket has its own memory controllers. Access to local memory costs ~80–120 ns, and the other socket's memory adds ~60–100 ns, with lower bandwidth. `numactl --hardware` shows the node distance matrix.
 
 - **First touch**: by default, a page is allocated on the node of the CPU that first touches it. A thread pinned on node 1 that initializes its data gets node-1 memory. A main thread on node 0 that initializes everything before handing it over puts everything on node 0.
-```mermaid
-sequenceDiagram
-  participant M as main thread (node 0)
-  participant W as worker, pinned on node 1
-  participant K as kernel
-  Note over M,K: wrong: the main thread touches first
-  M->>K: first write to the buffer
-  K-->>M: pages allocated on node 0
-  M->>W: hand over the buffer
-  W->>K: every cache miss crosses the socket interconnect
-  Note over M,K: right: the worker pins itself, then touches
-  W->>K: sched_setaffinity(node-1 CPU), then first write
-  K-->>W: pages allocated on node 1, local from then on
-```
+<img src="../assets/diagrams/first-touch.svg" alt="The thread that writes a buffer first decides the node its pages land on" width="720">
 
 *Under the default first-touch policy, memory lands on the node of whichever thread writes it first. So a thread should pin itself before it touches its own working set.*
 

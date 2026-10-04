@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 210" width="760" height="210" role="img" aria-labelledby="t d">
+<title id="t">Apply NIC settings in this order: channels, rings, coalescing, RSS, IRQ affinity last</title>
+<desc id="d">Every earlier step can reset or re-create the queues that the later steps configure. Changing channels re-creates queues and interrupt vectors, and changing rings may reset the queues. So the order is channels, rings, coalescing and features, RSS and ntuple, and IRQ affinity last.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(617px, 105px); animation: k1 8s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(123px, 105px); } 8% { transform: translate(123px, 105px); } 14% { transform: translate(123px, 105px); } 19.68% { transform: translate(181.5px, 105px); } 25.68% { transform: translate(181.5px, 105px); } 38.36% { transform: translate(312px, 105px); } 44.36% { transform: translate(312px, 105px); } 60.64% { transform: translate(479.5px, 105px); } 66.64% { transform: translate(479.5px, 105px); } 80% { transform: translate(617px, 105px); } 86% { transform: translate(617px, 105px); } 100% { transform: translate(617px, 105px); } }
+  .p2 { animation: p2 8s linear infinite; }
+  @keyframes p2 { 0%, 7.9% { fill: #ffd166; stroke-width: 1.5; } 10% { fill: #ffb703; stroke-width: 3; } 18%, 100% { fill: #ffd166; stroke-width: 1.5; } }
+  .p3 { animation: p3 8s linear infinite; }
+  @keyframes p3 { 0%, 19.58% { fill: #ffffff; stroke-width: 1.5; } 21.68% { fill: #ffe9a8; stroke-width: 3; } 29.68%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p4 { animation: p4 8s linear infinite; }
+  @keyframes p4 { 0%, 38.26% { fill: #ffffff; stroke-width: 1.5; } 40.36% { fill: #ffe9a8; stroke-width: 3; } 48.36%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p5 { animation: p5 8s linear infinite; }
+  @keyframes p5 { 0%, 60.54% { fill: #ffffff; stroke-width: 1.5; } 62.64% { fill: #ffe9a8; stroke-width: 3; } 70.64%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p6 { animation: p6 8s linear infinite; }
+  @keyframes p6 { 0%, 79.9% { fill: #cfe3ff; stroke-width: 1.5; } 80%, 97% { fill: #9cc3ff; stroke-width: 3; } 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .p3, .p4, .p5, .p6 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="210" rx="8"/>
+<path class="wire" d="M123,105 L181.5,105" marker-end="url(#a)"/>
+<path class="wire" d="M253.5,105 L312,105" marker-end="url(#a)"/>
+<path class="wire" d="M421,105 L479.5,105" marker-end="url(#a)"/>
+<path class="wire" d="M558.5,105 L617,105" marker-end="url(#a)"/>
+<path class="wire dash" d="M76.5,90.5 C76.5,30.5 673.5,23 673.5,83" marker-end="url(#a)"/>
+<path class="wire dash" d="M217.5,119.5 C217.5,169.5 366.5,177 366.5,127" marker-end="url(#a)"/>
+<rect class="foc p2" x="30" y="90.5" width="93" height="29" rx="5"/><text class="lbl" x="76.5" y="109.5" text-anchor="middle">-L channels</text>
+<rect class="step p3" x="181.5" y="90.5" width="72" height="29" rx="5"/><text class="lbl" x="217.5" y="109.5" text-anchor="middle">-G rings</text>
+<rect class="step p4" x="312" y="83" width="109" height="44" rx="5"/><text class="lbl" x="366.5" y="102" text-anchor="middle">-C coalescing,</text><text class="lbl" x="366.5" y="117" text-anchor="middle">-K features</text>
+<rect class="step p5" x="479.5" y="83" width="79" height="44" rx="5"/><text class="lbl" x="519" y="102" text-anchor="middle">-X RSS,</text><text class="lbl" x="519" y="117" text-anchor="middle">-N ntuple</text>
+<rect class="box p6" x="617" y="83" width="113" height="44" rx="2"/><line class="sl" x1="623" y1="83" x2="623" y2="127"/><line class="sl" x1="724" y1="83" x2="724" y2="127"/><text class="lbl" x="673.5" y="102" text-anchor="middle">IRQ affinity</text><text class="lbl" x="673.5" y="117" text-anchor="middle">/proc/irq</text>
+<text class="el" x="375" y="42.5" text-anchor="middle">re-creates queues and vectors</text>
+<text class="el" x="292" y="165.5" text-anchor="middle">may reset the queues</text>
+<circle class="tok k1" cx="0" cy="0" r="7"/>
+</svg>
