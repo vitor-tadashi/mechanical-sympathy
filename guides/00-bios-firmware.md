@@ -175,33 +175,7 @@ If the clock steps down, raise the fan profile first. If it still steps down wit
 
 ## 5. How the settings map to what Linux sees
 
-```mermaid
-flowchart LR
-  subgraph fw["BIOS setup"]
-    direction TB
-    b1["C-states, C1E"]
-    b2["Hardware P-states,<br/>turbo, EPB"]
-    b3["Hyper-Threading"]
-    b4["Node interleaving,<br/>SNC / NPS"]
-    b5["ASPM"]
-    b6["SMI sources"]
-  end
-  subgraph os["What to check from Linux"]
-    direction TB
-    o1["cpuidle states<br/>/sys/.../cpuidle/state*/name"]
-    o2["scaling_driver, no_turbo,<br/>energy_perf_bias"]
-    o3["/sys/devices/system/cpu/smt/active"]
-    o4["numactl --hardware<br/>(nodes per socket)"]
-    o5["/sys/module/pcie_aspm/parameters/policy,<br/>lspci -vv LnkCtl"]
-    o6["turbostat SMI column"]
-  end
-  b1 --> o1
-  b2 --> o2
-  b3 --> o3
-  b4 --> o4
-  b5 --> o5
-  b6 --> o6
-```
+<img src="../assets/diagrams/bios-to-linux.svg" alt="Six BIOS settings, each linked to the Linux file or command that shows it" width="720">
 
 *Each BIOS setting leaves a trace Linux can read. `00-bios-firmware --verify` checks those traces, so a reset BIOS shows up as a WARN instead of as unexplained jitter.*
 

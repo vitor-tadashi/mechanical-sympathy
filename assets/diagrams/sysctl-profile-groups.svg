@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 230" width="760" height="230" role="img" aria-labelledby="t d">
+<title id="t">The sysctl profile has seven groups, and three hold values to check</title>
+<desc id="d">The file 90-lowlat.conf has seven groups, one section each: logging, TCP, buffers, queues, endpoint, BPF and memory. The three groups marked risky value hold the values to check against your host: SYN retries, IPv6 and min_free_kbytes.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(68px, 123px); animation: k1 9s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(380px, 50.5px); } 6% { transform: translate(380px, 50.5px); } 6.85% { transform: translate(380px, 86.75px); } 14.14% { transform: translate(68px, 86.75px); } 14.99% { transform: translate(68px, 123px); } 100% { transform: translate(68px, 123px); } }
+  .p2 { animation: p2 9s linear infinite; }
+  @keyframes p2 { 0%, 14.89% { fill: #ffffff; stroke-width: 1.5; } 16.99% { fill: #ffe9a8; stroke-width: 3; } 24.99%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .k3 { transform: translate(172px, 123px); animation: k3 9s linear infinite; }
+  @keyframes k3 { 0% { transform: translate(380px, 50.5px); } 16.57% { transform: translate(380px, 50.5px); } 17.73% { transform: translate(380px, 86.75px); } 24.4% { transform: translate(172px, 86.75px); } 25.56% { transform: translate(172px, 123px); } 100% { transform: translate(172px, 123px); } }
+  .p4 { animation: p4 9s linear infinite; }
+  @keyframes p4 { 0%, 25.46% { fill: #ffc9c9; stroke-width: 1.5; } 27.56% { fill: #ff9b9b; stroke-width: 3; } 35.56%, 100% { fill: #ffc9c9; stroke-width: 1.5; } }
+  .k5 { transform: translate(276px, 123px); animation: k5 9s linear infinite; }
+  @keyframes k5 { 0% { transform: translate(380px, 50.5px); } 27.14% { transform: translate(380px, 50.5px); } 28.99% { transform: translate(380px, 86.75px); } 34.28% { transform: translate(276px, 86.75px); } 36.13% { transform: translate(276px, 123px); } 100% { transform: translate(276px, 123px); } }
+  .p6 { animation: p6 9s linear infinite; }
+  @keyframes p6 { 0%, 36.03% { fill: #ffffff; stroke-width: 1.5; } 38.13% { fill: #ffe9a8; stroke-width: 3; } 46.13%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .k7 { transform: translate(380px, 123px); animation: k7 9s linear infinite; }
+  @keyframes k7 { 0% { transform: translate(380px, 50.5px); } 37.71% { transform: translate(380px, 50.5px); } 46.7% { transform: translate(380px, 123px); } 100% { transform: translate(380px, 123px); } }
+  .p8 { animation: p8 9s linear infinite; }
+  @keyframes p8 { 0%, 46.6% { fill: #ffffff; stroke-width: 1.5; } 48.7% { fill: #ffe9a8; stroke-width: 3; } 56.7%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .k9 { transform: translate(484px, 123px); animation: k9 9s linear infinite; }
+  @keyframes k9 { 0% { transform: translate(380px, 50.5px); } 48.29% { transform: translate(380px, 50.5px); } 50.13% { transform: translate(380px, 86.75px); } 55.43% { transform: translate(484px, 86.75px); } 57.27% { transform: translate(484px, 123px); } 100% { transform: translate(484px, 123px); } }
+  .p10 { animation: p10 9s linear infinite; }
+  @keyframes p10 { 0%, 57.17% { fill: #ffc9c9; stroke-width: 1.5; } 59.27% { fill: #ff9b9b; stroke-width: 3; } 67.27%, 100% { fill: #ffc9c9; stroke-width: 1.5; } }
+  .k11 { transform: translate(588px, 123px); animation: k11 9s linear infinite; }
+  @keyframes k11 { 0% { transform: translate(380px, 50.5px); } 58.86% { transform: translate(380px, 50.5px); } 60.02% { transform: translate(380px, 86.75px); } 66.68% { transform: translate(588px, 86.75px); } 67.84% { transform: translate(588px, 123px); } 100% { transform: translate(588px, 123px); } }
+  .p12 { animation: p12 9s linear infinite; }
+  @keyframes p12 { 0%, 67.74% { fill: #ffffff; stroke-width: 1.5; } 69.84% { fill: #ffe9a8; stroke-width: 3; } 77.84%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .k13 { transform: translate(692px, 123px); animation: k13 9s linear infinite; }
+  @keyframes k13 { 0% { transform: translate(380px, 50.5px); } 69.43% { transform: translate(380px, 50.5px); } 70.28% { transform: translate(380px, 86.75px); } 77.57% { transform: translate(692px, 86.75px); } 78.41% { transform: translate(692px, 123px); } 100% { transform: translate(692px, 123px); } }
+  .p14 { animation: p14 9s linear infinite; }
+  @keyframes p14 { 0%, 78.31% { fill: #ffc9c9; stroke-width: 1.5; } 80.41% { fill: #ff9b9b; stroke-width: 3; } 88.41%, 100% { fill: #ffc9c9; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .k3, .p4, .k5, .p6, .k7, .p8, .k9, .p10, .k11, .p12, .k13, .p14 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="230" rx="8"/>
+<path class="wire" d="M380,50.5 L380,86.75 L68,86.75 L68,123" marker-end="url(#a)"/>
+<path class="wire" d="M380,50.5 L380,86.75 L172,86.75 L172,123" marker-end="url(#a)"/>
+<path class="wire" d="M380,50.5 L380,86.75 L276,86.75 L276,123" marker-end="url(#a)"/>
+<path class="wire" d="M380,50.5 L380,123" marker-end="url(#a)"/>
+<path class="wire" d="M380,50.5 L380,86.75 L484,86.75 L484,123" marker-end="url(#a)"/>
+<path class="wire" d="M380,50.5 L380,86.75 L588,86.75 L588,123" marker-end="url(#a)"/>
+<path class="wire" d="M380,50.5 L380,86.75 L692,86.75 L692,123" marker-end="url(#a)"/>
+<rect class="foc" x="315" y="21.5" width="130" height="29" rx="2"/><line class="sl" x1="321" y1="21.5" x2="321" y2="50.5"/><line class="sl" x1="439" y1="21.5" x2="439" y2="50.5"/><text class="lbl" x="380" y="40.5" text-anchor="middle">90-lowlat.conf</text>
+<rect class="step p2" x="20" y="123" width="96" height="74" rx="5"/><text class="sm" x="68" y="150.5" text-anchor="middle">§2 logging</text><text class="sm" x="68" y="164.5" text-anchor="middle">printk,</text><text class="sm" x="68" y="178.5" text-anchor="middle">numa_balancing</text>
+<rect class="wait p4" x="124" y="123" width="96" height="74" rx="5"/><text class="lbl" x="172" y="142" text-anchor="middle">§3 TCP</text><text class="lbl" x="172" y="157" text-anchor="middle">SYN retries,</text><text class="lbl" x="172" y="172" text-anchor="middle">keepalive</text><text class="lbl" x="172" y="187" text-anchor="middle">(risky value)</text>
+<rect class="step p6" x="228" y="123" width="96" height="74" rx="5"/><text class="lbl" x="276" y="149.5" text-anchor="middle">§4 buffers</text><text class="lbl" x="276" y="164.5" text-anchor="middle">rmem_max,</text><text class="lbl" x="276" y="179.5" text-anchor="middle">tcp_rmem</text>
+<rect class="step p8" x="332" y="123" width="96" height="74" rx="5"/><text class="lbl" x="380" y="149.5" text-anchor="middle">§5 queues</text><text class="lbl" x="380" y="164.5" text-anchor="middle">backlog,</text><text class="lbl" x="380" y="179.5" text-anchor="middle">qdisc</text>
+<rect class="wait p10" x="436" y="123" width="96" height="74" rx="5"/><text class="lbl" x="484" y="142" text-anchor="middle">§6 endpoint</text><text class="lbl" x="484" y="157" text-anchor="middle">forwarding,</text><text class="lbl" x="484" y="172" text-anchor="middle">IPv6, ARP</text><text class="lbl" x="484" y="187" text-anchor="middle">(risky value)</text>
+<rect class="step p12" x="540" y="123" width="96" height="74" rx="5"/><text class="lbl" x="588" y="157" text-anchor="middle">§7 BPF</text><text class="lbl" x="588" y="172" text-anchor="middle">JIT</text>
+<rect class="wait p14" x="644" y="123" width="96" height="74" rx="5"/><text class="sm" x="692" y="143.5" text-anchor="middle">§8 memory</text><text class="sm" x="692" y="157.5" text-anchor="middle">dirty, min_free,</text><text class="sm" x="692" y="171.5" text-anchor="middle">stat_interval</text><text class="sm" x="692" y="185.5" text-anchor="middle">(risky value)</text>
+<circle class="tok k1" cx="0" cy="0" r="6"/>
+<circle class="tok k3" cx="0" cy="0" r="6"/>
+<circle class="tok k5" cx="0" cy="0" r="6"/>
+<circle class="tok k7" cx="0" cy="0" r="6"/>
+<circle class="tok k9" cx="0" cy="0" r="6"/>
+<circle class="tok k11" cx="0" cy="0" r="6"/>
+<circle class="tok k13" cx="0" cy="0" r="6"/>
+</svg>

@@ -20,18 +20,7 @@
 
 *Guide 06 is independent of the CPU layout. It can run on any host class.*
 
-```mermaid
-flowchart TD
-  f[["90-lowlat.conf"]] --> g1["§2 logging<br/>printk,<br/>numa_balancing"]
-  f --> g2["§3 TCP<br/>SYN retries,<br/>keepalive<br/>(risky value)"]
-  f --> g3["§4 buffers<br/>rmem_max,<br/>tcp_rmem"]
-  f --> g4["§5 queues<br/>backlog,<br/>qdisc"]
-  f --> g5["§6 endpoint<br/>forwarding,<br/>IPv6, ARP<br/>(risky value)"]
-  f --> g6["§7 BPF<br/>JIT"]
-  f --> g7["§8 memory<br/>dirty, min_free,<br/>stat_interval<br/>(risky value)"]
-  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
-  class g2,g5,g7 risk
-```
+<img src="../assets/diagrams/sysctl-profile-groups.svg" alt="The sysctl profile fans out into seven groups, three of them marked risky value" width="720">
 
 *The profile has seven groups, one section each. The three groups marked "risky value" hold the values to check against your host: §3 (SYN retries), §6 (IPv6) and §8 (`min_free_kbytes`).*
 
@@ -46,10 +35,7 @@ flowchart TD
 
 Load order at boot:
 
-```mermaid
-flowchart LR
-  a["systemd-sysctl.service<br/>all sysctl.d files, sorted by name"] --> b["tuned<br/>its profile's [sysctl] section,<br/>then sysctl.d again (reapply_sysctl)"] --> c["udev rule<br/>per-interface keys when each NIC appears"]
-```
+<img src="../assets/diagrams/sysctl-load-order.svg" alt="systemd-sysctl, then tuned, then udev write sysctl values at boot, and the last writer wins" width="720">
 
 *The last writer wins. tuned re-applies `sysctl.d` after its own values, and the per-interface keys only land once each NIC exists, because the NICs do not exist yet when `systemd-sysctl` runs.*
 
@@ -201,13 +187,7 @@ tuned-adm active; grep -r rmem_max /etc/sysctl.d /usr/lib/sysctl.d /etc/tuned 2>
 
 ## 11. Troubleshooting
 
-```mermaid
-flowchart TD
-  s(["A sysctl value is wrong"]) --> w{"When?"}
-  w -- "after boot" --> f1["A later file or tuned wins:<br/>systemd-analyze cat-config sysctl.d"]
-  w -- "only per-interface keys" --> f2["NIC appeared late:<br/>check again after boot, udev re-applies"]
-  w -- "never applied" --> f3["Key missing on this kernel:<br/>sysctl --system errors, script skip list"]
-```
+<img src="../assets/diagrams/sysctl-troubleshoot.svg" alt="A troubleshooting tree that asks when a sysctl value went wrong" width="720">
 
 *A value that reverts is almost always a later writer. A per-interface key that is missing at boot is usually a NIC that appeared after `systemd-sysctl` ran.*
 

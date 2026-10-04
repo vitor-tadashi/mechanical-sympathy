@@ -27,11 +27,7 @@
 
 A packet arriving on the wire goes through the following stages before the application reads it (details in [concepts/network-tuning.md](../concepts/network-tuning.md)):
 
-```mermaid
-flowchart LR
-  nic["NIC<br/>MAC, DMA to RX ring"] --> co["coalescing<br/>timer"]:::risk --> irq["hard IRQ<br/>CPU X"] --> napi["softirq, CPU X<br/>NAPI, GRO, IP, UDP/TCP"] --> sock["socket<br/>queue"] --> app["app thread<br/>CPU Y"]
-  classDef risk fill:#ffc9c9,stroke:#9b1c1c,color:#2b0a0a
-```
+<img src="../assets/diagrams/rx-stages.svg" alt="A packet moves from the NIC through the coalescing timer, the interrupt and the softirq to the application, and waits at the timer" width="720">
 
 *A received packet crosses six stages. The coalescing timer, highlighted, is where most of the avoidable waiting happens, and the IRQ CPU X is never the application's isolated CPU Y. [NAPI](../GLOSSARY.md#napi) is the kernel loop that collects received packets from the ring in batches.*
 
@@ -63,31 +59,7 @@ The goal of this guide is that a critical packet **never waits** (coalescing 0, 
 
 Latency-critical traffic should never share a NIC, a queue, an IRQ, or a CPU with bulk traffic. A 50 MB log shipment in front of a 200-byte request is head-of-line blocking at every layer. The reference host uses **four roles on six NICs**:
 
-```mermaid
-flowchart LR
-  subgraph crit["critical · NUMA node 1"]
-    e1["ens1f0<br/>client requests, events"]
-    e2["ens1f1<br/>backend, cache, IPC"]
-  end
-  subgraph other["timing, bulk, mgmt · NUMA node 0"]
-    t["eno1 · timing<br/>PTP"]
-    b1["ens2f0 · bulk<br/>replication, archive"]
-    b2["ens2f1 · bulk<br/>logs, reports"]
-    m["eno2 · mgmt<br/>SSH, config (untouched)"]
-  end
-  e1 --> c1["CPU 1<br/>node-1 housekeeping"]
-  e2 --> c1
-  t --> c0["CPU 0"]
-  m --> c0
-  b1 --> c30["CPU 30<br/>far from critical"]
-  b2 --> c30
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
-  classDef muted fill:#eeeeee,stroke:#777777,color:#333333
-  class e1,e2 iso
-  class c1,c0,c30,t,b1,b2 hk
-  class m muted
-```
+<img src="../assets/diagrams/nic-roles-map.svg" alt="Critical NICs interrupt CPU 1, timing and management NICs CPU 0, and bulk NICs CPU 30" width="720">
 
 *Both critical NICs sit on node 1 and send their interrupts to CPU 1, the node's only housekeeping CPU. Timing and management interrupts go to CPU 0, and bulk interrupts to CPU 30, away from everything critical.*
 
@@ -184,16 +156,7 @@ Combined:       63           ← the driver default: often one per CPU, up to th
 
 Most current drivers (ixgbe, i40e, ice, mlx5, sfc, bnxt) only use `Combined`. `ethtool -L ens1f0 combined N` therefore means "use N queue pairs, and N interrupts". Where a packet goes:
 
-```mermaid
-flowchart LR
-  nic["NIC:<br/>RSS hash of<br/>src/dst IP + port"] -- "indirection table<br/>(ethtool -x)" --> q0["queue 0"]
-  nic --> q1["queue 1"]
-  nic --> qn["queue N"]
-  q0 --> i0["IRQ 120"] --> cpu["CPU 1<br/>(smp_affinity_list)"]
-  q1 --> i1["IRQ 121"] --> cpu
-  qn --> in["IRQ 12N"] --> cpu
-  cpu --> napi["NAPI poll<br/>softirq"] --> sock["socket"]
-```
+<img src="../assets/diagrams/rss-queues.svg" alt="RSS spreads flows over three queues whose interrupts all point at CPU 1" width="720">
 
 *The NIC hashes each flow to a queue, each queue has its own MSI-X interrupt, and here every interrupt points at CPU 1. So one CPU drains all the queues in turn, which is why the queue count should follow the number of IRQ CPUs.*
 
@@ -441,18 +404,7 @@ Record p50/p99/p99.9 before and after. The biggest visible change is usually in 
 
 ## 10. Troubleshooting
 
-```mermaid
-flowchart TD
-  s(["Network latency or drops"]) --> d{"Drops?"}
-  d -- "ethtool -S drop/miss" --> f1["Ring too small or IRQ CPU too slow:<br/>rings at max (§5.7), check squeezed"]
-  d -- "softnet squeezed" --> f2["IRQ CPU cannot keep up:<br/>dedicate it, add a second CPU,<br/>or busy polling / bypass"]
-  d -- none --> r{"Settings<br/>reverted?"}
-  r -- "after minutes" --> f3["irqbalance, adaptive coalescing<br/>or NetworkManager re-applying"]
-  r -- "after reboot" --> f4["systemctl status lowlat-runtime"]
-  r -- no --> i{"NIC IRQs on an<br/>isolated CPU?"}
-  i -- yes --> f5["Run 04-network --runtime after<br/>any channel change; add the device to NICS"]
-  i -- no --> f6["See the table below"]
-```
+<img src="../assets/diagrams/network-troubleshoot.svg" alt="A troubleshooting tree that checks drops, then reverted settings, then interrupt placement" width="720">
 
 *Check drops first, then whether settings survived, then where the interrupts land. Each branch ends at the fix from the table.*
 
@@ -471,10 +423,7 @@ flowchart TD
 
 ## 11. Rollback
 
-```mermaid
-flowchart LR
-  stop["Stop lowlat-runtime.service<br/>(no re-apply at boot)"] --> ch["Channels first<br/>(may re-create IRQ vectors)"] --> rest["Rings, coalescing, PAUSE,<br/>offloads, txqueuelen"] --> irq["IRQ CPU lists,<br/>vector by vector"]
-```
+<img src="../assets/diagrams/network-rollback-order.svg" alt="The rollback stops the boot re-apply, restores channels, then rings and offloads, and IRQ placement last" width="720">
 
 *Channels go back first, because changing them can create new interrupt vectors. The IRQ placement is restored last, on the vectors that exist then.*
 
