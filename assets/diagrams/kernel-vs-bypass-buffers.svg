@@ -24,8 +24,23 @@
   .tick { stroke: #8c959f; stroke-width: 1; }
   .arrow { stroke: #57606a; stroke-width: 1.5; fill: none; marker-end: url(#ah); }
   .arrowr { stroke: #9b1c1c; stroke-width: 1.5; fill: none; marker-end: url(#ahr); }
+  .tk1 { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; transform: translate(477px, 131px); animation: tk1 8s linear infinite; }
+  @keyframes tk1 { 0% { transform: translate(69px, 131px); } 5% { transform: translate(69px, 131px); } 18% { transform: translate(171px, 131px); } 28% { transform: translate(171px, 131px); } 41% { transform: translate(273px, 131px); } 47% { transform: translate(273px, 131px); } 60% { transform: translate(375px, 131px); } 72% { transform: translate(375px, 131px); } 85% { transform: translate(477px, 131px); } 100% { transform: translate(477px, 131px); } }
+  .pl2 { animation: pl2 8s linear infinite; }
+  @keyframes pl2 { 0%, 84.9% { fill: #c8f0d0; } 85%, 97% { fill: #8fe0a0; } 100% { fill: #c8f0d0; } }
+  .tk3 { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; transform: translate(477px, 253px); animation: tk3 8s linear infinite; }
+  @keyframes tk3 { 0% { transform: translate(69px, 253px); } 5% { transform: translate(69px, 253px); } 15.75% { transform: translate(171px, 253px); } 21.75% { transform: translate(171px, 253px); } 32.5% { transform: translate(273px, 253px); } 43.25% { transform: translate(375px, 253px); } 51.25% { transform: translate(375px, 253px); } 62% { transform: translate(477px, 253px); } 100% { transform: translate(477px, 253px); } }
+  .pl4 { animation: pl4 8s linear infinite; }
+  @keyframes pl4 { 0%, 61.9% { fill: #c8f0d0; } 62%, 97% { fill: #8fe0a0; } 100% { fill: #c8f0d0; } }
+  .tk5 { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; transform: translate(434px, 375px); animation: tk5 8s linear infinite; }
+  @keyframes tk5 { 0% { transform: translate(94px, 375px); } 5% { transform: translate(94px, 375px); } 17.5% { transform: translate(264px, 375px); } 23.5% { transform: translate(264px, 375px); } 36% { transform: translate(434px, 375px); } 100% { transform: translate(434px, 375px); } }
+  .pl6 { animation: pl6 8s linear infinite; }
+  @keyframes pl6 { 0%, 35.9% { fill: #c8f0d0; } 36%, 97% { fill: #8fe0a0; } 100% { fill: #c8f0d0; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tk1, .pl2, .tk3, .pl4, .tk5, .pl6 { animation: none; }
   }
 </style>
 <defs>
@@ -55,7 +70,7 @@
 <text class="tiny" x="375" y="144" text-anchor="middle">rcvbuf</text>
 <path class="arrow" d="M421 131 L431 131"/>
 <text class="redt" x="426" y="104" text-anchor="middle">copy</text>
-<rect class="app" x="432" y="108" width="90" height="46" rx="5"/>
+<rect class="app pl2" x="432" y="108" width="90" height="46" rx="5"/>
 <text class="smb" x="477" y="128" text-anchor="middle">app buffer</text>
 <text class="tiny" x="477" y="144" text-anchor="middle">your memory</text>
 <text class="sm" x="530" y="94">queues: 3, or 4 with RPS</text>
@@ -82,7 +97,7 @@
 <text class="tiny" x="375" y="266" text-anchor="middle">user space</text>
 <path class="arrow" d="M421 253 L431 253"/>
 <text class="redt" x="426" y="226" text-anchor="middle">copy</text>
-<rect class="app" x="432" y="230" width="90" height="46" rx="5"/>
+<rect class="app pl4" x="432" y="230" width="90" height="46" rx="5"/>
 <text class="smb" x="477" y="250" text-anchor="middle">app buffer</text>
 <text class="tiny" x="477" y="266" text-anchor="middle">your memory</text>
 <text class="sm" x="530" y="216">queues: 3, all in user space</text>
@@ -100,7 +115,7 @@
 <text class="smb" x="264" y="372" text-anchor="middle">RX ring + mbuf</text>
 <text class="tiny" x="264" y="388" text-anchor="middle">your memory, DMA</text>
 <path class="arrow" d="M335 375 L363 375"/>
-<rect class="app" x="364" y="352" width="140" height="46" rx="5"/>
+<rect class="app pl6" x="364" y="352" width="140" height="46" rx="5"/>
 <text class="smb" x="434" y="372" text-anchor="middle">your code</text>
 <text class="tiny" x="434" y="388" text-anchor="middle">reads in place</text>
 <text class="sm" x="530" y="338">queues: 2</text>
@@ -110,4 +125,7 @@
 <rect class="mut" x="10" y="426" width="740" height="40" rx="6"/>
 <text class="smb" x="24" y="443">What you give up with bypass</text>
 <text class="sm" x="24" y="459">tcpdump, netfilter and per-socket kernel counters no longer see the traffic, and a polling core is 100% busy.</text>
+<circle class="tk1" cx="0" cy="0" r="6"/>
+<circle class="tk3" cx="0" cy="0" r="6"/>
+<circle class="tk5" cx="0" cy="0" r="6"/>
 </svg>

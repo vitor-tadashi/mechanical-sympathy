@@ -13,8 +13,19 @@
   .det { fill: none; stroke: #1d6b33; stroke-width: 2.5; stroke-dasharray: 7 4; }
   .mark { stroke: #8a5a00; stroke-width: 1.5; stroke-dasharray: 3 3; }
   .mtxt { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; text-anchor: middle; }
+  .tk1 { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; transform: translate(639px, 81.3px); animation: tk1 9s linear infinite; }
+  @keyframes tk1 { 0% { transform: translate(90px, 305.1px); } 5% { transform: translate(90px, 305.1px); } 8.78% { transform: translate(120.5px, 303.8px); } 12.55% { transform: translate(151px, 302.4px); } 16.33% { transform: translate(181.5px, 300.7px); } 20.11% { transform: translate(212px, 298.9px); } 23.89% { transform: translate(242.5px, 296.8px); } 27.67% { transform: translate(273px, 294.5px); } 31.46% { transform: translate(303.5px, 291.7px); } 35.25% { transform: translate(334px, 288.6px); } 39.06% { transform: translate(364.5px, 284.8px); } 42.87% { transform: translate(395px, 280.3px); } 46.7% { transform: translate(425.5px, 274.7px); } 50.57% { transform: translate(456px, 267.8px); } 54.5% { transform: translate(486.5px, 258.9px); } 58.55% { transform: translate(517px, 247.1px); } 62.84% { transform: translate(547.5px, 230.5px); } 67.7% { transform: translate(578px, 205.7px); } 74.07% { transform: translate(608.5px, 164.2px); } 85% { transform: translate(639px, 81.3px); } 100% { transform: translate(639px, 81.3px); } }
+  .ap2 { animation: ap2 9s linear infinite; }
+  @keyframes ap2 { 0%, 42.77% { opacity: 0; } 42.87%, 100% { opacity: 1; } }
+  .ap3 { animation: ap3 9s linear infinite; }
+  @keyframes ap3 { 0%, 58.45% { opacity: 0; } 58.55%, 100% { opacity: 1; } }
+  .ap4 { animation: ap4 9s linear infinite; }
+  @keyframes ap4 { 0%, 84.9% { opacity: 0; } 85%, 100% { opacity: 1; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tk1, .ap2, .ap3, .ap4 { animation: none; }
   }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="400" rx="8"/>
@@ -39,13 +50,14 @@
 <polyline class="p99" points="90.0,305.1 120.5,303.8 151.0,302.4 181.5,300.7 212.0,298.9 242.5,296.8 273.0,294.5 303.5,291.7 334.0,288.6 364.5,284.8 395.0,280.3 425.5,274.7 456.0,267.8 486.5,258.9 517.0,247.1 547.5,230.5 578.0,205.7 608.5,164.2 639.0,81.3 669.5,60.0"/>
 <polyline class="det" points="90.0,324.6 120.5,320.1 151.0,319.4 181.5,318.5 212.0,316.8 242.5,315.6 273.0,314.4 303.5,312.8 334.0,311.0 364.5,309.1 395.0,306.6 425.5,303.8 456.0,300.3 486.5,296.0 517.0,290.2 547.5,282.2 578.0,270.0 608.5,250.4 639.0,213.2 669.5,112.4 681.7,60.0"/>
 <circle cx="395.0" cy="319.2" r="4" fill="#1f4e8c"/><circle cx="395.0" cy="280.3" r="4" fill="#9b1c1c"/>
-<text class="mtxt" x="369.0" y="274.3">9 S</text>
+<text class="mtxt ap2" x="369.0" y="274.3">9 S</text>
 <circle cx="517.0" cy="312.0" r="4" fill="#1f4e8c"/><circle cx="517.0" cy="247.1" r="4" fill="#9b1c1c"/>
-<text class="mtxt" x="491.0" y="241.1">15 S</text>
+<text class="mtxt ap3" x="491.0" y="241.1">15 S</text>
 <circle cx="639.0" cy="276.0" r="4" fill="#1f4e8c"/><circle cx="639.0" cy="81.3" r="4" fill="#9b1c1c"/>
-<text class="mtxt" x="613.0" y="75.3">46 S</text>
+<text class="mtxt ap4" x="613.0" y="75.3">46 S</text>
 <line class="p99" x1="110" y1="82" x2="140" y2="82"/><text class="lbl" x="148" y="86" fill="#9b1c1c">p99, variable service time</text>
 <line class="det" x1="110" y1="102" x2="140" y2="102"/><text class="lbl" x="148" y="106" fill="#1d6b33">p99, fixed service time (no jitter)</text>
 <line class="mean" x1="110" y1="122" x2="140" y2="122"/><text class="lbl" x="148" y="126" fill="#1f4e8c">mean, variable service time</text>
 <text class="axis" x="24" y="392">One server, random arrivals (M/M/1 theory); the fixed-service curve is simulated. Shapes, not measurements.</text>
+<circle class="tk1" cx="0" cy="0" r="6"/>
 </svg>

@@ -24,8 +24,17 @@
   .warn { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9b1c1c; }
   .ok { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1d6b33; }
   .seq { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .tk1 { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; transform: translate(435px, 150px); animation: tk1 8s linear infinite; }
+  @keyframes tk1 { 0% { transform: translate(740px, 150px); } 5% { transform: translate(740px, 150px); } 8.74% { transform: translate(720px, 150px); } 26.74% { transform: translate(720px, 150px); } 80% { transform: translate(435px, 150px); } 100% { transform: translate(435px, 150px); } }
+  .pl2 { animation: pl2 8s linear infinite; }
+  @keyframes pl2 { 0%, 8.64% { fill: #eeeeee; } 10.74% { fill: #ff9b9b; } 26.74%, 100% { fill: #eeeeee; } }
+  .pl3 { animation: pl3 8s linear infinite; }
+  @keyframes pl3 { 0%, 79.9% { fill: #cfe3ff; } 80%, 97% { fill: #ff9b9b; } 100% { fill: #cfe3ff; } }
   @media (prefers-color-scheme: dark) {
     svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tk1, .pl2, .pl3 { animation: none; }
   }
 </style>
 <rect class="bg" x="0" y="0" width="760" height="360" rx="8"/>
@@ -45,9 +54,9 @@
 <line class="pin" x1="178.5" y1="124" x2="178.5" y2="150" stroke="#57606a"/>
 <rect class="app" x="91.3" y="100" width="174.4" height="24" rx="5"/><text class="mid" x="178.5" y="116">lowlat-app.service: -900</text>
 <line class="pin" x1="435.0" y1="94" x2="435.0" y2="150" stroke="#57606a"/>
-<rect class="box" x="321.4" y="70" width="227.2" height="24" rx="5"/><text class="mid" x="435.0" y="86">agents, shells, most services: 0</text>
+<rect class="box pl3" x="321.4" y="70" width="227.2" height="24" rx="5"/><text class="mid" x="435.0" y="86">agents, shells, most services: 0</text>
 <line class="pin" x1="720.0" y1="124" x2="720.0" y2="150" stroke="#57606a"/>
-<rect class="mut" x="594.6" y="100" width="141.4" height="24" rx="5"/><text class="mid" x="665.3" y="116">+1000: always first</text>
+<rect class="mut pl2" x="594.6" y="100" width="141.4" height="24" rx="5"/><text class="mid" x="665.3" y="116">+1000: always first</text>
 <path class="arrow" d="M378.0,184 L634.5,184"/><text class="warn" x="506.2" y="180" text-anchor="middle">killed first →</text>
 <rect class="lane" x="10" y="210" width="740" height="140" rx="6"/>
 <text class="cap" x="24" y="234">What -900 buys, and why not -1000</text>
@@ -56,4 +65,5 @@
 <text class="ok" x="24" y="300">-900, the service leaks:</text><text class="seq" x="190" y="300">once it holds most of the memory, its score passes the others and it is killed. sshd still answers.</text>
 <text class="warn" x="24" y="324">-1000, the service leaks:</text><text class="seq" x="190" y="324">everything else is killed, sshd and the journal too, and then the kernel panics.</text>
 
+<circle class="tk1" cx="0" cy="0" r="7"/>
 </svg>
