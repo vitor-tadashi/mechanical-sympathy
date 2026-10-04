@@ -41,16 +41,7 @@ On a kernel with the fair server (RHEL 10, [Guide 02 §4.4](../../guides/02-cpu-
 
 Three questions: which threads run in a real-time class, is the kernel throttling them, and what is waiting on their CPU?
 
-```mermaid
-flowchart TD
-  s(["Network or disk stalls on one CPU"]) --> q1{"A FIFO thread<br/>on it?"}
-  q1 -- no --> f1["Not this story: see<br/>use case 4"]
-  q1 -- yes --> q2{"sched_rt_runtime_us<br/>is -1?"}
-  q2 -- no --> f2["50 ms throttling gaps<br/>every second (act 1)"]
-  q2 -- yes --> f3["ksoftirqd or a kworker waits<br/>behind the spinner (act 2)"]
-  f2 --> fix["Back to SCHED_OTHER (§3)"]
-  f3 --> fix
-```
+<img src="../../assets/diagrams/uc14-rt-spinner.svg" alt="A troubleshooting tree for a real-time spinner whose two branches both end at SCHED_OTHER" width="720">
 
 *Find the real-time thread, check the throttle, and both branches end at the same fix: the normal scheduling class.*
 

@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 347" width="760" height="347" role="img" aria-labelledby="t d">
+<title id="t">One question at a time places every thread</title>
+<desc id="d">Only threads on the critical path get an isolated CPU on the NIC's node, one thread per CPU. Agents and vendor tools go into housekeeping.slice on CPUs 4 and 6. Interrupt and softirq work goes to a node-local housekeeping CPU. Everything else stays unpinned on the OS CPUs.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(400px, 97px); animation: k1 7s linear infinite; }
+  @keyframes k1 { 0%, 5.8% { transform: translate(140px, 49px); opacity: 0; } 6% { transform: translate(140px, 49px); opacity: 1; } 7.41% { transform: translate(140px, 75px); opacity: 1; } 10.98% { transform: translate(202px, 97px); opacity: 1; } 21.73% { transform: translate(400px, 97px); opacity: 1; } 24.3% { transform: translate(400px, 97px); opacity: 1; } 24.5%, 100% { transform: translate(400px, 97px); opacity: 0; } }
+  .p2 { animation: p2 7s linear infinite; }
+  @keyframes p2 { 0%, 21.62% { fill: #c8f0d0; stroke-width: 1.5; } 23.72% { fill: #8fe0a0; stroke-width: 3; } 31.73%, 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  .k3 { transform: translate(400px, 167px); animation: k3 7s linear infinite; }
+  @keyframes k3 { 0%, 24.3% { transform: translate(140px, 49px); opacity: 0; } 24.5% { transform: translate(140px, 49px); opacity: 1; } 25.64% { transform: translate(140px, 75px); opacity: 1; } 27.56% { transform: translate(140px, 119px); opacity: 1; } 28.69% { transform: translate(140px, 145px); opacity: 1; } 31.4% { transform: translate(198px, 167px); opacity: 1; } 40.23% { transform: translate(400px, 167px); opacity: 1; } 42.8% { transform: translate(400px, 167px); opacity: 1; } 43%, 100% { transform: translate(400px, 167px); opacity: 0; } }
+  .p4 { animation: p4 7s linear infinite; }
+  @keyframes p4 { 0%, 40.12% { fill: #eeeeee; stroke-width: 1.5; } 42.23% { fill: #d4d4d4; stroke-width: 3; } 50.22%, 100% { fill: #eeeeee; stroke-width: 1.5; } }
+  .k5 { transform: translate(400px, 237px); animation: k5 7s linear infinite; }
+  @keyframes k5 { 0%, 42.8% { transform: translate(140px, 49px); opacity: 0; } 43% { transform: translate(140px, 49px); opacity: 1; } 43.95% { transform: translate(140px, 75px); opacity: 1; } 45.56% { transform: translate(140px, 119px); opacity: 1; } 46.51% { transform: translate(140px, 145px); opacity: 1; } 48.12% { transform: translate(140px, 189px); opacity: 1; } 49.07% { transform: translate(140px, 215px); opacity: 1; } 51.52% { transform: translate(203px, 237px); opacity: 1; } 58.72% { transform: translate(400px, 237px); opacity: 1; } 61.3% { transform: translate(400px, 237px); opacity: 1; } 61.5%, 100% { transform: translate(400px, 237px); opacity: 0; } }
+  .p6 { animation: p6 7s linear infinite; }
+  @keyframes p6 { 0%, 58.63% { fill: #cfe3ff; stroke-width: 1.5; } 60.73% { fill: #9cc3ff; stroke-width: 3; } 68.73%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  .k7 { transform: translate(140px, 285px); animation: k7 7s linear infinite; }
+  @keyframes k7 { 0%, 61.3% { transform: translate(140px, 49px); opacity: 0; } 61.5% { transform: translate(140px, 49px); opacity: 1; } 63.23% { transform: translate(140px, 75px); opacity: 1; } 66.16% { transform: translate(140px, 119px); opacity: 1; } 67.9% { transform: translate(140px, 145px); opacity: 1; } 70.83% { transform: translate(140px, 189px); opacity: 1; } 72.56% { transform: translate(140px, 215px); opacity: 1; } 75.49% { transform: translate(140px, 259px); opacity: 1; } 77.22% { transform: translate(140px, 285px); opacity: 1; } 79.8% { transform: translate(140px, 285px); opacity: 1; } 80%, 100% { transform: translate(140px, 285px); opacity: 0; } }
+  .p8 { animation: p8 7s linear infinite; }
+  @keyframes p8 { 0%, 77.12% { fill: #cfe3ff; stroke-width: 1.5; } 79.22% { fill: #9cc3ff; stroke-width: 3; } 87.22%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .k3, .p4, .k5, .p6, .k7, .p8 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="347" rx="8"/>
+<path class="wire" d="M140,49 L140,75" marker-end="url(#a)"/>
+<path class="wire" d="M202,97 L400,97" marker-end="url(#a)"/>
+<path class="wire" d="M140,119 L140,145" marker-end="url(#a)"/>
+<path class="wire" d="M198,167 L400,167" marker-end="url(#a)"/>
+<path class="wire" d="M140,189 L140,215" marker-end="url(#a)"/>
+<path class="wire" d="M203,237 L400,237" marker-end="url(#a)"/>
+<path class="wire" d="M140,259 L140,285" marker-end="url(#a)"/>
+<rect class="foc" x="102.5" y="20" width="75" height="29" rx="14.5"/><text class="lbl" x="140" y="39" text-anchor="middle">A thread</text>
+<polygon class="step" points="78,97 92,75 188,75 202,97 188,119 92,119"/><text class="lbl" x="140" y="94" text-anchor="middle">On the</text><text class="lbl" x="140" y="109" text-anchor="middle">critical path?</text>
+<rect class="app p2" x="400" y="75" width="218" height="44" rx="5"/><text class="lbl" x="509" y="94" text-anchor="middle">Isolated CPU on the NIC's node</text><text class="lbl" x="509" y="109" text-anchor="middle">one thread per CPU, pinned</text>
+<polygon class="step" points="82,167 96,145 184,145 198,167 184,189 96,189"/><text class="lbl" x="140" y="164" text-anchor="middle">An agent or</text><text class="lbl" x="140" y="179" text-anchor="middle">vendor tool?</text>
+<rect class="mut p4" x="400" y="145" width="137" height="44" rx="5"/><text class="lbl" x="468.5" y="164" text-anchor="middle">housekeeping.slice</text><text class="lbl" x="468.5" y="179" text-anchor="middle">CPUs 4 and 6</text>
+<polygon class="step" points="77,237 91,215 189,215 203,237 189,259 91,259"/><text class="lbl" x="140" y="234" text-anchor="middle">Interrupt or</text><text class="lbl" x="140" y="249" text-anchor="middle">softirq work?</text>
+<rect class="box p6" x="400" y="215" width="205" height="44" rx="5"/><text class="lbl" x="502.5" y="234" text-anchor="middle">Housekeeping CPU, node-local</text><text class="lbl" x="502.5" y="249" text-anchor="middle">CPU 1 critical, CPU 30 bulk</text>
+<rect class="box p8" x="19.5" y="285" width="241" height="44" rx="5"/><text class="lbl" x="140" y="304" text-anchor="middle">OS CPUs, left unpinned</text><text class="lbl" x="140" y="319" text-anchor="middle">logging, metrics, admin, GC helpers</text>
+<text class="el" x="234" y="92" text-anchor="start">yes</text>
+<text class="el" x="146" y="136" text-anchor="start">no</text>
+<text class="el" x="230" y="162" text-anchor="start">yes</text>
+<text class="el" x="146" y="206" text-anchor="start">no</text>
+<text class="el" x="235" y="232" text-anchor="start">yes</text>
+<text class="el" x="146" y="276" text-anchor="start">no</text>
+<circle class="tok k1" cx="0" cy="0" r="6"/>
+<circle class="tok k3" cx="0" cy="0" r="6"/>
+<circle class="tok k5" cx="0" cy="0" r="6"/>
+<circle class="tok k7" cx="0" cy="0" r="6"/>
+</svg>

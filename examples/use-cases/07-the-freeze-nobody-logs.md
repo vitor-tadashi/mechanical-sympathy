@@ -25,16 +25,7 @@ Everything the operating system controls has been tuned. The tail is short, and 
 
 Look for firmware first, then frequency, then idle states, in that order ([Guide 00 §8](../../guides/00-bios-firmware.md#8-troubleshooting)):
 
-```mermaid
-flowchart TD
-  s(["Rare max you cannot explain"]) --> smi{"SMI count<br/>rising?"}
-  smi -- yes --> f1["A firmware feature: remove sources,<br/>one change at a time"]
-  smi -- no --> mhz{"Bzy_MHz<br/>varies?"}
-  mhz -- yes --> f2["Turbo, HWP or thermal limits"]
-  mhz -- no --> cst{"Deep idle<br/>states listed?"}
-  cst -- yes --> f3["C-states on, idle=poll missing"]
-  cst -- no --> f4["Not firmware: back to rtla osnoise"]
-```
+<img src="../../assets/diagrams/uc07-firmware-noise.svg" alt="A troubleshooting tree that checks SMIs, then frequency, then idle states" width="720">
 
 *Check SMIs, then frequency changes, then deep idle states. When all three are clean, the noise is not coming from the firmware.*
 

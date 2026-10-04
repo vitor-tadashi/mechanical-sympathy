@@ -34,22 +34,7 @@ cat /sys/class/net/ens1f0/device/numa_node # the node of the critical NIC
 
 Then place every thread with one question:
 
-```mermaid
-flowchart TD
-  t(["A thread"]) --> q1{"On the<br/>critical path?"}
-  q1 -- yes --> c["Isolated CPU on the NIC's node<br/>one thread per CPU, pinned"]
-  q1 -- no --> q2{"An agent or<br/>vendor tool?"}
-  q2 -- yes --> a["housekeeping.slice<br/>CPUs 4 and 6"]
-  q2 -- no --> q3{"Interrupt or<br/>softirq work?"}
-  q3 -- yes --> h["Housekeeping CPU, node-local<br/>CPU 1 critical, CPU 30 bulk"]
-  q3 -- no --> o["OS CPUs, left unpinned<br/>logging, metrics, admin, GC helpers"]
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
-  classDef muted fill:#eeeeee,stroke:#777777,color:#333333
-  class c iso
-  class h,o hk
-  class a muted
-```
+<img src="../../assets/diagrams/uc02-thread-placement.svg" alt="A decision tree that sends each thread to an isolated CPU, the housekeeping slice, an IRQ CPU or the OS CPUs" width="720">
 
 *Only threads on the critical path get an isolated CPU. Everything else has a home on the OS CPUs, and the ones that need fencing go into the housekeeping slice.*
 

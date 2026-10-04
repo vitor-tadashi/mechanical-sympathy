@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 273" width="760" height="273" role="img" aria-labelledby="t d">
+<title id="t">Fence an agent: units go into the slice, other agents are pinned by name</title>
+<desc id="d">A systemd unit is listed in HOUSEKEEPING_SLICE_UNITS and restarted into the slice, where the kernel fences it. An agent that starts outside systemd or respawns is listed in HOUSEKEEPING_PIN_PROCESSES and pinned by name at every boot. Both end under the same slice limits.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(606px, 233px); animation: k1 7s linear infinite; }
+  @keyframes k1 { 0%, 5.8% { transform: translate(140px, 49px); opacity: 0; } 6% { transform: translate(140px, 49px); opacity: 1; } 7.97% { transform: translate(140px, 102px); opacity: 1; } 10.02% { transform: translate(190.5px, 124px); opacity: 1; } 10.92% { transform: translate(214.5px, 124px); opacity: 1; } 11.92% { transform: translate(214.5px, 97px); opacity: 1; } 18.09% { transform: translate(380px, 97px); opacity: 1; } 28.25% { transform: translate(653px, 97px); opacity: 1; } 29.44% { transform: translate(685px, 97px); opacity: 1; } 34.51% { transform: translate(685px, 233px); opacity: 1; } 37.45% { transform: translate(606px, 233px); opacity: 1; } 42.8% { transform: translate(606px, 233px); opacity: 1; } 43%, 100% { transform: translate(606px, 233px); opacity: 0; } }
+  .p2 { animation: p2 7s linear infinite; }
+  @keyframes p2 { 0%, 37.35% { fill: #cfe3ff; stroke-width: 1.5; } 39.45% { fill: #9cc3ff; stroke-width: 3; } 47.45%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  .k3 { transform: translate(524.5px, 211px); animation: k3 7s linear infinite; }
+  @keyframes k3 { 0%, 42.8% { transform: translate(140px, 49px); opacity: 0; } 43% { transform: translate(140px, 49px); opacity: 1; } 46.28% { transform: translate(140px, 102px); opacity: 1; } 49.68% { transform: translate(190.5px, 124px); opacity: 1; } 51.17% { transform: translate(214.5px, 124px); opacity: 1; } 52.83% { transform: translate(214.5px, 151px); opacity: 1; } 63.07% { transform: translate(380px, 151px); opacity: 1; } 72.1% { transform: translate(524.5px, 173px); opacity: 1; } 74.45% { transform: translate(524.5px, 211px); opacity: 1; } 79.8% { transform: translate(524.5px, 211px); opacity: 1; } 80%, 100% { transform: translate(524.5px, 211px); opacity: 0; } }
+  .p4 { animation: p4 7s linear infinite; }
+  @keyframes p4 { 0%, 74.35% { fill: #cfe3ff; stroke-width: 1.5; } 76.45% { fill: #9cc3ff; stroke-width: 3; } 84.45%, 100% { fill: #cfe3ff; stroke-width: 1.5; } }
+  .p5 { animation: p5 7s linear infinite; }
+  @keyframes p5 { 0%, 77.9% { fill: #ffd166; stroke-width: 1.5; } 78%, 97% { fill: #ffb703; stroke-width: 3; } 100% { fill: #ffd166; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .k3, .p4, .p5 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="273" rx="8"/>
+<path class="wire" d="M140,49 L140,102" marker-end="url(#a)"/>
+<path class="wire" d="M190.5,124 L214.5,124 L214.5,97 L380,97" marker-end="url(#a)"/>
+<path class="wire" d="M190.5,124 L214.5,124 L214.5,151 L380,151" marker-end="url(#a)"/>
+<path class="wire" d="M524.5,173 L524.5,211" marker-end="url(#a)"/>
+<path class="wire" d="M653,97 L685,97 L685,233 L606,233" marker-end="url(#a)"/>
+<rect class="foc" x="73.5" y="20" width="133" height="29" rx="14.5"/><text class="lbl" x="140" y="39" text-anchor="middle">An agent to fence</text>
+<polygon class="step" points="89.5,124 103.5,102 176.5,102 190.5,124 176.5,146 103.5,146"/><text class="lbl" x="140" y="121" text-anchor="middle">A systemd</text><text class="lbl" x="140" y="136" text-anchor="middle">unit?</text>
+<rect class="box p2" x="380" y="75" width="273" height="44" rx="5"/><text class="lbl" x="516.5" y="94" text-anchor="middle">List it in HOUSEKEEPING_SLICE_UNITS,</text><text class="lbl" x="516.5" y="109" text-anchor="middle">restart it into the slice</text>
+<rect class="box p4" x="380" y="129" width="289" height="44" rx="5"/><text class="lbl" x="524.5" y="148" text-anchor="middle">List it in HOUSEKEEPING_PIN_PROCESSES:</text><text class="lbl" x="524.5" y="163" text-anchor="middle">pinned by name at every boot</text>
+<rect class="foc p5" x="443" y="211" width="163" height="44" rx="5"/><text class="lbl" x="524.5" y="230" text-anchor="middle">Slice limits: CPUQuota,</text><text class="lbl" x="524.5" y="245" text-anchor="middle">MemoryMax, IOWeight</text>
+<text class="el" x="222.5" y="92" text-anchor="start">yes</text>
+<text class="el" x="222.5" y="146" text-anchor="start">no, or it respawns</text>
+<circle class="tok k1" cx="0" cy="0" r="6"/>
+<circle class="tok k3" cx="0" cy="0" r="6"/>
+</svg>

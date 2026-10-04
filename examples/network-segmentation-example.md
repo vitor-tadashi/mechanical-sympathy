@@ -12,51 +12,7 @@ This walkthrough builds the network side of the reference host from scratch: six
 
 ## 1. The target
 
-```mermaid
-flowchart LR
-  subgraph peers["Peers"]
-    direction TB
-    ex["clients, upstream peers"]
-    int["internal services"]
-    gm["PTP grandmaster"]
-    st["replication, storage"]
-    lg["logs, metrics sinks"]
-    ops["ops, SSH"]
-  end
-  subgraph nics["NICs and roles"]
-    direction TB
-    n1["ens1f0 · critical"]
-    n2["ens1f1 · critical"]
-    n3["eno1 · timing"]
-    n4["ens2f0 · bulk"]
-    n5["ens2f1 · bulk"]
-    n6["eno2 · mgmt<br/>default route"]
-  end
-  subgraph cpus["IRQ CPUs"]
-    direction TB
-    c1["CPU 1 · node 1"]
-    c0["CPU 0 · node 0"]
-    c30["CPU 30 · node 0"]
-  end
-  ex --> n1
-  int --> n2
-  gm --> n3
-  st --> n4
-  lg --> n5
-  ops --> n6
-  n1 --> c1
-  n2 --> c1
-  n3 --> c0
-  n6 --> c0
-  n4 --> c30
-  n5 --> c30
-  classDef iso fill:#c8f0d0,stroke:#1d6b33,color:#0b2613
-  classDef hk fill:#cfe3ff,stroke:#1f4e8c,color:#0b1f33
-  classDef muted fill:#eeeeee,stroke:#777777,color:#333333
-  class n1,n2,c1 iso
-  class n3,n4,n5,c0,c30 hk
-  class n6 muted
-```
+<img src="../assets/diagrams/segmentation-target.svg" alt="Six peer groups, each reaching its own NIC, and each NIC interrupting CPU 1, CPU 0 or CPU 30" width="720">
 
 *Each peer group reaches the host through its own NIC. The two critical NICs share CPU 1 on node 1, timing and management go to CPU 0, and bulk goes to CPU 30. Only the management NIC carries the default route.*
 
@@ -127,13 +83,7 @@ nmcli con add type ethernet ifname ens2f1 con-name bulk-logs ipv4.method manual 
 ip route        # exactly one "default via 10.99.0.1 dev eno2"
 ```
 
-```mermaid
-flowchart LR
-  d{"Destination?"} -- "10.200.0.0/16 peers" --> e1["ens1f0 · critical"]
-  d -- "10.10.2.0/24 backend" --> e2["ens1f1 · critical"]
-  d -- "10.201.0.0/16 replicas" --> e4["ens2f0 · bulk"]
-  d -- "anything else" --> e6["eno2 · mgmt (default)"]
-```
+<img src="../assets/diagrams/segmentation-routes.svg" alt="Each destination network routes to its own NIC, and only unknown destinations use the management default route" width="720">
 
 *Every network gets an explicit route to its own NIC. Only unknown destinations fall through to the management default route, so bulk or management traffic can never drift onto a critical link.*
 
