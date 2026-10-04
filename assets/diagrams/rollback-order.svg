@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 270" width="760" height="270" role="img" aria-labelledby="t d">
+<title id="t">apply-all --rollback undoes the guides in reverse run order</title>
+<desc id="d">The wrapper stops and disables lowlat-runtime.service, rolls back the guides in reverse run order, 11, 08, 04, 05, 10, 12, 07, 06, 03, 02, 01 and 00, removes or restores the runtime unit, and reboots. Guide 08 comes before 04, because its driver reload would reset the NIC settings that 04 restores.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(488px, 222px); animation: k1 10s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(56px, 40px); } 8% { transform: translate(56px, 40px); } 11% { transform: translate(56px, 40px); } 11.12% { transform: translate(61px, 40px); } 12.84% { transform: translate(61px, 111px); } 15.84% { transform: translate(61px, 111px); } 16.79% { transform: translate(96px, 128px); } 19.79% { transform: translate(96px, 128px); } 21.2% { transform: translate(154px, 128px); } 24.2% { transform: translate(154px, 128px); } 25.6% { transform: translate(212px, 128px); } 28.6% { transform: translate(212px, 128px); } 30.01% { transform: translate(270px, 128px); } 33.01% { transform: translate(270px, 128px); } 34.42% { transform: translate(328px, 128px); } 37.42% { transform: translate(328px, 128px); } 38.82% { transform: translate(386px, 128px); } 41.82% { transform: translate(386px, 128px); } 43.23% { transform: translate(444px, 128px); } 46.23% { transform: translate(444px, 128px); } 47.64% { transform: translate(502px, 128px); } 50.64% { transform: translate(502px, 128px); } 52.05% { transform: translate(560px, 128px); } 55.05% { transform: translate(560px, 128px); } 56.45% { transform: translate(618px, 128px); } 59.45% { transform: translate(618px, 128px); } 60.86% { transform: translate(676px, 128px); } 63.86% { transform: translate(676px, 128px); } 65.24% { transform: translate(699px, 180px); } 74.92% { transform: translate(300px, 180px); } 75.41% { transform: translate(300px, 200px); } 78.41% { transform: translate(300px, 200px); } 83% { transform: translate(488px, 222px); } 86% { transform: translate(488px, 222px); } 100% { transform: translate(488px, 222px); } }
+  .p2 { animation: p2 10s linear infinite; }
+  @keyframes p2 { 0%, 12.74% { fill: #ffffff; stroke-width: 1.5; } 14.84% { fill: #ffe9a8; stroke-width: 3; } 17.84%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p3 { animation: p3 10s linear infinite; }
+  @keyframes p3 { 0%, 16.69% { fill: #ffd166; stroke-width: 1.5; } 18.79% { fill: #ffb703; stroke-width: 3; } 21.79%, 100% { fill: #ffd166; stroke-width: 1.5; } }
+  .p4 { animation: p4 10s linear infinite; }
+  @keyframes p4 { 0%, 21.1% { fill: #ffd166; stroke-width: 1.5; } 23.2% { fill: #ffb703; stroke-width: 3; } 26.2%, 100% { fill: #ffd166; stroke-width: 1.5; } }
+  .p5 { animation: p5 10s linear infinite; }
+  @keyframes p5 { 0%, 25.5% { fill: #ffffff; stroke-width: 1.5; } 27.6% { fill: #ffe9a8; stroke-width: 3; } 30.6%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p6 { animation: p6 10s linear infinite; }
+  @keyframes p6 { 0%, 29.91% { fill: #ffffff; stroke-width: 1.5; } 32.01% { fill: #ffe9a8; stroke-width: 3; } 35.01%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p7 { animation: p7 10s linear infinite; }
+  @keyframes p7 { 0%, 34.32% { fill: #ffffff; stroke-width: 1.5; } 36.42% { fill: #ffe9a8; stroke-width: 3; } 39.42%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p8 { animation: p8 10s linear infinite; }
+  @keyframes p8 { 0%, 38.72% { fill: #ffffff; stroke-width: 1.5; } 40.82% { fill: #ffe9a8; stroke-width: 3; } 43.82%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p9 { animation: p9 10s linear infinite; }
+  @keyframes p9 { 0%, 43.13% { fill: #ffffff; stroke-width: 1.5; } 45.23% { fill: #ffe9a8; stroke-width: 3; } 48.23%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p10 { animation: p10 10s linear infinite; }
+  @keyframes p10 { 0%, 47.54% { fill: #ffffff; stroke-width: 1.5; } 49.64% { fill: #ffe9a8; stroke-width: 3; } 52.64%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p11 { animation: p11 10s linear infinite; }
+  @keyframes p11 { 0%, 51.95% { fill: #ffffff; stroke-width: 1.5; } 54.05% { fill: #ffe9a8; stroke-width: 3; } 57.05%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p12 { animation: p12 10s linear infinite; }
+  @keyframes p12 { 0%, 56.35% { fill: #ffffff; stroke-width: 1.5; } 58.45% { fill: #ffe9a8; stroke-width: 3; } 61.45%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p13 { animation: p13 10s linear infinite; }
+  @keyframes p13 { 0%, 60.76% { fill: #ffffff; stroke-width: 1.5; } 62.86% { fill: #ffe9a8; stroke-width: 3; } 65.86%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p14 { animation: p14 10s linear infinite; }
+  @keyframes p14 { 0%, 75.31% { fill: #ffffff; stroke-width: 1.5; } 77.41% { fill: #ffe9a8; stroke-width: 3; } 80.41%, 100% { fill: #ffffff; stroke-width: 1.5; } }
+  .p15 { animation: p15 10s linear infinite; }
+  @keyframes p15 { 0%, 82.9% { fill: #c8f0d0; stroke-width: 1.5; } 83%, 97% { fill: #8fe0a0; stroke-width: 3; } 100% { fill: #c8f0d0; stroke-width: 1.5; } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .p2, .p3, .p4, .p5, .p6, .p7, .p8, .p9, .p10, .p11, .p12, .p13, .p14, .p15 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="270" rx="8"/>
+<path class="wire" d="M84,128 L96,128" marker-end="url(#a)"/>
+<path class="wire" d="M142,128 L154,128" marker-end="url(#a)"/>
+<path class="wire" d="M200,128 L212,128" marker-end="url(#a)"/>
+<path class="wire" d="M258,128 L270,128" marker-end="url(#a)"/>
+<path class="wire" d="M316,128 L328,128" marker-end="url(#a)"/>
+<path class="wire" d="M374,128 L386,128" marker-end="url(#a)"/>
+<path class="wire" d="M432,128 L444,128" marker-end="url(#a)"/>
+<path class="wire" d="M490,128 L502,128" marker-end="url(#a)"/>
+<path class="wire" d="M548,128 L560,128" marker-end="url(#a)"/>
+<path class="wire" d="M606,128 L618,128" marker-end="url(#a)"/>
+<path class="wire" d="M664,128 L676,128" marker-end="url(#a)"/>
+<text class="lbl" x="380" y="94" text-anchor="middle">Roll back the guides, in reverse run order</text>
+<path class="wire" d="M56,40 L61,40 L61,111" marker-end="url(#a)"/>
+<path class="wire" d="M699,145 L699,180 L300,180 L300,200" marker-end="url(#a)"/>
+<path class="wire" d="M370,222 L488,222" marker-end="url(#a)"/>
+<text class="note" x="148" y="164" text-anchor="start">08 before 04: its driver reload would reset what 04 restores</text>
+<rect class="mut" x="56" y="18" width="168" height="44" rx="5"/><text class="lbl" x="140" y="37" text-anchor="middle">Stop and disable</text><text class="lbl" x="140" y="52" text-anchor="middle">lowlat-runtime.service</text>
+<rect class="step p2" x="38" y="111" width="46" height="34" rx="5"/><text class="lbl" x="61" y="132.5" text-anchor="middle">11</text>
+<rect class="foc p3" x="96" y="111" width="46" height="34" rx="5"/><text class="lbl" x="119" y="132.5" text-anchor="middle">08</text>
+<rect class="foc p4" x="154" y="111" width="46" height="34" rx="5"/><text class="lbl" x="177" y="132.5" text-anchor="middle">04</text>
+<rect class="step p5" x="212" y="111" width="46" height="34" rx="5"/><text class="lbl" x="235" y="132.5" text-anchor="middle">05</text>
+<rect class="step p6" x="270" y="111" width="46" height="34" rx="5"/><text class="lbl" x="293" y="132.5" text-anchor="middle">10</text>
+<rect class="step p7" x="328" y="111" width="46" height="34" rx="5"/><text class="lbl" x="351" y="132.5" text-anchor="middle">12</text>
+<rect class="step p8" x="386" y="111" width="46" height="34" rx="5"/><text class="lbl" x="409" y="132.5" text-anchor="middle">07</text>
+<rect class="step p9" x="444" y="111" width="46" height="34" rx="5"/><text class="lbl" x="467" y="132.5" text-anchor="middle">06</text>
+<rect class="step p10" x="502" y="111" width="46" height="34" rx="5"/><text class="lbl" x="525" y="132.5" text-anchor="middle">03</text>
+<rect class="step p11" x="560" y="111" width="46" height="34" rx="5"/><text class="lbl" x="583" y="132.5" text-anchor="middle">02</text>
+<rect class="step p12" x="618" y="111" width="46" height="34" rx="5"/><text class="lbl" x="641" y="132.5" text-anchor="middle">01</text>
+<rect class="step p13" x="676" y="111" width="46" height="34" rx="5"/><text class="lbl" x="699" y="132.5" text-anchor="middle">00</text>
+<rect class="step p14" x="230" y="200" width="140" height="44" rx="5"/><text class="lbl" x="300" y="219" text-anchor="middle">Remove or restore</text><text class="lbl" x="300" y="234" text-anchor="middle">the runtime unit</text>
+<rect class="app p15" x="488" y="207.5" width="64" height="29" rx="14.5"/><text class="lbl" x="520" y="226.5" text-anchor="middle">Reboot</text>
+<circle class="tok k1" cx="0" cy="0" r="7"/>
+</svg>

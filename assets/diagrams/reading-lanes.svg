@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 650" width="760" height="650" role="img" aria-labelledby="t d">
+<title id="t">Six reading lanes, one per role</title>
+<desc id="d">The operator takes a baseline with Guide 09, walks Guides 00 to 07, then 10, 11 and 12, with 08 only with kernel bypass, and ends at verify-tuning. The learner follows three use cases and the layout explorer. The developer reads pinning, the Java flags and the Java example. The reviewer reads the safety page and the risks. The network engineer goes from Guide 04 to time sync. The learner of mechanisms reads every concept.</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<marker id="w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a5a00"/></marker>
+</defs>
+<style>
+  .bg { fill: #ffffff; }
+  .lane { fill: #f6f8fa; stroke: #d0d7de; }
+  .grp { fill: none; stroke: #8c959f; stroke-dasharray: 5 4; }
+  .box { fill: #cfe3ff; stroke: #1f4e8c; stroke-width: 1.5; }
+  .app { fill: #c8f0d0; stroke: #1d6b33; stroke-width: 1.5; }
+  .wait { fill: #ffc9c9; stroke: #9b1c1c; stroke-width: 1.5; }
+  .mut { fill: #eeeeee; stroke: #777777; stroke-width: 1.5; }
+  .foc { fill: #ffd166; stroke: #8a5a00; stroke-width: 1.5; }
+  .step { fill: #ffffff; stroke: #57606a; stroke-width: 1.5; }
+  .cap { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sub { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .lbl { font: 600 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .sm { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1a1a1a; }
+  .gl { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; }
+  .note { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #57606a; }
+  .el { font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #444444; paint-order: stroke; stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; }
+  .done { font: 700 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #8a5a00; }
+  .sl { fill: none; stroke: #1a1a1a; stroke-width: 1; }
+  .wire { fill: none; stroke: #57606a; stroke-width: 1.5; }
+  .walk { fill: none; stroke: #8a5a00; stroke-width: 3; }
+  .dash { stroke-dasharray: 5 4; }
+  .tok { fill: #8a5a00; stroke: #1a1a1a; stroke-width: 1; }
+  .tokb { fill: #1f4e8c; stroke: #0b1f33; stroke-width: 1; }
+  .tokr { fill: #9b1c1c; stroke: #2b0a0a; stroke-width: 1; }
+  .tokg { fill: #1d6b33; stroke: #0b2613; stroke-width: 1; }
+  .head { stroke: #8a5a00; stroke-width: 2; stroke-dasharray: 4 3; }
+  .k1 { transform: translate(622px, 128px); animation: k1 10s linear infinite; }
+  @keyframes k1 { 0% { transform: translate(111px, 66px); } 4% { transform: translate(111px, 66px); } 4.29% { transform: translate(156px, 66px); } 4.84% { transform: translate(242px, 66px); } 5.13% { transform: translate(287px, 66px); } 5.45% { transform: translate(336px, 66px); } 5.74% { transform: translate(381px, 66px); } 6.05% { transform: translate(430px, 66px); } 6.34% { transform: translate(475px, 66px); } 6.65% { transform: translate(523px, 66px); } 6.94% { transform: translate(568px, 66px); } 7.28% { transform: translate(621px, 66px); } 7.57% { transform: translate(666px, 66px); } 7.84% { transform: translate(701px, 87px); } 7.9% { transform: translate(701px, 97px); } 12.05% { transform: translate(57px, 97px); } 12.11% { transform: translate(57px, 107px); } 12.36% { transform: translate(90px, 128px); } 12.66% { transform: translate(136.2px, 128px); } 13.03% { transform: translate(193.2px, 128px); } 13.33% { transform: translate(239.4px, 128px); } 13.74% { transform: translate(303.4px, 128px); } 13.79% { transform: translate(311.4px, 128px); } 13.98% { transform: translate(311.4px, 157px); } 15.11% { transform: translate(487.8px, 160px); } 15.32% { transform: translate(487.8px, 128px); } 15.37% { transform: translate(495.8px, 128px); } 15.89% { transform: translate(575.8px, 128px); } 16.18% { transform: translate(622px, 128px); } 100% { transform: translate(622px, 128px); } }
+  .k2 { transform: translate(666px, 226px); animation: k2 10s linear infinite; }
+  @keyframes k2 { 0% { transform: translate(128px, 226px); } 18.33% { transform: translate(128px, 226px); } 20.56% { transform: translate(226.333px, 226px); } 24.23% { transform: translate(388.333px, 226px); } 26.46% { transform: translate(486.667px, 226px); } 28.29% { transform: translate(567.667px, 226px); } 30.52% { transform: translate(666px, 226px); } 100% { transform: translate(666px, 226px); } }
+  .k3 { transform: translate(590px, 322px); animation: k3 10s linear infinite; }
+  @keyframes k3 { 0% { transform: translate(85px, 322px); } 32.67% { transform: translate(85px, 322px); } 35.3% { transform: translate(194px, 322px); } 37.25% { transform: translate(275px, 322px); } 39.88% { transform: translate(384px, 322px); } 42.22% { transform: translate(481px, 322px); } 44.85% { transform: translate(590px, 322px); } 100% { transform: translate(590px, 322px); } }
+  .k4 { transform: translate(669px, 418px); animation: k4 10s linear infinite; }
+  @keyframes k4 { 0% { transform: translate(132px, 418px); } 47% { transform: translate(132px, 418px); } 48.59% { transform: translate(202.25px, 418px); } 49.96% { transform: translate(262.25px, 418px); } 51.55% { transform: translate(332.5px, 418px); } 54.04% { transform: translate(442.5px, 418px); } 55.64% { transform: translate(512.75px, 418px); } 57.59% { transform: translate(598.75px, 418px); } 59.18% { transform: translate(669px, 418px); } 100% { transform: translate(669px, 418px); } }
+  .k5 { transform: translate(659px, 514px); animation: k5 10s linear infinite; }
+  @keyframes k5 { 0% { transform: translate(94px, 514px); } 61.33% { transform: translate(94px, 514px); } 61.84% { transform: translate(117.5px, 514px); } 63.97% { transform: translate(216.5px, 514px); } 64.48% { transform: translate(240px, 514px); } 65.99% { transform: translate(310px, 514px); } 66.5% { transform: translate(333.5px, 514px); } 67.79% { transform: translate(393.5px, 514px); } 68.3% { transform: translate(417px, 514px); } 70.45% { transform: translate(517px, 514px); } 70.96% { transform: translate(540.5px, 514px); } 73.01% { transform: translate(635.5px, 514px); } 73.52% { transform: translate(659px, 514px); } 100% { transform: translate(659px, 514px); } }
+  .k6 { transform: translate(638px, 610px); animation: k6 10s linear infinite; }
+  @keyframes k6 { 0% { transform: translate(101px, 610px); } 75.67% { transform: translate(101px, 610px); } 76.81% { transform: translate(151.6px, 610px); } 78.29% { transform: translate(216.6px, 610px); } 79.44% { transform: translate(267.2px, 610px); } 80.91% { transform: translate(332.2px, 610px); } 82.06% { transform: translate(382.8px, 610px); } 83.65% { transform: translate(452.8px, 610px); } 84.8% { transform: translate(503.4px, 610px); } 86.7% { transform: translate(587.4px, 610px); } 87.85% { transform: translate(638px, 610px); } 100% { transform: translate(638px, 610px); } }
+  @media (prefers-color-scheme: dark) {
+    svg > * { filter: invert(0.88) hue-rotate(180deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .k1, .k2, .k3, .k4, .k5, .k6 { animation: none; }
+  }
+</style>
+<rect class="bg" x="0" y="0" width="760" height="650" rx="8"/>
+<rect class="lane" x="10" y="10" width="740" height="150" rx="6"/>
+<text class="cap" x="24" y="34">Operator: apply the tuning (about half a day for the first host)</text>
+<path class="wire" d="M111,66 L156,66" marker-end="url(#a)"/>
+<path class="wire" d="M242,66 L287,66" marker-end="url(#a)"/>
+<path class="wire" d="M336,66 L381,66" marker-end="url(#a)"/>
+<path class="wire" d="M430,66 L475,66" marker-end="url(#a)"/>
+<path class="wire" d="M523,66 L568,66" marker-end="url(#a)"/>
+<path class="wire" d="M621,66 L666,66" marker-end="url(#a)"/>
+<path class="wire" d="M90,128 L136.2,128" marker-end="url(#a)"/>
+<path class="wire" d="M193.2,128 L239.4,128" marker-end="url(#a)"/>
+<path class="wire dash" d="M303.4,128 L349.6,128" marker-end="url(#a)"/>
+<path class="wire dash" d="M449.6,128 L495.8,128" marker-end="url(#a)"/>
+<path class="wire" d="M575.8,128 L622,128" marker-end="url(#a)"/>
+<path class="wire" d="M701,87 L701,97 L57,97 L57,107" marker-end="url(#a)"/>
+<rect class="lane" x="10" y="170" width="740" height="86" rx="6"/>
+<text class="cap" x="24" y="194">Learner: from stories</text>
+<path class="wire" d="M128,226 L226.333,226" marker-end="url(#a)"/>
+<path class="wire" d="M388.333,226 L486.667,226" marker-end="url(#a)"/>
+<path class="wire" d="M567.667,226 L666,226" marker-end="url(#a)"/>
+<rect class="lane" x="10" y="266" width="740" height="86" rx="6"/>
+<text class="cap" x="24" y="290">Application developer: how my code should behave</text>
+<path class="wire" d="M85,322 L194,322" marker-end="url(#a)"/>
+<path class="wire" d="M275,322 L384,322" marker-end="url(#a)"/>
+<path class="wire" d="M481,322 L590,322" marker-end="url(#a)"/>
+<rect class="lane" x="10" y="362" width="740" height="86" rx="6"/>
+<text class="cap" x="24" y="386">Manager or reviewer: what, why, what can go wrong</text>
+<path class="wire" d="M132,418 L202.25,418" marker-end="url(#a)"/>
+<path class="wire" d="M262.25,418 L332.5,418" marker-end="url(#a)"/>
+<path class="wire" d="M442.5,418 L512.75,418" marker-end="url(#a)"/>
+<path class="wire" d="M598.75,418 L669,418" marker-end="url(#a)"/>
+<rect class="lane" x="10" y="458" width="740" height="86" rx="6"/>
+<text class="cap" x="24" y="482">Network engineer</text>
+<path class="wire" d="M94,514 L117.5,514" marker-end="url(#a)"/>
+<path class="wire" d="M216.5,514 L240,514" marker-end="url(#a)"/>
+<path class="wire" d="M310,514 L333.5,514" marker-end="url(#a)"/>
+<path class="wire" d="M393.5,514 L417,514" marker-end="url(#a)"/>
+<path class="wire" d="M517,514 L540.5,514" marker-end="url(#a)"/>
+<path class="wire" d="M635.5,514 L659,514" marker-end="url(#a)"/>
+<rect class="lane" x="10" y="554" width="740" height="86" rx="6"/>
+<text class="cap" x="24" y="578">Learner of mechanisms: understand the machine (about three hours)</text>
+<path class="wire" d="M101,610 L151.6,610" marker-end="url(#a)"/>
+<path class="wire" d="M216.6,610 L267.2,610" marker-end="url(#a)"/>
+<path class="wire" d="M332.2,610 L382.8,610" marker-end="url(#a)"/>
+<path class="wire" d="M452.8,610 L503.4,610" marker-end="url(#a)"/>
+<path class="wire" d="M587.4,610 L638,610" marker-end="url(#a)"/>
+<path class="wire dash" d="M303.4,128 L311.4,128 L311.4,157 L487.8,160 L487.8,128 L495.8,128" marker-end="url(#a)"/>
+<rect class="step" x="24" y="52" width="87" height="28" rx="5"/><text class="sm" x="67.5" y="70.5" text-anchor="middle">Quick start</text>
+<rect class="foc" x="156" y="45" width="86" height="42" rx="21"/><text class="sm" x="199" y="63.5" text-anchor="middle">Step 0</text><text class="sm" x="199" y="77.5" text-anchor="middle">09 Baseline</text>
+<rect class="step" x="287" y="45" width="49" height="42" rx="5"/><text class="sm" x="311.5" y="63.5" text-anchor="middle">00</text><text class="sm" x="311.5" y="77.5" text-anchor="middle">BIOS</text>
+<rect class="step" x="381" y="45" width="49" height="42" rx="5"/><text class="sm" x="405.5" y="63.5" text-anchor="middle">01</text><text class="sm" x="405.5" y="77.5" text-anchor="middle">GRUB</text>
+<rect class="step" x="475" y="45" width="48" height="42" rx="5"/><text class="sm" x="499" y="63.5" text-anchor="middle">02</text><text class="sm" x="499" y="77.5" text-anchor="middle">CPUs</text>
+<rect class="step" x="568" y="42" width="53" height="48" rx="5"/><text class="sm" x="594.5" y="56.5" text-anchor="middle">03</text><text class="sm" x="594.5" y="70.5" text-anchor="middle">Huge</text><text class="sm" x="594.5" y="84.5" text-anchor="middle">pages</text>
+<rect class="step" x="666" y="45" width="70" height="42" rx="5"/><text class="sm" x="701" y="63.5" text-anchor="middle">04</text><text class="sm" x="701" y="77.5" text-anchor="middle">Network</text>
+<rect class="step" x="24" y="107" width="66" height="42" rx="5"/><text class="sm" x="57" y="125.5" text-anchor="middle">05</text><text class="sm" x="57" y="139.5" text-anchor="middle">cgroups</text>
+<rect class="step" x="136.2" y="107" width="57" height="42" rx="5"/><text class="sm" x="164.7" y="125.5" text-anchor="middle">06</text><text class="sm" x="164.7" y="139.5" text-anchor="middle">sysctl</text>
+<rect class="step" x="239.4" y="107" width="64" height="42" rx="5"/><text class="sm" x="271.4" y="125.5" text-anchor="middle">07</text><text class="sm" x="271.4" y="139.5" text-anchor="middle">Hygiene</text>
+<rect class="mut" x="349.6" y="104" width="100" height="48" rx="5"/><text class="sm" x="399.6" y="118.5" text-anchor="middle">08 Bypass</text><text class="sm" x="399.6" y="132.5" text-anchor="middle">(only with a</text><text class="sm" x="399.6" y="146.5" text-anchor="middle">bypass stack)</text>
+<rect class="step" x="495.8" y="104" width="80" height="48" rx="5"/><text class="sm" x="535.8" y="118.5" text-anchor="middle">10 Time</text><text class="sm" x="535.8" y="132.5" text-anchor="middle">11 Day-2</text><text class="sm" x="535.8" y="146.5" text-anchor="middle">12 Memory</text>
+<rect class="app" x="622" y="114" width="114" height="28" rx="2"/><line class="sl" x1="628" y1="114" x2="628" y2="142"/><line class="sl" x1="730" y1="114" x2="730" y2="142"/><text class="sm" x="679" y="132.5" text-anchor="middle">verify-tuning</text>
+<rect class="step" x="24" y="205" width="104" height="42" rx="5"/><text class="sm" x="76" y="223.5" text-anchor="middle">Use case 1</text><text class="sm" x="76" y="237.5" text-anchor="middle">The quiet core</text>
+<rect class="step" x="226.333" y="205" width="162" height="42" rx="5"/><text class="sm" x="307.333" y="223.5" text-anchor="middle">Use case 2</text><text class="sm" x="307.333" y="237.5" text-anchor="middle">Critical and non-critical</text>
+<rect class="step" x="486.667" y="205" width="81" height="42" rx="5"/><text class="sm" x="527.167" y="223.5" text-anchor="middle">Use case 8</text><text class="sm" x="527.167" y="237.5" text-anchor="middle">Capstone</text>
+<rect class="step" x="666" y="205" width="70" height="42" rx="5"/><text class="sm" x="701" y="223.5" text-anchor="middle">Layout</text><text class="sm" x="701" y="237.5" text-anchor="middle">explorer</text>
+<rect class="step" x="24" y="301" width="61" height="42" rx="5"/><text class="sm" x="54.5" y="319.5" text-anchor="middle">02 §6</text><text class="sm" x="54.5" y="333.5" text-anchor="middle">Pinning</text>
+<rect class="step" x="194" y="301" width="81" height="42" rx="5"/><text class="sm" x="234.5" y="319.5" text-anchor="middle">03 §5</text><text class="sm" x="234.5" y="333.5" text-anchor="middle">Java flags</text>
+<rect class="step" x="384" y="308" width="97" height="28" rx="5"/><text class="sm" x="432.5" y="326.5" text-anchor="middle">Java example</text>
+<rect class="step" x="590" y="301" width="146" height="42" rx="5"/><text class="sm" x="663" y="319.5" text-anchor="middle">Concept:</text><text class="sm" x="663" y="333.5" text-anchor="middle">caches and coherence</text>
+<rect class="step" x="24" y="397" width="108" height="42" rx="5"/><text class="sm" x="78" y="415.5" text-anchor="middle">README</text><text class="sm" x="78" y="429.5" text-anchor="middle">Read this first</text>
+<rect class="step" x="202.25" y="404" width="60" height="28" rx="5"/><text class="sm" x="232.25" y="422.5" text-anchor="middle">Safety</text>
+<rect class="step" x="332.5" y="397" width="110" height="42" rx="5"/><text class="sm" x="387.5" y="415.5" text-anchor="middle">Risk tables</text><text class="sm" x="387.5" y="429.5" text-anchor="middle">atop each guide</text>
+<rect class="wait" x="512.75" y="397" width="86" height="42" rx="5"/><text class="sm" x="555.75" y="415.5" text-anchor="middle">01 §5.6</text><text class="sm" x="555.75" y="429.5" text-anchor="middle">Mitigations</text>
+<rect class="wait" x="669" y="397" width="67" height="42" rx="5"/><text class="sm" x="702.5" y="415.5" text-anchor="middle">07 §6</text><text class="sm" x="702.5" y="429.5" text-anchor="middle">Firewall</text>
+<rect class="step" x="24" y="493" width="70" height="42" rx="5"/><text class="sm" x="59" y="511.5" text-anchor="middle">04</text><text class="sm" x="59" y="525.5" text-anchor="middle">Network</text>
+<rect class="step" x="117.5" y="493" width="99" height="42" rx="5"/><text class="sm" x="167" y="511.5" text-anchor="middle">Concept:</text><text class="sm" x="167" y="525.5" text-anchor="middle">network path</text>
+<rect class="step" x="240" y="493" width="70" height="42" rx="5"/><text class="sm" x="275" y="511.5" text-anchor="middle">Concept:</text><text class="sm" x="275" y="525.5" text-anchor="middle">ethtool</text>
+<rect class="step" x="333.5" y="493" width="60" height="42" rx="5"/><text class="sm" x="363.5" y="511.5" text-anchor="middle">08</text><text class="sm" x="363.5" y="525.5" text-anchor="middle">Bypass</text>
+<rect class="step" x="417" y="493" width="100" height="42" rx="5"/><text class="sm" x="467" y="511.5" text-anchor="middle">Segmentation</text><text class="sm" x="467" y="525.5" text-anchor="middle">example</text>
+<rect class="step" x="540.5" y="493" width="95" height="42" rx="5"/><text class="sm" x="588" y="511.5" text-anchor="middle">06 §3-6</text><text class="sm" x="588" y="525.5" text-anchor="middle">TCP, buffers</text>
+<rect class="step" x="659" y="493" width="77" height="42" rx="5"/><text class="sm" x="697.5" y="511.5" text-anchor="middle">10</text><text class="sm" x="697.5" y="525.5" text-anchor="middle">Time sync</text>
+<rect class="step" x="24" y="589" width="77" height="42" rx="5"/><text class="sm" x="62.5" y="607.5" text-anchor="middle">Concepts:</text><text class="sm" x="62.5" y="621.5" text-anchor="middle">hardware</text>
+<rect class="step" x="151.6" y="589" width="65" height="42" rx="5"/><text class="sm" x="184.1" y="607.5" text-anchor="middle">Kernel</text><text class="sm" x="184.1" y="621.5" text-anchor="middle">and CPU</text>
+<rect class="step" x="267.2" y="596" width="65" height="28" rx="5"/><text class="sm" x="299.7" y="614.5" text-anchor="middle">Memory</text>
+<rect class="step" x="382.8" y="596" width="70" height="28" rx="5"/><text class="sm" x="417.8" y="614.5" text-anchor="middle">Network</text>
+<rect class="step" x="503.4" y="596" width="84" height="28" rx="5"/><text class="sm" x="545.4" y="614.5" text-anchor="middle">Application</text>
+<rect class="step" x="638" y="596" width="98" height="28" rx="5"/><text class="sm" x="687" y="614.5" text-anchor="middle">Measurement</text>
+<circle class="tok k1" cx="0" cy="0" r="5"/>
+<circle class="tok k2" cx="0" cy="0" r="5"/>
+<circle class="tok k3" cx="0" cy="0" r="5"/>
+<circle class="tok k4" cx="0" cy="0" r="5"/>
+<circle class="tok k5" cx="0" cy="0" r="5"/>
+<circle class="tok k6" cx="0" cy="0" r="5"/>
+</svg>
