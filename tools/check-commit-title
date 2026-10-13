@@ -7,6 +7,8 @@
 #   - type(scope)!: subject, type in TYPES, scope and "!" optional
 #   - the subject is imperative and starts lowercase (fix: add x, not fix: Added x)
 #   - at most 72 characters in total, no trailing period, ASCII only
+# Dependabot titles (build(deps): bump ..., ci(deps): bump ...) are exempt from the
+# length limit: the bot writes them and names the package and both versions.
 # "fixup! " and "squash! " prefixes are accepted; autosquash removes them.
 # git's own 'Revert "..."' titles are accepted as they are.
 # --range skips merge commits: squash merges drop them, and "Update branch" creates them.
@@ -44,7 +46,7 @@ check_title() {
 		fail "'${title}'" "title is empty or has leading/trailing whitespace"
 		return
 	fi
-	if ((${#title} > MAX_LENGTH)); then
+	if ((${#title} > MAX_LENGTH)) && [[ ! "${title}" =~ ^(build|ci)\(deps(-dev)?\):\ bump\  ]]; then
 		fail "'${title}'" "${#title} characters, the limit is ${MAX_LENGTH}"
 	fi
 	if LC_ALL=C grep -q '[^ -~]' <<<"${title}"; then

@@ -83,7 +83,7 @@ These rules apply to every change, whoever makes it. If a rule and a request con
   - Format `type(scope)!: subject`. `type` is one of `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`. The scope and `!` (breaking change) are optional. No ticket prefix.
   - The subject completes "If applied, this commit will ...": imperative and lowercase, `docs(network): add ethtool reference`, not `docs(network): Added ethtool reference`.
   - Specific: `fix: pin IRQs of bulk NICs to housekeeping CPUs`, not `fix: bug` or `chore: update files`.
-  - At most 72 characters, no trailing period, ASCII only.
+  - At most 72 characters, no trailing period, ASCII only. Dependabot titles (`build(deps): bump ...`, `ci(deps): bump ...`) are exempt from the length limit.
   - A body is optional. When there is one, leave a blank line after the title and explain what changed and why, wrapped at 72 columns.
 - **Descriptions** (PR bodies and commit bodies) are plain text: no emojis, no tool attribution footers such as "Generated with ...", and no `Co-authored-by:` trailers naming a coding tool. `tools/check-description` enforces this in the commit-msg hook and in CI.
 - [Conventional Branch](https://conventional-branch.github.io/) names: `<type>/<kebab-slug>` (`docs/kernel-bypass`, `fix/irq-affinity`).
